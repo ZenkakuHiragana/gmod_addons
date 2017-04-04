@@ -1,0 +1,7 @@
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/entities/splattershot_wasabi"
+	"$nolod" 1
+	"$vertexalpha" 1
+	"$vertexcolor" 1
+}

@@ -1,0 +1,7 @@
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/entities/splatcharger_kelp"
+	"$nolod" 1
+	"$vertexalpha" 1
+	"$vertexcolor" 1
+}

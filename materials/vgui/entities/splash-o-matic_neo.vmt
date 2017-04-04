@@ -1,0 +1,7 @@
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/entities/splash-o-matic_neo"
+	"$nolod" 1
+	"$vertexalpha" 1
+	"$vertexcolor" 1
+}

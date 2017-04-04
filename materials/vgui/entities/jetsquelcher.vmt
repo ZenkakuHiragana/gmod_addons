@@ -1,0 +1,7 @@
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/entities/jetsquelcher"
+	"$nolod" 1
+	"$vertexalpha" 1
+	"$vertexcolor" 1
+}
