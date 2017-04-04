@@ -1,0 +1,1516 @@
+--[[
+Unknown
+body_rot_z
+spine_rot_z
+neck_trans_x
+head_rot_z
+head_rot_y
+head_rot_x
+batonidle1
+batonidle2
+smg1idle1
+smg1idle2
+pistolidle1
+pistolidle2
+Idle_Baton
+BlockEntry
+buttonright
+buttonfront
+buttonleft
+busyidle1
+busyidle2
+harassfront1
+harassfront2
+pickup
+point
+idleonfire
+moveonfire
+rappelloop
+rappelland
+dummy1
+dummy2
+pushplayer
+activatebaton
+deactivatebaton
+cower
+flinch_head1
+flinch_head2
+flinch_stomach1
+flinch_stomach2
+flinch_leftarm1
+flinch_rightarm1
+flinch_back1
+flinch1
+flinch2
+flinch_gesture
+flinchheadgest1
+flinchheadgest2
+flinchgutgest1
+flinchgutgest2
+flinchlarmgest
+flinchrarmgest
+physflinch1
+physflinch2
+deathpose_front
+deathpose_back
+deathpose_right
+deathpose_left
+deploy
+grenadethrow
+pistolangryidle2
+Crouch_idle_pistol
+drawpistol
+shootp1
+gesture_shoot_pistol
+reload_pistol
+crouch_reload_pistol
+gesture_reload_pistolspine
+gesture_reload_pistolarms
+gesture_reload_pistol
+lowcover_shoot_pistol
+lowcover_aim_pistol
+smg1angryidle1
+Crouch_idle_smg1
+shoot_smg1
+gesture_shoot_smg1
+reload_smg1
+crouch_reload_smg1
+gesture_reload_smg1spine
+gesture_reload_smg1arms
+gesture_reload_smg1
+lowcover_shoot_smg1
+lowcover_aim_smg1
+batonangryidle1
+swing
+thrust
+swinggesturespine
+swinggesturearms
+swinggesture
+pistol_Aim_all
+WalkN_pistol_Aim_all
+SMG1_Aim_all
+WalkN_SMG1_Aim_all
+Crouch_all
+walk_all
+layer_walk_hold_baton_angry
+walk_hold_baton_angry
+Pistol_aim_walk_all_delta
+layer_walk_aiming_pistol
+walk_aiming_pistol_all
+layer_walk_hold_pistol
+walk_hold_pistol
+SMG1_aim_walk_all_delta
+layer_walk_aiming_SMG1
+walk_aiming_SMG1_all
+layer_walk_hold_smg1
+walk_hold_smg1
+run_all
+Pistol_aim_run_all_delta
+layer_run_hold_pistol
+run_hold_pistol
+layer_run_aiming_pistol
+run_aiming_pistol_all
+smg1_aim_run_all_delta
+layer_run_hold_smg1
+run_hold_smg1
+layer_run_aiming_smg1
+run_aiming_smg1_all
+Stand_to_crouchpistol
+Crouch_to_standpistol
+Shoot_to_crouchpistol
+Crouch_to_shootpistol
+shoottostandpistol
+standtoshootpistol
+crouch_to_lowcoverpistol
+lowcover_to_crouchpistol
+Stand_to_crouchsmg1
+Crouch_to_standsmg1
+Shoot_to_crouchsmg1
+Crouch_to_shootsmg1
+crouch_to_lowcoversmg1
+lowcover_to_crouchsmg1
+turnleft
+turnright
+gesture_turn_left_45default
+gesture_turn_left_45inDelta
+gesture_turn_left_45outDelta
+gesture_turn_left_45
+gesture_turn_left_90default
+gesture_turn_left_90inDelta
+gesture_turn_left_90outDelta
+gesture_turn_left_90
+gesture_turn_right_45default
+gesture_turn_right_45inDelta
+gesture_turn_right_45outDelta
+gesture_turn_right_45
+gesture_turn_right_90default
+gesture_turn_right_90inDelta
+gesture_turn_right_90outDelta
+gesture_turn_right_90
+jump_holding_jump
+jump_holding_glide
+jump_holding_land
+Neutral_to_Choked_Barnacle
+Choked_Barnacle
+Crushed_Barnacle
+Dropship_Deploy
+Man_Gun_Aim_all
+Man_Gun
+local_reference
+shootflare
+jumpdown128
+canal3jump1
+canal3jump2
+canal1jump1
+barrelpushidle
+barrelpush
+canal5bidle1
+canal5bidle2
+canal5breact1
+canal5breact2
+forcescanner
+plazalean
+plazahalt
+plazathreat1
+plazathreat2
+dooridle
+dooropen
+itemhit
+adoorenter
+adoorkick
+kickdoorbaton
+adooridle
+adoorknock
+adoorcidle
+harrassidle
+harrassapcidle
+harrassapcslam
+luggagewarn
+luggagepush
+ts_luggageShove_All
+harrassalert
+APCidle
+SMGcover
+Spreadwall
+motionright
+motionleft
+arrestpreidle
+arrestpunch
+stopwomanpre
+stopwoman
+]]
+list.Set("NPC", "npc_znkksniper", {
+	Name = "Znkk Sniper",
+	Class = "npc_znkksniper",
+	Category = "GreatZenkakuMan's NPCs"
+	}
+)
+AddCSLuaFile("npc_znkksniper.lua")
+
+ENT.Base = "base_nextbot"
+ENT.Type = "nextbot"
+
+ENT.PrintName = "Znkk Sniper"
+ENT.Author = "Himajin Jichiku"
+ENT.Contact = ""
+ENT.Purpose = "A tricky sniper"
+ENT.Instruction = ""
+ENT.Spawnable = false
+
+local PistolClip = 6
+local RifleClip = 6
+ENT.AutomaticFrameAdvance = true
+ENT.SearchAngle = 22.5
+ENT.Radius = 10000
+ENT.LostDistance = 20000
+ENT.NearDistance = 800
+ENT.WalkSpeed = 70
+ENT.RunSpeed = 250
+ENT.JumpSpeed = 900
+ENT.JumpHeight = 30
+ENT.dist = 0
+ENT.lastsaw = Vector(0, 0, 0)
+ENT.aimattach = 1
+ENT.escapebias = 10
+ENT.NextFire = CurTime()
+ENT.PistolAmmo = PistolClip
+ENT.RifleAmmo = RifleClip
+ENT.StepHeight = 30
+
+ENT.Weapon = nil
+ENT.laser = nil
+ENT.look = false
+ENT.userstuck = false
+ENT.jumping = false
+ENT.ignorelist = {}
+
+ENT.Idle = ACT_IDLE
+ENT.Walk = ACT_WALK
+ENT.StandRifle = ACT_IDLE_ANGRY_SMG1
+ENT.StandPistol = ACT_IDLE_ANGRY_PISTOL
+ENT.RunRifle = ACT_RUN_AIM_RIFLE
+ENT.RunPistol = ACT_RUN
+ENT.ShootRifle = ACT_RANGE_ATTACK_SMG1
+ENT.ShootPistol = ACT_RANGE_ATTACK_PISTOL
+ENT.ReloadPistol = ACT_RELOAD_PISTOL
+ENT.ReloadPistolDuck = ACT_RELOADL_PISTOL_LOW
+ENT.ReloadRifle = ACT_RELOAD_SMG1
+ENT.ReloadRifleDuck = ACT_RELOAD_SMG1_LOW
+
+local GreatfulDead = 1
+local IsAlone --= 1
+
+function ENT:GetAimVector()
+	if IsValid(self:GetEnemy()) and self:IsValidate(self:GetEnemy()) then
+		return (self:GetTargetPos(false) - self:GetMuzzle().Pos):GetNormalized()
+	else
+		return self:GetForward()
+	end
+end
+
+function ENT:GetNoTarget() --for Half Life Renaissance Reconstructed
+	return false
+end
+
+function ENT:PercentageFrozen()
+	return 0
+end
+
+hook.Add("OnEntityCreated", "ZnkkSniperIsAlone!", function(e)
+	if SERVER and IsValid(e) and e:GetClass() ~= "npc_znkksniper" and e.AddEntityRelationship then
+		local t = "target" .. e:EntIndex()
+		timer.Create(t, 0.1, 0, function()
+			if not IsValid(e) then timer.Destroy(t) return end
+			for k, v in pairs(ents.FindByClass("npc_znkksniper")) do
+				if IsValid(v) then
+					e:AddEntityRelationship(v, D_HT, 99)
+				end
+			end
+		end)
+	end
+end)
+
+local SnipeSound = nil
+local ShootSound = nil
+
+if GreatfulDead then
+	SnipeSound = Sound("Weapon_357.Single")
+	ShootSound = Sound("Weapon_Shotgun.Single")
+else
+	SnipeSound = Sound("Weapon_Pistol.NPC_Single")
+	ShootSound = Sound("Weapon_SMG1.NPC_Single")
+end
+
+local InjuredSound = Sound("AlyxEMP.Discharge")
+
+function ENT:GetHullType()
+	return HULL_HUMAN
+end
+
+function SetAutomaticFrameAdvance(bUsingAnim)
+	self.AutomaticFrameAdvance = bUsingAnim
+end
+
+function ENT:SetEnemy( ent )
+	if IsValid(self:GetEnemy()) then
+		self:GetEnemy():RemoveEffects(EF_BRIGHTLIGHT)
+	end
+	self.Enemy = ent
+	
+	if IsValid(ent) then
+		ent:AddEffects(EF_BRIGHTLIGHT)
+	end
+end
+
+function ENT:GetEnemy()
+	if self:IsValidate(self.Enemy) ~= 0 then
+		return nil
+	end
+	return self.Enemy
+end
+
+function ENT:IsValidate(e)
+	if e == self or not IsValid(e) then return -1 end
+	
+	local c = e:GetClass()
+	if c == "npc_rollermine" or c == "npc_turret_floor" then
+		return 0
+	elseif c ~= "npc_znkksniper" then
+		if not string.find(c, "bullseye") and c ~= "env_flare" and c ~= "npc_combinegunship" and c ~= "npc_helicopter" then
+			if (e.Type == "nextbot") or e:IsNPC() or (e:IsPlayer() and not (GetConVar("ai_ignoreplayers"):GetInt() ~= 0 or e:IsFlagSet(FL_NOTARGET))) then
+				if (e.Alive and e:Alive()) or (e.Health and e:Health() >= 0) then
+					return 0
+				end
+			end
+		end
+	elseif not IsAlone and self:GetRangeTo(e:GetPos()) < self.NearDistance * 8 then
+		return 1
+	else
+		return 0
+	end
+	return -1
+end
+
+function ENT:FindEnemy()
+	local list
+	--list = ents.FindInBox(self:GetPos() + Vector(-30, -30, 0), self:GetPos() + (self:GetForward() * self.Radius) + Vector(30, 30, 65))
+	--local list = ents.FindInCone(self:GetPos() + Vector(0,0,65), self:GetForward(), self.Radius, self.SearchAngle)
+	--debugoverlay.Line(self:GetPos() + Vector(0,0,65), self:GetPos() + Vector(0,0,65) + self:GetForward() * self.Radius, 0.03, Color(0, 255, 0, 255), true)
+	list = ents.GetAll()
+	local nearest = math.huge
+	local dist = math.huge
+	local enemy = nil
+	local target = nil
+	
+	for k, v in ipairs(list) do
+		if not table.HasValue(self.ignorelist, v) and (v:GetPos() - self:GetPos()):Dot(self:GetForward()) > 0.2 then
+			local e = self:IsValidate(v)
+			if e == 0 then
+				self:SetEnemy(v)
+				if self:CanSee() then
+					dist = self:GetRangeTo(v:GetPos())
+					if dist < nearest then
+						nearest = dist
+						target = v
+					end
+				end
+			elseif e == 1 then
+				self:SetEnemy(v:GetEnemy())
+				return IsValid(self:GetEnemy())
+			end
+		end
+	end
+	self:SetEnemy(target)
+	if not self:CanSee() then
+		self:SetEnemy(nil)
+	end
+	self.aimattach = 1
+	if IsValid(self:GetEnemy()) then
+	--	print(self:GetEnemy():GetClass())
+		self.lastsaw = self:GetEnemy():GetPos()
+		self.dist = self:GetRangeTo(self.lastsaw)
+	end
+	return IsValid(self:GetEnemy())
+end
+
+function ENT:HaveEnemy()
+	if IsValid(self:GetEnemy()) then
+		local e = self:GetEnemy()
+		if not self:FindEnemy() then
+			self:SetEnemy(e)
+		end
+		return true
+	else
+		return self:FindEnemy()
+	end
+end
+
+function ENT:GetEye()
+	return self:GetAttachment(self:LookupAttachment("eyes"))
+end
+
+function ENT:GetMuzzle()
+	if IsValid(self.Weapon) then
+		return self.Weapon:GetAttachment(self.Weapon:LookupAttachment("muzzle"))
+	else
+		return self:GetAttachment(self:LookupAttachment("anim_attachment_RH"))
+	end
+end
+
+function ENT:MakeTarget()
+	if not IsValid(self.laser) then
+		self.laser = ents.Create("ent_znkklasersight")
+		self.laser:Spawn()
+		self.laser:SetPos(self:GetMuzzle().Pos)
+	end
+end
+
+function ENT:GetEyeTrace(dist)
+	local begin, last
+	
+	begin = self:GetEye().Pos
+	last = begin + self:GetEye().Ang:Forward() * (dist or 80)
+	
+	return util.TraceLine({
+		start = begin,
+		endpos = last,
+		filter = self
+	})
+end
+
+function ENT:CanSee(vec, rad, ent, shot, draw)
+	local m = MASK_BLOCKLOS_AND_NPCS
+	if shot then m = MASK_SHOT end
+	
+	local st = vec or self:GetEye().Pos
+	local e = ent or self:GetEnemy()
+	local filter = ents.FindByClass("func_breakable")
+	table.Add(filter, {self, self.Weapon})
+	table.Add(filter, ents.FindByClass("func_breakable_surf"))
+	if IsValid(self.Weapon) and IsValid(e) then
+		st = vec or self:GetMuzzle().Pos
+	end
+	if not IsValid(e) then
+		for k, v in pairs(ents.FindInSphere(st, rad or self.Radius)) do
+			if self:IsValidate(v) == 0 then
+				local tr = util.TraceLine({
+					start = st,
+					endpos = self:GetTargetPos(false, v),
+					filter = filter,
+					mask = m
+				})
+				if draw then
+					debugoverlay.Line(st, tr.HitPos or self:GetTargetPos(false, last), 3, Color(0, 255, 0, 255), false)
+				end
+				
+				if (not tr.StartSolid) and ((tr.Entity == v) or (tr.HitPos - self:GetTargetPos(false, v)):LengthSqr() < (rad or 1000)) then
+					return true
+				end
+			end
+		end
+		return false
+	else
+		local tr = util.TraceLine({
+			start = st,
+			endpos = self:GetTargetPos(false, e),
+			filter = filter,
+			mask = m
+		})
+		if draw then
+			debugoverlay.Line(st, tr.HitPos or self:GetTargetPos(false, e), 3, Color(0, 255, 0, 255), false)
+		end
+		--print((tr.HitPos - self:GetTargetPos(false, e)):LengthSqr())
+		if (not tr.StartSolid) and ((tr.Entity == e) or (tr.HitPos - self:GetTargetPos(false, e)):LengthSqr() < (rad or 1000)) then
+			return true
+		end
+		return false
+	end
+end
+
+--function ENT:CanSee(vec, rad, draw)
+--	local st = vec or self:GetEye().Pos
+--	if IsValid(self.Weapon) and IsValid(self:GetEnemy()) then
+--		st = vec or self:GetMuzzle().Pos
+--	end
+--	
+--	if IsValid(self:GetEnemy()) then
+--		local targetpos = navmesh.GetNearestNavArea(self:GetTargetPos(false))
+--		vis, pos = targetpos:IsVisible(st, self)
+--		return vis
+--	else
+--		local targetpos = navmesh.GetNearestNavArea(st)
+--		
+--		for k, v in pairs(ents.FindInSphere(st, self.Radius)) do
+--			vis, pos = targetpos:IsVisible(v:GetPos() + Vector(0, 0, 30), v)
+--			if vis then return true end
+--		end
+--		return false
+--	end
+--end
+
+function ENT:GetTargetPos(aiming, target)
+    local e = target
+    if not IsValid(e) then e = self:GetEnemy() end
+    if not IsValid(e) then 
+    	if not self:HaveEnemy() then
+    		return self:GetEye().Pos + self:GetForward() * self.NearDistance
+    	else
+    		e = self:GetEnemy()
+    	end
+    end
+	
+	for k, v in pairs(ents.FindInSphere(self:GetPos(), 200)) do
+		if v:GetClass() == "npc_grenade_frag" then
+			return v:GetPos()
+		end
+	end
+	local dir = e:GetPos()
+	
+	if string.find(e:GetClass(), "headcrab") then
+		return e:GetPos() + Vector(0, 0, 8)
+	end
+--	if e.HeadTarget then
+--		dir = e:HeadTarget(self:GetMuzzle().Pos)
+--	elseif e.BodyTarget then
+--		dir = e:BodyTarget(self:GetMuzzle().Pos)
+--	end
+	
+	if e:LookupAttachment("head") and e:LookupAttachment("head") > 0 then --for zombie
+		dir = e:GetAttachment(e:LookupAttachment("head")).Pos
+	
+	elseif e:LookupBone("ValveBiped.Bip01_Head1") then
+		dir = e:GetBonePosition(e:LookupBone("ValveBiped.Bip01_Head1"))
+	elseif e:LookupBone("ValveBiped.Bip01_Neck1") then
+		dir = e:GetBonePosition(e:LookupBone("ValveBiped.Bip01_Neck1"))
+	elseif e:LookupBone("Antlion.Head_Bone") then --for Antlion
+		dir = e:GetBonePosition(e:LookupBone("Antlion.Head_Bone"))
+	elseif e:LookupBone("Bip01 Head") then --for Half-Life Source NPCs
+		dir = e:GetBonePosition(e:LookupBone("Bip01 Head"))
+	elseif e:LookupBone("Bip01 Neck") then --for Half-Life Source NPCs
+		dir = e:GetBonePosition(e:LookupBone("Bip01 Neck"))
+	elseif e:LookupBone("TorSkel Head") then --for Half-Life: Renaissance Tor
+		dir = e:GetBonePosition(e:LookupBone("TorSkel Head"))
+	
+	elseif e:LookupAttachment("eyes") and e:LookupAttachment("eyes") > 0 then --for most human
+		dir = e:GetAttachment(e:LookupAttachment("eyes")).Pos
+	elseif e:LookupAttachment("light") and e:LookupAttachment("light") > 0 then --for manhack
+		dir = e:GetAttachment(e:LookupAttachment("light")).Pos
+	elseif e:LookupAttachment("eye") and e:LookupAttachment("eye") > 0 then --for combine assassin
+		dir = e:GetAttachment(e:LookupAttachment("eye")).Pos
+	elseif e:LookupAttachment("head_center") and e:LookupAttachment("head_center") > 0 then --for hunter
+		dir = e:GetAttachment(e:LookupAttachment("head_center")).Pos
+	elseif e:LookupAttachment("mouth") and e:LookupAttachment("mouth") > 0 then --for antlion worker
+		dir = e:GetAttachment(e:LookupAttachment("mouth")).Pos
+	elseif e:LookupAttachment("innards") and e:LookupAttachment("innards") > 0 then --for barnacle
+		dir = e:GetAttachment(e:LookupAttachment("innards")).Pos
+	elseif e:GetAttachments() and #e:GetAttachments() > 0 then
+		if aiming then
+			self.aimattach = self.aimattach + 1
+			if self.aimattach > #e:GetAttachments() then
+				self.aimattach = 1
+			end
+		end
+		dir = e:GetAttachment(self.aimattach).Pos
+	end
+--	PrintTable(e:GetAttachments())
+--	for i = 1, e:GetBoneCount() - 1 do
+--		print(e:GetBoneName(i))
+--	end
+	return dir
+end
+
+function ENT:Initialize()
+	if SERVER then
+		self:SetModel("models/Police.mdl")
+		self:AddFlags(FL_NPC)
+		self:AddFlags(FL_OBJECT)
+		self:SetSolid(SOLID_BBOX)
+		self:SetCollisionGroup(COLLISION_GROUP_NONE)
+		--self:SetMoveType(MOVETYPE_STEP)
+		self.loco:SetStepHeight(self.StepHeight)
+		self.loco:SetJumpHeight(self.JumpHeight)
+		self.loco:SetDeathDropHeight(self.StepHeight)--200
+		self.loco:SetMaxYawRate(400)
+		self:SetNoDraw(false)
+		self:SetFriction(0)
+		
+		self:MakeTarget()
+		
+		self:SetHealth(125)
+		self:SetMaxHealth(125)
+		self:StartActivity(self.Idle)
+		
+		if GreatfulDead then
+			PistolClip = 6
+			RifleClip = 6
+		else
+			PistolClip = 18
+			RifleClip = 45
+		end
+		self.PistolAmmo = PistolClip
+		self.RifleAmmo = RifleClip
+	end
+end
+
+function ENT:GetRelationship(e)
+	return D_HT
+end
+
+function ENT:OnContact(data)
+	if IsValid(self) then
+		if not data:IsWorld() then
+			self.userstuck = true
+		end
+		
+		local et = self:GetEyeTrace()
+		if IsValid(et.Entity) then
+			et.Entity:Input("Open", self, self)
+			et.Entity:Input("OpenAwayFrom", self, self, self:GetClass())
+		--	if et.Entity:GetClass() == "func_door" then
+		--	elseif et.Entity:GetClass() == "prop_door_rotating" then
+		--	elseif et.Entity:GetClass() == "func_door_rotating" then
+		--		et.Entity:Input("Open", self, self)
+		--	end
+		end
+	end
+end
+
+function ENT:OnStuck()
+	--self.loco:FaceTowards(self:GetPos() + self:GetRight() * 100)
+	self.loco:Jump()
+	print("stuck")
+end
+
+function ENT:OnRemove()
+	self:SetEnemy(nil)
+	if IsValid(self.Weapon) then
+		self.Weapon:Remove()
+	end
+	if IsValid(self.laser) then
+		self.laser:Remove()
+	end
+end
+
+function ENT:OnOtherKilled(e, info)
+	if e == self.Enemy then
+		self.killcount = (self.killcount or 0) + 1
+	end
+	
+	for k, v in pairs(ents.FindInSphere(e:GetPos(), self.NearDistance)) do
+		if self:IsValidate(v) == 0 then
+			if not IsValid(self:GetEnemy()) then
+				self:SetEnemy(v)
+				break
+			else
+				if not self:CanSee() or self:GetRangeSquaredTo(v) <
+					self:GetRangeSquaredTo(self:GetEnemy():GetPos()) then
+					self:SetEnemy(v)
+					break
+				end
+			end
+		end
+	end
+end
+
+function ENT:OnInjured(info)
+	local h = self:Health() / 125 * 255
+	self:SetColor(Color(h, h, h, 255))
+	if self.escapebias > 2 then
+		self.escapebias = self.escapebias * 0.6
+	end
+	
+	if info:IsDamageType(DMG_BURN) or self:IsValidate(info:GetAttacker()) ~= 0 then
+		return
+	end
+	if IsValid(self) and self:IsValidate(info:GetAttacker()) == 0 then
+		local ang = (info:GetAttacker():GetPos() - self:GetPos()):Angle()
+		self:EmitSound(InjuredSound)
+		if not IsValid(self:GetEnemy()) or not self:CanSee() then
+			self:SetEnemy(info:GetAttacker())
+			self:SetAngles(Angle(0, ang.yaw, ang.roll))
+		--	self.userstuck = true
+		elseif self:GetRangeSquaredTo(self:GetEnemy():GetPos()) > self:GetRangeSquaredTo(info:GetAttacker():GetPos()) then
+			self:SetEnemy(info:GetAttacker())
+			self:SetAngles(Angle(0, ang.yaw, ang.roll))
+		--	self.userstuck = true
+		end
+	end
+end
+
+function ENT:OnKilled(info)
+	hook.Call("OnNPCKilled", GAMEMODE, self, info:GetAttacker(), info:GetInflictor())
+	self:OnRemove()
+	self:BecomeRagdoll(info)
+	
+	if SERVER then
+		PrintMessage(HUD_PRINTTALK, "Znkk Sniper got " .. (self.killcount or 0) .. " kill(s).")
+	end
+end
+
+function ENT:SetRunAnim()
+	if self.dist < self.NearDistance then
+		if self:GetActivity() ~= self.RunRifle then
+			self:StartActivity(self.RunRifle)
+			self:Give(false)
+		end
+	else
+		if self:GetActivity() ~= self.RunPistol then
+			self:StartActivity(self.RunPistol)
+			self:Give(true)
+		end
+	end
+end
+
+function ENT:Throw()
+	if self.dist < self.NearDistance * 0.7 then return end
+	if navmesh.GetNearestNavArea(self:GetPos()):GetAdjacentCount() < 6 then return end
+	local throwVec = self.lastsaw - self:GetEye().Pos
+	local pow = math.pow(self.dist, 1.015)
+	local att = "anim_attachment_LH"
+	local p = self:GetAttachment(self:LookupAttachment(att))
+	local up = util.TraceLine({
+		start = p.Pos,
+		endpos = p.Pos + self:GetForward() * self.dist + Vector(0, 0, self.dist * 0.6),
+		filter = self
+	})
+	
+	if not up.Hit then
+		if throwVec.z > 0 then
+			throwVec = throwVec + Vector(0, 0, throwVec.z * 2.5)
+		else
+			throwVec.z = 0--throwVec.z / 8
+		end
+	end
+	debugoverlay.Line(self.lastsaw, self:GetEye().Pos, 2, Color(0,255,0,255),true)
+	debugoverlay.Line(p.Pos, p.Pos + throwVec, 2, Color(0,255,0,255),true)
+	
+	timer.Simple(0.8, function()
+		if not IsValid(self) then return end
+		local ent = ents.Create("npc_grenade_frag")
+		ent:Input("settimer",self, self, self.dist^0.0125)
+		ent:SetPos(p.Pos)
+		ent:SetAngles(p.Ang)
+		ent:SetOwner(self)
+		ent:Spawn()
+		
+		local phys = ent:GetPhysicsObject()
+        phys:ApplyForceCenter(throwVec:GetNormalized() * self.dist * 2)
+	end)
+	self.look = false
+	self:PlaySequenceAndWait("grenadethrow")
+	self.look = true
+end
+
+function ENT:findpath(area, fromArea, ladder, elevator, length)
+	if not IsValid(fromArea) then
+		// first area in path, no cost
+		debugoverlay.Line(area:GetCenter(), area:GetCenter() + Vector(0, 0, 100), 5, Color(255,0,255,255),true)
+		return 0
+	else
+		if not self.loco:IsAreaTraversable(area) then
+			// our locomotor says we can't move here
+			return -1
+		end
+		
+		local t = util.TraceHull({
+			start = area:GetCenter(),
+			endpos = area:GetCenter() + Vector(0, 0, self.loco:GetMaxJumpHeight()),
+			maxs = Vector(area:GetSizeX() / 2, area:GetSizeY() / 2, self.loco:GetMaxJumpHeight()),
+			mins = Vector(area:GetSizeX() / -2, area:GetSizeY() / -2, 0),
+			mask = MASK_NPCSOLID
+		})
+		if t.Hit and IsValid(t.Entity) then
+			local p = t.Entity:GetPhysicsObject()
+			if IsValid(p) then
+				return p:GetVolume()
+			else
+				return -1
+			end
+		end
+		
+		// compute distance traveled along path so far
+		local dist = 0
+		
+		if IsValid(ladder) then
+			dist = ladder:GetLength()
+		elseif length > 0 then
+			// optimization to avoid recomputing length
+			dist = length
+		else
+			dist = (area:GetCenter() - fromArea:GetCenter()):GetLength()
+		end
+		
+		local cost = dist + fromArea:GetCostSoFar()
+		
+		// check height change
+		local deltaZ = fromArea:ComputeAdjacentConnectionHeightChange(area)
+		if deltaZ >= self.loco:GetStepHeight() then
+			if deltaZ >= self.loco:GetMaxJumpHeight() then
+				// too high to reach
+				return -1
+			end
+			
+			// jumping is slower than flat ground
+			local jumpPenalty = 5
+			cost = cost + jumpPenalty * dist
+		elseif deltaZ < -self.loco:GetDeathDropHeight() then
+			// too far to drop
+			return -1
+		end
+		
+		return cost
+	end
+end
+
+function ENT:Chase()
+	if not IsValid(self:GetEnemy()) then return "invalid" end
+	local path = Path("Follow")
+	local prevpos = self:GetPos()
+	
+	path:SetMinLookAheadDistance(100)
+	path:SetGoalTolerance(self.NearDistance)
+	path:Compute(self, self:GetEnemy():GetPos())--, function(area, fromArea, ladder, elevator, length) return self:findpath(area, fromArea, ladder, elevator, length) end)
+	
+	while path:IsValid() do
+		if path:GetAge() > 60 or not IsValid(self:GetEnemy()) then
+			self:SetEnemy(nil)
+			self:HaveEnemy()
+			return "invalid"
+		end
+		
+		self.look = false
+		self.dist = self:GetRangeTo(self.lastsaw)
+		self:SetRunAnim()
+		
+		if self:HaveEnemy() and self:CanSee(nil, nil, nil, true) then
+			return "canshoot"
+		end
+		
+		seg = path:GetCurrentGoal()
+		if seg.type == 2 then
+			self.loco:Jump()--AcrossGap(seg.pos + Vector(0, 0, self.StepHeight), seg.forward + Vector(0, 0, self.StepHeight))
+			self:StartActivity(act or self.RunPistol)
+		end
+		
+		--path:Chase(self, self:GetEnemy())
+		path:Update(self)
+		--path:Draw()
+		
+		-- If we're stuck then call the HandleStuck function and abandon
+		if self.loco:IsStuck() or self.userstuck then
+			self:HandleStuck()
+			self.loco:FaceTowards(self:GetPos() + self:GetRight() * 100)
+			return "stuck"
+		end
+		
+		coroutine.yield()
+		
+		self.userstuck = self.userstuck or (self:GetRangeSquaredTo(prevpos) == 0)
+		prevpos = self:GetPos()
+	end
+	
+	return "ok"
+end
+function ENT:Move(moveto, shoot, opt)
+    if not IsValid(self) then return "invalid" end
+    
+    if shoot == nil then shoot = true end
+    local opt = opt or {}
+	local path = Path("Follow")
+	local to = moveto or (self:GetPos() + Vector(math.Rand(-1, 1), math.Rand(-1, 1), 0) * (opt.dist or 400))
+	local prevpos = self:GetPos()
+	local seg = nil
+	local act = self:GetActivity()
+	local stuck = false
+	
+	local n = navmesh.Find(to, opt.tolerance or 10, self.StepHeight * 3, self.StepHeight)
+	local vis = false
+	for k, v in pairs(n) do
+		if self.loco:IsAreaTraversable(v) then
+			vis = true
+			break
+		end
+	end
+	
+	if not vis then
+		debugoverlay.Line(self:GetPos(), to, 5, Color(255, 0, 0, 255), true)
+		return "invalid"
+	end
+	
+	path:SetMinLookAheadDistance(opt.lookahead or 1000)
+	path:SetGoalTolerance(opt.tolerance or 50)
+	path:Compute(self, to)--, function(area, fromArea, ladder, elevator, length) return self:findpath(area, fromArea, ladder, elevator, length) end)
+	
+	if not path:IsValid() then
+		if false and self:GetRangeTo(to) < 512 then
+			local dir = (to - self:GetPos()):GetNormalized()
+			local ang = Angle(0, 0, 0)
+		--	debugoverlay.Line(self:GetPos(), to, 3, Color(0, 255, 0, 255), true)
+			while (to - self:GetPos()):Length2DSqr() > 225 do
+			--	self:PlaySequenceAndWait("Idle_to_Sit_Ground")
+			--	self:PlaySequenceAndWait("Sit_Ground_to_Idle")
+				if not util.QuickTrace(self:GetPos() + dir * 8, Vector(0, 0, -self.StepHeight * 3), {self, self.Weapon}).Hit then
+					return "invalid"
+				end
+				
+				self:SetPos(self:GetPos() + dir)
+				ang:Set(self:GetAngles())
+				ang.y = ang.y + (dir:Angle().y - ang.y) / 10
+				self:SetAngles(ang)
+				self:SetCycle(self:GetCycle() + 0.02)
+				local t = {
+					start = self:GetPos(),
+					endpos = self:GetPos() + Vector(0, 0, self.StepHeight + 1),
+					maxs = Vector(13, 13, self.StepHeight),
+					mins = Vector(-13, -13, 0),
+					mask = MASK_NPCSOLID,
+					filter = {self, self.Weapon}
+				}
+				local tr = util.TraceHull(t)
+				if tr.Hit then
+					self:SetPos(self:GetPos() - dir)
+					return "invalid"
+				end
+				coroutine.yield()
+			end
+		end
+		
+		return "invalid"
+	end
+	
+	while path:IsValid() and (not opt.stuckflag or opt.stuckflag(self, opt.seg, opt.len)) do
+		self.look = false
+		
+		if moveto and path:GetAge() > 60 then
+			path:Compute(self, to)--, function(area, fromArea, ladder, elevator, length) return self:findpath(area, fromArea, ladder, elevator, length) end)
+		end
+		
+		if shoot and self:HaveEnemy() and self:CanSee(nil, nil, nil, true) then
+			return "canshoot"
+		end
+		
+		seg = path:GetCurrentGoal()
+	--	if seg.type == 2 then
+	--		self.loco:JumpAcrossGap(seg.pos + Vector(0, 0, self.StepHeight), seg.forward + Vector(0, 0, self.StepHeight))
+	--		self:StartActivity(act or self.RunPistol)
+	--	end
+		
+		if false and (opt.stuckcount or 0) < 5 then
+			for _ = 1, 2 do
+				seg = path:GetCurrentGoal()
+				local l = 1
+				if _ == 2 then l = -1 end
+				local st = self:GetPos() - self:GetRight() * 12 * l - self:GetForward() * 20 + Vector(0, 0, self.StepHeight)
+				local t = util.QuickTrace(st, seg.forward:GetNormalized() * 35, {self, self.Weapon})
+				
+			--	debugoverlay.Line(st, st + seg.forward * 35, 3, Color(0, 255, 0, 255), true)
+				while t.HitNonWorld and (not opt.seg or opt.seg:Dot(-t.HitNormal) < 0.98) do
+					_ = 2
+					local n = t.HitNormal:GetNormalized()
+					n:Rotate(Angle(0, 90 * l, 0))
+					self:Move(self:GetPos() + n * 50, false, {
+						stuckcount = (opt.stuckcount or 0) + 1,
+						seg = -t.HitNormal,
+						tolerance = 10,
+						len = 12 * l,
+						stuckflag = function(self, seg, len)
+							if not seg then return true end
+							debugoverlay.Line(self:GetPos() - self:GetForward() * len + Vector(0, 0, self.StepHeight),
+								self:GetPos() - self:GetForward() * len + Vector(0, 0, self.StepHeight) + seg * 60, 3, Color(0, 255, 0, 255), true)
+							return util.QuickTrace(self:GetPos() - self:GetForward() * len + Vector(0, 0, self.StepHeight), seg * 60, {self, self.Weapon}).Hit
+						end
+					})
+					
+					seg = path:GetCurrentGoal()
+					st = self:GetPos() - self:GetForward() * 20 + Vector(0, 0, self.StepHeight)
+					t = util.QuickTrace(st, seg.forward * 60, {self, self.Weapon})
+					debugoverlay.Line(st, st + seg.forward * 60, 3, Color(255, 0, 255, 255), false)
+					coroutine.yield()
+					
+					if opt.stuckcount then
+						t.HitNonWorld = false
+						to = self:GetPos() - self:GetRight() * 100 * l
+						path:Compute(self, to)
+						opt.seg = false
+					end
+				end
+			end
+		--	if opt.stuckcount and path:GetAge() > 0.08 then
+		--		to = self:GetPos() + self:GetForward() * 50
+		--		path:Compute(self, to)
+		--	end
+		end
+		
+	--	path:Draw()
+		path:Update(self)
+		
+		if self.jumping then
+			self.loco:Jump()--AcrossGap(to, self:GetForward())
+			self.jumping = false
+		--	self:StartActivity(act)
+		end
+		
+		-- If we're stuck then call the HandleStuck function and abandon
+		if self.loco:IsStuck() or self.userstuck then
+			self.userstuck = false
+			self:HandleStuck()
+			stcount = (stcount or 0) + 1
+			if stcount and stcount > 5 then
+				stcount = 0
+				return "stuck"
+			end
+			self:Move(self:GetPos() + self:GetRight() * math.Rand(-100, 100), true, opt)
+			self.userstuck = false
+		end
+		coroutine.yield()
+		self.userstuck = self.userstuck or (self:GetRangeSquaredTo(prevpos) == 0)
+	--	stuck = (path:GetAge() > 1) and (self:GetRangeSquaredTo(prevpos) == 0)
+		prevpos = self:GetPos()
+	end
+	return "ok"
+end
+
+function ENT:SetSnipe()
+	self:Wait(math.Rand(0.2, 0.8))
+	
+	local spots = navmesh.Find(self:GetPos(), 2000, self.StepHeight, self.StepHeight)
+	local target, found = nil, {}
+	local visible = false
+	local p = Path("Follow")
+	
+	for k, n in pairs(spots) do
+		if k > 300 then break end
+		visible, pos = n:IsVisible(self:GetTargetPos(false) or self.lastsaw)
+		pos = n:GetRandomPoint() + Vector(0, 0, 45)
+		if (self:GetTargetPos(false) - self:GetPos()):LengthSqr() < (self:GetTargetPos(false) - pos):LengthSqr()
+			and self:CanSee(pos, nil, nil, true) then
+			p:Invalidate()
+			p:Compute(self, pos)
+			table.insert(found, {vec = pos, len = p:GetLength()})
+			if p:GetLength() < 1200 then break end
+		end
+	end
+	
+	self:SetRunAnim()
+	if #found > 0 then
+		table.SortByMember(found, "len", true)
+		local n = 1
+	--	for i = 1, #found do
+	--		if self:CanSee(found[i].vec + Vector(0, 0, 40)) then
+	--			n = i
+	--			break
+	--		end
+	--	end
+		
+		self.loco:SetDesiredSpeed(200)
+		self.loco:SetAcceleration(1000)
+		self:Move(found[n].vec, true, {tolerance = 6})
+		self.loco:FaceTowards(self.lastsaw)
+	elseif (not spots) or spots == {} then
+		self:Move(self:GetPos() + self:GetRight() * 200 * math.Rand(-1, 1), false, {tolerance = 6})
+	else
+		self:HaveEnemy()
+		self:Chase()
+	end
+end
+
+function ENT:Escape(shoot, ent, far)
+	local e = ent or self:GetEnemy()
+	if not IsValid(e) then
+		if not self:HaveEnemy() then
+			return
+		end
+	end
+	local shoot = shoot or false
+	local spots = navmesh.Find(self:GetPos(), 5000, self.StepHeight, self.StepHeight)
+	local target, found = nil, {}
+	local visible = false
+	local p = Path("Follow")
+	
+	for k, n in pairs(spots) do
+	--	if k > 300 then break end
+	--	visible, pos = n:IsVisible(self:GetTargetPos(false) or self.lastsaw)
+		pos = n:GetRandomPoint() + Vector(0, 0, 30)
+		if (self:GetTargetPos(false, e) - self:GetPos()):LengthSqr() <
+			(self:GetTargetPos(false, e) - pos):LengthSqr() then
+			if not self:CanSee(pos, 90000, e) then
+				p:Invalidate()
+				p:Compute(self, pos)
+				
+				if p:FirstSegment() then
+					if p:FirstSegment().forward:Dot(self:GetTargetPos(false, e) - self:GetPos()) < 0.4 then
+						table.insert(found, {vec = pos, len = p:GetLength(), path = p})
+						if far then
+							if p:GetLength() > 1500 then break end
+						else
+							if p:GetLength() < 800 then break end
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	self.loco:SetDesiredSpeed(200)
+	self.loco:SetAcceleration(1000)
+	self:SetRunAnim()
+--	print(#found)
+	if #found > 0 then
+		table.SortByMember(found, "len", far)
+		local n = 1
+	--	debugoverlay.Line(found[n].vec, self:GetTargetPos(false))
+		self:Move(found[n].vec, shoot, {tolerance = 10})
+	else
+	--	self:Move(self:GetPos() + self:GetRight() * 200 * math.Rand(-1, 1), shoot, {tolerance = 10})
+	end
+end
+
+function ENT:Give(class)
+	if not IsValid(self) then return end
+	if IsValid(self.Weapon) then
+		self.Weapon:Remove()
+	elseif class then
+		self:PlaySequenceAndWait("drawpistol")
+		self:StartActivity(self.Idle)
+	end
+	
+	local att = "anim_attachment_RH"
+	local shootpos = self:GetAttachment(self:LookupAttachment(att))
+	
+	if GreatfulDead then
+		if class then class = "models/weapons/w_357.mdl" else class = "models/weapons/w_shotgun.mdl" end
+	else
+		if class then class = "models/weapons/w_pistol.mdl" else class = "models/weapons/w_smg1.mdl" end
+	end
+--	if class then class = "weapon_pistol" else class = "weapon_smg1" end
+--	if class then class = "weapon_357" else class = "weapon_shotgun" end
+	local wep = ents.Create("prop_physics")
+	wep:SetModel(class)
+	wep.Owner = self
+	wep:SetOwner(self)
+	wep:SetPos(shootpos.Pos)
+	--wep:SetAngles(ang)
+	wep:Spawn()
+	wep:SetKeyValue("spawnflags", 1+2+4) --Adds Spawn Flags.  2 .. Deny player pickup, 4 .. Not puntable bu Gravity Gun.
+	
+	wep:SetSolid(SOLID_NONE)
+	wep:SetParent(self)
+	
+	wep:Fire("setparentattachment", "anim_attachment_RH")
+	wep:AddEffects(EF_BONEMERGE)
+	wep:SetAngles(self:GetForward():Angle())
+	
+	self.Weapon = wep
+end
+
+function ENT:Reload(pistol)
+	if pistol then
+		if self:GetEyeTrace().Fraction < 0.3 then
+			self:PlaySequenceAndWait( "reload_pistol" )
+		else
+			self:PlaySequenceAndWait( "Stand_to_crouchpistol", 1.5 )
+			self:PlaySequenceAndWait( "crouch_reload_pistol" )
+			self:PlaySequenceAndWait( "Crouch_to_standpistol", 1.5 )
+		end
+		self:StartActivity(self.Idle)
+		self.PistolAmmo = RifleClip
+	else
+		if self:GetEyeTrace().Fraction < 0.3 then
+			self:PlaySequenceAndWait( "reload_smg1" )
+		else
+			self:PlaySequenceAndWait( "Stand_to_crouchsmg1", 1.5 )
+			self:PlaySequenceAndWait( "crouch_reload_smg1" )
+			self:PlaySequenceAndWait( "Crouch_to_standsmg1", 1.5 )
+		end
+		self:StartActivity(self.Idle)
+		self.RifleAmmo = RifleClip
+	end
+end
+
+function ENT:FireWeapon(smg)
+	if not IsValid(self) then return end
+	if not IsValid(self:GetEnemy()) then return end
+	if not self:CanSee(nil, nil, nil, true) then return end
+	local wep = self.Weapon
+	if not IsValid(wep) then return end
+	
+	local shootPos = self:GetMuzzle().Pos
+	local num = 1
+	local spread = 15
+	local dmg = 5
+	local ammo = "RPG_Round"
+	local _next = 0.4
+	
+	if GreatfulDead then
+		spread = 0
+		dmg = 40
+		ammo = "357"
+		_next = 0.5
+	end
+	
+	--	for i = 1, self:GetSequenceCount() - 1 do
+	--		print(self:GetSequenceName(i))
+	--	end
+	if self.dist < self.NearDistance then
+		num = 1
+		spread = 15
+		dmg = 4
+		ammo = "RPG_Round"
+		_next = 0
+		
+		if GreatfulDead then
+			num = 7
+			spread = 10
+			dmg = 8
+			_next = 0.5
+			ammo = "Shotgun"
+		end
+		
+		if self.RifleAmmo <= 0 then
+			self.look = false
+			self:Escape()
+			self:Reload(false)
+			self:SetSnipe()
+			self.look = true
+			return
+		end
+		if CurTime() - self.NextFire < _next then return end
+		wep:EmitSound(ShootSound)
+		
+		if not (self:GetActivity() == self.ShootRifle) then
+			self:StartActivity(self.ShootRifle)
+		end
+		self.RifleAmmo = self.RifleAmmo - 1
+	else
+		if self.PistolAmmo <= 0 then
+			self.look = false
+			self:Escape()
+			self:Reload(true)
+			self:SetSnipe()
+			self.look = true
+			return
+		end
+		if CurTime() - self.NextFire < _next then return end
+		wep:EmitSound(SnipeSound)
+		
+		if not (self:GetActivity() == self.ShootPistol) then
+			self:StartActivity(self.ShootPistol)
+		end
+		self.PistolAmmo = self.PistolAmmo - 1
+	end
+	if self:GetEnemy() then
+		self.loco:FaceTowards(self:GetEnemy():GetPos())
+		coroutine.yield()
+	end
+	
+	local dir = self:GetTargetPos(true)
+	
+	local bullet = {
+		Attacker = self,
+		Num = num,
+		Src = shootPos + (dir - shootPos):GetNormalized(),
+		Dir = dir - shootPos,
+		Spread = Vector(spread, spread, 0),
+		Force = 9999999,
+		Damage = dmg,
+		AmmoType = ammo,
+		Callback = function(attacker, tr, dmginfo)
+			if not IsValid(attacker:GetEnemy()) then return end
+			if not IsValid(tr.Entity) then return end
+			if not tr.Entity == attacker:GetEnemy() then return end
+			
+			if tr.Entity:GetClass() == "npc_turret_floor" then
+				tr.Entity:Fire("SelfDestruct")
+			elseif tr.Entity:GetClass() == "npc_rollermine" then
+				util.BlastDamage(self.Weapon, self, tr.Entity:GetPos(), 1, 1)
+			end
+		end,
+	}
+	--print("fire")
+	wep:FireBullets(bullet)
+	self:MuzzleFlash()
+	wep:MuzzleFlash()
+	self.NextFire = CurTime()
+	
+	if self.dist < self.NearDistance and (not smg or smg < math.random(1, 3)) then
+		coroutine.wait(0.01)
+		coroutine.yield()
+		self:FireWeapon((smg or 0) + 1)
+	end
+end
+
+function ENT:GetYawPitch(vec)
+	--This gets the offset from 0,2,0 on the entity to the vec specified as a vector
+	local yawAng = vec - self:GetAttachment(self:LookupAttachment("eyes") or 1).Pos
+	--Then converts it to a vector on the entity and makes it an angle ("local angle")
+	local yawAng = self:WorldToLocal(self:GetPos() + yawAng):Angle()
+	
+	--Same thing as above but this gets the pitch angle. Since the turret's pitch axis and the turret's yaw axis are seperate I need to do this seperately.
+	local pAng = vec - self:LocalToWorld((yawAng:Forward() * 8) + Vector(0, 0, 50))
+	local pAng = self:WorldToLocal(self:GetPos() + pAng):Angle()
+
+	--Y=Yaw. This is a number between 0-360.	
+	local y = yawAng.y
+	--P=Pitch. This is a number between 0-360.
+	local p = pAng.p
+	
+	--Numbers from 0 to 360 don't work with the pose parameters, so I need to make it a number from -180 to 180
+	if y >= 180 then y = y - 360 end
+	if p >= 180 then p = p - 360 end
+	if y <- 60 || y > 60 then return false end
+	if p <- 80 || p > 50 then return false end
+	--Returns yaw and pitch as numbers between -180 and 180	
+	return y, p
+end
+
+--This grabs yaw and pitch from ENT:GetYawPitch. 
+--This function sets the facing direction of the turret also.
+function ENT:Aim(vec)
+	local y, p = self:GetYawPitch(vec)
+	if y == false then
+		return false
+	end
+	self:SetPoseParameter("aim_yaw", y)
+	self:SetPoseParameter("aim_pitch", p)
+	return true
+end
+
+function ENT:Think()
+--	if SERVER then
+--		local n = navmesh.Find(self:GetPos(), 5000, self.StepHeight, self.StepHeight)
+--		for k, v in pairs(n) do
+--			vis, pos = v:IsVisible(self:GetPos() + Vector(0, 0, 40), {self})
+--			if  vis then
+--				v:Draw()
+--				debugoverlay.Line(self:GetPos() + Vector(0, 0, 40), pos)
+--			--	debugoverlay.Line(pos, pos + Vector(0,0,100))
+--			end
+--		end
+--		self:NextThink(CurTime() + 0.2)
+--	end
+--	if SERVER and self:WaterLevel() > 1 then
+--		self:SetHealth(0)
+--		util.BlastDamage(game.GetWorld(), game.GetWorld(), self:GetPos(), 10, 10)
+--	end
+	if not IsValid(self:GetEnemy()) then
+		if IsValid(self.laser) then
+			self.laser:SetNWBool("isenemy", false)
+		end
+		return false
+	end
+	
+	if self.look then
+		self.loco:FaceTowards(self.lastsaw)
+		self:Aim(self:GetTargetPos(false))
+	end
+	
+--	debugoverlay.Line(self:GetEnemy():GetPos(), self:GetEnemy():GetPos() + Vector(0, 0, 100))
+--	if not self:CanSee(nil, nil, nil, true) then
+--		local d = self.StepHeight + 2
+--		self.jumping = util.TraceLine({
+--			start = self:GetPos() + Vector(0, 0, d),
+--			endpos = self:GetPos() + Vector(0, 0, d) + self:GetForward() * 30,
+--			filter = self
+--		}).Hit and not util.TraceLine({
+--			start = self:GetPos() + Vector(0, 0, self.JumpHeight),
+--			endpos = self:GetPos() + Vector(0, 0, self.JumpHeight) + self:GetForward() * 30,
+--			filter = self
+--		}).Hit and not util.TraceLine({
+--			start = self:GetPos() + Vector(0, 0, d),
+--			endpos = self:GetPos() + Vector(0, 0, self.JumpHeight + d),
+--			filter = self
+--		}).Hit
+--		
+--		debugoverlay.Line(self:GetPos() + Vector(0, 0, d), self:GetPos() + Vector(0, 0, self.JumpHeight + d), 0.1, Color(0, 255, 0, 255), false)
+--		debugoverlay.Line(self:GetPos() + Vector(0, 0, self.JumpHeight + d), self:GetPos() + Vector(0, 0, self.JumpHeight + d) + self:GetForward() * 80, 0.1, Color(0, 255, 0, 255), false)
+--		debugoverlay.Line(self:GetPos() + Vector(0, 0, d), self:GetPos() + Vector(0, 0, d) + self:GetForward() * 80, 0.1, Color(0, 255, 0, 255), false)
+--	end
+	
+	if IsValid(self.laser) then
+		if IsValid(self.Weapon) then
+			self.laser:SetNWVector("starts", self.Weapon:GetAttachment(self.Weapon:LookupAttachment("muzzle")).Pos)
+		end
+		
+		self.laser:SetNWVector("ends", self:GetTargetPos(false))
+		self.laser:SetNWBool("isenemy", self.look)
+	end
+	
+	return true
+end
+
+function ENT:Wait(sec)
+	for i = 1, 10 do
+		if self:HaveEnemy() then break end
+		coroutine.wait((sec or 2.5) / 10)
+		coroutine.yield()
+		if self:GetEyeTrace().Fraction < 0.5 then
+			self.loco:FaceTowards(self:GetEye().Pos + self:GetEyeTrace().HitNormal * 10)
+		end
+		for k, v in pairs(ents.FindInSphere(self:GetPos(), 200)) do
+			
+			if IsValid(v) and v:GetClass() == "npc_grenade_frag" then
+				self:Escape(nil, v)
+				return
+			end
+		end
+	end
+end
+
+function ENT:RunBehaviour()
+	while true do
+		if not tobool(GetConVarNumber("ai_disabled")) then
+			local e = 0
+			for k, v in pairs(ents.FindInSphere(self:GetPos(), 1000)) do
+				if self:IsValidate(v) == 0 and self:CanSee(nil, nil, v) then
+					e = e + 1
+				end
+			end
+			
+			if math.Rand(0, self.escapebias * 1.5) < e then
+				self:Escape(math.Rand(0, self.escapebias * 3) < e, nil, true)
+			end
+			
+			self:MakeTarget()
+			if self:HaveEnemy() then
+				self.look = true
+				
+				self.loco:SetAcceleration(1000)
+				self.loco:SetDeceleration(1000)
+				
+		 		if not self:CanSee(nil, nil, nil, true) then
+				--	coroutine.wait(0.4)
+					if self.dist < self.NearDistance * 2 then
+						self:Throw()
+						self:Escape()
+					end
+					
+					self:HaveEnemy()
+					self:SetSnipe()
+				else
+					self.lastsaw = self:GetEnemy():GetPos()
+					self.dist = self:GetRangeTo(self.lastsaw)
+				end
+				
+				if self.dist < self.NearDistance then
+					if not (self:GetActivity() == self.StandRifle) then
+						self:StartActivity(self.StandRifle)
+					end
+					self:Give(false)
+				else
+					if not (self:GetActivity() == self.StandPistol) then
+						self:StartActivity(self.StandPistol)
+					end
+					self:Give(true)
+				end
+				self:FireWeapon()
+				
+				if not self:GetEnemy() then
+					self:SetEnemy(nil)
+					self:StartActivity(self.Idle)
+					self:Wait()
+				end
+			else
+			--	self:PlaySequenceAndWait("")
+				self.look = false
+				self.aimattach = 1
+				
+				if not self:HaveEnemy() then
+					self:StartActivity(self.Walk)
+					self.loco:SetDesiredSpeed(self.WalkSpeed)
+					self.loco:SetAcceleration(1000)
+					self.loco:SetDeceleration(1000)
+					if self:Move(nil, true, {}) ~= "canshoot" then
+						if self.loco:IsStuck() then
+							self.loco:FaceTowards(self:GetPos() - self:GetForward())
+						end
+						self:StartActivity(self.Idle)
+					else
+						if IsValid(self.Weapon) then
+							if self.RifleAmmo < RifleClip then
+								self:Escape()
+								self:Give(false)
+								self:Reload(false)
+							end
+							if self.PistolAmmo < RifleClip then
+								self:Escape()
+								self:Give(true)
+								self:Reload(true)
+							end
+							
+							self:StartActivity(self.Idle)
+						else
+							self:Give(true)
+						end
+					end
+					self.escapebias = self:Health() / 10
+				end
+				
+				self:Wait(math.Rand(1, 5))
+			end
+			
+			self.userstuck = false
+			self.loco:ClearStuck()
+		end
+		coroutine.wait(0.1)
+	end
+end

@@ -1,0 +1,81 @@
+--THROW_SPEED = 650
+function ENT:GetTossVec(v1, v2, pow)
+	local tr
+	local vMidPoint //halfway point between v1 and v2
+	local vApex //highest point
+	local vScale
+	local velocity
+	local vTemp
+	local g = GetConVar("sv_gravity"):GetFloat() -- * gravity_adjust
+	
+	if v1.z > v2.z + (pow * (500 / 650)) then return end //to high, fail
+	
+	// toss a little bit to the left or right, not right down on the enemy's bean (head). 
+	v2.x = v2.x + math.Rand(-8, 8)
+	v2.y = v2.y + math.Rand(-8, 8)
+	
+	// How much time does it take to get there?
+	// get a rough idea of how high it can be thrown
+	vMidPoint = v1 + (v2 - v1) * 0.5
+	tr = util.QuickTrace(vMidPoint, Vector(0, 0, pow * (500 / 650)), self)
+	vMidPoint = tr.HitPos
+	
+	// (subtract 15 so the grenade doesn't hit the ceiling)
+	vMidPoint.z = vMidPoint.z - 15
+	
+	if (vMidPoint.z < v1.z) or (vMidPoint.z < v2.z) then return end //to not enough space, fail
+	
+	// How high should the grenade travel to reach the apex
+	local d1 = vMidPoint.z - v1.z
+	local d2 = vMidPoint.z - v2.z
+	
+	// How long will it take for the grenade to travel this distance
+	local t1 = math.sqrt(d1 / ((0.5 / 650) * pow * g))
+	local t2 = math.sqrt(d2 / ((0.5 / 650) * pow * g))
+	
+	if t1 < 0.1 then return end //too close
+	
+	// how hard to throw sideways to get there in time.
+	velocity = (v2 - v1) / (t1 + t2)
+	// how hard upwards to reach the apex at the right time.
+	velocity.z = g * t1
+	
+	
+	// find the apex
+	vApex = v1 + velocity * t1
+	vApex.z = vMidPoint.z
+	
+	debugoverlay.Line(v1, vApex, 3, Color(0,255,255,255),true)
+	debugoverlay.Line(v2, vApex, 3, Color(0,255,255,255),true)
+	tr = util.TraceLine({start = v1, endpos = vApex, filter = self})
+	if tr.Fraction ~= 1.0 then return end //fail
+	
+	// UNDONE: either ignore monsters or change it to not care if we hit our enemy
+	tr = util.TraceLine({start = v2, endpos = vApex, filter = self, mask = MASK_NPCSOLID_BRUSHONLY})
+	if tr.Fraction ~= 1.0 then return end //fail
+	
+	return velocity, t1 + t2
+end
+
+function ENT:GetThrowVec(v1, v2, pow)
+	local g = GetConVar("sv_gravity"):GetFloat()
+	local velocity = v2 - v1
+	
+	//throw at a constant time
+	local time = velocity:Length() / pow
+	velocity = velocity * (1.0 / time)
+	
+	//adjust upward toss to compensate for gravity loss
+	velocity.z = velocity.z + (g * time * (0.5 / 650) * pow)
+	local vApex = v1 + ((v2 - v1) * 0.00076923078 * pow)
+	vApex.z = vApex.z + (0.5 * g * (time * (0.5 / 650) * pow)^2)
+	
+	debugoverlay.Line(v1, vApex, 3, Color(0,255,255,255),true)
+	debugoverlay.Line(v2, vApex, 3, Color(0,255,255,255),true)
+	local tr = util.TraceLine({start = v1, endpos = vApex, filter = self})
+	if tr.Fraction ~= 1.0 then return end
+	tr = util.TraceLine({start = v2, endpos = vApex, filter = self, mask = MASK_NPCSOLID_BRUSHONLY})
+	if tr.Fraction ~= 1.0 then return end
+	
+	return velocity,velocity.z * 2 / g
+end
