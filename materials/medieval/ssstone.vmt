@@ -1,0 +1,7 @@
+"LightmappedGeneric"
+{
+	"$basetexture" "medieval/ssstone"
+	"$bumpmap" "medieval/ssstone_bump"
+	"$surfaceprop" "Rock"
+                "$ssbump"1
+}
