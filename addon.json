@@ -1,0 +1,12 @@
+{
+	"title"		:	"Mad Vehicle",
+	"type"		:	"npc",
+	"tags"		:	"fun",
+	"ignore"	:
+	[
+		"*.psd",
+		"*.vcproj",
+		"*.svn*",
+		"*.png"
+	]
+}
