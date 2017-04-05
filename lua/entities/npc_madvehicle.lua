@@ -22,8 +22,9 @@ function ENT:Initialize()
 	
 	if SERVER then
 		for k, v in pairs(ents.FindInSphere(self:GetPos(), 10)) do
-			if v:IsVehicle() and v:GetWheelCount() and v:IsEngineEnabled() and not IsValid(v:GetDriver()) then
+			if v:IsVehicle() and v:GetWheelCount() and not IsValid(v:GetDriver()) then
 				self.v = v
+				v:EnableEngine(true)
 				v:StartEngine(true)
 			end
 		end
@@ -41,6 +42,12 @@ function ENT:Initialize()
 			self.loop:SetSoundLevel(80)
 			self.loop:Play()
 		end
+		
+		for k, v in pairs(ents.GetAll()) do
+			if IsValid(v) and isfunction(v.AddEntityRelationship) then
+				v:AddEntityRelationship(self, D_HT, 0)
+			end
+		end
 	end
 end
 
@@ -51,16 +58,6 @@ end
 
 if SERVER then	
 	CreateConVar("madvehicle_playmusic", 0, FCVAR_ARCHIVE, "Mad Vehicle: If 1, the vehicles play a music.")
-	
-	hook.Add("OnEntityCreated", "MadVehicle!", function(e)
-		if IsValid(e) and e:GetClass() ~= "npc_madvehicle" and isfunction(e.AddEntityRelationship) then
-			for k, v in pairs(ents.FindByClass("npc_madvehicle")) do
-				if IsValid(v) then
-					e:AddEntityRelationship(v, D_HT, 0)
-				end
-			end
-		end
-	end)
 	
 	function ENT:OnRemove()
 		if IsValid(self.v) and self.v:IsVehicle() and not IsValid(self.v:GetDriver()) then
@@ -82,7 +79,7 @@ if SERVER then
 	function ENT:Validate(v)
 		return IsValid(v) and v:GetClass() ~= "npc_madvehicle" and v:OnGround() and 
 		(v:WorldSpaceCenter() - self.v:WorldSpaceCenter()):LengthSqr() < 4000000 and 
-		(v:IsNPC() or (v:IsPlayer() and v:Alive() and not GetConVar("ai_ignoreplayers"):GetBool()))
+		(v:IsNPC() or v.Type == "nextbot" or (v:IsPlayer() and v:Alive() and not GetConVar("ai_ignoreplayers"):GetBool()))
 	end
 	
 	function ENT:Think()
