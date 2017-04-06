@@ -15,6 +15,7 @@ list.Set("NPC", "npc_sniper", {
 AddCSLuaFile("nextbot_user_base.lua")
 AddCSLuaFile("acts.lua")
 include("acts.lua")
+include("ainodes.lua")
 
 ENT.Base = "base_nextbot"
 ENT.Type = "nextbot"
@@ -28,7 +29,7 @@ ENT.Spawnable = false
 
 ENT.AutomaticFrameAdvance = true
 
-ENT.StepHeight = 18
+ENT.StepHeight = 22
 ENT.JumpHeight = 58
 ENT.MaxHP = 125
 
@@ -82,7 +83,7 @@ function ENT:Initialize()
 	self:SetCollisionGroup(COLLISION_GROUP_NONE)
 	
 	self.loco:SetStepHeight(self.StepHeight)
-	self.loco:SetJumpHeight(self.JumpHeight)
+--	self.loco:SetJumpHeight(self.JumpHeight)
 	
 	self:SetHealth(self.MaxHP)
 	self:SetMaxHealth(self.MaxHP)
@@ -93,13 +94,7 @@ function ENT:Initialize()
 	end
 	self:Anim(ACT_IDLE)
 	
-	for k, v in pairs(ents.FindInSphere(self:GetPos(), 400)) do
-		if v:IsVehicle() then
-			self.v = v
-			v:SetThrottle(100)
-			break
-		end
-	end
+	self:ParseFile()
 end
 
 function ENT:OnRemove()
@@ -221,8 +216,8 @@ function ENT:Think()
 	if SERVER then
 		local n = navmesh.Find(self:GetPos(), 800, self.JumpHeight, self.JumpHeight * 3)
 		for k, v in pairs(n) do
-			v:Draw()
-			v:DrawSpots()
+	--		v:Draw()
+	--		v:DrawSpots()
 		end
 	end
 	
@@ -235,10 +230,9 @@ function ENT:Think()
 	return true
 end
 
-function ENT:findpath(area, fromArea, ladder, elevator, length)
+local function findpath(self, area, fromArea, ladder, elevator, length)
 	if not IsValid(fromArea) then
 		// first area in path, no cost
-		debugoverlay.Line(area:GetCenter(), area:GetCenter() + Vector(0, 0, 100), 5, Color(255,0,255,255),true)
 		return 0
 	else
 		if not self.loco:IsAreaTraversable(area) then
@@ -265,14 +259,14 @@ function ENT:findpath(area, fromArea, ladder, elevator, length)
 			// optimization to avoid recomputing length
 			dist = length
 		else
-			dist = (area:GetCenter() - fromArea:GetCenter()):GetLength()
+			dist = area:GetCenter():Distance(fromArea:GetCenter())
 		end
 		
 		local cost = dist + fromArea:GetCostSoFar()
-		
 		// check height change
 		local deltaZ = fromArea:ComputeAdjacentConnectionHeightChange(area)
 		if deltaZ >= self.loco:GetStepHeight() then
+		print(fromArea:ComputeAdjacentConnectionHeightChange(area))
 			if deltaZ >= self.loco:GetMaxJumpHeight() then
 				// too high to reach
 				return -1
@@ -281,6 +275,7 @@ function ENT:findpath(area, fromArea, ladder, elevator, length)
 			// jumping is slower than flat ground
 			local jumpPenalty = 5
 			cost = cost + jumpPenalty * dist
+			return -1
 		elseif deltaZ < -self.loco:GetDeathDropHeight() then
 			// too far to drop
 			return -1
@@ -290,138 +285,24 @@ function ENT:findpath(area, fromArea, ladder, elevator, length)
 	end
 end
 
-function ENT:Move(moveto, shoot, opt)
-    if not IsValid(self) then return "invalid" end
-    
-    if shoot == nil then shoot = true end
+function ENT:Move(moveto, opt)
     local opt = opt or {}
 	local path = Path("Follow")
 	local to = moveto or (self:GetPos() + Vector(math.Rand(-1, 1), math.Rand(-1, 1), 0) * (opt.dist or self.NearDistance))
-	local prevpos = self:GetPos()
-	local seg = nil
-	local act = self:GetActivity()
 	
-	local n = navmesh.Find(to, opt.tolerance or 10, self.JumpHeight, self.JumpHeight * 3)
-	local vis = false
-	for k, v in pairs(n) do
-		if self.loco:IsAreaTraversable(v) then
-			vis = true
-			break
-		end
-	end
-	
-	if not vis then
+	local traversable = util.QuickTrace(to, to + vector_up * 30)
+	if traversable.AllSolid then
 		debugoverlay.Line(self:GetPos(), to, 5, Color(255, 0, 0, 255), true)
 		return "invalid"
 	end
 	
 	path:SetMinLookAheadDistance(opt.lookahead or 50)
 	path:SetGoalTolerance(opt.tolerance or 50)
-	local valid = 
-	path:Compute(self, to)--, function(area, fromArea, ladder, elevator, length) return self:findpath(area, fromArea, ladder, elevator, length) end)
-	debugoverlay.Line(self:GetPos(), to, 5, Color(0, 255, 0, 255), true)
-	if not valid then
-		
-		return "invalid"
-	end
+	local valid = path:Compute(self, to, function(area, fromArea, ladder, elevator, length)
+		return findpath(self, area, fromArea, ladder, elevator, length)
+	end)
 	
-	while path:IsValid() do
-		self.look = false
-		
-		if opt.func and path:GetAge() > opt.func then
-		end
-		
-		if moveto and path:GetAge() > (opt.repath or 3) then
-			path:Compute(self, to)--, function(area, fromArea, ladder, elevator, length) return self:findpath(area, fromArea, ladder, elevator, length) end)
-			path:ResetAge()
-		end
-		
-		if path:GetAge() > (opt.maxage or 10) then
-			return "timeout"
-		end
-		
-		path:Draw()
-		if opt.draw then
-		end
-		
-		
-		--path:Draw()
-		path:Update(self)
-		seg = path:GetCurrentGoal()
-		if seg then
-			if self.loco:GetVelocity():LengthSqr() > 120*120 then
-				if seg.area:HasAttributes(NAV_MESH_JUMP) or
-					navmesh.GetNearestNavArea(self:GetPos()):HasAttributes(NAV_MESH_JUMP) then
-					self.loco:Jump()
-				end
-			end
-		--	if seg.how >= 3 then
-		--		self.loco:JumpAcrossGap(seg.pos + Vector(0,0,58), seg.forward  * self.JumpHeight)
-		--		self:Anim(ACT_RUN)
-		--	end
-			if seg.area:HasAttributes(NAV_MESH_CROUCH) then
-				self.loco:SetDesiredSpeed(120)
-				self:Anim(ACT_WALK_CROUCH)
-			else
-				self.loco:SetDesiredSpeed(200)
-				self:Anim(ACT_RUN)
-			end
-			
-			if self.userstuck then
-				while util.QuickTrace(self:GetPos() + Vector(0,0,self.StepHeight+1), seg.forward * 20, self).Hit do
-					self:SetPos(self:GetPos() + self:GetRight())
-					self:BodyMoveXY()
-					coroutine.yield()
-				end
-				self.userstuck = false
-			end
-		end
-		
-		-- If we're stuck then call the HandleStuck function and abandon
-		if self.loco:IsStuck() then
-			self:HandleStuck()
-			return "stuck"
-		end
-		coroutine.yield()
-		
-		self.userstuck = self:GetRangeTo(prevpos) == 0
-		prevpos = self:GetPos()
-	end
-	
-	return "ok"
-end
-
-function ENT:Move(moveto, shoot, opt)
-    if not IsValid(self) then return "invalid" end
-    
-    if shoot == nil then shoot = true end
-    local opt = opt or {}
-	local path = Path("Follow")
-	local to = moveto or (self:GetPos() + Vector(math.Rand(-1, 1), math.Rand(-1, 1), 0) * (opt.dist or self.NearDistance))
-	local prevpos = self:GetPos()
-	local seg = nil
-	local act = self:GetActivity()
-	local stuck = false
-	
-	local n = navmesh.Find(to, opt.tolerance or 10, self.StepHeight, self.StepHeight * 3)
-	local vis = false
-	for k, v in pairs(n) do
-		if self.loco:IsAreaTraversable(v) then
-			vis = true
-			break
-		end
-	end
-	
-	if not vis then
-		debugoverlay.Line(self:GetPos(), to, 5, Color(255, 0, 0, 255), true)
-		return "invalid"
-	end
-	
-	path:SetMinLookAheadDistance(opt.lookahead or 50)
-	path:SetGoalTolerance(opt.tolerance or 50)
-	path:Compute(self, to)--, function(area, fromArea, ladder, elevator, length) return self:findpath(area, fromArea, ladder, elevator, length) end)
-	
-	if not path:IsValid() then
+	if not (valid and path:IsValid()) then
 		if self:GetRangeTo(to) < 512 then
 			while self:GetRangeTo(to) > (opt.tolerance or 50) do
 				self.loco:Approach(to, 1)
@@ -441,38 +322,37 @@ function ENT:Move(moveto, shoot, opt)
 			self:SetPoseParameter("move_yaw",
 			math.Remap(self:WorldToLocal(self:GetPos() - self:GetVelocity()):Angle().y, 0, 360, -180, 180))
 		end
-		self.look = false
 		
-		if moveto and path:GetAge() > 5 or self.repath then
-			path:Compute(self, to)--, function(area, fromArea, ladder, elevator, length) return self:findpath(area, fromArea, ladder, elevator, length) end)
-			self.repath = false
+		if path:GetAge() > (opt.maxage or 60) then
+			return "timeout"
+		end
+		
+		if path:GetAge() > (opt.repath or 10) then
+			path:Compute(self, to, function(area, fromArea, ladder, elevator, length)
+				return findpath(self, area, fromArea, ladder, elevator, length)
+			end)
 		end
 		
 		seg = path:GetCurrentGoal()
-	--	if seg.type == 2 then
-	--		self.loco:JumpAcrossGap(seg.pos + Vector(0, 0, self.StepHeight), seg.forward + Vector(0, 0, self.StepHeight))
-	--		self:StartActivity(act or self.RunPistol)
-	--	end
-		if not self.jumping then
-			self.loco:JumpAcrossGap(to, self:GetForward())
-			self.jumping = true
+		if seg.type == 2 then
+			self.loco:JumpAcrossGap(seg.pos + Vector(0, 0, self.StepHeight), seg.forward + Vector(0, 0, self.StepHeight))
+			self:StartActivity(act or self.RunPistol)
 		end
-		self.loco:FaceTowards(to)
 		
-		path:Draw()
+		if opt.draw then path:Draw() end
 		path:Update(self)
-		
-		local d = 20
-		local base = self:GetPos() + vector_up * d
-		local tr = {start = base,
-					endpos = base + self:GetForward() * d,
-					filter = self}
-		local f = util.TraceEntity(tr, self)
-		if f.Hit then
-			local cross = self:GetForward():Cross(f.HitNormal).z
-			self.loco:Approach(self:GetPos() + self:GetRight() * (cross > 0 and -d or d), 100)
-			self.loco:FaceTowards(self:GetPos() - f.HitNormal)
-		end
+	--	
+	--	local d = 20
+	--	local base = self:GetPos() + vector_up * d
+	--	local tr = {start = base,
+	--				endpos = base + self:GetForward() * d,
+	--				filter = self}
+	--	local f = util.TraceEntity(tr, self)
+	--	if f.Hit then
+	--		local cross = self:GetForward():Cross(f.HitNormal).z
+	--		self.loco:Approach(self:GetPos() + self:GetRight() * (cross > 0 and -d or d), 100)
+	--		self.loco:FaceTowards(self:GetPos() - f.HitNormal)
+	--	end
 		
 		-- If we're stuck then call the HandleStuck function and abandon
 		if self.loco:IsStuck() then
@@ -498,19 +378,18 @@ function ENT:RunBehaviour()
 				self.loco:SetDeceleration(5000)
 				self.loco:SetDesiredSpeed(150)
 				self.loco:SetMaxYawRate(400)
-				self:Anim(ACT_RUN)
+				self:Anim(ACT_WALK)
 			--	self.loco:JumpAcrossGap(Entity(1):GetEyeTrace().HitPos,
 			--		(Entity(1):GetEyeTrace().HitPos + self:GetPos()):GetNormalized())
-				print(self:Move(Entity(1):GetEyeTrace().HitPos, {
-					lookahead = 500000, 
+				local open, goal = self:FindPath(Entity(1):GetEyeTrace().HitPos)
+				print(self:MoveToPos(Entity(1):GetEyeTrace().HitPos, {
+					lookahead = 10, 
 					tolerance = 5, 
 					draw = true, 
 					maxage = 15, 
-					repath = 30,
-					func = 1
+					repath = 3,
 				}))
 				self:Anim(ACT_IDLE)
-				coroutine.wait(1)
 			else
 				self:Anim(ACT_IDLE)
 				self:MuzzleFlash()
