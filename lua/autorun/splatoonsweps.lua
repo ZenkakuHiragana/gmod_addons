@@ -83,18 +83,27 @@ local dmg = Sound("SplatoonSWEPs/HitEffectiveCommon02.wav")
 local direct = Sound("SplatoonSWEPs/ShotExplosionDirect00.mp3")
 
 if SERVER then
-	CreateConVar("sv_splatoon_automatic_disappear", 180, 0, "GreatZenkakuMan's Splatoon SWEPs: Time to automatically disappear ink(seconds).  0 to disable.")
-	CreateConVar("sv_splatoon_npc_inkcolor", 5, 0, "GreatZenkakuMan's Splatoon SWEPs: Determines NPC's ink color. 1: Orange  2: Pink  3: Purple  4: Blue  5: Cyan  6: Green   0 is its own color.")
-	CreateConVar("sv_splatoon_ff", 0, 0, "GreatZenkakuMan's Splatoon SWEPs: Can Friendly Fire. 1 to allow FF.")
+	CreateConVar("sv_splatoon_automatic_disappear", 180, FCVAR_ARCHIVE, 
+		"GreatZenkakuMan's Splatoon SWEPs: Time to automatically disappear ink(seconds).  0 to disable.")
+	CreateConVar("sv_splatoon_npc_inkcolor", 5, FCVAR_ARCHIVE, 
+		"GreatZenkakuMan's Splatoon SWEPs: Determines NPC's ink color. 1: Orange  2: Pink  3: Purple  4: Blue  5: Cyan  6: Green   0 is its own color.")
+	CreateConVar("sv_splatoon_ff", 0, FCVAR_ARCHIVE, 
+		"GreatZenkakuMan's Splatoon SWEPs: Can Friendly Fire. 1 to allow FF.")
 else
-	CreateConVar("cl_splatoon_drawdistance", 27000, 0, "GreatZenkakuMan's Splatoon SWEPs: How far is ink drawn.")
-	CreateConVar("cl_splatoon_gender", 0, 0, "GreatZenkakuMan's Splatoon SWEPs: Determines inkling's gender.  0 is girl, 1 is boy,  2 is octoling.")
-	CreateConVar("cl_splatoon_inkcolor", 1, 0, "GreatZenkakuMan's Splatoon SWEPs: Determines SWEP's ink color. 1: Orange  2: Pink  3: Purple  4: Blue  5: Cyan  6: Green   0 is its own color.")
-	CreateConVar("cl_splatoon_isinkling", 1, 0, "GreatZenkakuMan's Splatoon SWEPs: Force to become inkling. 1 is to become inkling.")
+	CreateConVar("cl_splatoon_gender", 0, FCVAR_ARCHIVE, 
+		"GreatZenkakuMan's Splatoon SWEPs: Determines inkling's gender.  0 is girl, 1 is boy,  2 is octoling.")
+	CreateConVar("cl_splatoon_isinkling", 1, FCVAR_ARCHIVE, 
+		"GreatZenkakuMan's Splatoon SWEPs: Force to become inkling. 1 is to become inkling.")
+	CreateConVar("cl_splatoon_inkcolor", 1, FCVAR_ARCHIVE, 
+		"GreatZenkakuMan's Splatoon SWEPs: Determines SWEP's ink color. 1: Orange  2: Pink  3: Purple  4: Blue  5: Cyan  6: Green   0 is its own color.")
+	CreateConVar("cl_splatoon_drawdistance", 27000, FCVAR_ARCHIVE, 
+		"GreatZenkakuMan's Splatoon SWEPs: How far is ink drawn.")
+	CreateConVar("cl_splatoon_usedecal", 1, FCVAR_ARCHIVE, 
+		"GreatZenkakuMan's Splatoon SWEPs: 0: Use entity model to draw ink.    1: Use decals to draw ink.")
 end
 
 --All painting data{Pos, Normal, ColorName}
-SplatoonSurfaces = {}
+SplatoonSurfaces = SplatoonSurfaces or {}
 
 util.PrecacheModel("models/props_splatoon/squids/squid_beta.mdl")
 util.PrecacheModel("models/drlilrobot/splatoon/ply/inkling_boy.mdl")
@@ -102,47 +111,48 @@ util.PrecacheModel("models/drlilrobot/splatoon/ply/inkling_girl.mdl")
 util.PrecacheModel("models/props_splatoon/squids/octopus_beta.mdl")
 util.PrecacheModel("models/drlilrobot/splatoon/ply/octoling.mdl")
 
-local function InkImmune(t, d)
-	local it, id = t.InkColor, d:GetAttacker().InkColor
+hook.Add("EntityTakeDamage", "splatoonsweps_inkimmune", function (target, dmginfo)
+	if not (IsValid(target) and IsValid(dmginfo:GetAttacker())) then return false end
+	local attacker = dmginfo:GetAttacker()
+	local inktarget, inkdmginfo = target.InkColor, attacker.InkColor
 	
-	if d:GetAttacker():GetClass() == "splashootee" and IsValid(d:GetAttacker().Owner) then
-		d:SetAttacker(d:GetAttacker().Owner)
+	if attacker:GetClass() == "splashootee" and IsValid(attacker.Owner) then
+		dmginfo:SetAttacker(attacker.Owner)
+		attacker = attacker.Owner
 	end
 	
-	if not it then
-		if not isfunction(t.GetActiveWeapon) then
+	if not inktarget then
+		if not isfunction(target.GetActiveWeapon) then
 			return false
-		elseif t:GetActiveWeapon() then
-			it = t:GetActiveWeapon().InkColor
+		elseif target:GetActiveWeapon() then
+			inktarget = target:GetActiveWeapon().InkColor
 		end
 	end
 	
-	if not id then
-		if not isfunction(d:GetAttacker().GetActiveWeapon) then
+	if not inkdmginfo then
+		if not isfunction(attacker.GetActiveWeapon) then
 			return false
-		elseif d:GetAttacker():GetActiveWeapon() then
-			id = d:GetAttacker():GetActiveWeapon().InkColor
+		elseif attacker:GetActiveWeapon() then
+			inkdmginfo = attacker:GetActiveWeapon().InkColor
 		end
 	end
 	
 	local c = GetConVar("sv_splatoon_ff")
-	if it ~= nil and id ~= nil then
-		if it == id and c:GetInt() == 0 then
+	if inktarget and inkdmginfo then
+		if inktarget == inkdmginfo and c:GetInt() == 0 then
 			return true
 		else
-			if t.GetActiveWeapon and d:GetAttacker().GetActiveWeapon then
-				if (d:GetAttacker():GetActiveWeapon().charge and 
-					d:GetAttacker():GetActiveWeapon().charge >= 100 and
-					d:GetDamage() >= 100) then
-					d:GetAttacker():EmitSound(direct)
+			if target.GetActiveWeapon and attacker.GetActiveWeapon then
+				if (attacker:GetActiveWeapon().charge and 
+					attacker:GetActiveWeapon().charge >= 100 and
+					dmginfo:GetDamage() >= 100) then
+					attacker:EmitSound(direct)
 				
-				elseif not d:GetAttacker().Blaster then
-					d:GetAttacker():EmitSound(dmg)
+				elseif not attacker.Blaster then
+					attacker:EmitSound(dmg)
 				end
 			end
 			return false
 		end
 	end
-end
-
-hook.Add("EntityTakeDamage", "inkimmune", InkImmune)
+end)
