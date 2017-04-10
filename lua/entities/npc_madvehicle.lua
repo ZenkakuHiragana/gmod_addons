@@ -21,7 +21,8 @@ function ENT:Initialize()
 	self:SetMoveType(MOVETYPE_NONE)
 	
 	if SERVER then
-		for k, v in pairs(ents.FindInSphere(self:GetPos(), 10)) do
+		local distance = GetConVar("madvehicle_detectionrange"):GetFloat() or 30
+		for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
 			if v:IsVehicle() then
 				if v.IsScar then
 					if not v:HasDriver() then
@@ -29,8 +30,14 @@ function ENT:Initialize()
 						self.v.HasDriver = function() return true end
 						v:StartCar()
 					end
+				elseif v.IsSimfphyscar and v:IsInitialized() then
+					if not IsValid(v:GetDriver()) then
+						self.v = v
+						v:SetActive(true)
+						v:StartEngine()
+					end
 				else
-					if v:GetWheelCount() and not IsValid(v:GetDriver()) then
+					if isfunction(v.GetWheelCount) and v:GetWheelCount() and not IsValid(v:GetDriver()) then
 						self.v = v
 						v:EnableEngine(true)
 						v:StartEngine(true)
@@ -45,8 +52,9 @@ function ENT:Initialize()
 		util.Effect("propspawn", e)
 		
 		self.moving = CurTime()
+		self.TargetRange = GetConVar("madvehicle_enemyrange"):GetFloat()^2 or 16000000
 		local min, max = self.v:GetHitBoxBounds(0, 0)
-		self.collision_length = max.z
+		self.CollisionHeight = max.z
 		
 		if GetConVar("madvehicle_playmusic"):GetBool() and 
 			#ents.FindByClass("npc_madvehicle") < 2 then
@@ -68,7 +76,17 @@ function ENT:GetNoTarget()
 	return false
 end
 
+function ENT:GetInfoNum(key, default)
+	if key == "cl_simfphys_ctenable" then return 1 --returns the default value
+	elseif key == "cl_simfphys_ctmul" then return 0.7 --because there's a little weird code in
+	elseif key == "cl_simfphys_ctang" then return 15 --Simfphys:PlayerSteerVehicle
+	elseif isnumber(default) then return default end
+	return 0
+end
+
 if SERVER then	
+	CreateConVar("madvehicle_enemyrange", 4500, FCVAR_ARCHIVE, "Mad Vehicle: Mad Vehicle targets an enemy within this range.")
+	CreateConVar("madvehicle_detectionrange", 30, FCVAR_ARCHIVE, "Mad Vehicle: A vehicle within this distance will become mad.")
 	CreateConVar("madvehicle_playmusic", 0, FCVAR_ARCHIVE, "Mad Vehicle: If 1, the vehicles play a music.")
 	CreateConVar("madvehicle_deleteonstuck", 10, FCVAR_ARCHIVE, "Mad Vehicle: Deletes Mad Vehicle if it gets stuck for the given seconds. 0 to disable.")
 	
@@ -91,11 +109,25 @@ if SERVER then
 	function ENT:OnRemove()
 		if IsValid(self.v) and self.v:IsVehicle() then
 			if self.v.IsScar then
-				self.v:TurnOffCar()
-				self.v:HandBrakeOn()
-				self.v:GoNeutral()
-				self.v:NotTurning()
 				self.v.HasDriver = self.v.BaseClass.HasDriver
+				if not self.v:HasDriver() then
+					self.v:TurnOffCar()
+					self.v:HandBrakeOn()
+					self.v:GoNeutral()
+					self.v:NotTurning()
+				end
+			elseif self.v.IsSimfphyscar then
+				if not IsValid(self.v:GetDriver()) then
+					self.v:SetActive(false)
+					self.v:StopEngine()
+				end
+				self.v.PressedKeys = self.v.PressedKeys or {}
+				self.v.PressedKeys["W"] = false
+				self.v.PressedKeys["A"] = false
+				self.v.PressedKeys["S"] = false
+				self.v.PressedKeys["D"] = false
+				self.v.PressedKeys["Shift"] = false
+				self.v.PressedKeys["Space"] = false
 			elseif not IsValid(self.v:GetDriver()) then
 				self.v:StartEngine(false)
 				self.v:SetHandbrake(true)
@@ -114,7 +146,7 @@ if SERVER then
 	end
 	
 	function ENT:TargetEnemy()
-		local t = ents.FindInSphere(self.v:WorldSpaceCenter(), 4000)
+		local t = ents.FindInSphere(self.v:WorldSpaceCenter(), math.sqrt(self.TargetRange))
 		local distance, nearest = math.huge, nil --Targets the nearest enemy.
 		for k, v in pairs(t) do
 			if self:Validate(v) then
@@ -130,26 +162,40 @@ if SERVER then
 	end
 	
 	function ENT:Validate(v)
-		return IsValid(v) and v:GetClass() ~= "npc_madvehicle" and v:OnGround() and 
-		(v:WorldSpaceCenter() - self.v:WorldSpaceCenter()):LengthSqr() < 4000000 and 
+		local valid = IsValid(v) and v:GetClass() ~= "npc_madvehicle" and 
+		(v:WorldSpaceCenter() - self.v:WorldSpaceCenter()):LengthSqr() < self.TargetRange and 
 		(v:IsNPC() or v.Type == "nextbot" or (v:IsPlayer() and v:Alive() and not GetConVar("ai_ignoreplayers"):GetBool()))
+		if not valid then return false end
+		local onground = util.QuickTrace(v:GetPos(), -vector_up * self.CollisionHeight, {v, self, self.v})
+		return onground.Hit
 	end
 	
 	function ENT:Think()
 		if not IsValid(self.v) or not self.v:IsVehicle() or 
 			IsValid(self.v:GetDriver()) or self:WaterLevel() > 1 or
-			(self.v.IsScar and (self.v:IsDestroyed() or self.v.Fuel <= 0)) then
+			(self.v.IsScar and (self.v:IsDestroyed() or self.v.Fuel <= 0)) or
+			(self.v.IsSimfphyscar and (self.v:GetCurHealth() <= 0)) then
 			SafeRemoveEntity(self)
 		return end
 		
-		self:SetPos(self.v:GetPos() + vector_up * self.collision_length)
+		self:SetPos(self.v:GetPos() + vector_up * self.CollisionHeight)
 		if not self:Validate(self.e) then
 			if self.v.IsScar then
 				self.v:GoNeutral()
 				self.v:NotTurning()
+				self.v:HandBrakeOn()
+			elseif self.v.IsSimfphyscar and self.v:GetActive() then
+				self.v.PressedKeys = self.v.PressedKeys or {}
+				self.v.PressedKeys["W"] = false
+				self.v.PressedKeys["A"] = false
+				self.v.PressedKeys["S"] = false
+				self.v.PressedKeys["D"] = false
+				self.v.PressedKeys["Shift"] = false
+				self.v.PressedKeys["Space"] = true
 			else
 				self.v:SetThrottle(0)
 				self.v:SetSteering(0, 0)
+				self.v:SetHandbrake(true)
 			end
 			
 			local enemy = self:TargetEnemy()
@@ -178,10 +224,14 @@ if SERVER then
 			
 			if self.v.IsScar then
 				self.v:HandBrakeOff()
-			else
+			elseif self.v.IsSimfphyscar and self.v:GetActive() then
+				self.v.PressedKeys = self.v.PressedKeys or {}
+				self.v.PressedKeys["Space"] = false
+			elseif isfunction(self.v.SetHandbrake) then
 				self.v:SetHandbrake(false)
 			end
-			local forward = self.v.IsScar and self.v:GetForward() or self.v:GetForward()
+			local forward = self.v.IsSimfphyscar and 
+				self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Forward() or self.v:GetForward()
 			local dist = self.e:WorldSpaceCenter() - self.v:WorldSpaceCenter()
 			local vect = dist:GetNormalized()
 			local vectdot = vect:Dot(self.v:GetVelocity())
@@ -202,7 +252,12 @@ if SERVER then
 				else
 					self.v:GoBack(-throttle)
 				end
-			else
+			elseif self.v.IsSimfphyscar and self.v:GetActive() then
+				self.v.PressedKeys = self.v.PressedKeys or {}
+				self.v.PressedKeys["Shift"] = false
+				self.v.PressedKeys["W"] = throttle > 0
+				self.v.PressedKeys["S"] = throttle <= 0
+			elseif isfunction(self.v.SetThrottle) then
 				self.v:SetThrottle(throttle)
 			end
 			
@@ -218,7 +273,9 @@ if SERVER then
 				else
 					self.v:NotTurning()
 				end
-			else
+			elseif self.v.IsSimfphyscar and self.v:GetActive() then
+				self.v:PlayerSteerVehicle(self, steer < 0 and -steer or 0, steer > 0 and steer or 0)
+			elseif isfunction(self.v.SetSteering) then
 				self.v:SetSteering(steer, 0)
 			end
 		end
