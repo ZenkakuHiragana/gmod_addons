@@ -21,7 +21,7 @@ function ENT:Initialize()
 	self:SetMoveType(MOVETYPE_NONE)
 	
 	if SERVER then
-		local distance = GetConVar("madvehicle_detectionrange"):GetFloat() or 30
+		local distance = GetConVar("madvehicle_detectionrange"):GetFloat()
 		for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
 			if v:IsVehicle() then
 				if v.IsScar then
@@ -36,7 +36,7 @@ function ENT:Initialize()
 						v:SetActive(true)
 						v:StartEngine()
 					end
-				else
+				elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then
 					if isfunction(v.GetWheelCount) and v:GetWheelCount() and not IsValid(v:GetDriver()) then
 						self.v = v
 						v:EnableEngine(true)
@@ -51,14 +51,15 @@ function ENT:Initialize()
 		e:SetEntity(self.v)
 		util.Effect("propspawn", e)
 		
-		self.moving = CurTime()
-		self.TargetRange = GetConVar("madvehicle_enemyrange"):GetFloat()^2 or 16000000
 		local min, max = self.v:GetHitBoxBounds(0, 0)
+		self.moving = CurTime()
+		self.TargetRange = GetConVar("madvehicle_enemyrange"):GetFloat()^2
 		self.CollisionHeight = max.z
+		self.v:DeleteOnRemove(self)
 		
 		if GetConVar("madvehicle_playmusic"):GetBool() and 
 			#ents.FindByClass("npc_madvehicle") < 2 then
-			self.loop = CreateSound(self.v, "madvehicle_music.wav")
+			self.loop = CreateSound(self, "madvehicle_music.wav")
 			self.loop:SetSoundLevel(85)
 			self.loop:Play()
 		end
@@ -76,6 +77,7 @@ function ENT:GetNoTarget()
 	return false
 end
 
+--For Simfphys Vehicles
 function ENT:GetInfoNum(key, default)
 	if key == "cl_simfphys_ctenable" then return 1 --returns the default value
 	elseif key == "cl_simfphys_ctmul" then return 0.7 --because there's a little weird code in
@@ -128,7 +130,9 @@ if SERVER then
 				self.v.PressedKeys["D"] = false
 				self.v.PressedKeys["Shift"] = false
 				self.v.PressedKeys["Space"] = false
-			elseif not IsValid(self.v:GetDriver()) then
+			elseif not IsValid(self.v:GetDriver()) and 
+				isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) and 
+				isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) then
 				self.v:StartEngine(false)
 				self.v:SetHandbrake(true)
 				self.v:SetThrottle(0)
@@ -184,7 +188,9 @@ if SERVER then
 				self.v:GoNeutral()
 				self.v:NotTurning()
 				self.v:HandBrakeOn()
-			elseif self.v.IsSimfphyscar and self.v:GetActive() then
+			elseif self.v.IsSimfphyscar then
+				self.v:SetActive(true)
+				self.v:StartEngine()
 				self.v.PressedKeys = self.v.PressedKeys or {}
 				self.v.PressedKeys["W"] = false
 				self.v.PressedKeys["A"] = false
@@ -192,7 +198,7 @@ if SERVER then
 				self.v.PressedKeys["D"] = false
 				self.v.PressedKeys["Shift"] = false
 				self.v.PressedKeys["Space"] = true
-			else
+			elseif isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) and isfunction(self.v.SetHandbrake) then
 				self.v:SetThrottle(0)
 				self.v:SetSteering(0, 0)
 				self.v:SetHandbrake(true)
@@ -224,7 +230,9 @@ if SERVER then
 			
 			if self.v.IsScar then
 				self.v:HandBrakeOff()
-			elseif self.v.IsSimfphyscar and self.v:GetActive() then
+			elseif self.v.IsSimfphyscar then
+				self.v:SetActive(true)
+				self.v:StartEngine()
 				self.v.PressedKeys = self.v.PressedKeys or {}
 				self.v.PressedKeys["Space"] = false
 			elseif isfunction(self.v.SetHandbrake) then
@@ -252,7 +260,9 @@ if SERVER then
 				else
 					self.v:GoBack(-throttle)
 				end
-			elseif self.v.IsSimfphyscar and self.v:GetActive() then
+			elseif self.v.IsSimfphyscar then
+				self.v:SetActive(true)
+				self.v:StartEngine()
 				self.v.PressedKeys = self.v.PressedKeys or {}
 				self.v.PressedKeys["Shift"] = false
 				self.v.PressedKeys["W"] = throttle > 0
@@ -273,7 +283,9 @@ if SERVER then
 				else
 					self.v:NotTurning()
 				end
-			elseif self.v.IsSimfphyscar and self.v:GetActive() then
+			elseif self.v.IsSimfphyscar then
+				self.v:SetActive(true)
+				self.v:StartEngine()
 				self.v:PlayerSteerVehicle(self, steer < 0 and -steer or 0, steer > 0 and steer or 0)
 			elseif isfunction(self.v.SetSteering) then
 				self.v:SetSteering(steer, 0)
