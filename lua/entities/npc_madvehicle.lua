@@ -14,81 +14,7 @@ ENT.Contact = ""
 ENT.Purpose = "Mad Vehicle."
 ENT.Instruction = ""
 ENT.Spawnable = false
-
-function ENT:Initialize()
-	self:SetNoDraw(true)
-	self:SetModel("models/props_wasteland/cargo_container01.mdl")
-	self:SetMoveType(MOVETYPE_NONE)
-	
-	if SERVER then
-		--Pick up a vehicle in the given sphere.
-		local distance = GetConVar("madvehicle_detectionrange"):GetFloat()
-		for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
-			if v:IsVehicle() then
-				if v.IsScar then --If it's a SCAR.
-					if not v:HasDriver() then --If driver's seat is empty.
-						self.v = v
-						self.v.HasDriver = function() return true end --SCAR script assumes there's a driver.
-						self.v.SpecialThink = function() end --Tanks or something sometimes make errors so disable thinking.
-						v:StartCar()
-					end
-				elseif v.IsSimfphyscar and v:IsInitialized() then --If it's a Simfphys Vehicle.
-					if not IsValid(v:GetDriver()) then --Fortunately, Simfphys Vehicles can use GetDriver()
-						self.v = v
-						v:SetActive(true)
-						v:StartEngine()
-					end
-				elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then --Normal vehicles should use these functions. (SCAR and Simfphys cannot.)
-					if isfunction(v.GetWheelCount) and v:GetWheelCount() and not IsValid(v:GetDriver()) then
-						self.v = v
-						v:EnableEngine(true)
-						v:StartEngine(true)
-					end
-				end
-			end
-		end
-	
-		if not IsValid(self.v) then SafeRemoveEntity(self) return end --When there's no vehicle, remove Mad Vehicle.
-		local e = EffectData()
-		e:SetEntity(self.v)
-		util.Effect("propspawn", e) --Perform a spawn effect.
-		
-		local min, max = self.v:GetHitBoxBounds(0, 0) --NPCs aim at the top of the vehicle referred by hit box.
-		if not isvector(max) then min, max = self.v:GetModelBounds() end --If getting hit box bounds is failed, get model bounds instead.
-		if not isvector(max) then max = vector_up * math.random(80, 200) end --If even getting model bounds is failed, set a random value.
-		self.moving = CurTime()
-		self.TargetRange = GetConVar("madvehicle_enemyrange"):GetFloat()^2 --Target range is squared to prevent from calculating sqrt()
-		self.CollisionHeight = max.z
-		self.v:DeleteOnRemove(self)
-		
-		if GetConVar("madvehicle_playmusic"):GetBool() and 
-			#ents.FindByClass("npc_madvehicle") < 2 then --Only one Mad Vehicle can play the music.
-			self.loop = CreateSound(self, "madvehicle_music.wav")
-			self.loop:SetSoundLevel(85)
-			self.loop:Play()
-		end
-		
-		for k, v in pairs(ents.GetAll()) do --Everyone hates Mad Vehicle.
-			if IsValid(v) and isfunction(v.AddEntityRelationship) then
-				v:AddEntityRelationship(self, D_HT, 0) --But NPCs who isn't using relationship system don't.
-			end
-		end
-	end
-end
-
---For Half Life Renaissance Reconstructed
-function ENT:GetNoTarget()
-	return false
-end
-
---For Simfphys Vehicles
-function ENT:GetInfoNum(key, default)
-	if key == "cl_simfphys_ctenable" then return 1 --returns the default value
-	elseif key == "cl_simfphys_ctmul" then return 0.7 --because there's a little weird code in
-	elseif key == "cl_simfphys_ctang" then return 15 --Simfphys:PlayerSteerVehicle()
-	elseif isnumber(default) then return default end
-	return 0
-end
+ENT.Modelname = "models/props_wasteland/cargo_container01.mdl"
 
 if SERVER then	
 	--Setting ConVars.
@@ -105,6 +31,68 @@ if SERVER then
 	CreateConVar("madvehicle_detectionrange", 30, FCVAR_ARCHIVE, "Mad Vehicle: A vehicle within this distance will become mad.")
 	CreateConVar("madvehicle_playmusic", 0, FCVAR_ARCHIVE, "Mad Vehicle: If 1, the vehicles play a music.")
 	CreateConVar("madvehicle_deleteonstuck", 10, FCVAR_ARCHIVE, "Mad Vehicle: Deletes Mad Vehicle if it gets stuck for the given seconds. 0 to disable.")
+	CreateConVar("madvehicle_soundlevel", 85, FCVAR_ARCHIVE, "Mad Vehicle: The sound level of the music.")
+	
+	--Target NPC filter using NPC:Classify().
+	local antlion_class = {
+		[CLASS_ANTLION] = true,
+	}
+	local citizen_class = {
+		[CLASS_NONE] = true,
+		[CLASS_PLAYER] = true,
+		[CLASS_PLAYER_ALLY] = true,
+		[CLASS_PLAYER_ALLY_VITAL] = true,
+		[CLASS_CITIZEN_PASSIVE] = true,
+		[CLASS_CITIZEN_REBEL] = true,
+		[CLASS_VORTIGAUNT] = true,
+	}
+	local combine_class = {
+		[CLASS_COMBINE] = true,
+		[CLASS_COMBINE_GUNSHIP] = true,
+		[CLASS_SCANNER] = true,
+		[CLASS_STALKER] = true,
+		[CLASS_PROTOSNIPER] = true,
+		[CLASS_HACKED_ROLLERMINE] = true,
+		[CLASS_COMBINE_HUNTER] = true,
+	}
+	local military_class = {
+		[CLASS_MILITARY] = true,
+	}
+	local police_class = {
+		[CLASS_MANHACK] = true,
+		[CLASS_METROPOLICE] = true,
+	}
+	local zombie_class = {
+		[CLASS_HEADCRAB] = true,
+		[CLASS_ZOMBIE] = true,
+	}
+	
+	--Pass some ConVar settings.
+	local function PassConVarFilter(v)
+		if v:IsNPC() then
+			local c = v:Classify()
+			if antlion_class[c] then
+				return GetConVar("madvehicle_targetantlion"):GetBool()
+			elseif citizen_class[c] then
+				return GetConVar("madvehicle_targetcitizen"):GetBool()
+			elseif combine_class[c] then
+				return GetConVar("madvehicle_targetcombine"):GetBool()
+			elseif police_class[c] then
+				return GetConVar("madvehicle_targetmetropolice"):GetBool()
+			elseif military_class[c] then
+				return GetConVar("madvehicle_targetmilitary"):GetBool()
+			elseif zombie_class[c] then
+				return GetConVar("madvehicle_targetzombie"):GetBool()
+			else
+				return GetConVar("madvehicle_targetother"):GetBool()
+			end
+		elseif v.Type == "nextbot" and GetConVar("madvehicle_targetnextbot"):GetBool() then
+			return true
+		elseif v:IsPlayer() and GetConVar("madvehicle_targetplayer"):GetBool() then
+			return true
+		end
+		return false
+	end
 	
 	--Everyone hates Mad Vehicle.
 	hook.Add("OnEntityCreated", "MadVehicleIsAlone!", function(e)
@@ -115,7 +103,8 @@ if SERVER then
 					if not IsValid(e) then timer.Remove(t) return end
 					for k, v in pairs(ents.FindByClass("npc_madvehicle")) do
 						if IsValid(v) then
-							e:AddEntityRelationship(v, D_HT, 0)
+							local relationship = PassConVarFilter(e) and D_HT or D_NU
+							e:AddEntityRelationship(v, relationship, 0)
 						end
 					end
 				end)
@@ -183,43 +172,8 @@ if SERVER then
 		return nearest
 	end
 	
-	--Target NPC filter using NPC:Classify().
-	local antlion_class = {
-		[CLASS_ANTLION] = true,
-	}
-	local citizen_class = {
-		[CLASS_NONE] = true,
-		[CLASS_PLAYER] = true,
-		[CLASS_PLAYER_ALLY] = true,
-		[CLASS_PLAYER_ALLY_VITAL] = true,
-		[CLASS_CITIZEN_PASSIVE] = true,
-		[CLASS_CITIZEN_REBEL] = true,
-		[CLASS_VORTIGAUNT] = true,
-	}
-	local combine_class = {
-		[CLASS_COMBINE] = true,
-		[CLASS_COMBINE_GUNSHIP] = true,
-		[CLASS_SCANNER] = true,
-		[CLASS_STALKER] = true,
-		[CLASS_PROTOSNIPER] = true,
-		[CLASS_HACKED_ROLLERMINE] = true,
-		[CLASS_COMBINE_HUNTER] = true,
-	}
-	local military_class = {
-		[CLASS_MILITARY] = true,
-	}
-	local police_class = {
-		[CLASS_MANHACK] = true,
-		[CLASS_METROPOLICE] = true,
-	}
-	local zombie_class = {
-		[CLASS_HEADCRAB] = true,
-		[CLASS_ZOMBIE] = true,
-	}
-	
 	--Validate the given entity.
 	function ENT:Validate(v)
-		
 		local valid = 
 			IsValid(v) and --Not a NULL entity.
 			v:GetClass() ~= "npc_madvehicle" and --Not me.
@@ -232,29 +186,7 @@ if SERVER then
 		local onground = util.QuickTrace(v:GetPos(), -vector_up * self.CollisionHeight, {v, self, self.v})
 		if not onground.Hit then return false end
 		
-		--Pass some ConVar settings..
-		if v:IsNPC() then
-			local c = v:Classify()
-			if antlion_class[c] then
-				return GetConVar("madvehicle_targetantlion"):GetBool()
-			elseif citizen_class[c] then
-				return GetConVar("madvehicle_targetcitizen"):GetBool()
-			elseif combine_class[c] then
-				 return GetConVar("madvehicle_targetcombine"):GetBool()
-			elseif police_class[c] then
-				return GetConVar("madvehicle_targetmetropolice"):GetBool()
-			elseif military_class[c] then
-				return GetConVar("madvehicle_targetmilitary"):GetBool()
-			elseif zombie_class[c] then
-				return GetConVar("madvehicle_targetzombie"):GetBool()
-			else
-				return GetConVar("madvehicle_targetother"):GetBool()
-			end
-		elseif v.Type == "nextbot" and GetConVar("madvehicle_targetnextbot"):GetBool() then
-			return true
-		elseif v:IsPlayer() and GetConVar("madvehicle_targetplayer"):GetBool() then
-			return true
-		end
+		return PassConVarFilter(v)
 	end
 	
 	function ENT:Think()
@@ -382,5 +314,88 @@ if SERVER then
 				self.v:SetSteering(steer, 0)
 			end
 		end --if not self:Validate(self.e)
-	end --function ENT:Think()
+	end
+	
+	function ENT:Initialize()
+		self:SetNoDraw(true)
+		self:SetMoveType(MOVETYPE_NONE)
+		self:SetModel(self.Modelname)
+		
+		--Pick up a vehicle in the given sphere.
+		local distance = GetConVar("madvehicle_detectionrange"):GetFloat()
+		for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
+			if v:IsVehicle() then
+				if v.IsScar then --If it's a SCAR.
+					if not v:HasDriver() then --If driver's seat is empty.
+						self.v = v
+						self.v.HasDriver = function() return true end --SCAR script assumes there's a driver.
+						self.v.SpecialThink = function() end --Tanks or something sometimes make errors so disable thinking.
+						v:StartCar()
+					end
+				elseif v.IsSimfphyscar and v:IsInitialized() then --If it's a Simfphys Vehicle.
+					if not IsValid(v:GetDriver()) then --Fortunately, Simfphys Vehicles can use GetDriver()
+						self.v = v
+						v:SetActive(true)
+						v:StartEngine()
+					end
+				elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then --Normal vehicles should use these functions. (SCAR and Simfphys cannot.)
+					if isfunction(v.GetWheelCount) and v:GetWheelCount() and not IsValid(v:GetDriver()) then
+						self.v = v
+						v:EnableEngine(true)
+						v:StartEngine(true)
+					end
+				end
+			end
+		end
+	
+		if not IsValid(self.v) then SafeRemoveEntity(self) return end --When there's no vehicle, remove Mad Vehicle.
+		local e = EffectData()
+		e:SetEntity(self.v)
+		util.Effect("propspawn", e) --Perform a spawn effect.
+		
+		local min, max = self.v:GetHitBoxBounds(0, 0) --NPCs aim at the top of the vehicle referred by hit box.
+		if not isvector(max) then min, max = self.v:GetModelBounds() end --If getting hit box bounds is failed, get model bounds instead.
+		if not isvector(max) then max = vector_up * math.random(80, 200) end --If even getting model bounds is failed, set a random value.
+		self.moving = CurTime()
+		self.TargetRange = GetConVar("madvehicle_enemyrange"):GetFloat()^2 --Target range is squared to prevent from calculating sqrt()
+		
+		local tr = util.TraceLine({start = self.v:GetPos() + vector_up * max.z, 
+			endpos = self.v:GetPos(), ignoreworld = true})
+		self.CollisionHeight = tr.HitPos.z - self.v:GetPos().z
+		self.v:DeleteOnRemove(self)
+		
+		if GetConVar("madvehicle_playmusic"):GetBool() and 
+			#ents.FindByClass("npc_madvehicle") < 2 then --Only one Mad Vehicle can play the music.
+			self.loop = CreateSound(self, "madvehicle_music.wav")
+			self.loop:SetSoundLevel(GetConVar("madvehicle_soundlevel"):GetInt())
+			self.loop:Play()
+		end
+		
+		for k, v in pairs(ents.GetAll()) do --Everyone hates Mad Vehicle.
+			if IsValid(v) and isfunction(v.AddEntityRelationship) then
+				local relationship = PassConVarFilter(v) and D_HT or D_NU
+				v:AddEntityRelationship(self, relationship, 0) --But NPCs who aren't using relationship system don't.
+			end
+		end
+	end
+else --if CLIENT
+	function ENT:Initialize()
+		self:SetNoDraw(true)
+		self:SetMoveType(MOVETYPE_NONE)
+		self:SetModel(self.Modelname)
+	end
 end --if SERVER
+
+--For Half Life Renaissance Reconstructed
+function ENT:GetNoTarget()
+	return false
+end
+
+--For Simfphys Vehicles
+function ENT:GetInfoNum(key, default)
+	if key == "cl_simfphys_ctenable" then return 1 --returns the default value
+	elseif key == "cl_simfphys_ctmul" then return 0.7 --because there's a little weird code in
+	elseif key == "cl_simfphys_ctang" then return 15 --Simfphys:PlayerSteerVehicle()
+	elseif isnumber(default) then return default end
+	return 0
+end
