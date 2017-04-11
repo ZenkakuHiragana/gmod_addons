@@ -335,7 +335,9 @@ if SERVER then
 			local throttle = dist:Dot(forward) > 0 and 1 or -1 --Throttle depends on their positional relationship.
 			local right = vect:Cross(forward) --The enemy is right side or not.
 			local steer_amount = right:Length()^0.8 --Steering parameter.
-			local steer = math.abs(steer_amount) * (vectdot < -0.12 and -1 or 1) --Actual steering parameter.
+			local steer = right.z > 0 and steer_amount or -steer_amount --Actual steering parameter.
+			if vectdot < -0.12 then steer = steer * -1 end
+			
 			--If the vehicle is too close to the enemy or the vehicle shouldn't go backward, invert the throttle.
 			if (dist:Length2DSqr() < 250000 and vectdot < 0) or 
 				(self.v:GetVelocity():LengthSqr() < 40000 and dist:Length2DSqr() < 20000) then
