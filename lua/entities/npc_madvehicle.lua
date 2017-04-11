@@ -359,9 +359,11 @@ if SERVER then
 		self.moving = CurTime()
 		self.TargetRange = GetConVar("madvehicle_enemyrange"):GetFloat()^2 --Target range is squared to prevent from calculating sqrt()
 		
-		local tr = util.TraceLine({start = self.v:GetPos() + vector_up * max.z, 
-			endpos = self.v:GetPos(), ignoreworld = true})
+		local tr = util.TraceHull({start = self.v:GetPos() + vector_up * max.z, 
+			endpos = self.v:GetPos(), ignoreworld = true,
+			mins = Vector(-16, -16, -1), maxs = Vector(16, 16, 1)})
 		self.CollisionHeight = tr.HitPos.z - self.v:GetPos().z
+		if self.CollisionHeight < 10 then self.CollisionHeight = max.z end
 		self.v:DeleteOnRemove(self)
 		
 		if GetConVar("madvehicle_playmusic"):GetBool() and 
