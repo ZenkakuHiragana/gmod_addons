@@ -175,6 +175,8 @@ ENT.Spawnable = false
 
 if SERVER then
 	--Console Variables
+	CreateConVar("random_combine_start_patrolling", 1, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE,
+	"Random Combine: Set 1 to start patrolling automatically.")
 	CreateConVar("random_combine_plus", 0, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
 	"Random Combine: Spawns All of Combines including who can not rappel down.")
 	CreateConVar("random_combine_shield", 0, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
@@ -429,7 +431,9 @@ if SERVER then
 					self.npc:SetKeyValue("NumGrenades", math.random(3, 20))
 				end
 				
-				self.npc:Fire("StartPatrolling")
+				if GetConVar("random_combine_start_patrolling"):GetBool() then
+					self.npc:Fire("StartPatrolling")
+				end
 			end,
 			
 			--Random +PLUS+
@@ -498,7 +502,9 @@ if SERVER then
 				self.npc:SetKeyValue("citizentype", "4")
 				self.npc:SetKeyValue("model", models[index])
 				self.npc:SetKeyValue("additionalequipment", w)
-				self.npc:Fire("StartPatrolling")
+				if GetConVar("random_combine_start_patrolling"):GetBool() then
+					self.npc:Fire("StartPatrolling")
+				end
 			end,
 			
 			--Random Sparbine
@@ -560,7 +566,9 @@ if SERVER then
 				end
 				self.npc:SetKeyValue("squadname", "overwatch")
 				self.npc:SetKeyValue("additionalequipment", w)
-				self.npc:Fire("StartPatrolling")
+				if GetConVar("random_combine_start_patrolling"):GetBool() then
+					self.npc:Fire("StartPatrolling")
+				end
 			end,
 			
 			--Random Grunt
@@ -872,7 +880,9 @@ if SERVER then
 					self.angle = nil
 					self.pos = nil
 					self.npc.inpcIgnore = false --iNPC Compatible
-					self.npc:Fire("StartPatrolling")
+					if GetConVar("random_combine_start_patrolling"):GetBool() then
+						self.npc:Fire("StartPatrolling")
+					end
 				end
 			else--if self.pos and self.pos.z > self.npc:GetPos().z then
 				if IsValid(self.seq) then
