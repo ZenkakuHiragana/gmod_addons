@@ -14,6 +14,27 @@ function ENT:GetTask()
 	return self.State.Task, self.State.TaskParam
 end
 
+--Do a list of functions.
+--Argument: Table t | list of functions.
+--function | (function, argument) | taskname | (taskname, argument)
+local function DoTaskList(self, l)
+	if not istable(l) then return end
+	for i, t in ipairs(l) do
+		if isfunction(t) then
+			if t(self) then break end
+		elseif isstring(t) then
+			if self.Task[t](self) then return end
+		elseif istable(t) then
+			if isfunction(t[1]) then
+				if t[1](self, t[2]) then break end
+			elseif isstring(t[1]) then
+				if self.Task[t[1]](self, t[2]) then break end
+			end
+		end
+	end
+	self.State.TaskDone = nil
+end
+
 --++Tasks++---------------------{
 --Nextbot tasks
 --Usage:
@@ -37,27 +58,12 @@ function ENT.Task.Fail(self)
 	return "invalid"
 end
 
---MaintainWeapons: deal with my weapons.
-function ENT.Task.MaintainWeapons(self, baton)
-	local e = self:GetEnemy()
-	if e then
-		if baton then
-			self:Give()
-		else
-			self:Give(self.Memory.Distance >= self.NearDistance)
-		end
-	elseif self:GetActiveWeapon() then
-		self:GetActiveWeapon():Remove()
-	end
-	self.Task.Complete(self)
-end
-
 --Wait: wait a while and rotate the head.
 --Argument: Table opt | options.
 ----number time | time to wait.
 ----function func(self, opt) | function while waiting.
 function ENT.Task.Wait(self, opt)
-	local opt = opt or {time = 2, func = nil}
+	local opt = istable(opt) and opt or {time = 2, func = nil}
 	local time = opt.time or 2
 	if isfunction(opt.func) then
 		opt.func(self, opt)
@@ -82,189 +88,132 @@ end
 --SetFaceEnemy: set flag of facing enemy.
 --Argument: Bool bLooking | Flag.
 function ENT.Task.SetFaceEnemy(self, bLooking)
-	self.Memory.FaceEnemy = bLooking
+	self.Memory.Look = bLooking
 	return self.Task.Complete(self)
+end
+
+--MeleeAttack: do a melee attack.
+function ENT.Task.MeleeAttack(self)
+	if CurTime() < self.Time.Melee then self.Task.Fail(self) return end
+	if not self:GetEnemy() then self.Task.Fail(self) return end
+	self:AddGesture(self.Act.Melee)
+	self:GetEnemy():TakeDamage(30, self, self)
+	self.Time.Melee = CurTime() + 1.1
+	self.Task.Complete(self)
 end
 
 --FireWeapon: wrapper function of self:FireWeapon()
 function ENT.Task.FireWeapon(self)
---	self:FireWeapon()
+	self.Equipment.Fire(self, self.Equipment.Entity)
 	self.Task.Complete(self)
-end
-
---SetCoverFireAnim: set cover animation for firing.
-function ENT.Task.SetCoverFireAnim(self)
-	self.Task.Complete(self)
-	if not self:GetActiveWeapon() then
-		return
-	end
-	local FilterTable = table.Copy(self.Sensor.breakable_filter)
-	table.insert(FilterTable, self:GetActiveWeapon())
-	local tr = util.TraceLine({
-		start = self:WorldSpaceCenter(),
-		endpos = self.Memory.EnemyPosition,
-		filter = FilterTable,
-		mask = MASK_SHOT,
-	})
-	if not tr.StartSolid and not tr.HitWorld and
-		tr.HitPos:DistToSqr(self.Memory.EnemyPosition) < 100e+2 then
-		return
-	end
-	tr.HitPos.z = self:GetPos().z
-	local height = util.TraceLine({
-		start = tr.HitPos - tr.HitNormal + vector_up * self.Height.Eye[HEIGHT_STAND],
-		endpos = tr.HitPos - tr.HitNormal,
-		filter = FilterTable,
-		mask = MASK_SHOT,
-	})
-	local wh = height.HitPos.z - self:GetPos().z
-	local mz = self.Equipment.IsPrimary and
-		self.Height.Muzzle.Primary or self.Height.Muzzle.Secondary
-	local anim = "SMGcover"
-	if self.Equipment.IsPrimary then
-		if mz[HEIGHT_LOWERCOVER] > wh and wh > mz[HEIGHT_MOVE] / 2 then
-			self.StandPistol = ACT_RANGE_AIM_PISTOL_LOW
-		else
-			self.StandPistol = ACT_IDLE_ANGRY_PISTOL
-		end
-	else
-		if not self.Path.Main:IsValid() and mz[HEIGHT_COVER] > wh and wh > mz[HEIGHT_LOWERCOVER] then
-			self:SetSequence("SMGcover")
-		elseif mz[HEIGHT_LOWERCOVER] > wh and wh > mz[HEIGHT_STAND] then
-			self.StandRifle = ACT_RANGE_AIM_SMG1_LOW
-		else
-			self.StandRifle = ACT_IDLE_ANGRY_SMG1
-		end
-	end
-	return
 end
 
 --Reload: wrapper function of self:Reload()
 function ENT.Task.Reload(self)
-	self:Reload()
+	self:ReloadWeapon()
 	self.Task.Complete(self)
 end
 
 --Advance: wrapper function of self:Advance()
 function ENT.Task.Advance(self)
-	if not self.Path.Main:IsValid() then
-		self:Advance()
-		if self.Path.Main:IsValid() then
-			self.Task.Complete(self)
-		else
-			self.Task.Fail(self)
-		end
-	end
+	self.Path.DesiredPosition = self.Memory.EnemyPosition
+	self.Task.Complete(self)
 end
 
 --Appear: wrapper function of self:Appear()
 function ENT.Task.Appear(self, wait)
-	if not self.Path.Main:IsValid() then
-		self:Appear()
-		if self.Path.Main:IsValid() then
-			self.Task.Complete(self)
-		else
-			self.Task.Fail(self)
-		end
+	if self:SetDesiredPosition() then
+		self.Task.Complete(self)
+	else
+		self.Task.Fail(self)
 	end
 end
 
---Escape: wrapper function of self:Escape()
+--Escape: wrapper function of self:EscapeFromEnemy()
 function ENT.Task.Escape(self, opt)
-	if not self.Path.Main:IsValid() then
-		local opt = istable(opt) and opt or {}
-		self:Escape(IsValid(opt.ent) and opt.ent or self.State.Previous.HaveEnemy, opt.far, opt.overwrite)
-		if self.Path.Main:IsValid() then
-			self.Task.Complete(self)
-		else
-			self.Task.Fail(self)
-		end
+	if self:SetDesiredPosition({spottype = "Escape", see = false, nearest = true}) then
+		self.Task.Complete(self)
+	else
+		self.Task.Fail(self)
 	end
 end
 
---SearchCover: wrapper function of self:SearchCover()
-function ENT.Task.SearchCover(self)
-	if not self.Path.Main:IsValid() then
-		self:SearchCover()
-		if self.Path.Main:IsValid() then
-			self.Task.Complete(self)
-		else
-			self.Task.Fail(self)
-		end
-	end
-end
-
---WalkRandom: walk around random position.
---number distance | walking distance.
---bool gonext | do not wait for arrival.
-function ENT.Task.WalkRandom(self, opt)
-	local opt = opt or {distance = 200}
-	local distance = opt.distance or 200
-	if not self.Path.Main:IsValid() then
-		for i = 1, 3 do
-			local distance = isnumber(distance) and distance or 200
-			local vec = Vector(self:XorRand(-1, 1), self:XorRand(-1, 1), 0) * distance
-			if vec:LengthSqr() > 100e+2 then
-				self.Path.Main:Invalidate()
-				self:StartMove(self:GetPos() + vec, {movetype = "idle"})
-			end
-			if self.Path.Main:IsValid() and
-				self.Path.Main:GetLength() < distance * 2 then break end
-		end
-		if not opt.wait then self.Task.Complete(self) end
-	end
+--SetRandomPosition: walk around random position.
+function ENT.Task.SetRandomPosition(self, opt)
+	local opt = istable(opt) and opt or {}
+	self:GotoRandomPosition(opt.dist)
+	self.Task.Complete(self)
 end
 
 --RecomputePath: recompute the current path.
 function ENT.Task.RecomputePath(self)
 	if self.Path.Main:IsValid() then
-		self.Path.Main:Compute(self, self.Path.Goal)
+		self.Path.Main:Compute(self, self.Path.DesiredPosition)
 	end
 	self.Task.Complete(self)
 end
 
 --InvalidatePath: invalidate the current path.
 function ENT.Task.InvalidatePath(self)
-	self:ClearPath()
+	self.Path.Main:Invalidate()
 	return self.Task.Complete(self)
 end
 
---SwingBaton: deploy a stunstick and swing.
-function ENT.Task.SwingBaton(self)
-	if self.Memory.Distance < self.MeleeDistance * 0.7 then
-		self.Path.Approaching = false
-		timer.Simple(0.45 / (self.TrueSniper and 2 or 1), function()
-			if IsValid(self) and IsValid(self.Weapon) and IsValid(self:GetEnemy())
-				and self:GetRangeTo(self:GetTargetPos()) < self.MeleeDistance then
-				local d = DamageInfo()
-				d:SetAttacker(self)
-				d:SetDamage(40)
-				d:SetDamageForce(self:GetForward())
-				d:SetDamagePosition(self:GetEnemy():WorldSpaceCenter())
-				d:SetDamageType(DMG_DISSOLVE)
-				d:SetInflictor(self.Weapon)
-				d:SetMaxDamage(d:GetDamage())
-				self:GetEnemy():TakeDamageInfo(d)
-				self.Weapon:EmitSound("Weapon_StunStick.Melee_Hit")
-			end
-		end)
-		self.Weapon:EmitSound("Weapon_StunStick.Swing")
-		self:PlaySequenceAndWait("swing", self.TrueSniper and 2 or 1)
-		self.Task.Complete(self)
-	else
-		if CurTime() > self.Time.Task + 1 then
-			self.Task.Complete(self)
-		else
-			self.Path.Approaching = true
-			self.loco:FaceTowards(self.Memory.EnemyPosition)
-			self.loco:Approach(self.Memory.EnemyPosition, 10)
-		end
-	end
+--StartMove: start moving toward self.Path.DesiredPosition
+function ENT.Task.StartMove(self)
+	self:StartMove()
+	return self.Task.Complete(self)
 end
 
---TaskThrowGrenade: wrapper function of self:Throw()
-function ENT.Task.TaskThrowGrenade(self)
-	self:Throw()
-	self.Time.Threw = CurTime() + 7
+--SetBlinkPosition: Sets the position after using blink.
+--Argument:
+----string mode | Blink mode: "TowardEnemy", "Dodge"
+function ENT.Task.SetBlinkPosition(self, mode)
+	if not isstring(mode) or CurTime() < self.Time.Blink then
+		self.Memory.BlinkPosition = nil
+		self.Task.Complete(self)
+		return
+	elseif self.BlinkRemaining <= 0 then
+		self.Task.Fail(self)
+		return
+	end
+	if mode == "TowardEnemy" then
+		local pos = self:WorldSpaceCenter() + (self.Memory.EnemyPosition
+			- self:WorldSpaceCenter()):GetNormalized() * self.Dist.Blink
+		local tr = util.TraceHull({
+			start = self:WorldSpaceCenter(), 
+			endpos = pos,
+			maxs = self:OBBMaxs(), mins = self:OBBMins(),
+			mask = MASK_NPCSOLID_BRUSHONLY,
+			filter = self,
+		})
+		if tr.Hit then
+			pos = tr.HitPos
+		end
+		
+		self.Memory.BlinkPosition = pos
+		debugoverlay.Line(pos, pos + vector_up * 100, 2, Color(0,255,0,255))
+	end
+	
+	self.Task.Complete(self)
+end
+
+--Blink: Teleport to self.Memory.BlinkPosition.
+function ENT.Task.Blink(self)
+	if not isvector(self.Memory.BlinkPosition) or
+		self.Memory.BlinkPosition:DistToSqr(self:GetPos()) > self.Dist.BlinkSqr * 1.02 then
+		self.Task.Fail(self)
+		return
+	end
+	
+	local trace = util.SpriteTrail(self, self:LookupAttachment("chest"), 
+		Color(0, 128, 255, 192), true, 20, 0, 0.5, 1/10, "effects/blueblacklargebeam.vmt")
+	local tr = util.QuickTrace(self.Memory.BlinkPosition + vector_up * self.Dist.Blink, 
+		-vector_up * (self.Dist.Blink + self:OBBMaxs().z / 2), self)
+	
+	self:SetPos(tr.HitPos)
+	SafeRemoveEntityDelayed(trace, 0.5)
+	self.Time.Blink = CurTime() + 0.2
+	self.BlinkRemaining = self.BlinkRemaining - 1
 	self.Task.Complete(self)
 end

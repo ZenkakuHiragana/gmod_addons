@@ -2,6 +2,7 @@
 AddCSLuaFile("shared.lua")
 include("shared.lua")
 include("weapon.lua")
+include("targeting.lua")
 include("movement.lua")
 include("schedules.lua")
 
@@ -20,7 +21,8 @@ end)
 
 --Called when the nextbot touches another entity.
 --Applies the physics damage.
---Argument: Entity v | The entity the nextbot came in contact with.
+--Argument:
+----Entity v | The entity the nextbot came in contact with.
 function ENT:OnContact(v)
 	if not IsValid(v) then return end
 	if v:IsPlayer() or v:IsNPC() or v.Type == "nextbot" then return end
@@ -56,14 +58,16 @@ function ENT:OnInjured(info)
 	self.Time.Damage = CurTime()
 	if info:IsDamageType(DMG_BURN) or self:Validate(info:GetAttacker()) ~= 0 then return end
 	
-	self.Memory.Enemies[info:GetAttacker()] =
-		{Pos = info:GetAttacker():GetPos(),
-		 Distance = info:GetAttacker():GetPos():DistToSqr(self:GetPos()),
-		 Forward = info:GetAttacker():GetForward()}
+	self.Memory.Enemies[info:GetAttacker()] = {
+		Pos = info:GetAttacker():GetPos(),
+		Distance = info:GetAttacker():GetPos():DistToSqr(self:GetPos()),
+		Forward = info:GetAttacker():GetForward()
+	}
 end
 
 function ENT:OnRemove()	
 	if IsValid(self.Equipment.Entity) then self.Equipment.Entity:Remove() end
+	timer.Remove("BlinkRecover" .. self:EntIndex())
 end
 
 function ENT:OnKilled(info)
@@ -87,15 +91,24 @@ function ENT:InitializeTimers()
 	self.Time.SeeEnemy = CurTime()			--Can see the enemy
 	self.Time.Fire = CurTime()				--Fire primary weapon
 	self.Time.Move = CurTime()				--Start moving to somewhere
+	self.Time.Melee = CurTime()				--Melee attack cooldown
 	self.Time.Reload = CurTime()			--Reloading
 	self.Time.Damage = CurTime()			--Last time damage taken
 	self.Time.DamageRepeatedly = CurTime()	--Flag as repeatedly damage
 	self.Time.Schedule = CurTime()			--Begin a schedule
 	self.Time.Task = CurTime()				--Begin a task
+	self.Time.Blink = CurTime()				--Blink cooldown
 end
 
 function ENT:InitializeVariables()
 	self.Equipment = self:CreatePulsePistols() --Weapons info
+	self.EyeHeight = self:GetEye().Pos.z - self:GetPos().z
+	
+	self.BlinkRemaining = 3
+	timer.Create("BlinkRecover" .. self:EntIndex(), 5, 0, function()
+		if not IsValid(self) or self.BlinkRemaining > 2 then return end
+		self.BlinkRemaining = self.BlinkRemaining + 1
+	end)
 	
 	self.Path = {}
 	self.Path.Main = Path("Follow")
@@ -109,6 +122,7 @@ function ENT:InitializeVariables()
 	self.Memory.DangerEntity = nil --An entity that I should run away from.
 	self.Memory.Distance = 0 --Distance from myself to the enemy.
 	self.Memory.EnemyPosition = self:GetEye().Pos --I know his last position I've seen.
+	self.Memory.EnemyAimVector = self:GetForward() --The enemy's looking at.
 	self.Memory.Enemies = {} --Enemy pool
 	self.Memory.Look = false --Look at the enemy
 	--------------------------------
@@ -121,6 +135,7 @@ end
 function ENT:Initialize()
 	self.breakable_filter = ents.FindByClass("func_breakable")
 	table.Add(self.breakable_filter, ents.FindByClass("func_breakable_surf"))
+	table.insert(self.breakable_filter, self)
 	
 	--Shared functions
 	self:SetModel(self.Model)
@@ -132,10 +147,10 @@ function ENT:Initialize()
 	self:MakePhysicsObjectAShadow(true, true)
 	
 	--Server functions
-	self.Condition = {}
 	self:SetUseType(SIMPLE_USE)
 	self:SetMaxHealth(self.HP.Init)
 	self:StartActivity(self.Act.Run)
+	self.loco:SetMaxYawRate(self.MaxYawRate)
 	self.loco:SetDesiredSpeed(self.Speed.Run)
 	self.loco:SetAcceleration(self.Speed.Acceleration)
 	self.loco:SetDeceleration(self.Speed.Deceleration)
@@ -143,126 +158,104 @@ function ENT:Initialize()
 end
 ----------------------------------------------}
 
-
 function ENT:RunBehaviour()
 	while true do
 		if not self:GetConVarBool("ai_disabled") then
-			--Perform sensing.
-			local nearestenemy, e = self:FindEnemy(), self:GetEnemy()
-			if IsValid(nearestenemy) then
-				self:SetEnemy(nearestenemy)
-			end
-			--Update enemy info
-			self.Memory.Look = self:CanSee() --I have LOS of the enemy.
-			self.Memory.Shoot = self:CanSee(self.Memory.EnemyPosition, --I can shoot the enemy.
-				{start = self:GetMuzzle().Pos, shoot = true})
+			local sched, progress = self:GetSchedule()
+			if not istable(self.Schedule[sched]) then self:SetSchedule("Idle") end
 			
-			if self.Memory.Look then
-				--Update the position of current enemy
-				self.Memory.EnemyPosition = self:GetTargetPos() --set the last position I saw
-				self.Memory.Distance = self:GetRangeTo(self.Memory.EnemyPosition) --set the last distance I know
-				self:SetLook(self.Memory.Shoot)
-				self.Time.Saw = CurTime()
+			for i, interrupt in ipairs(self.Schedule[sched].Interrupts) do
+				if self:HasCondition(interrupt) then
+					self.State.ScheduleProgress = math.huge
+				end
 			end
-			
-			--Build conditions.
-			self:RemoveAllConditions()
-			self.Condition.Build(self, self.Memory.Enemy)
 			
 			--Choose a state.
 			self.State.Build(self)
 			
+			--Perform sensing.
+			local nearestenemy, e = self:FindEnemy(), self:GetEnemy()
+			if IsValid(nearestenemy) then self:SetEnemy(nearestenemy) end
+			
+			--Build conditions.
+			self:BuildConditions(self:GetEnemy())
+			
+			--Update enemy info			
+			if self:GetEnemy() and self.Memory.Look then
+				--Update the position of current enemy
+				self.Memory.EnemyAimVector = self:GetEnemyAimVector()
+				self.Memory.EnemyPosition = self:GetEnemy():WorldSpaceCenter() --set the last position I saw
+				self.Memory.Distance = self:GetRangeTo(self.Memory.EnemyPosition) --set the last distance I know
+				self.Time.SeeEnemy = CurTime()
+			end
+			
 			--Select a new schedule
-			local sched, progress = self:GetSchedule()
-			if not istable(self.Schedule[sched]) or self:HasCondition("Done") then
+			if self:HasCondition("Done") then
 				self:SetSchedule(self.Schedule.Build[self:GetState()](self))
 			end
 			
-			if self.Memory.Shoot then
-				self:FireWeapon()
-			end
-			
 			--Do current schedule.
-			if istable(self.Schedule[sched]) then --Current schedule is available, run task.
-				for i = 1, 3 do
-					sched, progress = self:GetSchedule()
-					self.State.Task = self.Schedule[sched][progress]
-					if istable(self.State.Task) then
-						self.State.TaskParam = self.State.Task[2]
-						self.State.Task = self.State.Task[1]
-					else
-						self.State.TaskParam = nil
-					end
-					
-					local task, param, taskreturn, completed = self.State.Task, self.State.TaskParam, nil, nil
-					if isfunction(self.Task[task]) then
-						taskreturn = self.Task[task](self, param)
-						completed = self.Task.IsCompleted(self)
-						if completed then --Current task is completed, go to next task.
-							if completed == "invalid" then
-								self.State.Previous.FailSchedule = sched
-								self.State.ScheduleProgress = #self.Schedule[sched] + 1
-							else
-								self.State.Previous.FailSchedule = nil
-								self.State.ScheduleProgress = progress + 1
-							end
-							self.Time.Task = CurTime()
-						end
-						if not (completed and taskreturn) then break end
-					end
+			for i = 1, 10 do --This should be: while true do
+				--Pick up current task.
+				sched, progress = self:GetSchedule()
+				self.State.Task = self.Schedule[sched][progress]
+				if istable(self.State.Task) then
+					self.State.TaskParam = self.State.Task[2]
+					self.State.Task = self.State.Task[1]
+				else
+					self.State.TaskParam = nil
 				end
 				
-				for i, interrupt in ipairs(self.Schedule[sched].Interrupts) do
-					if self:HasCondition(interrupt) then
-						self.State.ScheduleProgress = #self.Schedule[sched] + 1
+				if isfunction(self.Task[self.State.Task]) then
+					local taskreturn = self.Task[self.State.Task](self, self.State.TaskParam)
+					local completed = self.Task.IsCompleted(self)
+					if completed then --Current task is completed, go to next task.
+						if completed == "invalid" then --Task is failed
+							self.State.Previous.FailSchedule = sched
+							self.State.ScheduleProgress = math.huge --Abort the schedule
+							break
+						else --Task acomplished
+							self.State.Previous.FailSchedule = nil
+							self.State.ScheduleProgress = self.State.ScheduleProgress + 1
+						end
+						self.Time.Task = CurTime()
 					end
+					--taskreturn == true and task is completed, go to next task.
+					if not completed or not taskreturn then break end
 				end
 			end
 			
-			self.State.Previous.HaveEnemy = self.Memory.Enemy --For "EnemyDead" condition.
-			self.State.Previous.Health = self:Health() --For "Light/HeavyDamage" condition.
-			--For "PathFinished" condition.
-			self.State.Previous.Path = self.Path.Main:IsValid() or self.Path.Approaching
+			self.State.Previous.HaveEnemy = self:GetEnemy() --For "EnemyDead"
+			self.State.Previous.Health = self:Health() --For "LightDamage", "HeavyDamage"
+			self.State.Previous.Path = self.Path.Main:IsValid() or self.Path.Approaching --For "PathFinished"
 			
-			self:SetLocoAnimation()
-			self:MoveBehaviour()
-			if self.Memory.FaceEnemy then
-				self.loco:FaceTowards(self.Memory.EnemyPosition)
-				self.loco:FaceTowards(self.Memory.EnemyPosition)
-				self:Aim(self.Memory.EnemyPosition)
-			end
-		end
-		coroutine.yield()
-	end
-end
-
-function ENT:RunBehaviour()
-	while true do
-		if not self:GetConVarBool("ai_disabled") then
-			if not self.Path.Main:IsValid() then
-				if CurTime() > self.Time.Move then
-					self:GotoRandomPosition()
-					self:StartMove()
-				end
-			elseif not self:UpdatePosition() then
-				self.Time.Move = CurTime() + 3
-			end
+			if self.Path.Main:IsValid() then self:UpdatePosition() end
 			
 			self:PerformAnimation()
+			
+			if self.Memory.Look then
+				self.loco:SetMaxYawRate(self.MaxYawRate * 5)
+				self.loco:FaceTowards(self.Memory.EnemyPosition)
+				self.loco:SetMaxYawRate(self.MaxYawRate)
+			end
 		end
 		
 		coroutine.yield()
 	end
 end
+
 function ENT:PerformAnimation()
 	--Pose parameter for locomotion
 	local multiply = self:GetVelocity():LengthSqr() / self.Speed.RunSqr
 	local move_vector = self:WorldToLocal(self:GetPos() + self:GetVelocity():GetNormalized())
 	self:SetPoseParameter("move_x", move_vector.x * multiply)
-	self:SetPoseParameter("move_y", move_vector.y * multiply)
+	self:SetPoseParameter("move_y", -move_vector.y * multiply)
 	self:SetPoseParameter("vertical_velocity", move_vector.z * multiply)
 	
-	--Pose parameter for aiming
+	--Pose parameter for 
+	if self.Memory.FaceEnemy then
+		self:Aim(self.Memory.EnemyPosition)
+	end
 	
 	--Set activity
 	local velocity = self:GetVelocity():LengthSqr()
@@ -275,11 +268,49 @@ function ENT:PerformAnimation()
 	self:SetActivity(act)
 end
 
+--Sets the given activity number, but does not restart the animation.
+--Argument:
+----number a | the activity number.
 function ENT:SetActivity(a)
 	if self:GetActivity() ~= a then self:StartActivity(a) end
 end
 
+--Returns a table about the hand.
+--Argument:
+----bool isleft | True if it is left hand.
 function ENT:GetHand(isleft)
 	local att = isleft and "anim_attachment_LH" or "anim_attachment_RH"
 	return self:GetAttachment(self:LookupAttachment(att))
+end
+
+--This function sets the facing direction of the arms.
+--Argument:
+----Vector pos | the position to aim at.
+function ENT:Aim(pos)
+	--Then converts it to a vector on the entity and makes it an angle ("local angle")
+	local yawAng = self:WorldToLocal(pos):Angle()
+	
+	--Same thing as above but this gets the pitch angle.
+	--Since the turret's pitch axis and the turret's yaw axis are seperate I need to do this seperately.
+	local pAng = pos - self:LocalToWorld((yawAng:Forward() * 8) + Vector(0, 0, 50))
+	local pAng = self:WorldToLocal(self:GetPos() + pAng):Angle()
+
+	--y = Yaw. This is a number between 0-360.
+	--p = Pitch. This is a number between 0-360.
+	local y, p = yawAng.y, pAng.p
+	local min, max = self:GetPoseParameterRange("")
+	--min, max = Minimum value and maximum value of pose parameter, "aim_yaw", "aim_pitch".
+	
+	--Numbers from 0 to 360 don't work with the pose parameters, so I need to make it a number from -180 to 180
+	math.Remap(y, 0, 360, -180, 180)
+	math.Remap(p, 0, 360, -180, 180)
+	if y >= 180 then y = y - 360 end
+	if p >= 180 then p = p - 360 end
+	if math.abs(y) > 60 then return false end
+	if 56.203525543213 < p or p < -86.324005126953 then return false end
+	--Returns yaw and pitch as numbers between -180 and 180
+	
+	if not y then return false end
+	self:SetPoseParameter("aim_yaw", y)
+	self:SetPoseParameter("aim_pitch", p)
 end

@@ -1,4 +1,6 @@
 
+local ___DEBUG_SEE = false
+
 --Determines whether given entity is targetable or not.
 function ENT:Validate(e)
 	if not IsValid(e) or e == self then return -1 end
@@ -13,7 +15,7 @@ function ENT:Validate(e)
 			c ~= "npc_combinegunship" and c ~= "npc_helicopter" and c ~= "npc_strider" then
 				if e:IsNPC() or e.Type == "nextbot" or
 				(e:IsPlayer() and not (self:GetConVarBool("ai_ignoreplayers") or e:IsFlagSet(FL_NOTARGET))) then
-						return 0
+					return 0
 				end
 			end
 		end
@@ -36,17 +38,14 @@ end
 
 --Finds nearest enemy and returns it.
 function ENT:FindEnemy()
-	local lst = ents.FindInSphere(self:GetEye().Pos, self.FarDistance)
-	local pos, dist, pool, nearestenemy, e, sentence = math.huge, math.huge, {}
+	local lst = ents.FindInSphere(self:GetEye().Pos, self.Dist.Search)
+	local pos, nearestenemy = vector_origin, NULL
 	
 	for k, v in pairs(lst) do
-		e = self:Validate(v)
-		if e == 0 and (v:GetPos() - self:GetEye().Pos):GetNormalized():Dot(self:GetEye().Ang:Forward())
-			> math.cos(math.rad(self.SearchAngle)) then
+		if self:Validate(v) == 0 and (v:GetPos() - self:GetEye().Pos):GetNormalized():Dot(self:GetEye().Ang:Forward()) > math.cos(math.rad(self.SearchAngle)) then
 			pos = v:WorldSpaceCenter()
-			dist = self:GetRangeSquaredTo(v:GetPos())
 			if self:CanSee(pos) then --normal entity and can see
-				self.Memory.Enemies[v] = {Pos = pos, Distance = dist, Forward = v:GetForward()}
+				self.Memory.Enemies[v] = {Pos = pos, Distance = self:GetRangeSquaredTo(v:GetPos()), Forward = self:GetEnemyAimVector(v)}
 			end
 		end
 	end
@@ -71,6 +70,7 @@ end
 function ENT:CanSee(pos, opt)
 	local opt = opt or {}
 	local e = pos or self.Memory.EnemyPosition
+	local filter = table.Copy(self.breakable_filter)
 	local tr = util.TraceLine({
 		start = opt.start or self:GetEye().Pos,
 		endpos = e,
@@ -83,3 +83,21 @@ function ENT:CanSee(pos, opt)
 	return not tr.StartSolid and not tr.HitWorld and tr.HitPos:DistToSqr(e) < 100e+2
 end
 
+--Returns where current enemy or the given entity is looking at.
+--Argument:
+----Entity e | The given entity(Optional).
+function ENT:GetEnemyAimVector(e)
+	if not IsValid(e) and not IsValid(self.Memory.Enemy) then return self:WorldSpaceCenter() end
+	local ent = IsValid(e) and e or self.Memory.Enemy
+	return isfunction(ent.GetAimVector) and ent:GetAimVector() or ent:GetForward()
+end
+
+--Returns if the enemy or the given entity is facing me.
+--Argument:
+----Entity e | The given entity(Optional).
+function ENT:IsFacingMe(e)
+	local vEnemyPos = IsValid(e) and e:WorldSpaceCenter() or self.Memory.EnemyPosition
+	local vEnemyAim = IsValid(e) and self:GetEnemyAimVector(e) or self.Memory.EnemyAimVector
+	local vEnemyToMe = (self:GetEye().Pos - vEnemyPos):GetNormalized()
+	return vEnemyAim:Dot(vEnemyToMe) > 0.85
+end

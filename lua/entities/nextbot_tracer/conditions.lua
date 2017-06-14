@@ -32,6 +32,7 @@ ENT.Condition = {
 	"ReloadFinished", --I've just finished reloading.
 	"RepeatedDamage", --I take a damage repeatedly.
 }
+
 for i, v in ipairs(ENT.Condition) do
 	ENT.Condition[v] = i
 	ENT.Condition[i] = nil
@@ -39,66 +40,82 @@ end
 
 --Builds some conditions of the nextbot.
 --Compare e and PreviousMemory to set "EnemyDead" condition.
-function ENT.Condition.Build(self, e)
+function ENT:BuildConditions(e)
 	local c = {} --list of conditions
 	
-	c.NewEnemy = self.State.Previous.HaveEnemy ~= e --I got new enemy.
+	c.NewEnemy = tobool(not self.State.Previous.HaveEnemy and e) --I got new enemy.
 	c.LostEnemy = tobool(not e and self.State.Previous.HaveEnemy) --I had an enemy previous tick.
-	c.EnemyDead = c.LostEnemy or (IsValid(e) and e:Health() <= 0) --An enemy with 0 health.
-	if IsValid(e) then
-		c.EnemyFacingMe = (self:GetEye().Pos --the enemy is facing me.
-		 - self.Memory.EnemyPosition):GetNormalized():Dot(e:GetForward()) > 0.85
-		c.EnemyTooFar = self.Memory.Distance >= self.FarDistance --the enemy is too far.
-		local n = navmesh.Find(self.Memory.EnemyPosition, self.MeleeDistance,
+	c.EnemyDead = c.LostEnemy or (e and e:Health() <= 0) --An enemy with 0 health.
+	if e then
+		--the enemy is facing me.
+		local vEnemyToMe = (self:GetEye().Pos - self.Memory.EnemyPosition):GetNormalized()
+		c.EnemyFacingMe = self:IsFacingMe()
+		
+		--the enemy is too far.
+		c.EnemyTooFar = self.Memory.Distance > self.Dist.ShootRange
+		
+		--Check if the enemy position is unreachable.
+		c.EnemyUnreachable = true
+		local n = navmesh.Find(self.Memory.EnemyPosition, self.Dist.Melee,
 			self.loco:GetDeathDropHeight(), self.loco:GetStepHeight())
 		for k, v in pairs(n) do
-			if self.loco:IsAreaTraversable(v) then n = true break end
+			if self.loco:IsAreaTraversable(v) then
+				c.EnemyUnreachable = false
+				break
+			end
 		end
-		c.EnemyUnreachable = not isbool(n) --the enemy position is unreachable.
 		
-		if self.Memory.Shoot then--and self:GetAimVector():Dot(self:GetForward()) > 0.7 then
-			c.CanPrimaryAttack = --if I'm enough to fire primary weapon
-			self.Memory.Distance < self.FarDistance and
-			self.Memory.Distance >= self.NearDistance and
-			self.Primary.Ammo > 0 and
-			CurTime() > self.Time.Fired
-			c.CanSecondaryAttack = --if I'm enough to fire secondary weapon
-			self.Memory.Distance < self.NearDistance and
-			self.Memory.Distance >= self.MeleeDistance and
-			self.Secondary.Ammo > 0 and
-			CurTime() > self.Time.Fired
-			c.CanMeleeAttack = self.Memory.Distance < self.MeleeDistance --enemy is too close, beat it
-		end
-		c.HaveEnemyLOS = self.Memory.Look --I have LOS of the enemy.
-		c.EnemyOccluded = not self.Memory.Look --I can't see the enemy.
+		local bLook, bShoot = self:CanSee(), self:CanSee(self.Memory.EnemyPosition, {shoot = true})
+		if bLook then self.Time.SeeEnemy = CurTime() end
+		c.HaveEnemyLOS = bLook --I have LOS of the enemy.
+		c.EnemyOccluded = not bLook --I can't see the enemy.
+		
+		--if I'm enough to fire primary weapon
+		c.CanPrimaryAttack = 
+		bShoot and
+		self.Memory.Distance < self.Dist.ShootRange and
+		self.Equipment.Ammo > 0 and
+		CurTime() > self.Time.Fire
+		
+		--if I'm enough to fire secondary weapon
+		c.CanSecondaryAttack = false
+		
+		--enemy is too close, beat it
+		c.CanMeleeAttack = 
+		bShoot and self.Memory.Distance < self.Dist.Melee
 	end
 	
+	--Is there an enemy behind me?
+	c.BehindEnemy = false
 	for enemy in pairs(self.Memory.Enemies) do
-		local tp = self:GetTargetPos(false, enemy)
-		if self:CanSee(tp) and (self:GetEye().Pos - tp):GetNormalized():Dot(self:GetForward()) > 0.7 then
+		if self:CanSee(enemy:WorldSpaceCenter()) and 
+		(self:GetEye().Pos - enemy:WorldSpaceCenter()):GetNormalized():Dot(self:GetForward()) > 0.7 then
 			c.BehindEnemy = true
 			break
 		end
 	end
 	
 	--Checking weapon ammunition.
-	c.NoPrimaryAmmo = self.Primary.Ammo <= 0
-	c.NoSecondaryAmmo = self.Secondary.Ammo <= 0
+	c.NoPrimaryAmmo = self.Equipment.Ammo <= 0
+	c.NoSecondaryAmmo = false
 	c.ReloadFinished = math.abs(CurTime() - self.Time.Reload) < 0.1
-	c.LowPrimaryAmmo = self.Primary.Ammo > 0 and self.Primary.Ammo < self.Primary.Clip / 3
-	c.LowSecondaryAmmo = self.Secondary.Ammo > 0 and self.Secondary.Ammo < self.Secondary.Clip / 3
+	c.LowPrimaryAmmo = self.Equipment.Ammo > 0 and self.Equipment.Ammo < self.Equipment.Clip / 2
+	c.LowSecondaryAmmo = false
 	
-	--Set if current schedule is done.
-	c.Done = self.State.ScheduleProgress > #self.Schedule[self:GetSchedule()]
+	--Is current schedule done?
+	c.Done = self.State.ScheduleProgress > #self.Schedule[self.State.Schedule]
+	--Have current path just finished?
 	c.PathFinished = self.State.Previous.Path and not (self.Path.Main:IsValid() or self.Path.Approaching)
 	
 	--Around my health.
 	c.LightDamage = self.State.Previous.Health - self:Health() > 1
 	c.HeavyDamage = self.State.Previous.Health - self:Health() > self:GetMaxHealth() / 5
-	c.RepeatedDamage = self.Time.Damage - self.Time.DamageRepeated > 0.8
-	if c.RepeatedDamage then self.Time.DamageRepeated = CurTime() end
+	c.RepeatedDamage = self.Time.Damage - self.Time.DamageRepeatedly > 0.8
+	if c.RepeatedDamage then self.Time.DamageRepeatedly = CurTime() end
 	
 	--Get dangerous things.
+	c.NearDanger = false
+	self.Memory.DangerEntity = NULL
 	local d, ent = self.State.GetDanger(self)
 	if d then
 		c.NearDanger = true
@@ -107,6 +124,7 @@ function ENT.Condition.Build(self, e)
 	
 	--Build conditions
 	for i, v in pairs(c) do
+		self:RemoveCondition(i)
 		self:AddCondition(i, v)
 	end
 end

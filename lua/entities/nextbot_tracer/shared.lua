@@ -12,19 +12,28 @@ ENT.Spawnable = false
 ENT.AutomaticFrameAdvance = true
 ENT.Model = "models/player/ow_tracer.mdl"
 ENT.SearchAngle = 60
+ENT.MaxNavAreas = 400 --Maximum amount of searching NavAreas.
+ENT.Bravery = 6
 
 ENT.Act = {}
 ENT.Act.Idle = ACT_HL2MP_IDLE_DUEL
 ENT.Act.Run = ACT_HL2MP_RUN_DUEL
 ENT.Act.Walk = ACT_HL2MP_WALK_DUEL
 ENT.Act.Attack = ACT_HL2MP_GESTURE_RANGE_ATTACK_DUEL
-ENT.Act.Reload = ACT_HL2MP_GESTURE_RELOAD
+ENT.Act.Melee = ACT_HL2MP_GESTURE_RANGE_ATTACK_MELEE
+ENT.Act.Reload = ACT_HL2MP_GESTURE_RELOAD_DUEL
 
 ENT.Dist = {}
 ENT.Dist.Search = 4000
 ENT.Dist.ShootRange = 500
 ENT.Dist.Melee = 100
 ENT.Dist.Blink = 7 * 3.280839895 * 16 --blink distance in hammer unit, meters -> inches -> hammer units
+ENT.Dist.BlinkSqr = ENT.Dist.Blink^2
+ENT.Dist.Grenade = 300 --Distance for detecting grenades.
+ENT.Dist.GrenadeSqr = ENT.Dist.Grenade^2
+ENT.Dist.Manhack = ENT.Dist.Grenade / 2
+ENT.Dist.ManhackSqr = ENT.Dist.Manhack^2
+ENT.Dist.FindSpots = 3000 --Search radius for finding where the nextbot should move to.
 
 ENT.HP = {}
 ENT.HP.Init = 150
@@ -62,6 +71,28 @@ list.Set("NPC", classname, {
 	Class = classname,
 	Category = "GreatZenkakuMan's NPCs"
 })
+
+local metatable = FindMetaTable("Entity")
+local isnpc = metatable.IsNPC
+--function metatable:IsNPC() return self:GetClass() == classname or isnpc(self) end
+function metatable:AddEntityRelationship() end
+function metatable:AddRelationship() end
+function metatable:AlertSound() end
+function metatable:CapabilitiesAdd() end
+function metatable:CapabilitiesClear() end
+function metatable:CapabilitiesGet() return CAP_MOVE_GROUND end
+function metatable:CapabilitiesRemove() end
+function metatable:Classify() return CLASS_CITIZEN_REBEL end
+function metatable:ClearCondition() end
+function metatable:ClearEnemyMemory() end
+function metatable:ClearExpression() end
+function metatable:ClearGoal() end
+function metatable:ClearSchedule() end
+function metatable:ClearSchedule() end
+function metatable:GetActiveWeapon() return NULL end
+function metatable:SetCurrentWeaponProficiency(p) end
+function metatable:SetLastPosition(v) end
+function metatable:SetTarget(p) end
 
 --++Debugging functions++---------------------{
 function ENT:ShowActAll()

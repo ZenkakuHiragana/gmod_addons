@@ -136,24 +136,24 @@ end
 --Arguments:
 --Nextbot self | The owner of the weapon.
 --Entity weapon | The weapon.
-function ENT:Reload()
+function ENT:ReloadWeapon()
 	if self.Time.Reload > CurTime() then return end
 	if self.Equipment.Ammo >= self.Equipment.Clip then return end
 	
-	self:RemoveAllGestures()	
-	local WeaponInfo = pistol and self.Primary or self.Secondary	
+	self:RemoveAllGestures()
 	local bLooking = self.Memory.Look
 	self.Memory.Look = false
 	
-	local duration = self:GetLayerDuration(self:AddGesture(self.Act.Reloadt)) * 1.02
-	self.Time.Reload = CurTime() + duration
+	self.ReloadLayerID = self:AddGesture(self.Act.Reload)
+	self:SetLayerPlaybackRate(self.ReloadLayerID, self:GetLayerDuration(self.ReloadLayerID))
+	self.Time.Reload = CurTime() + self.Equipment.Delay.Reload
 	timer.Simple(self.Equipment.Delay.ReloadSound, function()
 		if not IsValid(self) or not IsValid(self.Equipment.Entity) or
 			not self:IsPlayingGesture(self.Act.Reload) then return end
 		self.Equipment.Entity:EmitSound(self.Equipment.Sound.Reload)
 	end)
 	
-	timer.Simple(duration, function()
+	timer.Simple(self.Equipment.Delay.Reload, function()
 		if not IsValid(self) then return end
 		self.Equipment.Ammo = self.Equipment.Clip
 		self.Memory.Look = bLooking
@@ -167,8 +167,8 @@ function ENT:CreatePulsePistols()
 	--fire rate: 40rps
 	--reload time: 1 second
 	return self.Weapon.Create(self,
-	"tfa_tracer_nope", 40, 1, 25, 6, "Pistol",
-	{firerate = 1/40 * 2, reloadtime = 1, reloadsound = 0},
+	"tfa_tracer_nope", 40, 1, 150, 6, "Pistol",
+	{firerate = 1/40, reloadtime = 1, reloadsound = 0},
 	{probability = 0.4, scale = 0.7},
 	{fire = "NOPE_TRACER.1", reload = "NOPE_TRACER.RELOADFOLEY"},
 	function(self, weapon)
@@ -176,6 +176,8 @@ function ENT:CreatePulsePistols()
 		if not IsValid(self) or not IsValid(weapon) then return end
 		if self.Equipment.Ammo <= 0 then return end
 		if CurTime() < self.Time.Fire then return end
+		if self.Memory.Distance > self.Dist.ShootRange then return end
+		if not self:HasCondition("CanPrimaryAttack") then return end
 		
 		local shootPos = {self:GetHand(true), self:GetHand()}
 		self.Equipment.Ammo = self.Equipment.Ammo - 1
@@ -210,8 +212,8 @@ function ENT:CreatePulsePistols()
 		
 		for i = 1, 2 do
 			bullet.Src = shootPos[i].Pos
-			bullet.Dir = shootPos[i].Ang:Forward() * 10000
-		
+			bullet.Dir = (self.Memory.EnemyPosition - shootPos[i].Pos):GetNormalized() * 1000
+			
 			self:FireBullets(bullet)
 			ef:SetOrigin(shootPos[i].Pos)
 			ef:SetAngles(shootPos[i].Ang)
@@ -222,6 +224,6 @@ function ENT:CreatePulsePistols()
 		
 		weapon:MuzzleFlash()
 		self:MuzzleFlash()
-		self.Time.Fired = CurTime() + self.Equipment.Delay.Fire
+		self.Time.Fire = CurTime() + self.Equipment.Delay.Fire
 	end)
 end
