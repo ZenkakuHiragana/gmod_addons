@@ -1,7 +1,7 @@
 
-local ___DEBUG_DRAW_PATH = true
-local ___DEBUG_DRAW_MOVEPOINT = true
-local ___DEBUG_SHOW_PATHNAME = true
+local ___DEBUG_DRAW_PATH = false
+local ___DEBUG_DRAW_MOVEPOINT = false
+local ___DEBUG_SHOW_PATHNAME = false
 
 ENT.MaxYawRate = 250 --default: 250
 ENT.Speed = {}
@@ -23,12 +23,23 @@ end
 function ENT:UpdatePosition()
 	if not self.Path.Main:IsValid() then return end
 	if ___DEBUG_DRAW_PATH then self.Path.Main:Draw() end
+	
+	local seg = self.Path.Main:GetCurrentGoal()
+	if seg then
+		self.Memory.Crouch = seg.area:HasAttributes(NAV_MESH_CROUCH)
+		self.Memory.Walk = seg.area:HasAttributes(NAV_MESH_WALK)
+		self.Memory.Jump = seg.area:HasAttributes(NAV_MESH_JUMP) or seg.type == 2
+	end
+	
 	self.Path.Main:Update(self)
 	
 	if self.loco:IsStuck() then
+		self.loco:ClearStuck()
 		self.Path.Main:Invalidate()
 		self.Path.DesiredPosition = self:GetPos()
 	end
+	
+	if self.Memory.Jump then self.loco:Jump() end
 	
 	return self.Path.Main:IsValid()
 end
@@ -36,11 +47,7 @@ end
 function ENT:GotoRandomPosition(distance)
 	local destination = Vector(distance or 700, 0, 0)
 	destination:Rotate(Angle(0, math.Rand(-180, 180), 0))
-	self.Path.DesiredPosition = destination
-	local nav = navmesh.GetNearestNavArea(self.Path.DesiredPosition)
-	if not nav or not self.loco:IsAreaTraversable(nav) then
-		self.Path.DesiredPosition = self:GetPos()
-	end
+	self.Path.DesiredPosition = self:GetPos() + destination
 end
 
 ENT.FindSpotDefaultParameters = {

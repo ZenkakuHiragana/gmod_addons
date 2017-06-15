@@ -23,8 +23,7 @@ local function GetDanger(self)
 				bravery = math.huge
 			elseif v:IsVehicle() and --vehicle incoming
 				(isfunction(v.GetSpeed) and v:GetSpeed() or v:GetVelocity()) > 15 and
-				v:GetVelocity():GetNormalized():Dot(
-				(self:WorldSpaceCenter() - v:WorldSpaceCenter()):GetNormalized()) > 0.65 then
+				v:GetVelocity():GetNormalized():Dot(self:GetAimVector(v:WorldSpaceCenter())) > 0.65 then
 				
 				bravery = math.huge
 			end
@@ -45,6 +44,7 @@ function ENT:InitializeState()
 	self.State.Previous.Health = self:GetMaxHealth() --Detecting damage.
 	self.State.Previous.Path = false --Hook for finished moving.
 	self.State.Previous.FailSchedule = nil --Recently failed schedule.
+	self.State.FailNextSchedule = nil --If a schedule failed, do this schedule.
 	self.State.Task = "" --The current task name.
 	self.State.TaskParam = nil --The parameter of the current task.
 	self.State.TaskDone = nil --True if the current task is done.
@@ -116,17 +116,19 @@ end
 --function Init(self) | Initializes the schedule.
 --Table Interrupts | Defines interrupt functions.
 ----"<ConditionName>"
---string List of TaskNames
+--Table  tasks | List of TaskNames.
+--string failschedule | If this schedule failed, go to this schedule(Optional).
 ENT.Schedule = {
-Add = function(self, key, init, interrupts, tasks)
+Add = function(self, key, init, interrupts, tasks, failschedule)
 	self[key] = {}
 	if isfunction(init) then
 		self[key].Init = init
 	else
-		interrupts, tasks = init, interrupts
+		interrupts, tasks, failschedule = init, interrupts, tasks
 	end
 	self[key].Interrupts = interrupts
 	if istable(tasks) then table.Add(self[key], tasks) end
+	self[key].FailSchedule = failschedule
 end}
 
 --Determine what schedule should do.
@@ -141,51 +143,78 @@ ENT.Schedule.Build = {
 	end,
 	[NPC_STATE_COMBAT] = function(self)
 		--Main combat schedule.
-		local sched = "TakeCover"
+		local sched = "Escape"
 		--The enemy is enough close, do a melee attack.
 		if self:HasCondition("CanMeleeAttack") and self:GetEnemy():Health() < 30 then
-			sched = "MeleeAttack"
+			return "MeleeAttack"
 		--I have low/no ammo, reload.
-		elseif self:HasCondition("NoPrimaryAmmo") or
+		elseif CurTime() > self.Time.Reload and 
+			(self:HasCondition("NoPrimaryAmmo") or
 			self:HasCondition("NoSecondaryAmmo") or
 			(math.random() < 0.3 and
 			(self:HasCondition("LowPrimaryAmmo") or
-			self:HasCondition("LowSecondaryAmmo")))then
-			sched = "HideAndReload"
-		--Enemy is out of range.
-		elseif self:HasCondition("EnemyTooFar") then
-			if self.State.Previous.FailSchedule ~= "BlinkTowardEnemy" and 
-				self.Memory.Distance > self.Dist.Blink then
-				sched = "BlinkTowardEnemy"
+			self:HasCondition("LowSecondaryAmmo"))))then
+			
+			if self:HasCondition("CanBlink") and
+				self:HasCondition("EnemyFacingMe") and
+				self.Memory.Distance < self.Dist.Blink * 0.75 then
+				return "BlinkTowardEnemyAndReload"
 			else
-				sched = "Advance"
+				return "HideAndReload"
+			end
+		--Blink and sidestep.
+		elseif self:HasCondition("CanBlink") then 
+			if self.Memory.Distance < self.Dist.Blink and 
+				self:HasCondition("EnemyFacingMe") then
+				return "BlinkSidestep"
+			--I've taken repeated damage and enemies are near, blink and go behind them.
+			elseif self.Memory.Distance < self.Dist.Blink * 2 and 
+				self:HasCondition("RepeatedDamage") then
+				return "BlinkTowardEnemy"
 			end
 		--I've taken damage and feel dangerous, flee.
 		elseif self:HasCondition("NearDanger") or
 			self:HasCondition("HeavyDamage") or
-			self:HasCondition("RepeatedDamage") or
 			(self:Health() < self:GetMaxHealth() / 2 and
 			self:HasCondition("LightDamage")) then
-			sched = "Escape"
+			
+			if self:HasCondition("CanBlink") then
+				if self:HasCondition("EnemyFacingMe") and --The enemy is near,
+					self.Memory.Distance < self.Dist.Blink / 2 then
+					return "BlinkTowardEnemy" --Go behind the enemy.
+				else
+					return math.random() > 0.5 and "BlinkFromEnemy" or "BlinkSidestep"
+				end
+			else
+				return "TaleCover"
+			end
+		--Enemy is out of range.
+		elseif self:HasCondition("EnemyTooFar") then
+			if self:HasCondition("CanBlink") and
+				self.Memory.Distance > self.Dist.Blink then
+				return "BlinkTowardEnemy"
+			elseif self.State.Previous.FailSchedule ~= "Advance" then
+				return "Advance"
+			end
+		end
+		
 		--An enemy is behind me.
-		elseif self:HasCondition("BehindEnemy") then
-			sched = "TakeCover"
-		--Enemy is occluded.
-		elseif self:HasCondition("EnemyOccluded") and
-			CurTime() > self.Time.SeeEnemy + 3 and
-			self.Memory.Distance > self.Dist.ShootRange / 2 then
-			sched = "AppearUntilSee"
+		if self:HasCondition("CanBlink") and
+			self:HasCondition("MobbedByEnemies") then
+			return "BlinkTowardEnemy"
 		--The enemy is not visible, chase it.
 		elseif self:HasCondition("EnemyOccluded") then
-			sched = "AppearUntilSee"
+			return "AppearUntilSee"
 		else
 			--The enemy knows me, and I can attack, fire.
 			if self:HasCondition("CanPrimaryAttack") or
 				self:HasCondition("CanSecondaryAttack") then
-				sched = "RangeAttack"
+				return "RangeAttack"
 			--Go to enemy position.
+			elseif self:HasCondition("CanBlink") and self.Memory.Distance < self.Dist.Blink / 2 then
+				return "BlinkTowardEnemy"
 			else
-				sched = "Advance"
+				return "Advance"
 			end
 		end
 		return sched
@@ -199,7 +228,7 @@ ENT.Schedule:Add(
 		self.Task.Variable = math.Rand(20, 65)
 	end,
 	{
-		"NearDanger",
+		{"NearDanger", "Escape"},
 		"NewEnemy",
 		"LightDamage",
 		"HeavyDamage",
@@ -232,37 +261,64 @@ ENT.Schedule:Add(
 	{
 		"NearDanger",
 		"NewEnemy",
-		"HaveEnemyLOS",
-		"CanPrimaryAttack",
-		"CanSecondaryAttack",
-		"CanMeleeAttack",
 		"LightDamage",
 		"HeavyDamage",
 		"ReceiveEnemyInfo",
 	},
 	{
-		"SetFaceEnemy",
 		"InvalidatePath",
 		{"Wait", {time = 0.7}},
 		"SetFaceEnemy",
-		{"SetRandomPosition", {distance = 350}},
+		{"SetRandomPosition", {dist = 350}},
 		"StartMove",
-		"WaitForMovement",
+		{"WaitForMovement", {"Reload"}},
+	}
+)
+--------------------------------}
+--==RunAround==-----------------{
+ENT.Schedule:Add(
+	"RunAround",
+	function(self)
+		self.State.TaskVariable = math.Rand(100, 200)
+	end,
+	{
+		"LightDamage",
+		"HeavyDamage",
+		"RepeatedDamage",
+		"CanMeleeAttack",
+		"NearDanger",
+		"NewEnemy",
+		"InvalidPath",
+	},
+	{
+		"SetFaceEnemy",
+		"InvalidatePath",
+		{"SetRandomPosition", {dist = 256}},
+		"StartMove",
+		{"WaitForMovement", {"FireWeapon"}},
 	}
 )
 --------------------------------}
 --==Advance==-------------------{
 ENT.Schedule:Add(
 	"Advance",
+	function(self)
+		timer.Simple(2, function()
+			if not IsValid(self) then return end
+			self.Task.Fail(self)
+		end)
+	end,
 	{
-		"LightDamage",
-		"HeavyDamage",
-		"RepeatedDamage",
+		{"LightDamage", "BlinkTowardEnemy"},
+		{"HeavyDamage", "BlinkSidestep"},
+		{"RepeatedDamage", "BlinkSidestep"},
+		"CanPrimaryAttack",
 		"CanSecondaryAttack",
 		"CanMeleeAttack",
 		"NewEnemy",
 		"EnemyDead",
 		"MobbedByEnemies",
+		{"InvalidPath", "RunAround"},
 	},
 	{
 		"InvalidatePath",
@@ -276,18 +332,27 @@ ENT.Schedule:Add(
 --==Escape==--------------------{
 ENT.Schedule:Add(
 	"Escape",
+	function(self)
+		timer.Simple(2, function()
+			if not IsValid(self) then return end
+			self.Task.Fail(self, "BlinkTowardEnemy")
+		end)
+	end,
 	{
 		"NewEnemy",
+		"LightDamage",
 		"HeavyDamage",
+		"RepeatedDamage",
 		"EnemyDead",
-		"EnemyOccluded",
+		{"EnemyOccluded", "AppearUntilSee"},
+		{"InvalidPath", "RunAround"},
 	},
 	{
 		"InvalidatePath",
-		{"SetFaceEnemy", true},
+		"SetFaceEnemy",
 		"Escape",
 		"StartMove",
-		{"WaitForMovement", {"FireWeapon"}},
+		{"WaitForMovement", {"FireWeapon", "Reload"}},
 		{"Wait", {time = 1.2}},
 	}
 )
@@ -299,14 +364,16 @@ ENT.Schedule:Add(
 		"NewEnemy",
 		"EnemyDead",
 		"CanMeleeAttack",
+		{"InvalidPath", "RunAround"},
 	},
 	{
 		"InvalidatePath",
 		{"SetFaceEnemy", true},
-		"Escape",
+		{"Escape", {nearby = true}},
 		"StartMove",
+		
 		{"WaitForMovement", {"FireWeapon"}},
-		{"Wait", {time = 3.5}},
+	--	{"Wait", {time = 2}},
 	}
 )
 --------------------------------}
@@ -343,6 +410,7 @@ ENT.Schedule:Add(
 	},
 	{
 		"InvalidatePath",
+		{"SetFaceEnemy", true},
 		"Appear",
 		"StartMove",
 		"WaitForMovement",
@@ -355,9 +423,11 @@ ENT.Schedule:Add(
 	{
 		"NewEnemy",
 		"ReloadFinished",
+		{"MobbedByEnemies", "Escape"},
 	},
 	{
 		"InvalidatePath",
+		{"SetFaceEnemy", true},
 		"Escape",
 		"StartMove",
 		{"WaitForMovement", {"FireWeapon", "Reload"}},
@@ -365,7 +435,7 @@ ENT.Schedule:Add(
 	}
 )
 --------------------------------}
---==MeleeAttack==----------------{
+--==MeleeAttack==---------------{
 ENT.Schedule:Add(
 	"MeleeAttack",
 	{
@@ -390,35 +460,57 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"BlinkTowardEnemy",
 	{
-		"CanPrimaryAttack",
 	},
 	{
+		"SetFaceEnemy",
 		{"SetBlinkPosition", "TowardEnemy"},
 		"Blink",
 		"RecomputePath",
 	}
 )
 --------------------------------}
---==TurnBack==------------------{
+--==BlinkTowardEnemyAndReload==-{
 ENT.Schedule:Add(
-	"TurnBack", function(self)
-		self.Task.Variable = (math.Rand() < 0.5) and 1 or -1
-	end, {
-	"NearDanger",
-	"LightDamage",
-	"HeavyDamage",
-	"MobbedByEnemies",
-	"CanPrimaryAttack",
-	"CanSecondaryAttack",
-	"CanMeleeAttack",
-},{
-	{"Wait", {time = 1.5, func = function(self)
-		local fraction = math.sin(((self.Time.Task + 1.5 - CurTime()) / 1.5) * math.pi) * self.Task.Variable	
-		self:SetPoseParameter("body_yaw", fraction * 30) --Rotate the body.
-		self:SetPoseParameter("spine_yaw", fraction * 30) --Rotate the spine.
-		self:SetPoseParameter("head_yaw", fraction * 60) --Rotate the head.
-	end}},
-	{"Wait", {time = 0.4}},
-})
+	"BlinkTowardEnemyAndReload",
+	{
+	},
+	{
+		"SetFaceEnemy",
+		{"SetBlinkPosition", "TowardEnemy"},
+		"Blink",
+		"InvalidatePath",
+		{"SetFaceEnemy", true},
+		"Advance",
+		"StartMove",
+		{"Wait", {time = 0.5, "Reload"}},
+	}
+)
+--------------------------------}
+--==BlinkFromEnemy==------------{
+ENT.Schedule:Add(
+	"BlinkFromEnemy",
+	{
+	},
+	{
+		"SetFaceEnemy",
+		{"SetBlinkPosition", "FromEnemy"},
+		"Blink",
+		"RecomputePath",
+	}
+)
+--------------------------------}
+--==BlinkSidestep==-------------{
+ENT.Schedule:Add(
+	"BlinkSidestep",
+	{
+	},
+	{
+		"SetFaceEnemy",
+		{"SetBlinkPosition", "Sidestep"},
+		"Blink",
+		"RecomputePath",
+	},
+	"Advance"
+)
 --------------------------------}
 --------------------------------}

@@ -115,7 +115,7 @@ function ENT.Weapon.Fire(self, weapon)
 			end
 		end,
 	}
-	self:FireBullets(bullet)
+	self.Equipment.Entity:FireBullets(bullet)
 	
 	local ef = EffectData()
 	ef:SetEntity(weapon)
@@ -160,6 +160,62 @@ function ENT:ReloadWeapon()
 	end)
 end
 
+--Fire function for Tracer's Pulse Pistols.
+local function FireTracerPistols(self, weapon)
+	if not IsValid(self) or not IsValid(weapon) then return end
+	if self.Equipment.Ammo <= 0 then return end
+	if CurTime() < self.Time.Fire then return end
+	if self.Memory.Distance > self.Dist.ShootRange then return end
+	if not self:HasCondition("CanPrimaryAttack") then return end
+	
+	local shootPos = {self:GetHand(true), self:GetHand()}
+	self.Equipment.Ammo = self.Equipment.Ammo - 1
+	self:AddGesture(self.Act.Attack)
+	weapon:EmitSound(self.Equipment.Sound.Fire)
+	
+	local ef = EffectData()
+	ef:SetEntity(weapon)
+	ef:SetEntIndex(weapon:EntIndex())
+	ef:SetScale(self.Equipment.Muzzle.Scale)
+	local bullet = {
+		Attacker = self,
+		Num = 1,
+		Spread = Vector(self.Equipment.Spread, self.Equipment.Spread, 0),
+		Force = 100,
+		Tracer = 5,
+		TracerName = "Tracer",
+		Damage = self.Equipment.Damage,
+		AmmoType = self.Equipment.AmmoType,
+		Callback = function(attacker, tr, dmginfo)
+			if not IsValid(tr.Entity) then return end
+			
+			dmginfo:SetInflictor(attacker.Equipment.Entity)
+			local c = tr.Entity:GetClass()			
+			if c == "npc_turret_floor" then
+				tr.Entity:Fire("SelfDestruct")
+			elseif c == "npc_rollermine" then
+				util.BlastDamage(weapon, self, tr.Entity:GetPos(), 1, 1)
+			end
+		end,
+	}
+	
+	for i = 1, 2 do
+		bullet.Src = shootPos[i].Pos
+		bullet.Dir = (self.Memory.EnemyPosition - shootPos[i].Pos):GetNormalized() * 1000
+		
+		self:FireBullets(bullet)
+		ef:SetOrigin(shootPos[i].Pos)
+		ef:SetAngles(shootPos[i].Ang)
+		if math.random() < self.Equipment.Muzzle.Probability then
+			util.Effect("MuzzleEffect", ef)
+		end
+	end
+	
+	weapon:MuzzleFlash()
+	self:MuzzleFlash()
+	self.Time.Fire = CurTime() + self.Equipment.Delay.Fire
+end
+
 --Creates the weapon information class of Tracer's Pulse Pistols.
 function ENT:CreatePulsePistols()
 	--Pulse pistols damage: 1.5 - 6
@@ -171,59 +227,5 @@ function ENT:CreatePulsePistols()
 	{firerate = 1/40, reloadtime = 1, reloadsound = 0},
 	{probability = 0.4, scale = 0.7},
 	{fire = "NOPE_TRACER.1", reload = "NOPE_TRACER.RELOADFOLEY"},
-	function(self, weapon)
-		--Firing weapon for Tracer's Pulse Pistols
-		if not IsValid(self) or not IsValid(weapon) then return end
-		if self.Equipment.Ammo <= 0 then return end
-		if CurTime() < self.Time.Fire then return end
-		if self.Memory.Distance > self.Dist.ShootRange then return end
-		if not self:HasCondition("CanPrimaryAttack") then return end
-		
-		local shootPos = {self:GetHand(true), self:GetHand()}
-		self.Equipment.Ammo = self.Equipment.Ammo - 1
-		self:AddGesture(self.Act.Attack)
-		weapon:EmitSound(self.Equipment.Sound.Fire)
-		
-		local ef = EffectData()
-		ef:SetEntity(weapon)
-		ef:SetEntIndex(weapon:EntIndex())
-		ef:SetScale(self.Equipment.Muzzle.Scale)
-		local bullet = {
-			Attacker = self,
-			Num = 1,
-			Spread = Vector(self.Equipment.Spread, self.Equipment.Spread, 0),
-			Force = 100,
-			Tracer = 5,
-			TracerName = "Tracer",
-			Damage = self.Equipment.Damage,
-			AmmoType = self.Equipment.AmmoType,
-			Callback = function(attacker, tr, dmginfo)
-				if not IsValid(tr.Entity) then return end
-				
-				dmginfo:SetInflictor(weapon)
-				local c = tr.Entity:GetClass()			
-				if c == "npc_turret_floor" then
-					tr.Entity:Fire("SelfDestruct")
-				elseif c == "npc_rollermine" then
-					util.BlastDamage(weapon, self, tr.Entity:GetPos(), 1, 1)
-				end
-			end,
-		}
-		
-		for i = 1, 2 do
-			bullet.Src = shootPos[i].Pos
-			bullet.Dir = (self.Memory.EnemyPosition - shootPos[i].Pos):GetNormalized() * 1000
-			
-			self:FireBullets(bullet)
-			ef:SetOrigin(shootPos[i].Pos)
-			ef:SetAngles(shootPos[i].Ang)
-			if math.random() < self.Equipment.Muzzle.Probability then
-				util.Effect("MuzzleEffect", ef)
-			end
-		end
-		
-		weapon:MuzzleFlash()
-		self:MuzzleFlash()
-		self.Time.Fire = CurTime() + self.Equipment.Delay.Fire
-	end)
+	FireTracerPistols)
 end

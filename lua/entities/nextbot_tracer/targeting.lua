@@ -9,7 +9,7 @@ function ENT:Validate(e)
 	if not isstring(c) then return -1
 	elseif c == "npc_rollermine" or c == "npc_turret_floor" then
 		return 0
-	elseif c ~= classname or IsAlone then
+	elseif c ~= self.classname or IsAlone then
 		if e:Health() > 0 then
 			if not c:find("bullseye") and c ~= "env_flare" and
 			c ~= "npc_combinegunship" and c ~= "npc_helicopter" and c ~= "npc_strider" then
@@ -42,7 +42,7 @@ function ENT:FindEnemy()
 	local pos, nearestenemy = vector_origin, NULL
 	
 	for k, v in pairs(lst) do
-		if self:Validate(v) == 0 and (v:GetPos() - self:GetEye().Pos):GetNormalized():Dot(self:GetEye().Ang:Forward()) > math.cos(math.rad(self.SearchAngle)) then
+		if self:Validate(v) == 0 and self:GetAimVector(v:WorldSpaceCenter()):Dot(self:GetEye().Ang:Forward()) > math.cos(math.rad(self.SearchAngle)) then
 			pos = v:WorldSpaceCenter()
 			if self:CanSee(pos) then --normal entity and can see
 				self.Memory.Enemies[v] = {Pos = pos, Distance = self:GetRangeSquaredTo(v:GetPos()), Forward = self:GetEnemyAimVector(v)}
@@ -56,8 +56,16 @@ function ENT:FindEnemy()
 			self.Memory.Enemies[k] = nil
 		end
 	end
+	
+	for k, v in pairs(self.Memory.Enemies) do
+		debugoverlay.Sphere(k:WorldSpaceCenter(), 10, 0.1, Color(0, 255, 0, 255), true)
+	end
+	
 	for k, v in SortedPairsByMemberValue(self.Memory.Enemies, "Distance") do
-		if IsValid(k) then return k end --Get the nearest enemy.
+		if IsValid(k) then --Get the nearest enemy.
+			debugoverlay.Sphere(k:WorldSpaceCenter(), 50, 0.1, Color(255, 0, 0, 255), true)
+			return k
+		end
 	end
 end
 
@@ -92,12 +100,20 @@ function ENT:GetEnemyAimVector(e)
 	return isfunction(ent.GetAimVector) and ent:GetAimVector() or ent:GetForward()
 end
 
+--Returns aiming direction vector.
+--Argument:
+----Vector dir | Looking at this position(Optional).
+function ENT:GetAimVector(dir)
+	local aimat = dir or self.Memory.EnemyPosition
+	return (aimat - self:WorldSpaceCenter()):GetNormalized()
+end
+
 --Returns if the enemy or the given entity is facing me.
 --Argument:
 ----Entity e | The given entity(Optional).
 function ENT:IsFacingMe(e)
 	local vEnemyPos = IsValid(e) and e:WorldSpaceCenter() or self.Memory.EnemyPosition
 	local vEnemyAim = IsValid(e) and self:GetEnemyAimVector(e) or self.Memory.EnemyAimVector
-	local vEnemyToMe = (self:GetEye().Pos - vEnemyPos):GetNormalized()
+	local vEnemyToMe = self:GetAimVector(vEnemyPos)
 	return vEnemyAim:Dot(vEnemyToMe) > 0.85
 end

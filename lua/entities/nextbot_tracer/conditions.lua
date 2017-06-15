@@ -8,6 +8,7 @@ local COND_SCHEDULE_DONE = COND_NO_CUSTOM_INTERRUPTS + 4
 --Nextbot conditions
 ENT.Condition = {
 	"BehindEnemy", --An enemy is behind me.
+	"CanBlink", --I can blink now.
 	"CanMeleeAttack", --I can swing my baton.
 	"CanPrimaryAttack", --The enemy is in enough range and ready to fire.
 	"CanSecondaryAttack", --The enemy is in close range and ready to fire.
@@ -19,6 +20,7 @@ ENT.Condition = {
 	"EnemyUnreachable", --The enemy position is unreachable for me.
 	"HeavyDamage", --I've just taken a heavy damage.
 	"HaveEnemyLOS", --I can see the enemy.
+	"InvalidPath", --The main pathfollower is invalid.
 	"LightDamage", --I've just taken a light damage.
 	"LostEnemy", --I've lost the enemy.
 	"LowPrimaryAmmo", --I have low primary ammo.
@@ -48,7 +50,6 @@ function ENT:BuildConditions(e)
 	c.EnemyDead = c.LostEnemy or (e and e:Health() <= 0) --An enemy with 0 health.
 	if e then
 		--the enemy is facing me.
-		local vEnemyToMe = (self:GetEye().Pos - self.Memory.EnemyPosition):GetNormalized()
 		c.EnemyFacingMe = self:IsFacingMe()
 		
 		--the enemy is too far.
@@ -72,7 +73,7 @@ function ENT:BuildConditions(e)
 		
 		--if I'm enough to fire primary weapon
 		c.CanPrimaryAttack = 
-		bShoot and
+		bShoot and self:GetAimVector():Dot(self:GetForward()) > math.cos(math.rad(80)) and
 		self.Memory.Distance < self.Dist.ShootRange and
 		self.Equipment.Ammo > 0 and
 		CurTime() > self.Time.Fire
@@ -89,7 +90,7 @@ function ENT:BuildConditions(e)
 	c.BehindEnemy = false
 	for enemy in pairs(self.Memory.Enemies) do
 		if self:CanSee(enemy:WorldSpaceCenter()) and 
-		(self:GetEye().Pos - enemy:WorldSpaceCenter()):GetNormalized():Dot(self:GetForward()) > 0.7 then
+		self:GetAimVector(enemy:WorldSpaceCenter()):Dot(self:GetForward()) > 0.7 then
 			c.BehindEnemy = true
 			break
 		end
@@ -106,10 +107,12 @@ function ENT:BuildConditions(e)
 	c.Done = self.State.ScheduleProgress > #self.Schedule[self.State.Schedule]
 	--Have current path just finished?
 	c.PathFinished = self.State.Previous.Path and not (self.Path.Main:IsValid() or self.Path.Approaching)
+	--Is my path valid?
+	c.InvalidPath = not self.Path.Main:IsValid()
 	
 	--Around my health.
 	c.LightDamage = self.State.Previous.Health - self:Health() > 1
-	c.HeavyDamage = self.State.Previous.Health - self:Health() > self:GetMaxHealth() / 5
+	c.HeavyDamage = self.State.Previous.Health - self:Health() > self:GetMaxHealth() / 10
 	c.RepeatedDamage = self.Time.Damage - self.Time.DamageRepeatedly > 0.8
 	if c.RepeatedDamage then self.Time.DamageRepeatedly = CurTime() end
 	
@@ -121,6 +124,15 @@ function ENT:BuildConditions(e)
 		c.NearDanger = true
 		self.Memory.DangerEntity = ent
 	end
+	
+	d = 0 --Mobbed by enemies.
+	for enemy, data in pairs(self.Memory.Enemies) do
+		if data.Distance < self.Dist.MobbedSqr then d = d + 1 end
+	end
+	c.MobbedByEnemies = d > self:Health() / self:GetMaxHealth() * self.Bravery
+	
+	--Can I blink now?
+	c.CanBlink = self.BlinkRemaining > 0 and CurTime() > self.Time.Blink
 	
 	--Build conditions
 	for i, v in pairs(c) do
