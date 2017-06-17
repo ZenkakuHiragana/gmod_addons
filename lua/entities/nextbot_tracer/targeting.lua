@@ -1,28 +1,6 @@
 
 local ___DEBUG_SEE = false
-
---Determines whether given entity is targetable or not.
-function ENT:Validate(e)
-	if not IsValid(e) or e == self then return -1 end
-	
-	local c = e:GetClass()
-	if not isstring(c) then return -1
-	elseif c == "npc_rollermine" or c == "npc_turret_floor" then
-		return 0
-	elseif c ~= self.classname or IsAlone then
-		if e:Health() > 0 then
-			if not c:find("bullseye") and c ~= "env_flare" and
-			c ~= "npc_combinegunship" and c ~= "npc_helicopter" and c ~= "npc_strider" then
-				if e:IsNPC() or e.Type == "nextbot" or
-				(e:IsPlayer() and not (self:GetConVarBool("ai_ignoreplayers") or e:IsFlagSet(FL_NOTARGET))) then
-					return 0
-				end
-			end
-		end
-	else
-		return 1
-	end
-end
+local ___DEBUG_ENEMY_MEMORY = false
 
 --Gets personal enemy entity.
 function ENT:GetEnemy()
@@ -50,6 +28,7 @@ function ENT:FindEnemy()
 		end
 	end
 	
+	--Clean up old infomations.
 	for k, v in SortedPairsByMemberValue(self.Memory.Enemies, "Distance") do
 		if self:Validate(k) ~= 0 or 
 			(self:CanSee(v.Pos) and not self:CanSee(k:WorldSpaceCenter())) then
@@ -57,13 +36,17 @@ function ENT:FindEnemy()
 		end
 	end
 	
-	for k, v in pairs(self.Memory.Enemies) do
-		debugoverlay.Sphere(k:WorldSpaceCenter(), 10, 0.1, Color(0, 255, 0, 255), true)
+	if ___DEBUG_ENEMY_MEMORY then
+		for k, v in pairs(self.Memory.Enemies) do
+			debugoverlay.Sphere(k:WorldSpaceCenter(), 10, 0.1, Color(0, 255, 0, 255), true)
+		end
 	end
 	
 	for k, v in SortedPairsByMemberValue(self.Memory.Enemies, "Distance") do
 		if IsValid(k) then --Get the nearest enemy.
-			debugoverlay.Sphere(k:WorldSpaceCenter(), 50, 0.1, Color(255, 0, 0, 255), true)
+			if ___DEBUG_ENEMY_MEMORY then
+				debugoverlay.Sphere(k:WorldSpaceCenter(), 50, 0.1, Color(255, 0, 0, 255), true)
+			end
 			return k
 		end
 	end
@@ -114,6 +97,17 @@ end
 function ENT:IsFacingMe(e)
 	local vEnemyPos = IsValid(e) and e:WorldSpaceCenter() or self.Memory.EnemyPosition
 	local vEnemyAim = IsValid(e) and self:GetEnemyAimVector(e) or self.Memory.EnemyAimVector
-	local vEnemyToMe = self:GetAimVector(vEnemyPos)
-	return vEnemyAim:Dot(vEnemyToMe) > 0.85
+	local vEnemyToMe = -self:GetAimVector(vEnemyPos)
+	return vEnemyAim:Dot(vEnemyToMe) > math.cos(math.rad(40))
+end
+
+--Updates current enemy's information.
+function ENT:UpdateEnemyMemory()
+	if self:GetEnemy() and self.Memory.Look then
+		--Update the position of current enemy
+		self.Memory.EnemyAimVector = self:GetEnemyAimVector()
+		self.Memory.EnemyPosition = self:GetEnemy():WorldSpaceCenter() --set the last position I saw
+		self.Memory.Distance = self:GetRangeTo(self.Memory.EnemyPosition) --set the last distance I know
+		self.Time.SeeEnemy = CurTime()
+	end
 end

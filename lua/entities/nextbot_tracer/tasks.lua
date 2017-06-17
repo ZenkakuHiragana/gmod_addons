@@ -53,10 +53,18 @@ function ENT.Task.Complete(self)
 	return true
 end
 --Call when task is failed.
-function ENT.Task.Fail(self, nextschedule)
-	if isstring(nextschedule) then self.State.FailNextSchedule = nextschedule end
+function ENT.Task.Fail(self, reason)
+	self.State.FailReason = isstring(reason) and reason or "NoReasonGiven"
 	self.State.TaskDone = "invalid"
 	return "invalid"
+end
+
+--SetFailSchedule: set an alternative schedule when the current task is failed.
+--Argument:
+----string alt | the alternative schedule.  can be nil.
+function ENT.Task.SetFailSchedule(self, alt)
+	self.State.FailSchedule = alt
+	return self.Task.Complete(self)
 end
 
 --Wait: wait a while and rotate the head.
@@ -67,6 +75,10 @@ function ENT.Task.Wait(self, opt)
 	local opt = istable(opt) and opt or {time = 2, func = nil}
 	local func = isfunction(opt.func) and opt.func or DoTaskList
 	local time = opt.time or 2
+	if not isnumber(time) and isnumber(self.State.TaskVariable) then
+		time = self.State.TaskVariable
+	end
+	
 	func(self, opt)
 	if CurTime() > self.Time.Task + time then
 		self.Task.Complete(self)
@@ -81,7 +93,7 @@ function ENT.Task.WaitForMovement(self, opt)
 	local func = isfunction(opt.func) and opt.func or DoTaskList
 	func(self, opt)
 	if not self.Path.Main:IsValid() then
-		self.Task.Complete(self)
+		return self.Task.Complete(self)
 	end
 end
 
@@ -135,15 +147,26 @@ function ENT.Task.Appear(self, wait)
 	end
 end
 
---Escape: wrapper function of self:EscapeFromEnemy()
+--MakeDistance: Make a distance from the enemy.
+function ENT.Task.MakeDistance(self, distance)
+	if self:SetDesiredPosition({
+		spottype = "MakeDistance", see = true,
+		nearest = false, range = self.Dist.FindSpots / 5}) then
+		return self.Task.Complete(self)
+	else
+		self.Task.Fail(self)
+	end
+end
+
+--Escape: search a position that takes a cover from the enemy.
 function ENT.Task.Escape(self, opt)
 	local opt = opt or {}
 	if self:SetDesiredPosition({spottype = "Escape", see = false, nearest = true}) then
 		if opt.nearby then
 			local path = Path("Follow")
 			path:Compute(self, self.Path.DesiredPosition)
-			if path:GetLength() > self.Dist.Blink * 2 then
-				self.Task.Fail(self, "RunAround")
+			if path:GetLength() > self.Dist.Blink * 3 then
+				self.Task.Fail(self, self.FailReason.InvalidPath)
 			end
 		end
 		return self.Task.Complete(self)
@@ -156,6 +179,20 @@ end
 function ENT.Task.SetRandomPosition(self, opt)
 	local opt = istable(opt) and opt or {}
 	self:GotoRandomPosition(opt.dist)
+	self.Task.Complete(self)
+end
+
+--SetRunFromEnemy: decide a random position but run away.
+function ENT.Task.SetRunFromEnemy(self, opt)
+	local opt = istable(opt) and opt or {}
+	self:GotoRandomDirection(-self:GetAimVector(), opt.deg or 50, opt.dist)
+	self.Task.Complete(self)
+end
+
+--SetRunIntoEnemy: decide a random position but approach.
+function ENT.Task.SetRunIntoEnemy(self, opt)
+	local opt = istable(opt) and opt or {}
+	self:GotoRandomDirection(self:GetAimVector(), opt.deg or 50, opt.dist)
 	self.Task.Complete(self)
 end
 
@@ -179,12 +216,12 @@ function ENT.Task.StartMove(self)
 	return self.Task.Complete(self)
 end
 
---SetBlinkPosition: Sets the position after using blink.
+--SetBlinkDirection: Sets the position after using blink.
 --Argument:
 ----string mode | Blink mode: "TowardEnemy", "Dodge"
-function ENT.Task.SetBlinkPosition(self, mode)
+function ENT.Task.SetBlinkDirection(self, mode)
 	if not isstring(mode) or CurTime() < self.Time.Blink then
-		self.Memory.BlinkPosition = nil
+		self.Memory.BlinkDirection = nil
 		self.Time.Blink = CurTime() + 1
 		self.Task.Fail(self)
 		return
@@ -194,97 +231,86 @@ function ENT.Task.SetBlinkPosition(self, mode)
 		return
 	end
 	
-	local fail = "TakeCover"
-	local pos = vector_origin
+	local dir = vector_origin
 	local aim = self:GetAimVector()
 	aim.z = 0
 	aim:Normalize()
 	if mode == "TowardEnemy" then
-		fail = "Sidestep"
-		pos = self:WorldSpaceCenter() + aim * self.Dist.Blink
+		local path = Path("Follow")
+		path:Compute(self, self.Memory.EnemyPosition)
+		local seg = path:FirstSegment()
+		if seg then
+			dir = seg.forward
+		else
+			dir = aim
+		end
 	elseif mode == "FromEnemy" then
-		fail = "TakeCover"
-		pos = self:WorldSpaceCenter() - aim * self.Dist.Blink
+		dir = -aim
 	elseif mode == "Sidestep" then
 		aim:Rotate(Angle(0, -90, 0))
+		debugoverlay.Line(self:GetPos(), self:GetPos() + aim * self.Dist.Blink, 5, Color(255,255,0,255),true)
 		
-		local tr = util.TraceHull({
+		local tr = {
 			start = self:WorldSpaceCenter(), 
 			endpos = self:WorldSpaceCenter() + aim * self.Dist.Blink,
 			maxs = self:OBBMaxs(), mins = self:OBBMins(),
 			mask = MASK_NPCSOLID_BRUSHONLY,
 			filter = self,
-		})
-		local another = util.TraceHull({
-			start = self:WorldSpaceCenter(), 
-			endpos = self:WorldSpaceCenter() - aim * self.Dist.Blink,
-			maxs = self:OBBMaxs(), mins = self:OBBMins(),
-			mask = MASK_NPCSOLID_BRUSHONLY,
-			filter = self,
-		})
+		}
+		local right = util.TraceHull(tr)
+		tr.endpos = self:WorldSpaceCenter() - aim * self.Dist.Blink
+		local left = util.TraceHull(tr)
 		
-		if tr.Hit and another.Hit then
-			pos = tr.Fraction > another.Fraction and tr.HitPos or another.HitPos
-		elseif tr.Hit then
-			pos = self:WorldSpaceCenter() - aim * self.Dist.Blink
+		if right.Hit and left.Hit then
+			dir = right.Fraction > left.Fraction and aim or -aim
+		elseif right.Hit then
+			dir = -aim
+		elseif left.Hit then
+			dir = aim
 		else
-			pos = self:WorldSpaceCenter() + aim * self.Dist.Blink
+			dir = math.random() > 0.5 and aim or -aim
 		end
-		
-		if self:GetPos():DistToSqr(pos) < self.Dist.BlinkSqr / 10 then
-			self.Time.Blink = CurTime() + 1
-			self.Task.Fail(self)
-			return
-		end
-		
-		self.Memory.BlinkPosition = pos
-	--	debugoverlay.Sphere(pos, 50, 2, Color(0,255,0,255), true)
-		
-		self.Task.Complete(self)
-		return
 	end
 	
-	local tr = util.TraceHull({
-		start = self:WorldSpaceCenter(), 
-		endpos = pos,
-		maxs = self:OBBMaxs(), mins = self:OBBMins(),
-		mask = MASK_NPCSOLID_BRUSHONLY,
-		filter = self,
-	})
-	if tr.Hit then pos = tr.HitPos end
-	
-	if self:GetPos():DistToSqr(pos) < self.Dist.BlinkSqr / 10 then
-		self.Time.Blink = CurTime() + 1
-		self.Task.Fail(self, fail)
-		return
-	end
-	
-	self.Memory.BlinkPosition = pos
---	debugoverlay.Sphere(pos, 50, 2, Color(0,255,0,255), true)
+	self.Memory.BlinkDirection = dir
+	debugoverlay.Line(self:GetPos(), self:GetPos() + dir * self.Dist.Blink, 5, Color(0,255,0,255),true)
+--	debugoverlay.Sphere(dir, 50, 2, Color(0,255,0,255), true)
 	
 	self.Task.Complete(self)
 end
 
---Blink: Teleport to self.Memory.BlinkPosition.
+--Blink: Teleport to self.Memory.BlinkDirection.
 function ENT.Task.Blink(self)
-	if not isvector(self.Memory.BlinkPosition) or
-		self.Memory.BlinkPosition:DistToSqr(self:GetPos()) > self.Dist.BlinkSqr * 1.02 then
-		self.Time.Blink = CurTime() + 1
-		self.Task.Fail(self)
-		return
-	end
+	self:PlayBlink()
 	
-	local tr = util.QuickTrace(self.Memory.BlinkPosition, vector_up * self.Dist.Blink, self)
-	tr = util.QuickTrace(tr.HitPos, -vector_up * self.Dist.Blink, self)
+	local tick = CurTime()
+	coroutine.yield()
+	tick = CurTime() - tick
+	local start_move = CurTime()
+	local start_pos = self:GetPos()
+	local blink_speed = self.Dist.Blink / tick / 2
 	local trail = util.SpriteTrail(self, self:LookupAttachment("chest"), 
 		Color(0, 128, 255, 192), true, 20, 0, 0.6, 1/10, "effects/blueblacklargebeam.vmt")
 	
-	self:SetPos(tr.HitPos)
-	self:DropToFloor()
+	self.loco:SetVelocity(self.Memory.BlinkDirection * blink_speed)
+	self.DesiredSpeed = blink_speed
+	self.loco:SetDesiredSpeed(self.DesiredSpeed)
+	self.loco:SetAcceleration(blink_speed / tick)
+	self.loco:SetDeceleration(blink_speed / tick)
+	self:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+	self.loco:ClearStuck()
+	while self:GetRangeTo(start_pos) < self.Dist.Blink and CurTime() - start_move < 0.02 do
+		self.loco:Approach(self:GetPos() + self.Memory.BlinkDirection * self.Dist.Blink, 1)
+		coroutine.yield()
+	end
+	self.DesiredSpeed = self.Speed.Run
+	self.loco:SetDesiredSpeed(self.DesiredSpeed)
+	self.loco:SetAcceleration(self.Speed.Acceleration)
+	self.loco:SetDeceleration(self.Speed.Deceleration)
 	SafeRemoveEntityDelayed(trail, 0.6)
 	self.Time.Blink = CurTime() + 0.2
 	self.BlinkRemaining = self.BlinkRemaining - 1
-	timer.Simple(5, function()
+	timer.Simple(3, function()
 		if not IsValid(self) then return end
 		self.BlinkRemaining = self.BlinkRemaining + 1
 	end)

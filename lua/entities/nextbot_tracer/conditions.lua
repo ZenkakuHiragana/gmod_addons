@@ -1,4 +1,16 @@
 
+ENT.FailReason = {
+	"InterruptByCcondition", --Schedule stopped by condition.
+	"InvalidPath", --Calculating path is failed.
+	"NoSpotsFound", --Appropriate position is not found.
+	"NoReasonGiven", --No reason is given.
+	"TimeOut", --Time out to move to position.
+}
+for i, v in ipairs(ENT.FailReason) do
+	ENT.FailReason[v] = i
+	ENT.FailReason[i] = nil
+end
+
 --++Conditions++----------------{
 local COND_NO_CUSTOM_INTERRUPTS = 70
 local COND_LOW_SECONDARY_AMMO = COND_NO_CUSTOM_INTERRUPTS + 1
@@ -13,7 +25,8 @@ ENT.Condition = {
 	"CanPrimaryAttack", --The enemy is in enough range and ready to fire.
 	"CanSecondaryAttack", --The enemy is in close range and ready to fire.
 	"Done", --Schedule is done.
-	"EnemyDead", --Current enemy is dead and I have no enemy for now.
+	"EnemyApproaching", --Current enemy is moving toward me.
+	"EnemyDead", --Current enemy is dead.
 	"EnemyFacingMe", --The enemy is facing me.
 	"EnemyOccluded", --The enemy is occluded.
 	"EnemyTooFar", --The enemy is out of range, I need to draw near.
@@ -30,7 +43,9 @@ ENT.Condition = {
 	"NewEnemy", --I found a new enemy.
 	"NoPrimaryAmmo", --I have no primary ammo and need to reload.
 	"NoSecondaryAmmo", --I have no secondary ammo and need to reload.
+	"OnContact", --On contact someone.
 	"PathFinished", --I've just finished moving.
+	"ReceiveEnemyInfo", --Currently unused. Using this in squad coding.
 	"ReloadFinished", --I've just finished reloading.
 	"RepeatedDamage", --I take a damage repeatedly.
 }
@@ -49,6 +64,11 @@ function ENT:BuildConditions(e)
 	c.LostEnemy = tobool(not e and self.State.Previous.HaveEnemy) --I had an enemy previous tick.
 	c.EnemyDead = c.LostEnemy or (e and e:Health() <= 0) --An enemy with 0 health.
 	if e then
+		--the enemy is approaching me.
+		c.EnemyApproaching = (self.Memory.EnemyPosition
+		-self.State.Previous.ApproachingPos):GetNormalized()
+		:Dot(self:GetAimVector()) < math.cos(math.rad(180 - 30))
+		
 		--the enemy is facing me.
 		c.EnemyFacingMe = self:IsFacingMe()
 		
@@ -68,22 +88,35 @@ function ENT:BuildConditions(e)
 		
 		local bLook, bShoot = self:CanSee(), self:CanSee(self.Memory.EnemyPosition, {shoot = true})
 		if bLook then self.Time.SeeEnemy = CurTime() end
-		c.HaveEnemyLOS = bLook --I have LOS of the enemy.
 		c.EnemyOccluded = not bLook --I can't see the enemy.
+		c.HaveEnemyLOS = bLook --I have LOS of the enemy.
 		
 		--if I'm enough to fire primary weapon
 		c.CanPrimaryAttack = 
-		bShoot and self:GetAimVector():Dot(self:GetForward()) > math.cos(math.rad(80)) and
+		bShoot and
+		self:GetAimVector():Dot(self:GetForward()) > math.cos(math.rad(80)) and
 		self.Memory.Distance < self.Dist.ShootRange and
 		self.Equipment.Ammo > 0 and
-		CurTime() > self.Time.Fire
+		CurTime() > self.Time.Fire and
+		CurTime() > self.Time.Reload
 		
 		--if I'm enough to fire secondary weapon
 		c.CanSecondaryAttack = false
 		
 		--enemy is too close, beat it
 		c.CanMeleeAttack = 
-		bShoot and self.Memory.Distance < self.Dist.Melee
+		bShoot and
+		CurTime() > self.Time.Melee and
+		self.Memory.Distance < self.Dist.Melee
+	else
+		c.EnemyFacingMe = false
+		c.EnemyOccluded = false
+		c.EnemyTooFar = false
+		c.EnemyUnreachable = false
+		c.HaveEnemyLOS = false
+		c.CanMeleeAttack = false
+		c.CanPrimaryAttack = false
+		c.CanSecondaryAttack = false
 	end
 	
 	--Is there an enemy behind me?
@@ -113,8 +146,8 @@ function ENT:BuildConditions(e)
 	--Around my health.
 	c.LightDamage = self.State.Previous.Health - self:Health() > 1
 	c.HeavyDamage = self.State.Previous.Health - self:Health() > self:GetMaxHealth() / 10
-	c.RepeatedDamage = self.Time.Damage - self.Time.DamageRepeatedly > 0.8
-	if c.RepeatedDamage then self.Time.DamageRepeatedly = CurTime() end
+	c.RepeatedDamage = self.Time.Damage - self.Time.RepeatedDamage > self.Time.RepeatedDamageDuration
+	if c.RepeatedDamage then self.Time.RepeatedDamage = CurTime() end
 	
 	--Get dangerous things.
 	c.NearDanger = false
@@ -127,12 +160,14 @@ function ENT:BuildConditions(e)
 	
 	d = 0 --Mobbed by enemies.
 	for enemy, data in pairs(self.Memory.Enemies) do
-		if data.Distance < self.Dist.MobbedSqr then d = d + 1 end
+		if data.Distance < self.Dist.Mobbed then d = d + 1 end
 	end
 	c.MobbedByEnemies = d > self:Health() / self:GetMaxHealth() * self.Bravery
 	
 	--Can I blink now?
 	c.CanBlink = self.BlinkRemaining > 0 and CurTime() > self.Time.Blink
+	--I touched someone.
+	c.OnContact = math.abs(CurTime() - self.Time.Touch) < 0.05
 	
 	--Build conditions
 	for i, v in pairs(c) do
@@ -141,7 +176,6 @@ function ENT:BuildConditions(e)
 	end
 end
 --------------------------------}
-
 
 --Adds the given condition.
 --Arguments:

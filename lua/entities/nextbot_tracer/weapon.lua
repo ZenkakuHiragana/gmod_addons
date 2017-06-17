@@ -145,7 +145,7 @@ function ENT:ReloadWeapon()
 	self.Memory.Look = false
 	
 	self.ReloadLayerID = self:AddGesture(self.Act.Reload)
-	self:SetLayerPlaybackRate(self.ReloadLayerID, self:GetLayerDuration(self.ReloadLayerID))
+	self:SetLayerPlaybackRate(self.ReloadLayerID, self:GetLayerDuration(self.ReloadLayerID) * 0.8)
 	self.Time.Reload = CurTime() + self.Equipment.Delay.Reload
 	timer.Simple(self.Equipment.Delay.ReloadSound, function()
 		if not IsValid(self) or not IsValid(self.Equipment.Entity) or
@@ -158,6 +158,17 @@ function ENT:ReloadWeapon()
 		self.Equipment.Ammo = self.Equipment.Clip
 		self.Memory.Look = bLooking
 	end)
+end
+
+local function FireCallBack(attacker, tr, dmginfo)
+	if not IsValid(tr.Entity) then return end
+	
+	local c = tr.Entity:GetClass()			
+	if c == "npc_turret_floor" then
+		tr.Entity:Fire("SelfDestruct")
+	elseif c == "npc_rollermine" then
+		util.BlastDamage(attacker.Equipment.Entity, self, tr.Entity:GetPos(), 1, 1)
+	end
 end
 
 --Fire function for Tracer's Pulse Pistols.
@@ -186,17 +197,7 @@ local function FireTracerPistols(self, weapon)
 		TracerName = "Tracer",
 		Damage = self.Equipment.Damage,
 		AmmoType = self.Equipment.AmmoType,
-		Callback = function(attacker, tr, dmginfo)
-			if not IsValid(tr.Entity) then return end
-			
-			dmginfo:SetInflictor(attacker.Equipment.Entity)
-			local c = tr.Entity:GetClass()			
-			if c == "npc_turret_floor" then
-				tr.Entity:Fire("SelfDestruct")
-			elseif c == "npc_rollermine" then
-				util.BlastDamage(weapon, self, tr.Entity:GetPos(), 1, 1)
-			end
-		end,
+		Callback = FireCallBack,
 	}
 	
 	for i = 1, 2 do
@@ -204,7 +205,7 @@ local function FireTracerPistols(self, weapon)
 		bullet.Dir = (self.Memory.EnemyPosition - shootPos[i].Pos):GetNormalized() * 1000
 		
 		self:FireBullets(bullet)
-		ef:SetOrigin(shootPos[i].Pos)
+		ef:SetOrigin(shootPos[i].Pos + shootPos[i].Ang:Forward() * 10 + self:GetVelocity() / 10)
 		ef:SetAngles(shootPos[i].Ang)
 		if math.random() < self.Equipment.Muzzle.Probability then
 			util.Effect("MuzzleEffect", ef)

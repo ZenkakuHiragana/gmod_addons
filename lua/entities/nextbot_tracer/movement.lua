@@ -4,6 +4,7 @@ local ___DEBUG_DRAW_MOVEPOINT = false
 local ___DEBUG_SHOW_PATHNAME = false
 
 ENT.MaxYawRate = 250 --default: 250
+ENT.StepHeight = 30 --default: 20
 ENT.Speed = {}
 ENT.Speed.Run = 315						--approximately 6 m/s, player default: 200
 ENT.Speed.RunSqr = ENT.Speed.Run^2
@@ -50,6 +51,12 @@ function ENT:GotoRandomPosition(distance)
 	self.Path.DesiredPosition = self:GetPos() + destination
 end
 
+function ENT:GotoRandomDirection(dir, deg, dist)
+	local destination = dir * (dist or 700)
+	destination:Rotate(Angle(0, math.Rand(-deg, deg), 0))
+	self.Path.DesiredPosition = self:GetPos() + destination
+end
+
 ENT.FindSpotDefaultParameters = {
 	spottype = "Appear",
 	see = true,
@@ -62,23 +69,26 @@ ENT.FindSpotDefaultParameters = {
 }
 function ENT:FindSpecifiedSpot(opt)
 	local opt = istable(opt) and opt or self.FindSpotDefaultParameters
-	local spots = navmesh.Find(self:GetPos(), self.Dist.FindSpots, self.loco:GetDeathDropHeight(), self.loco:GetStepHeight())
+	local pos = vector_origin
+	local range = opt.range or self.Dist.FindSpots
+	local spots = navmesh.Find(self:GetPos(), range, self.loco:GetDeathDropHeight(), self.loco:GetStepHeight())
 	local vResult, NearestDistance = vector_origin, (opt.nearest and math.huge or 0)
 	local path = Path("Follow")
 	for index, area in pairs(spots) do --Check NavAreas near the nextbot.
 		if index > self.MaxNavAreas then break end --There're too many NavAreas, then break.
 		if isfunction(opt.evaluation) and opt.evaluation(self, area, opt) or --Do a evaluate function.
 			self.FindSpotDefaultParameters.evaluation(self, area, opt) then
+			pos = area:GetRandomPoint()
 			path:Invalidate()
-			path:Compute(self, area:GetCenter()) --Calcuate the length to reach.
+			path:Compute(self, pos) --Calcuate the length to reach.
 			if path:IsValid() then
 				local length = path:GetLength() < NearestDistance
 				if not opt.nearest then length = not length end
 				if length then
 					NearestDistance = path:GetLength()
-					vResult = area:GetCenter()
+					vResult = pos
 					if ___DEBUG_DRAW_MOVEPOINT then
-						debugoverlay.Line(area:GetCenter(), area:GetCenter() - vector_up * self.EyeHeight, 5, Color(0,255,0,255))
+						debugoverlay.Line(pos, pos - vector_up * 400, 5, Color(0,255,0,255), true)
 					end
 				end
 			end
@@ -93,7 +103,9 @@ end
 function ENT:SetDesiredPosition(opt)
 	local pos = self:FindSpecifiedSpot(opt)
 	if isvector(pos) then
-		if ___DEBUG_SHOW_PATHNAME then print("SpotType: " .. (opt or self.FindSpotDefaultParameters).spottype) end
+		if ___DEBUG_SHOW_PATHNAME then
+			print("SpotType: " .. (opt or self.FindSpotDefaultParameters).spottype)
+		end
 		self.Path.DesiredPosition = pos
 		return true
 	end
