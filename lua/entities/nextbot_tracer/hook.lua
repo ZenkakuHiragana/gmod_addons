@@ -14,11 +14,13 @@ local function OnHearSound(self, t)
 			self:SetEnemy(t.Entity)
 		end
 		
-		self.Memory.Enemies[t.Entity] = {
-			Pos = t.Entity:GetPos(),
-			Distance = t.Entity:GetPos():DistToSqr(self:GetPos()),
-			Forward = t.Entity:GetForward()
-		}
+		if not istable(self.Memory.Enemies[t.Entity]) then
+			self.Memory.Enemies[t.Entity] = {
+				Pos = t.Entity:GetPos(),
+				Distance = t.Entity:GetPos():DistToSqr(self:GetPos()),
+				Forward = t.Entity:GetForward()
+			}
+		end
 	end
 end
 
@@ -29,7 +31,7 @@ hook.Add("OnEntityCreated", "NextbotIsAlone!", function(e)
 		timer.Simple(1, function()
 			if not IsValid(e) then return end
 			for k, v in pairs(ents.FindByClass(classname)) do
-				if IsValid(v) then e:AddEntityRelationship(v, D_HT, 1) end
+				if IsValid(v) and e:Disposition(v) ~= D_HT then e:AddEntityRelationship(v, D_HT, 1) end
 			end
 		end)
 	end
@@ -62,7 +64,7 @@ end)
 ----Entity v | The entity the nextbot came in contact with.
 function ENT:OnContact(v)
 	if not IsValid(v) then return end
-	self.Time.Touch = CurTime()
+	if self:GetCollisionGroup() == COLLISION_GROUP_PLAYER then self.Time.Touch = CurTime() end
 	
 	if v:IsPlayer() or v:IsNPC() or v.Type == "nextbot" then return end
 	local p = v:GetPhysicsObject() if not IsValid(p) then return end
@@ -110,11 +112,13 @@ function ENT:OnInjured(info)
 		self:SetEnemy(info:GetAttacker())
 	end
 	
-	self.Memory.Enemies[info:GetAttacker()] = {
-		Pos = info:GetAttacker():GetPos(),
-		Distance = info:GetAttacker():GetPos():DistToSqr(self:GetPos()),
-		Forward = info:GetAttacker():GetForward()
-	}
+	if not istable(self.Memory.Enemies[info:GetAttacker()]) then
+		self.Memory.Enemies[info:GetAttacker()] = {
+			Pos = info:GetAttacker():GetPos(),
+			Distance = info:GetAttacker():GetPos():DistToSqr(self:GetPos()),
+			Forward = info:GetAttacker():GetForward()
+		}
+	end
 end
 
 function ENT:OnRemove()	

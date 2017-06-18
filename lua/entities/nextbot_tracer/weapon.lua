@@ -1,5 +1,5 @@
 
-ENT.Weapon = ENT.Weapon or {}
+ENT.Weapon = {}
 --Creates a weapon information class.
 --Arguments:
 --Nextbot self | The owner of the weapon.
@@ -145,7 +145,7 @@ function ENT:ReloadWeapon()
 	self.Memory.Look = false
 	
 	self.ReloadLayerID = self:AddGesture(self.Act.Reload)
-	self:SetLayerPlaybackRate(self.ReloadLayerID, self:GetLayerDuration(self.ReloadLayerID) * 0.8)
+	self:SetLayerPlaybackRate(self.ReloadLayerID, self:GetLayerDuration(self.ReloadLayerID) * 0.9)
 	self.Time.Reload = CurTime() + self.Equipment.Delay.Reload
 	timer.Simple(self.Equipment.Delay.ReloadSound, function()
 		if not IsValid(self) or not IsValid(self.Equipment.Entity) or

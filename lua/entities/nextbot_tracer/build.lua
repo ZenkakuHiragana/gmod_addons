@@ -139,7 +139,7 @@ CombatSchedule.Assault = function(self)
 					return "BlinkSidestep"
 				end
 			else
-				return "EscapeWhileReload"
+				return "HideAndReload"
 			end
 		else --Just reload.
 			self:ReloadWeapon()
@@ -225,8 +225,10 @@ CombatSchedule.Flee = function(self)
 	else
 		if self:HasCondition("CanBlink") then
 			return "BlinkFromEnemy"
-		else
+		elseif self:HasCondition("CanPrimaryAttack") then
 			return "TakeCover"
+		else
+			return "HideAndReload"
 		end
 	end
 end

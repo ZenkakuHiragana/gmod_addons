@@ -429,7 +429,7 @@ ENT.Schedule:Add(
 		{"SetFaceEnemy", true},
 		"Escape",
 		"StartMove",
-		{"WaitForMovement", {"FireWeapon", "Reload"}},
+		{"WaitForMovement", {"Reload"}},
 		"Reload",
 	}
 )

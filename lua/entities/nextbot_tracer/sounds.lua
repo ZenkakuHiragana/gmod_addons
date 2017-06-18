@@ -22,7 +22,7 @@ sound.Add({
 })
 sound.Add({
 	name = "Nextbot_Tracer.BlinkVoice",
-	channel = CHAN_BODY,
+	channel = CHAN_VOICE,
 	volume = 1,
 	level = 100,
 	sound = {
@@ -34,7 +34,7 @@ sound.Add({
 })
 sound.Add({
 	name = "Nextbot_Tracer.OnSpawn",
-	channel = CHAN_BODY,
+	channel = CHAN_VOICE,
 	volume = 1,
 	level = 100,
 	sound = "entities/nextbot_tracer/vo/onspawn.wav",
