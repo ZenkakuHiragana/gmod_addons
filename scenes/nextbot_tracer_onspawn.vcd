@@ -3,10 +3,10 @@ actor "Tracer"
 {
   channel "Speech"
   {
-    event speak "entities\nextbot_tracer\vo\onspawn.wav"
+    event speak "Quote"
     {
       time 0.000000 2.280000
-      param "entities\nextbot_tracer\vo\onspawn.wav"
+      param "Nextbot_Tracer.OnSpawn"
       fixedlength
       cctype "cc_master"
       cctoken ""

@@ -123,7 +123,7 @@ function ENT:Initialize()
 	self.Trail:DeleteOnRemove(self)
 	
 	--Cheers, love!  The cavalry's here!
-	self:SetScene("scenes/tracer_lipsync_cheerslove.vcd")
+	self:SetScene("scenes/nextbot_tracer_onspawn.vcd")
 end
 ----------------------------------------------}
 
