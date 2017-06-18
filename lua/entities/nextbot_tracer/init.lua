@@ -29,6 +29,7 @@ function ENT:InitializeTimers()
 	self.Time.IdleLookat = CurTime()			--When idle, look around
 	self.Time.Melee = CurTime()					--Melee attack cooldown
 	self.Time.Move = CurTime()					--Start moving to somewhere
+	self.Time.PlayingScene = CurTime() - 1		--No flex modifying during playing a scene
 	self.Time.Reload = CurTime()				--Reloading
 	self.Time.RepeatedDamage = CurTime()		--Flag as repeated damage
 	self.Time.Schedule = CurTime()				--Begin a schedule
@@ -66,12 +67,12 @@ function ENT:InitializeVariables()
 	self.Memory.Enemy = nil --Target entity.
 	self.Memory.EnemyAimVector = self:GetForward() --The enemy's looking at.
 	self.Memory.EnemyPosition = self:GetEye().Pos --I know his last position I've seen.
+	self.Memory.EyePosition = vector_origin --For eye posing.
 	self.Memory.DangerEntity = nil --An entity that I should run away from.
 	self.Memory.Distance = 0 --Distance from myself to the enemy.
 	self.Memory.IdleLastLookat = nil --Last entity what I looked at.
 	self.Memory.IdleLookat = vector_origin --When idle, look at this position(face).
 	self.Memory.IdleLookatEye = vector_origin --When idle, look at this position(eyes).
-	self.Memory.EyePosition = vector_origin --For eye posing.
 	self.Memory.Jump = false --Should jump or not.
 	self.Memory.Look = false --Should look at the enemy or not.
 	self.Memory.Walk = false --Walk for surpressing footsteps.
@@ -96,7 +97,8 @@ function ENT:Initialize()
 	
 	--Shared functions
 	self:SetModel(self.Model)
-	self:SetFlexWeight(self:GetFlexIDByName("mouth_sideways"), 2/3)
+--	self:SetFlexWeight(self:GetFlexIDByName("mouth_sideways"), 0.5)
+--	self:SetFlexWeight(self:GetFlexIDByName("jaw_sideways"), 0.5)
 	self:SetHealth(self.HP.Init)
 	self:AddFlags(FL_NPC)
 	self:AddFlags(FL_OBJECT)
@@ -121,7 +123,7 @@ function ENT:Initialize()
 	self.Trail:DeleteOnRemove(self)
 	
 	--Cheers, love!  The cavalry's here!
-	self:EmitSound("Nextbot.Tracer.OnSpawn")
+	self:SetScene("scenes/tracer_lipsync_cheerslove.vcd")
 end
 ----------------------------------------------}
 
@@ -214,7 +216,7 @@ end
 
 -- function ENT:RunBehaviour()
 	-- self:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
-	-- self:StartActivity(ACT_HL2MP_IDLE_SHOTGUN)
+	-- self:StartActivity(ACT_HL2MP_WALK_DUEL)
 	-- self:AddGesture(ACT_HL2MP_WALK_DUEL, false)
 	-- self:SetPoseParameter("move_x", -1)
 	-- self:SetPoseParameter("vertical_velocity", -1)

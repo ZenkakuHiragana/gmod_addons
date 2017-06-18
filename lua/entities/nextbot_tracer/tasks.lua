@@ -288,26 +288,43 @@ function ENT.Task.Blink(self)
 	tick = CurTime() - tick
 	local start_move = CurTime()
 	local start_pos = self:GetPos()
+	local destination = start_pos + self.Memory.BlinkDirection * self.Dist.Blink
 	local blink_speed = self.Dist.Blink / tick / 2
 	local trail = util.SpriteTrail(self, self:LookupAttachment("chest"), 
 		Color(0, 128, 255, 192), true, 20, 0, 0.6, 1/10, "effects/blueblacklargebeam.vmt")
+	local stopper = ents.Create("prop_physics")
+	if IsValid(stopper) then
+		stopper:SetModel("models/props_c17/door02_double.mdl")
+		stopper:SetPos(start_pos + self.Memory.BlinkDirection * (self.Dist.Blink + 17))
+		stopper:SetAngles(self.Memory.BlinkDirection:Angle())
+		stopper:SetMoveType(MOVETYPE_NONE)
+		stopper:SetNoDraw(true)
+		stopper:DrawShadow(false)
+		local p = stopper:GetPhysicsObject()
+		if p and IsValid(p) then p:Sleep() end
+		stopper:Spawn()
+	end
 	
+	self:SetVelocity(self.Memory.BlinkDirection * blink_speed)
 	self.loco:SetVelocity(self.Memory.BlinkDirection * blink_speed)
+	self.IsBlink = true
 	self.DesiredSpeed = blink_speed
 	self.loco:SetDesiredSpeed(self.DesiredSpeed)
-	self.loco:SetAcceleration(blink_speed / tick)
-	self.loco:SetDeceleration(blink_speed / tick)
+	self.loco:SetAcceleration(blink_speed)
+	self.loco:SetDeceleration(blink_speed)
 	self:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
 	self.loco:ClearStuck()
-	while self:GetRangeTo(start_pos) < self.Dist.Blink and CurTime() - start_move < 0.02 do
-		self.loco:Approach(self:GetPos() + self.Memory.BlinkDirection * self.Dist.Blink, 1)
+	while self:GetRangeTo(start_pos) < self.Dist.Blink and (CurTime() - start_move < tick * 2) do
+		self.loco:Approach(destination, 100)
 		coroutine.yield()
 	end
+	self.IsBlink = false
 	self.DesiredSpeed = self.Speed.Run
 	self.loco:SetDesiredSpeed(self.DesiredSpeed)
 	self.loco:SetAcceleration(self.Speed.Acceleration)
 	self.loco:SetDeceleration(self.Speed.Deceleration)
-	SafeRemoveEntityDelayed(trail, 0.6)
+	SafeRemoveEntityDelayed(trail, 1.5)
+	SafeRemoveEntity(stopper)
 	self.Time.Blink = CurTime() + 0.2
 	self.BlinkRemaining = self.BlinkRemaining - 1
 	timer.Simple(3, function()

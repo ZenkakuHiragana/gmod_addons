@@ -1,27 +1,27 @@
 
 sound.Add({
-	name = "Nextbot.Tracer.Blink1",
+	name = "Nextbot_Tracer.Blink1",
 	channel = CHAN_BODY,
 	volume = {0.95, 1},
 	level = 105,
 	sound = "entities/nextbot_tracer/blink1.wav",
 })
 sound.Add({
-	name = "Nextbot.Tracer.Blink2",
+	name = "Nextbot_Tracer.Blink2",
 	channel = CHAN_BODY,
 	volume = {0.95, 1},
 	level = 105,
 	sound = "entities/nextbot_tracer/blink2.wav",
 })
 sound.Add({
-	name = "Nextbot.Tracer.Blink3",
+	name = "Nextbot_Tracer.Blink3",
 	channel = CHAN_BODY,
 	volume = {0.95, 1},
 	level = 105,
 	sound = "entities/nextbot_tracer/blink3.wav",
 })
 sound.Add({
-	name = "Nextbot.Tracer.BlinkVoice",
+	name = "Nextbot_Tracer.BlinkVoice",
 	channel = CHAN_BODY,
 	volume = 1,
 	level = 100,
@@ -33,12 +33,14 @@ sound.Add({
 	},
 })
 sound.Add({
-	name = "Nextbot.Tracer.OnSpawn",
+	name = "Nextbot_Tracer.OnSpawn",
 	channel = CHAN_BODY,
 	volume = 1,
 	level = 100,
 	sound = "entities/nextbot_tracer/vo/onspawn.wav",
 })
+
+PrecacheScene("scenes/tracer_lipsync_cheerslove.vcd")
 
 function ENT:PlayBlink()
 	if CurTime() > self.Time.Blink + 2 then
@@ -46,9 +48,9 @@ function ENT:PlayBlink()
 	elseif self.BlinkSoundLevel < 3 then
 		self.BlinkSoundLevel = self.BlinkSoundLevel + 1
 		if self.BlinkSoundLevel == 3 then
-			self:EmitSound("Nextbot.Tracer.BlinkVoice")
+			self:EmitSound("Nextbot_Tracer.BlinkVoice")
 		end
 	end
 	
-	self.Equipment.Entity:EmitSound("Nextbot.Tracer.Blink" .. self.BlinkSoundLevel)
+	self.Equipment.Entity:EmitSound("Nextbot_Tracer.Blink" .. self.BlinkSoundLevel)
 end

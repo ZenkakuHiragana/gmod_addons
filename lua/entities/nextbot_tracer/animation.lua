@@ -13,11 +13,15 @@ local head_yaw_min, head_yaw_max = -75, 75
 local head_pitch_min, head_pitch_max = -60, 60
 local parameter_movedivision = 8
 
---Sets the given activity number, but does not restart the animation.
+--Plays a scene and sets a timer for preventing flex problem.
 --Argument:
-----number a | the activity number.
-function ENT:SetActivity(a)
-	if self:GetActivity() ~= a then self:StartActivity(a) end
+----string scene | Filepath to scene.
+function ENT:SetScene(scene)
+	if CurTime() > self.Time.PlayingScene then
+		self.Time.PlayingScene = CurTime() + self:PlayScene(scene)
+		return true
+	end
+	return false
 end
 
 --This function sets the facing direction of the arms.
@@ -68,23 +72,23 @@ function ENT:BodyUpdate()
 	if not self.loco:IsOnGround() then
 		act = self.Act.Jump
 	elseif self.Memory.CrouchNav or self.Memory.Crouch then
-		self.DesiredSpeed = self.Speed.Crouched
+		if not self.IsBlink then self.DesiredSpeed = self.Speed.Crouched end
 		act = velocity > 0 and self.Act.WalkCrouch or self.Act.IdleCrouch
 	else
 		if not (self.Memory.WalkNav or self.Memory.Walk) then
-			self.DesiredSpeed = self.Speed.Run
+			if not self.IsBlink then self.DesiredSpeed = self.Speed.Run end
 			if velocity > self.Speed.WalkSqr then
 				act = self.Act.Run
 			elseif velocity > 0 then
 				act = self.Act.Walk
 			end
 		else
-			self.DesiredSpeed = self.Speed.Walk
+			if not self.IsBlink then self.DesiredSpeed = self.Speed.Walk end
 			act = self.Act.Walk
 		end
 	end
-	self.loco:SetDesiredSpeed(self.DesiredSpeed)
-	self:SetActivity(act)
+	if not self.IsBlink then self.loco:SetDesiredSpeed(self.DesiredSpeed) end
+	if self:GetActivity() ~= act then self:StartActivity(act) end
 	
 	self:BodyMoveXY()
 	
@@ -118,22 +122,26 @@ function ENT:BodyUpdate()
 		lookat_head = self.Memory.IdleLookat
 		lookat_eye = self.Memory.IdleLookatEye
 	end
-	debugoverlay.Sphere(lookat_head, 20, 0.1, Color(0, 255, 0, 255))
+--	debugoverlay.Sphere(lookat_head, 20, 0.1, Color(0, 255, 0, 255))
 	self:MoveEyeTarget(lookat_eye)
 	self:FaceHead(lookat_head)
 	self:Aim(lookat)
 	
 	--Eye blink
-	if CurTime() > self.Time.EyeBlink then
-		local delta = CurTime() - self.Time.EyeBlink
-		if delta < 0.1 then
-			self:SetFlexWeight(self:GetFlexIDByName("blink"), delta * 10)
-		elseif delta < 0.3 then
-			delta = 1 - (delta - 0.1) * 5
-			self:SetFlexWeight(self:GetFlexIDByName("blink"), delta^4)
-		else
-			self.Time.EyeBlink = CurTime() + math.Rand(1.15, 3.50)
-			self:SetFlexWeight(self:GetFlexIDByName("blink"), 0)
+	if CurTime() > self.Time.PlayingScene then
+		self:SetFlexWeight(self:GetFlexIDByName("mouth_sideways"), 0.5)
+		self:SetFlexWeight(self:GetFlexIDByName("jaw_sideways"), 0.5)
+		if CurTime() > self.Time.EyeBlink then
+			local delta = CurTime() - self.Time.EyeBlink
+			if delta < 0.05 then
+				self:SetFlexWeight(self:GetFlexIDByName("blink"), delta * 10)
+			elseif delta < 0.15 then
+				delta = 1 - (delta - 0.1) * 5
+				self:SetFlexWeight(self:GetFlexIDByName("blink"), delta^4)
+			else
+				self.Time.EyeBlink = CurTime() + math.Rand(1.15, 3.50)
+				self:SetFlexWeight(self:GetFlexIDByName("blink"), 0)
+			end
 		end
 	end
 

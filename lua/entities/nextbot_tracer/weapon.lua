@@ -1,5 +1,5 @@
 
-ENT.Weapon = {}
+ENT.Weapon = ENT.Weapon or {}
 --Creates a weapon information class.
 --Arguments:
 --Nextbot self | The owner of the weapon.

@@ -1,7 +1,10 @@
 
 local metatable = metatable or FindMetaTable("Entity")
 local isnpc = metatable.IsNPC
-function metatable:IsNPC() return self:GetClass() == self.classname or isnpc(self) end
+function metatable:IsNPC()
+	if not IsValid(self) then return false end
+	return self:GetClass() == self.classname or isnpc(self)
+end
 function ENT:AddEntityRelationship() end
 function ENT:AddRelationship() end
 function ENT:AlertSound() end
