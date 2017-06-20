@@ -63,7 +63,7 @@ function ENT:BuildConditions(e)
 	c.NewEnemy = tobool(not self.State.Previous.HaveEnemy and e) --I got new enemy.
 	c.LostEnemy = tobool(not e and self.State.Previous.HaveEnemy) --I had an enemy previous tick.
 	c.EnemyDead = c.LostEnemy or (e and e:Health() <= 0) --An enemy with 0 health.
-	if c.LostEnemy then print("enemy lost") end
+	
 	if e then
 		--the enemy is approaching me.
 		c.EnemyApproaching = (self.Memory.EnemyPosition

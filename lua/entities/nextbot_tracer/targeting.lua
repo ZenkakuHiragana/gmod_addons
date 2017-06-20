@@ -1,7 +1,4 @@
 
-local ___DEBUG_SEE = false
-local ___DEBUG_ENEMY_MEMORY = false
-
 --Gets personal enemy entity.
 function ENT:GetEnemy()
 	if self:Validate(self.Memory.Enemy) ~= 0 then return nil end
@@ -12,6 +9,9 @@ end
 function ENT:SetEnemy(ent)
 	if self:Validate(ent) ~= 0 then return end
 	self.Memory.Enemy = ent
+	self.Memory.EnemyAimVector = self:GetEnemyAimVector()
+	self.Memory.EnemyPosition = self:GetEnemy():WorldSpaceCenter() --set the last position I saw
+	self.Memory.Distance = self:GetRangeTo(self.Memory.EnemyPosition)
 end
 
 --Finds nearest enemy and returns it.
@@ -36,7 +36,7 @@ function ENT:FindEnemy()
 		end
 	end
 	
-	if ___DEBUG_ENEMY_MEMORY then
+	if self.Debug.ShowEnemyMemory then
 		for k, v in pairs(self.Memory.Enemies) do
 			debugoverlay.Sphere(k:WorldSpaceCenter(), 10, 0.1, Color(0, 255, 0, 255), true)
 		end
@@ -44,7 +44,7 @@ function ENT:FindEnemy()
 	
 	for k, v in SortedPairsByMemberValue(self.Memory.Enemies, "Distance") do
 		if IsValid(k) then --Get the nearest enemy.
-			if ___DEBUG_ENEMY_MEMORY then
+			if self.Debug.ShowEnemyMemory then
 				debugoverlay.Sphere(k:WorldSpaceCenter(), 50, 0.1, Color(255, 0, 0, 255), true)
 			end
 			return k
@@ -68,7 +68,7 @@ function ENT:CanSee(pos, opt)
 		filter = self.breakable_filter,
 		mask = opt.shoot and MASK_SHOT or MASK_BLOCKLOS_AND_NPCS,
 	})
-	if ___DEBUG_SEE then
+	if self.Debug.SeeTrace then
 		debugoverlay.Line(tr.StartPos, tr.HitPos, 3, Color(0, 255, 0, 255), false)
 	end
 	return not tr.StartSolid and not tr.HitWorld and tr.HitPos:DistToSqr(e) < 100e+2
@@ -103,7 +103,9 @@ end
 
 --Updates current enemy's information.
 function ENT:UpdateEnemyMemory()
-	if self:GetEnemy() and self.Memory.Look then
+	if self:GetEnemy() and self.Memory.Look and self:HasCondition("HaveEnemyLOS") and
+		math.abs((self:GetEnemy():WorldSpaceCenter() - self:WorldSpaceCenter()):GetNormalized()
+		:Dot(self:GetEye().Ang:Forward())) > math.cos(math.rad(self.SearchAngle)) then
 		--Update the position of current enemy
 		self.Memory.EnemyAimVector = self:GetEnemyAimVector()
 		self.Memory.EnemyPosition = self:GetEnemy():WorldSpaceCenter() --set the last position I saw

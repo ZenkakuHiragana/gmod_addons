@@ -1,4 +1,14 @@
 
+util.PrecacheSound("entities/nextbot_tracer/blink1.wav")
+util.PrecacheSound("entities/nextbot_tracer/blink2.wav")
+util.PrecacheSound("entities/nextbot_tracer/blink3.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/blink laugh.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/blink wicked.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/whee!.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/whoa.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/onspawn.wav")
+if SERVER then PrecacheScene("scenes/tracer_lipsync_cheerslove.vcd") end
+
 sound.Add({
 	name = "Nextbot_Tracer.Blink1",
 	channel = CHAN_BODY,
@@ -40,17 +50,17 @@ sound.Add({
 	sound = "entities/nextbot_tracer/vo/onspawn.wav",
 })
 
-PrecacheScene("scenes/tracer_lipsync_cheerslove.vcd")
-
-function ENT:PlayBlink()
-	if CurTime() > self.Time.Blink + 2 then
-		self.BlinkSoundLevel = 1
-	elseif self.BlinkSoundLevel < 3 then
-		self.BlinkSoundLevel = self.BlinkSoundLevel + 1
-		if self.BlinkSoundLevel == 3 then
-			self:EmitSound("Nextbot_Tracer.BlinkVoice")
+if SERVER then
+	function ENT:PlayBlink()
+		if CurTime() > self.Time.Blink + 2 then
+			self.BlinkSoundLevel = 1
+		elseif self.BlinkSoundLevel < 3 then
+			self.BlinkSoundLevel = self.BlinkSoundLevel + 1
+			if self.BlinkSoundLevel == 3 then
+				self:EmitSound("Nextbot_Tracer.BlinkVoice")
+			end
 		end
+		
+		self.Equipment.Entity:EmitSound("Nextbot_Tracer.Blink" .. self.BlinkSoundLevel)
 	end
-	
-	self.Equipment.Entity:EmitSound("Nextbot_Tracer.Blink" .. self.BlinkSoundLevel)
 end

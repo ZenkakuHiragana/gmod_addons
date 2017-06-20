@@ -1,10 +1,4 @@
 
-local ___DEBUG_DRAW_PATH = false
-local ___DEBUG_DRAW_MOVEPOINT = false
-local ___DEBUG_SHOW_PATHNAME = false
-
-ENT.MaxYawRate = 250 --default: 250
-ENT.StepHeight = 30 --default: 20
 ENT.Speed = {}
 ENT.Speed.Run = 315						--approximately 6 m/s, player default: 200
 ENT.Speed.RunSqr = ENT.Speed.Run^2
@@ -12,8 +6,8 @@ ENT.Speed.Walk = ENT.Speed.Run / 2		--player default: 60
 ENT.Speed.WalkSqr = ENT.Speed.Walk^2
 ENT.Speed.Crouched = ENT.Speed.Run / 2	--player default: 60
 ENT.Speed.CrouchedSqr = ENT.Speed.Crouched^2
-ENT.Speed.Acceleration = 1600			--default: 400
-ENT.Speed.Deceleration = 1600			--default: 400
+ENT.Speed.Acceleration = 5000			--default: 400
+ENT.Speed.Deceleration = 5000			--default: 400
 
 function ENT:StartMove()
 	if not isvector(self.Path.DesiredPosition) then return end
@@ -23,7 +17,9 @@ end
 
 function ENT:UpdatePosition()
 	if not self.Path.Main:IsValid() then return end
-	if ___DEBUG_DRAW_PATH then self.Path.Main:Draw() end
+	if self.Debug.DrawPath then self.Path.Main:Draw() end
+	
+	if self.Path.Main:GetAge() > 8 then self.Path.Main:Compute(self, self.Path.DesiredPosition) end
 	
 	local seg = self.Path.Main:GetCurrentGoal()
 	if seg then
@@ -33,12 +29,6 @@ function ENT:UpdatePosition()
 	end
 	
 	self.Path.Main:Update(self)
-	
-	if self.loco:IsStuck() then
-		self.loco:ClearStuck()
-		self.Path.Main:Invalidate()
-		self.Path.DesiredPosition = self:GetPos()
-	end
 	
 	if self.Memory.Jump then self.loco:Jump() end
 	
@@ -87,7 +77,7 @@ function ENT:FindSpecifiedSpot(opt)
 				if length then
 					NearestDistance = path:GetLength()
 					vResult = pos
-					if ___DEBUG_DRAW_MOVEPOINT then
+					if self.Debug.DrawMoveSuggestions then
 						debugoverlay.Line(pos, pos - vector_up * 400, 5, Color(0,255,0,255), true)
 					end
 				end
@@ -103,7 +93,7 @@ end
 function ENT:SetDesiredPosition(opt)
 	local pos = self:FindSpecifiedSpot(opt)
 	if isvector(pos) then
-		if ___DEBUG_SHOW_PATHNAME then
+		if self.Debug.WritePathName then
 			print("SpotType: " .. (opt or self.FindSpotDefaultParameters).spottype)
 		end
 		self.Path.DesiredPosition = pos

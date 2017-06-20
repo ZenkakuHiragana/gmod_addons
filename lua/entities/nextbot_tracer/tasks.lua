@@ -2,10 +2,13 @@
 local HEIGHT_STAND, HEIGHT_MOVE, HEIGHT_LOWERCOVER, HEIGHT_COVER, HEIGHT_CROUCH = 1, 2, 3, 4, 5
 
 --Sets current task.
-function ENT:SetTask(t, tp)
-	if not istable(self.Task[t]) then return end
+function ENT:SetTask(t)
 	self.State.Task = t
-	self.State.TaskParam = tp
+	self.State.TaskParam = nil
+	if istable(self.State.Task) then
+		self.State.TaskParam = self.State.Task[2]
+		self.State.Task = self.State.Task[1]
+	end
 	return true
 end
 
@@ -19,6 +22,7 @@ end
 --function | (function, argument) | taskname | (taskname, argument)
 local function DoTaskList(self, l)
 	if not istable(l) then return end
+	local taskstate = self.Task.IsCompleted(self)
 	for i, t in ipairs(l) do
 		if isfunction(t) then
 			if t(self) then break end
@@ -32,7 +36,7 @@ local function DoTaskList(self, l)
 			end
 		end
 	end
-	self.State.TaskDone = nil
+	self.State.TaskDone = taskstate
 end
 
 --++Tasks++---------------------{
@@ -42,10 +46,12 @@ end
 --any arg | Argument which is given by schedule.
 --Returning true to do a next task in the same tick,
 ENT.Task = {}
-function ENT.Task.IsCompleted(self)	
-	local done = self.State.TaskDone
+function ENT.Task.IsCompleted(self)
+	return self.State.TaskDone
+end
+--Call when the current task is finished.
+function ENT.Task.Clear(self)
 	self.State.TaskDone = nil
-	return done
 end
 --Call when to go to next task.
 function ENT.Task.Complete(self)
@@ -220,42 +226,39 @@ end
 --Argument:
 ----string mode | Blink mode: "TowardEnemy", "Dodge"
 function ENT.Task.SetBlinkDirection(self, mode)
-	if not isstring(mode) or CurTime() < self.Time.Blink then
-		self.Memory.BlinkDirection = nil
+	if self.BlinkRemaining <= 0 or CurTime() < self.Time.Blink then
 		self.Time.Blink = CurTime() + 1
-		self.Task.Fail(self)
-		return
-	elseif self.BlinkRemaining <= 0 then
-		self.Time.Blink = CurTime() + 1
-		self.Task.Fail(self)
-		return
+		return self.Task.Fail(self)
 	end
 	
+	local mode = isstring(mode) and mode or "TowardEnemy"
 	local dir = vector_origin
 	local aim = self:GetAimVector()
 	aim.z = 0
 	aim:Normalize()
 	if mode == "TowardEnemy" then
+		dir = aim
 		local path = Path("Follow")
 		path:Compute(self, self.Memory.EnemyPosition)
-		local seg = path:FirstSegment()
-		if seg then
-			dir = seg.forward
-		else
-			dir = aim
+		if path:IsValid() then
+			local seg = path:FirstSegment()
+			if seg then dir = seg.forward end
 		end
 	elseif mode == "FromEnemy" then
 		dir = -aim
 	elseif mode == "Sidestep" then
 		aim:Rotate(Angle(0, -90, 0))
-	--	debugoverlay.Line(self:GetPos(), self:GetPos() + aim * self.Dist.Blink, 5, Color(255,255,0,255),true)
 		
+		if self.Debug.BlinkDestination then
+			debugoverlay.Line(self:GetPos(), self:GetPos() + aim * self.Dist.Blink, 5, Color(255,255,0,255),true)
+			debugoverlay.Sphere(self:GetPos() + dir * self.Dist.Blink, 50, 2, Color(0,255,0,255), true)
+		end
+		
+		local mins, maxs = self:GetCollisionBounds()
 		local tr = {
 			start = self:WorldSpaceCenter(), 
 			endpos = self:WorldSpaceCenter() + aim * self.Dist.Blink,
-			maxs = self:OBBMaxs(), mins = self:OBBMins(),
-			mask = MASK_NPCSOLID_BRUSHONLY,
-			filter = self,
+			mins = mins, maxs = maxs, mask = MASK_NPCSOLID_BRUSHONLY, filter = self,
 		}
 		local right = util.TraceHull(tr)
 		tr.endpos = self:WorldSpaceCenter() - aim * self.Dist.Blink
@@ -273,54 +276,92 @@ function ENT.Task.SetBlinkDirection(self, mode)
 	end
 	
 	self.Memory.BlinkDirection = dir
---	debugoverlay.Line(self:GetPos(), self:GetPos() + dir * self.Dist.Blink, 5, Color(0,255,0,255),true)
---	debugoverlay.Sphere(dir, 50, 2, Color(0,255,0,255), true)
 	
-	self.Task.Complete(self)
+	if self.Debug.BlinkDestination then
+		debugoverlay.Line(self:GetPos(), self:GetPos() + dir * self.Dist.Blink, 5, Color(0,255,0,255),true)
+		debugoverlay.Sphere(self:GetPos() + dir * self.Dist.Blink, 20, 2, Color(0,255,0,255), true)
+	end
+	
+	return self.Task.Complete(self)
 end
 
 --Blink: Teleport to self.Memory.BlinkDirection.
 function ENT.Task.Blink(self)
 	self:PlayBlink()
 	
-	local tick = CurTime()
-	coroutine.yield()
-	tick = CurTime() - tick
-	local start_move = CurTime()
-	local start_pos = self:GetPos()
-	local destination = start_pos + self.Memory.BlinkDirection * self.Dist.Blink
-	local blink_speed = self.Dist.Blink / tick / 2
-	self.Trail:SetKeyValue("LifeTime", 0.6)
---	local trail = util.SpriteTrail(self, self:LookupAttachment("chest"), 
---		Color(0, 128, 255, 192), true, 20, 0, 0.6, 1/10, "effects/blueblacklargebeam.vmt")
-	
-	self:SetVelocity(self.Memory.BlinkDirection * blink_speed)
-	self.loco:SetVelocity(self.Memory.BlinkDirection * blink_speed)
-	self.IsBlink = true
-	self.DesiredSpeed = blink_speed
-	self.loco:SetDesiredSpeed(self.DesiredSpeed)
-	self.loco:SetAcceleration(blink_speed)
-	self.loco:SetDeceleration(blink_speed)
-	self:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-	self.loco:ClearStuck()
-	while self:GetRangeTo(start_pos) < self.Dist.Blink and (CurTime() - start_move < tick * 2) do
-		self.loco:Approach(destination, 100)
+	local destination = self:GetPos() + self.Memory.BlinkDirection * self.Dist.Blink
+	local tracedestination = destination + vector_up * self.StepHeight
+	local contents = bit.bor(CONTENTS_EMPTY, CONTENTS_WATER, CONTENTS_TESTFOGVOLUME, CONTENTS_TRANSLUCENT)
+	local mins, maxs = self:GetCollisionBounds()
+	local traceStructure = {
+		start = self:GetPos() + vector_up * self.StepHeight, endpos = tracedestination,
+		mins = mins, maxs = maxs, filter = {self, self.Equipment.Entity},
+	}
+	local straightTrace = util.TraceHull(traceStructure)
+	if self.Debug.BlinkTraces then
+		debugoverlay.Box(traceStructure.start, traceStructure.mins, traceStructure.maxs, 2)
+		debugoverlay.Box(traceStructure.endpos, traceStructure.mins, traceStructure.maxs, 2)
+	end
+	local verticalTrace, verticalStartZ = {}, traceStructure.start.z
+	for i = 1, 20 do
+		if straightTrace.Hit and math.abs(straightTrace.HitNormal:Dot(vector_up)) > math.cos(math.rad(45)) then
+			traceStructure.start = straightTrace.HitPos
+			verticalStartZ = traceStructure.start.z
+			traceStructure.endpos = straightTrace.HitPos + vector_up * 100000
+			verticalTrace = util.TraceHull(traceStructure)
+			if self.Debug.BlinkTraces then
+				debugoverlay.Box(traceStructure.start, traceStructure.mins, traceStructure.maxs, 2, Color(0,255,0))
+				debugoverlay.Box(traceStructure.endpos, traceStructure.mins, traceStructure.maxs, 2, Color(0,255,0))
+			end
+			
+			traceStructure.start = verticalTrace.HitPos
+			traceStructure.endpos = tracedestination
+			traceStructure.endpos.z = verticalTrace.HitPos.z
+			straightTrace = util.TraceHull(traceStructure)
+			
+			if self.Debug.BlinkTraces then
+				debugoverlay.Box(traceStructure.start, traceStructure.mins, traceStructure.maxs, 2)
+				debugoverlay.Box(traceStructure.endpos, traceStructure.mins, traceStructure.maxs, 2)
+			end
+		else
+			traceStructure.start = straightTrace.HitPos
+			traceStructure.endpos = straightTrace.HitPos
+			traceStructure.endpos.z = verticalStartZ
+			verticalTrace = util.TraceHull(traceStructure)
+			destination = verticalTrace.HitPos
+			
+			if self.Debug.BlinkTraces then
+				debugoverlay.Box(traceStructure.start, traceStructure.mins, traceStructure.maxs, 2, Color(255,255,0))
+				debugoverlay.Box(traceStructure.endpos, traceStructure.mins, traceStructure.maxs, 2, Color(255,255,0))
+			end
+			break
+		end
 		coroutine.yield()
 	end
-	self.IsBlink = false
-	self.DesiredSpeed = self.Speed.Run
-	self.loco:SetDesiredSpeed(self.DesiredSpeed)
-	self.loco:SetAcceleration(self.Speed.Acceleration)
-	self.loco:SetDeceleration(self.Speed.Deceleration)
-	timer.Simple(1, function() if not IsValid(self) or not IsValid(self.Trail) then return end
-		self.Trail:SetKeyValue("LifeTime", 0.1)
-	end)
---	SafeRemoveEntityDelayed(trail, 1.5)
-	self.Time.Blink = CurTime() + 0.2
-	self.BlinkRemaining = self.BlinkRemaining - 1
-	timer.Simple(3, function()
-		if not IsValid(self) then return end
-		self.BlinkRemaining = self.BlinkRemaining + 1
-	end)
-	self.Task.Complete(self)
+--	destination = destination + vector_up * self.StepHeight
+	
+	if self.Debug.BlinkDestination then debugoverlay.Sphere(destination, 20, 5, Color(0, 255, 0), true) end
+	if util.IsInWorld(destination) then
+		self.Trail:SetKeyValue("LifeTime", 1.2)
+	--	local trail = util.SpriteTrail(self, self:LookupAttachment("chest"), 
+		--	Color(0, 128, 255, 192), true, 40, 0, 1.2, 0.1, "effects/blueblacklargebeam.vmt")
+		self:SetPos(destination)
+		local blinktimer = "BlinkTrailRollback" .. self:EntIndex()
+		local timerfunc = timer.Exists(blinktimer) and timer.Adjust or timer.Create
+		timerfunc(blinktimer, 1.2, 1, function()
+			if not IsValid(self) or not IsValid(self.Trail) then return end
+			self.Trail:SetKeyValue("LifeTime", 0.1)
+		end)
+	--	SafeRemoveEntityDelayed(trail, 1.2)
+		self.Time.Blink = CurTime() + 0.2
+		self.BlinkRemaining = self.BlinkRemaining - 1
+		timer.Simple(3, function()
+			if not IsValid(self) then return end
+			self.BlinkRemaining = self.BlinkRemaining + 1
+		end)
+		return self.Task.Complete(self)
+	else
+		self.Time.Blink = CurTime() + 1
+		return self.Task.Fail(self)
+	end
 end

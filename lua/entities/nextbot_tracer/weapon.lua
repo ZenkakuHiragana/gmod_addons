@@ -74,7 +74,7 @@ function ENT.Weapon.Create(self, name, clip, numbullets, spread, dmg, ammotype, 
 		Delay = {Fire = delay.firerate or 0.5, Reload = delay.reloadtime or 1, ReloadSound = delay.reloadsound or 0},
 		Muzzle = {Probability = muzzle.probability or 0.5, Scale = muzzle.scale or 0.6},
 		Sound = {Fire = snd.fire or "Weapon_Pistol.NPC_Single", Reload = snd.reload or "Weapon_Pistol.NPC_Reload"},
-		Fire = isfunction(firefunction) and firefunction or nil
+		Fire = isfunction(firefunction) and firefunction or self.Weapon.Fire
 	}, {__index = self.Weapon})
 end
 
@@ -205,7 +205,7 @@ local function FireTracerPistols(self, weapon)
 		bullet.Dir = (self.Memory.EnemyPosition - shootPos[i].Pos):GetNormalized() * 1000
 		
 		self:FireBullets(bullet)
-		ef:SetOrigin(shootPos[i].Pos + shootPos[i].Ang:Forward() * 10 + self:GetVelocity() / 10)
+		ef:SetOrigin(shootPos[i].Pos + shootPos[i].Ang:Forward() * 10)
 		ef:SetAngles(shootPos[i].Ang)
 		if math.random() < self.Equipment.Muzzle.Probability then
 			util.Effect("MuzzleEffect", ef)
@@ -224,7 +224,7 @@ function ENT:CreatePulsePistols()
 	--fire rate: 40rps
 	--reload time: 1 second
 	return self.Weapon.Create(self,
-	"tfa_tracer_nope", 40, 1, 150, 6, "Pistol",
+	"tfa_tracer_nope", 20, 1, 150, 6, "Pistol",
 	{firerate = 1/40, reloadtime = 1, reloadsound = 0},
 	{probability = 0.4, scale = 0.7},
 	{fire = "NOPE_TRACER.1", reload = "NOPE_TRACER.RELOADFOLEY"},

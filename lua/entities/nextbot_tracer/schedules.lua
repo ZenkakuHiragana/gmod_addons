@@ -2,8 +2,6 @@
 	Nextbot AI that uses schedule system like HL2 NPCs.
 ]]
 
-local ___DEBUG_SHOW_SCHEDULENAME = false
-local ___DEBUG_SHOW_PREVIOUS_SCHEDULE = false
 include("conditions.lua")
 include("tasks.lua")
 include("build.lua")
@@ -76,9 +74,10 @@ end
 function ENT:SetSchedule(s)
 	if not istable(self.Schedule[s]) then return end
 	
-	if ___DEBUG_SHOW_PREVIOUS_SCHEDULE then
+	if self.Debug.ShowPreviousSchedule then
 		print(self, "Previous schedule: " .. self.State.Schedule .. "    Schedule progress: " .. self.State.ScheduleProgress)
 		print(self, "FailReason: ", self.State.FailReason, "FSched: ", self.State.FailSchedule, "InterC: ", self.State.InterruptCondition)
+		print("")
 	end
 	
 	self.Schedule:SetInterrupt(true)
@@ -90,8 +89,9 @@ function ENT:SetSchedule(s)
 	self.Time.Schedule = CurTime()
 	self.Time.Task = CurTime()
 	
-	if ___DEBUG_SHOW_SCHEDULENAME then
+	if self.Debug.ShowNextSchedule then
 		print(self, "Set a schedule: " .. s)
+		print("")
 	end
 	
 	if isfunction(self.Schedule[s].Init) then
@@ -178,7 +178,6 @@ ENT.Schedule:Add(
 		"ReceiveEnemyInfo",
 	},
 	{
-		"InvalidatePath",
 		"SetFaceEnemy",
 		"SetRandomPosition",
 		"StartMove",
@@ -202,13 +201,16 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"RunAroundAndFire",
 	function(self)
+		timer.Simple(1.5, function()
+			if not IsValid(self) or self:GetSchedule() ~= "RunAroundAndFire" then return end
+			self.Task.Fail(self, self.FailReason.TimeOut)
+		end)
 		self.State.TaskVariable = math.Rand(100, 200)
 	end,
 	{
 		"OnContact",
 	},
 	{
-		"InvalidatePath",
 		"SetFaceEnemy",
 		{"SetRandomPosition", {dist = 256}},
 		"StartMove",
@@ -220,13 +222,16 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"RunFromEnemy",
 	function(self)
+		timer.Simple(1.5, function()
+			if not IsValid(self) or self:GetSchedule() ~= "RunFromEnemy" then return end
+			self.Task.Fail(self, self.FailReason.TimeOut)
+		end)
 		self.State.TaskVariable = math.Rand(100, 200)
 	end,
 	{
 		"OnContact",
 	},
 	{
-		"InvalidatePath",
 		{"SetFaceEnemy", true},
 		{"SetRunFromEnemy", {deg = 100, dist = 256}},
 		"StartMove",
@@ -238,13 +243,16 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"RunIntoEnemy",
 	function(self)
+		timer.Simple(1.5, function()
+			if not IsValid(self) or self:GetSchedule() ~= "RunIntoEnemy" then return end
+			self.Task.Fail(self, self.FailReason.TimeOut)
+		end)
 		self.State.TaskVariable = math.Rand(100, 200)
 	end,
 	{
 		"OnContact",
 	},
 	{
-		"InvalidatePath",
 		{"SetFaceEnemy", true},
 		{"SetRunIntoEnemy", {deg = 100, dist = 256}},
 		"StartMove",
@@ -257,7 +265,7 @@ ENT.Schedule:Add(
 	"Advance",
 	function(self)
 		timer.Simple(3, function()
-			if not IsValid(self) then return end
+			if not IsValid(self) or self:GetSchedule() ~= "Advance" then return end
 			self.Task.Fail(self, self.FailReason.TimeOut)
 		end)
 	end,
@@ -274,7 +282,6 @@ ENT.Schedule:Add(
 	},
 	{
 		{"SetFailSchedule", "RunIntoEnemy"},
-		"InvalidatePath",
 		{"SetFaceEnemy", true},
 		"Advance",
 		"StartMove",
@@ -286,8 +293,8 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"Escape",
 	function(self)
-		timer.Simple(2, function()
-			if not IsValid(self) then return end
+		timer.Simple(3, function()
+			if not IsValid(self) or self:GetSchedule() ~= "Escape" then return end
 			self.Task.Fail(self, self.FailReason.TimeOut)
 		end)
 	end,
@@ -302,7 +309,6 @@ ENT.Schedule:Add(
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
-		"InvalidatePath",
 		"SetFaceEnemy",
 		"Escape",
 		"StartMove",
@@ -314,6 +320,12 @@ ENT.Schedule:Add(
 --==TakeCover==-----------------{
 ENT.Schedule:Add(
 	"TakeCover",
+	function(self)
+		timer.Simple(3, function()
+			if not IsValid(self) or self:GetSchedule() ~= "TakeCover" then return end
+			self.Task.Fail(self, self.FailReason.TimeOut)
+		end)
+	end,
 	{
 		"LightDamage",
 		"HeavyDamage",
@@ -324,7 +336,6 @@ ENT.Schedule:Add(
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
-		"InvalidatePath",
 		{"SetFaceEnemy", true},
 		{"Escape", {nearby = true}},
 		"StartMove",
@@ -350,7 +361,6 @@ ENT.Schedule:Add(
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
-		"InvalidatePath",
 		{"SetFaceEnemy", true},
 		"MakeDistance",
 		"StartMove",
@@ -371,7 +381,6 @@ ENT.Schedule:Add(
 		"EnemyOccluded",
 	},
 	{
-		"InvalidatePath",
 		{"SetFaceEnemy", true},
 		"FireWeapon",
 	}
@@ -404,7 +413,6 @@ ENT.Schedule:Add(
 	},
 	{
 		{"SetFailSchedule", "RunIntoEnemy"},
-		"InvalidatePath",
 		{"SetFaceEnemy", true},
 		"Appear",
 		"StartMove",
@@ -425,7 +433,6 @@ ENT.Schedule:Add(
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
-		"InvalidatePath",
 		{"SetFaceEnemy", true},
 		"Escape",
 		"StartMove",
@@ -461,10 +468,10 @@ ENT.Schedule:Add(
 	{
 	},
 	{
+		"InvalidatePath",
 		"SetFaceEnemy",
 		{"SetBlinkDirection", "TowardEnemy"},
 		"Blink",
-		"RecomputePath",
 	}
 )
 --------------------------------}
@@ -479,7 +486,6 @@ ENT.Schedule:Add(
 		"SetFaceEnemy",
 		{"SetBlinkDirection", "TowardEnemy"},
 		"Blink",
-		"InvalidatePath",
 		{"SetFaceEnemy", true},
 		"Advance",
 		"StartMove",
@@ -494,10 +500,10 @@ ENT.Schedule:Add(
 	{
 	},
 	{
+		"InvalidatePath",
 		"SetFaceEnemy",
 		{"SetBlinkDirection", "FromEnemy"},
 		"Blink",
-		"RecomputePath",
 	}
 )
 --------------------------------}
@@ -507,10 +513,10 @@ ENT.Schedule:Add(
 	{
 	},
 	{
+		"InvalidatePath",
 		"SetFaceEnemy",
 		{"SetBlinkDirection", "Sidestep"},
 		"Blink",
-		"RecomputePath",
 	}
 )
 --------------------------------}

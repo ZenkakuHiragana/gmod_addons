@@ -13,14 +13,6 @@ local function OnHearSound(self, t)
 		elseif self:GetState() == NPC_STATE_ALERT and self.Memory.Enemies == {} then
 			self:SetEnemy(t.Entity)
 		end
-		
-		if not istable(self.Memory.Enemies[t.Entity]) then
-			self.Memory.Enemies[t.Entity] = {
-				Pos = t.Entity:GetPos(),
-				Distance = t.Entity:GetPos():DistToSqr(self:GetPos()),
-				Forward = t.Entity:GetForward()
-			}
-		end
 	end
 end
 
@@ -64,7 +56,8 @@ end)
 ----Entity v | The entity the nextbot came in contact with.
 function ENT:OnContact(v)
 	if not IsValid(v) then return end
-	if self:GetCollisionGroup() == COLLISION_GROUP_PLAYER then self.Time.Touch = CurTime() end
+	if self:GetCollisionGroup() ~= COLLISION_GROUP_PLAYER then return end
+	self.Time.Touch = CurTime()
 	
 	if v:IsPlayer() or v:IsNPC() or v.Type == "nextbot" then return end
 	local p = v:GetPhysicsObject() if not IsValid(p) then return end
@@ -111,30 +104,22 @@ function ENT:OnInjured(info)
 	elseif self:GetState() == NPC_STATE_ALERT and self.Memory.Enemies == {} then
 		self:SetEnemy(info:GetAttacker())
 	end
-	
-	if not istable(self.Memory.Enemies[info:GetAttacker()]) then
-		self.Memory.Enemies[info:GetAttacker()] = {
-			Pos = info:GetAttacker():GetPos(),
-			Distance = info:GetAttacker():GetPos():DistToSqr(self:GetPos()),
-			Forward = info:GetAttacker():GetForward()
-		}
-	end
 end
 
 function ENT:OnRemove()	
-	if IsValid(self.Equipment.Entity) then self.Equipment.Entity:Remove() end
-	if IsValid(self.Trail) then self.Trail:Remove() end
+	if IsValid(self.Equipment.Entity) then SafeRemoveEntity(self.Equipment.Entity) end
+	if IsValid(self.Trail) then SafeRemoveEntity(self.Trail) end
 end
 
 function ENT:OnKilled(info)
 	hook.Call("OnNPCKilled", GAMEMODE, self, info:GetAttacker(), info:GetInflictor())
-	if IsValid() then
-		local w = ents.Create(self.Weapon:GetClass())
-		w:SetPos(self.Weapon:GetPos())
-		w:SetAngles(self.Weapon:GetAngles())
-		w:SetVelocity(self.Weapon:GetAbsVelocity())
+	if IsValid(self.Equipment.Entity) then
+		local w = ents.Create(self.Equipment.Name)
+		w:SetPos(self.Equipment.Entity:GetPos())
+		w:SetAngles(self.Equipment.Entity:GetAngles())
+		w:SetVelocity(self.Equipment.Entity:GetAbsVelocity())
 		w:Spawn()
-		self.Weapon:Remove()
+		SafeRemoveEntity(self.Equipment.Entity)
 	end
 	self:BecomeRagdoll(info)
 	self:OnRemove()
@@ -149,8 +134,8 @@ function ENT:OnNavAreaChanged(old, new)
 end
 
 function ENT:OnStuck()
-	self.loco:Jump()
 	self.loco:ClearStuck()
+	self.loco:Jump()
 	local forward, back, right, left =
 		util.QuickTrace(self:WorldSpaceCenter(), self:GetForward() * 30, self),
 		util.QuickTrace(self:WorldSpaceCenter(), -self:GetForward() * 30, self),
@@ -192,16 +177,11 @@ function ENT:OnStuck()
 		warpto:Rotate(Angle(0, math.Rand(-45, 45), 0))
 	end
 	
-	debugoverlay.Line(self:WorldSpaceCenter(), self:WorldSpaceCenter() + warpto * 50, 5, Color(255,255,0,255),true)
-	self:SetPos(self:GetPos() + warpto)
-	self.Path.DesiredPosition = self:GetPos() + warpto * 5
-	self:StartMove()
+	if self.Debug.StuckReposition then
+		debugoverlay.Line(self:WorldSpaceCenter(), self:WorldSpaceCenter() + warpto * 50, 5, Color(255,255,0,255),true)
+	end
 	
-	local min, max = self:GetCollisionBounds()
-	self:SetCollisionBounds(Vector(-4, -4, min.z), Vector(4, 4, max.z))
-	timer.Simple(1, function() if not IsValid(self) then return end
-		self:SetCollisionBounds(min, max)
-	end)
+	self:SetPos(self:GetPos() + warpto)
 end
 ----------------------------------------------}
 

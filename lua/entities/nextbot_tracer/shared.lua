@@ -11,8 +11,10 @@ ENT.Purpose = ""
 ENT.Spawnable = false
 ENT.AutomaticFrameAdvance = true
 ENT.Model = "models/player/ow_tracer.mdl"
+ENT.MaxYawRate = 250 --default: 250
+ENT.StepHeight = 30 --default: 20
 ENT.SearchAngle = 60 --FOV in degrees.
-ENT.MaxNavAreas = 500 --Maximum amount of searching NavAreas.
+ENT.MaxNavAreas = 720 --Maximum amount of searching NavAreas.
 ENT.Bravery = 6 --Parameter of Schedule.GetDanger()
 
 ENT.Act = {}
@@ -30,10 +32,10 @@ ENT.Dist = {}
 --blink distance in hammer unit, meters -> inches -> hammer units
 ENT.Dist.Blink = 7 * 3.280839895 * 16 --367.45406824
 ENT.Dist.BlinkSqr = ENT.Dist.Blink^2
-ENT.Dist.FindSpots = 3000 --Search radius for finding where the nextbot should move to.
+ENT.Dist.FindSpots = 1000 --Search radius for finding where the nextbot should move to.
 ENT.Dist.Grenade = 200 --Distance for detecting grenades.
 ENT.Dist.GrenadeSqr = ENT.Dist.Grenade^2
-ENT.Dist.Search = 4000 --Search radius for finding enemies.
+ENT.Dist.Search = 1000 --Search radius for finding enemies.
 ENT.Dist.ShootRange = 500
 ENT.Dist.Manhack = ENT.Dist.Grenade / 2 --For Manhacks.
 ENT.Dist.ManhackSqr = ENT.Dist.Manhack^2
@@ -43,7 +45,7 @@ ENT.Dist.Mobbed = 90 --For Condition "Mobbed by Enemies"
 ENT.Dist.MobbedSqr = ENT.Dist.Mobbed^2
 
 ENT.HP = {}
-ENT.HP.Init = 150
+ENT.HP.Init = 60
 
 --GetConVar() needs to check if it's valid.  so this function wraps it.
 function ENT:GetConVarBool(var)
@@ -102,11 +104,26 @@ function ENT:Validate(e)
 	else
 		return 1
 	end
+	
+	return -1
 end
 
 --Returns if I can hear the given sound.
 function ENT:IsHearingSound(t)
-	return math.log10(t.Entity:GetPos():DistToSqr(self:GetEye().Pos)) < t.SoundLevel * 0.08
+	return math.log10(t.Entity:GetPos():DistToSqr(self:GetEye().Pos)) < t.SoundLevel * 0.09
+end
+
+--Data Tables for eye blink.
+function ENT:SetupDataTables()
+	self:NetworkVar("Vector", 0, "LookatAim")
+	self:NetworkVar("Bool", 0, "LookatEnemy")
+	self:NetworkVar("Float", 0, "TimePlayingScene")
+	
+	if SERVER then
+		self:SetLookatAim(vector_origin)
+		self:SetLookatEnemy(false)
+		self:SetTimePlayingScene(CurTime() - 1)
+	end
 end
 
 list.Set("NPC", ENT.classname, {
@@ -116,6 +133,22 @@ list.Set("NPC", ENT.classname, {
 })
 
 --++Debugging functions++---------------------{
+
+ENT.Debug = {} --Debug information flags.
+ENT.Debug.BehindEnemy = false
+ENT.Debug.BlinkDestination = false
+ENT.Debug.BlinkTraces = false
+ENT.Debug.DrawMoveSuggestions = false
+ENT.Debug.DrawPath = false
+ENT.Debug.Fleeing = false
+ENT.Debug.LookatHead = false
+ENT.Debug.SeeTrace = false
+ENT.Debug.ShowEnemyMemory = true
+ENT.Debug.ShowNextSchedule = false
+ENT.Debug.ShowPreviousSchedule = false
+ENT.Debug.StuckReposition = false
+ENT.Debug.WritePathName = false
+
 function ENT:ShowActAll()
 	print("List of all available activities:")
 	for i = 0, self:GetSequenceCount() - 1 do
