@@ -203,7 +203,6 @@ function ENT:RunBehaviour()
 				if string.find(v:GetClass(), "door") then
 					v:Input("Open", self, self)
 					v:Input("OpenAwayFrom", self, self, self:GetClass())
-					constraint.NoCollide(self, v, 0, 0)
 				end
 			end
 			

@@ -225,7 +225,7 @@ function ENT:CreatePulsePistols()
 	--reload time: 1 second
 	return self.Weapon.Create(self,
 	"tfa_tracer_nope", 20, 1, 150, 6, "Pistol",
-	{firerate = 1/40, reloadtime = 1, reloadsound = 0},
+	{firerate = 1/20, reloadtime = 1, reloadsound = 0},
 	{probability = 0.4, scale = 0.7},
 	{fire = "NOPE_TRACER.1", reload = "NOPE_TRACER.RELOADFOLEY"},
 	FireTracerPistols)

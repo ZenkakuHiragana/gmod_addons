@@ -222,6 +222,21 @@ function ENT.Task.StartMove(self)
 	return self.Task.Complete(self)
 end
 
+--TurnBackToWall: turn my back to the wall.
+function ENT.Task.TurnBackToWall(self)
+	local mins, maxs = self:GetCollisionBounds()
+	local tr = util.TraceHull({
+		start = self:GetPos() + vector_up * self.StepHeight,
+		endpos = self:GetPos() + vector_up * self.StepHeight + self:GetForward() * 100,
+		mins = mins, maxs = maxs, filter = {self, self.Equipment.Entity}
+	})
+	if tr.Hit then
+		self.loco:FaceTowards(self:GetPos() + tr.HitNormal * 20)
+	else
+		self.Task.Complete(self)
+	end
+end
+
 --SetBlinkDirection: Sets the position after using blink.
 --Argument:
 ----string mode | Blink mode: "TowardEnemy", "Dodge"
@@ -342,13 +357,13 @@ function ENT.Task.Blink(self)
 	
 	if self.Debug.BlinkDestination then debugoverlay.Sphere(destination, 20, 5, Color(0, 255, 0), true) end
 	if util.IsInWorld(destination) then
-		self.Trail:SetKeyValue("LifeTime", 1.2)
+		self.Trail:SetKeyValue("LifeTime", 0.6)
 	--	local trail = util.SpriteTrail(self, self:LookupAttachment("chest"), 
 		--	Color(0, 128, 255, 192), true, 40, 0, 1.2, 0.1, "effects/blueblacklargebeam.vmt")
 		self:SetPos(destination)
 		local blinktimer = "BlinkTrailRollback" .. self:EntIndex()
 		local timerfunc = timer.Exists(blinktimer) and timer.Adjust or timer.Create
-		timerfunc(blinktimer, 1.2, 1, function()
+		timerfunc(blinktimer, 0.3, 1, function()
 			if not IsValid(self) or not IsValid(self.Trail) then return end
 			self.Trail:SetKeyValue("LifeTime", 0.1)
 		end)

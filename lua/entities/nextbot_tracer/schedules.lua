@@ -182,7 +182,7 @@ ENT.Schedule:Add(
 		"SetFaceEnemy",
 		"StartMove",
 		{"WaitForMovement", {"Reload"}},
-		"Wait",
+		{"Wait", {"TurnBackToWall"}},
 		"SetRandomPosition",
 	}
 )

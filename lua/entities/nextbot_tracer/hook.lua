@@ -63,7 +63,6 @@ end)
 ----Entity v | The entity the nextbot came in contact with.
 function ENT:OnContact(v)
 	if not IsValid(v) then return end
-	if self:GetCollisionGroup() ~= COLLISION_GROUP_PLAYER then return end
 	self.Time.Touch = CurTime()
 	
 	if v:IsPlayer() or v:IsNPC() or v.Type == "nextbot" then return end
@@ -141,6 +140,7 @@ function ENT:OnNavAreaChanged(old, new)
 end
 
 function ENT:OnStuck()
+	self.Path.Main:Invalidate()
 	self.loco:ClearStuck()
 	self.loco:Jump()
 	local forward, back, right, left =
