@@ -320,24 +320,6 @@ if SERVER then
 		end
 	end
 	
-	function ENT:SpawnFunction( ply, tr )
-		if not tr.Hit then return end
-		
-		local SpawnPos = tr.HitPos + tr.HitNormal * 6
-		self.Spawn_angles = ply:GetAngles()
-		self.Spawn_angles.pitch = 0
-		self.Spawn_angles.roll = 0
-		self.Spawn_angles.yaw = self.Spawn_angles.yaw + 180
-		
-		local ent = ents.Create("npc_combine_random")
-		ent:SetPos(SpawnPos)
-		ent:SetAngles(self.Spawn_angles)
-		ent:Spawn()
-		ent:Activate()
-		
-		return ent
-	end
-	
 	function ENT:Initialize()
 		self:SetNoDraw(true)
 		self:SetModel( "models/Gibs/wood_gib01e.mdl" )
