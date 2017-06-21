@@ -108,67 +108,67 @@ function ENT:MoveEyeTarget(pos)
 	self:SetEyeTarget(self.EyePosition)
 end
 
---function ENT:Think()
---	--Getting positions for aiming, rotating the head, and line of sight.
---	local lookat = self:GetLookatAim()
---	local lookat_eye = self.IdleLookatEye
---	local lookat_head = self.IdleLookatHead
---	local vector_default = self:GetEye().Pos + self:GetEye().Ang:Forward() * 400
---	if self:GetLookatEnemy() then
---		lookat_eye = lookat
---		lookat_head = lookat
---		self.IdleLookatEntity = nil
---	else
---		lookat = self:GetEye().Pos + self:GetForward() * 400
---		if CurTime() > self.TimeIdleLookat then
---			self.TimeIdleLookat = CurTime() + math.Rand(1.2, 4)
---			self.IdleLookatHead = vector_default +
---				self:GetRight() * math.Rand(-400, 400) + vector_up * math.Rand(-100, 100)
---			self.IdleLookatEye = self.IdleLookatHead +
---				self:GetRight() * math.Rand(-100, 100) + vector_up * math.Rand(-50, 50)
---			
---			local ent = ents.FindInSphere(self:GetEye().Pos, 400)
---			if #ent > 0 then
---				ent = ent[math.random(1, #ent)]
---				if IsValid(ent) and ent ~= self and ent:GetParent() ~= self and ent ~= self.IdleLookatEntity then
---					self.IdleLookatEntity = ent
---					if ent:WorldSpaceCenter():DistToSqr(self:WorldSpaceCenter()) > 1600 and
---						math.abs((ent:WorldSpaceCenter() - self:WorldSpaceCenter())
---						:GetNormalized():Dot(self:GetUp())) < math.cos(math.rad(head_pitch_max)) then
---						self.IdleLookatEye = ent:WorldSpaceCenter()
---						self.IdleLookatHead = ent:WorldSpaceCenter()
---					end
---				else
---					self.IdleLookatEntity = nil
---				end
---			end
---		end
---	end
---	
---	if self.Debug.LookatHead then
---		debugoverlay.Sphere(lookat_head, 20, 0.1, Color(0, 255, 0, 255))
---		debugoverlay.Sphere(self.IdleLookatHead, 20, 0.1, Color(255, 255, 0, 255))
---		debugoverlay.Sphere(self.IdleLookatEye, 20, 0.1, Color(0, 255, 255, 255))
---	end
---	
---	self:MoveEyeTarget(lookat_eye)
---	self:FaceHead(lookat_head)
---	self:Aim(lookat)
---	self:InvalidateBoneCache()
---	
---	--Eye blink
---	if CurTime() > self:GetTimePlayingScene() then
---		if CurTime() > self.TimeEyeBlink then
---			local delta = CurTime() - self.TimeEyeBlink
---			if delta < 0.05 then
---				self:SetFlexWeight(self:GetFlexIDByName("blink"), delta * 20)
---			elseif delta < 0.15 then
---				delta = 1 - (delta - 0.05) * 10
---				self:SetFlexWeight(self:GetFlexIDByName("blink"), delta^2)
---			else
---				self.TimeEyeBlink = CurTime() + math.Rand(1.15, 3.50)
---				self:SetFlexWeight(self:GetFlexIDByName("blink"), 0)
---			end
---		end
---	end
---end
+function ENT:Think()
+	--Getting positions for aiming, rotating the head, and line of sight.
+	local lookat = self:GetLookatAim()
+	local lookat_eye = self.IdleLookatEye
+	local lookat_head = self.IdleLookatHead
+	local vector_default = self:GetEye().Pos + self:GetEye().Ang:Forward() * 400
+	if self:GetLookatEnemy() then
+		lookat_eye = lookat
+		lookat_head = lookat
+		self.IdleLookatEntity = nil
+	else
+		lookat = self:GetEye().Pos + self:GetForward() * 400
+		if CurTime() > self.TimeIdleLookat then
+			self.TimeIdleLookat = CurTime() + math.Rand(1.2, 4)
+			self.IdleLookatHead = vector_default +
+				self:GetRight() * math.Rand(-400, 400) + vector_up * math.Rand(-100, 100)
+			self.IdleLookatEye = self.IdleLookatHead +
+				self:GetRight() * math.Rand(-100, 100) + vector_up * math.Rand(-50, 50)
+			
+			local ent = ents.FindInSphere(self:GetEye().Pos, 400)
+			if #ent > 0 then
+				ent = ent[math.random(1, #ent)]
+				if IsValid(ent) and ent ~= self and ent:GetParent() ~= self and ent ~= self.IdleLookatEntity then
+					self.IdleLookatEntity = ent
+					if ent:WorldSpaceCenter():DistToSqr(self:WorldSpaceCenter()) > 1600 and
+						math.abs((ent:WorldSpaceCenter() - self:WorldSpaceCenter())
+						:GetNormalized():Dot(self:GetUp())) < math.cos(math.rad(head_pitch_max)) then
+						self.IdleLookatEye = ent:WorldSpaceCenter()
+						self.IdleLookatHead = ent:WorldSpaceCenter()
+					end
+				else
+					self.IdleLookatEntity = nil
+				end
+			end
+		end
+	end
+	
+	if self.Debug.LookatHead then
+		debugoverlay.Sphere(lookat_head, 20, 0.1, Color(0, 255, 0, 255))
+		debugoverlay.Sphere(self.IdleLookatHead, 20, 0.1, Color(255, 255, 0, 255))
+		debugoverlay.Sphere(self.IdleLookatEye, 20, 0.1, Color(0, 255, 255, 255))
+	end
+	
+	self:MoveEyeTarget(lookat_eye)
+	self:FaceHead(lookat_head)
+	self:Aim(lookat)
+	self:InvalidateBoneCache()
+	
+	--Eye blink
+	if CurTime() > self:GetTimePlayingScene() then
+		if CurTime() > self.TimeEyeBlink then
+			local delta = CurTime() - self.TimeEyeBlink
+			if delta < 0.05 then
+				self:SetFlexWeight(self:GetFlexIDByName("blink"), delta * 20)
+			elseif delta < 0.15 then
+				delta = 1 - (delta - 0.05) * 10
+				self:SetFlexWeight(self:GetFlexIDByName("blink"), delta^2)
+			else
+				self.TimeEyeBlink = CurTime() + math.Rand(1.15, 3.50)
+				self:SetFlexWeight(self:GetFlexIDByName("blink"), 0)
+			end
+		end
+	end
+end

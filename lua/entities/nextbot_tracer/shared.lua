@@ -24,6 +24,8 @@ ENT.Act.Run = ACT_HL2MP_RUN_DUEL
 ENT.Act.Walk = ACT_HL2MP_WALK_DUEL
 ENT.Act.WalkCrouch = ACT_HL2MP_WALK_CROUCH_DUEL
 ENT.Act.Jump = ACT_HL2MP_JUMP_DUEL
+ENT.Act.SwimIdle = ACT_HL2MP_SWIM_IDLE_DUEL
+ENT.Act.Swim = ACT_HL2MP_SWIM_DUEL
 ENT.Act.Attack = ACT_HL2MP_GESTURE_RANGE_ATTACK_DUEL
 ENT.Act.Melee = ACT_HL2MP_GESTURE_RANGE_ATTACK_MELEE
 ENT.Act.Reload = ACT_HL2MP_GESTURE_RELOAD_DUEL
@@ -45,7 +47,7 @@ ENT.Dist.Mobbed = 90 --For Condition "Mobbed by Enemies"
 ENT.Dist.MobbedSqr = ENT.Dist.Mobbed^2
 
 ENT.HP = {}
-ENT.HP.Init = 60
+ENT.HP.Init = 150
 
 --GetConVar() needs to check if it's valid.  so this function wraps it.
 function ENT:GetConVarBool(var)

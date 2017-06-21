@@ -160,6 +160,7 @@ ENT.Schedule:Add(
 		"ReceiveEnemyInfo",
 	},
 	{
+		"Reload",
 		"Wait",
 	}
 )
@@ -179,21 +180,10 @@ ENT.Schedule:Add(
 	},
 	{
 		"SetFaceEnemy",
-		"SetRandomPosition",
 		"StartMove",
 		{"WaitForMovement", {"Reload"}},
-		{
-			"Wait",
-			{
-				func = function(self, opt)
-					local time = opt.time or 2
-					self:SetPoseParameter("head_yaw", --Rotate the head.
-						math.sin((self.Time.Task + time - CurTime())
-						/ time * 2 * math.pi) * self.State.TaskVariable)
-					if math.random() < 0.008 then self.Time.Task = CurTime() - time end
-				end
-			}
-		},
+		"Wait",
+		"SetRandomPosition",
 	}
 )
 --------------------------------}

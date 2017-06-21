@@ -24,6 +24,7 @@ function ENT:InitializeTimers()
 	self.Time.ApproachingChecked = CurTime()	--For "EnemyApproaching" condition
 	self.Time.Blink = CurTime()					--Blink cooldown
 	self.Time.Damage = CurTime()				--Last time damage taken
+	self.Time.FindEnemy = CurTime()				--Update enemy info
 	self.Time.Fire = CurTime()					--Fire primary weapon
 	self.Time.Melee = CurTime()					--Melee attack cooldown
 	self.Time.Move = CurTime()					--Start moving to somewhere
@@ -62,12 +63,12 @@ function ENT:InitializeVariables()
 	self.Memory = {}
 	self.Memory.Crouch = false --Crouch flag.
 	self.Memory.CrouchNav = false --Forced to crouch by navarea.
+	self.Memory.DangerEntity = nil --An entity that I should run away from.
+	self.Memory.Distance = 0 --Distance from myself to the enemy.
 	self.Memory.Enemies = {} --Enemy pool.
 	self.Memory.Enemy = nil --Target entity.
 	self.Memory.EnemyAimVector = self:GetForward() --The enemy's looking at.
 	self.Memory.EnemyPosition = self:GetEye().Pos --I know his last position I've seen.
-	self.Memory.DangerEntity = nil --An entity that I should run away from.
-	self.Memory.Distance = 0 --Distance from myself to the enemy.
 	self.Memory.Jump = false --Should jump or not.
 	self.Memory.Look = false --Should look at the enemy or not.
 	self.Memory.Walk = false --Walk for surpressing footsteps.
@@ -134,8 +135,11 @@ function ENT:RunBehaviour()
 			if not istable(self.Schedule[sched]) then self:SetSchedule("Idle") end
 			
 			--Perform sensing.
-			local nearestenemy, e = self:FindEnemy(), self:GetEnemy()
-			if IsValid(nearestenemy) then self:SetEnemy(nearestenemy) end
+			if CurTime() > self.Time.FindEnemy then
+				local nearestenemy = self:FindEnemy()
+				if IsValid(nearestenemy) then self:SetEnemy(nearestenemy) end
+				self.Time.FindEnemy = CurTime() + 0.5
+			end
 			
 			--For "EnemyApproaching" condition.
 			if CurTime() + self.Time.ApproachingInterval > 
@@ -195,8 +199,6 @@ function ENT:RunBehaviour()
 			self.State.Previous.Health = self:Health() --For "LightDamage", "HeavyDamage"
 			self.State.Previous.Path = self.Path.Main:IsValid() or self.Path.Approaching --For "PathFinished"
 			
-			if self.Path.Main:IsValid() then self:UpdatePosition() end
-			
 			for k, v in pairs(ents.FindInSphere(self:GetEye().Pos, 60)) do
 				if string.find(v:GetClass(), "door") then
 					v:Input("Open", self, self)
@@ -204,22 +206,10 @@ function ENT:RunBehaviour()
 					constraint.NoCollide(self, v, 0, 0)
 				end
 			end
+			
+			if self.Path.Main:IsValid() then self:UpdatePosition() end
 		end
-		coroutine.wait(0.1)
+		
 		coroutine.yield()
 	end
 end
-
--- function ENT:RunBehaviour()
-	-- self:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
-	-- self:StartActivity(ACT_HL2MP_WALK_DUEL)
-	-- self:AddGesture(ACT_HL2MP_WALK_DUEL, false)
-	-- self:SetPoseParameter("move_x", -1)
-	-- self:SetPoseParameter("vertical_velocity", -1)
-	-- self:AddGestureSequence(self:LookupSequence("shotgun_pump"))
-	-- while true do
-		-- self:PlaySequenceAndWait("taunt_laugh")
-		-- self:MoveToPos(self:GetPos() + self:GetForward() * 300)
-		-- coroutine.yield()
-	-- end
--- end

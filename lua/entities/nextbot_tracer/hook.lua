@@ -5,13 +5,20 @@
 ----Table t | Sound informations.
 local function OnHearSound(self, t)
 	--TODO: Tell other mates to alert
+	local pos = isvector(t.Pos) and t.Pos or t.Entity:GetPos()
 	if self:Validate(t.Entity) == 0 then
 		if self:GetState() == NPC_STATE_IDLE then
 			self:SetState(NPC_STATE_ALERT)
-			self.Path.DesiredPosition = t.Entity:GetPos()
+			self.Path.DesiredPosition = pos
 			self:StartMove()
 		elseif self:GetState() == NPC_STATE_ALERT and self.Memory.Enemies == {} then
 			self:SetEnemy(t.Entity)
+		end
+	elseif self:GetState() ~= NPC_STATE_COMBAT then
+		if t.Channel == CHAN_WEAPON or t.SoundLevel > 70 then
+			self:SetState(NPC_STATE_ALERT)
+			self.Path.DesiredPosition = pos
+			self:StartMove()
 		end
 	end
 end

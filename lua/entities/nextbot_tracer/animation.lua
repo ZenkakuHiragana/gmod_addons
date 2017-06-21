@@ -15,7 +15,11 @@ function ENT:BodyUpdate()
 	local velocity = self.loco:GetVelocity():LengthSqr()
 	local act = self.Act.Idle
 	if not self.loco:IsOnGround() then
-		act = self.Act.Jump
+		if self:WaterLevel() > 1 then
+			act = self:GetVelocity():LengthSqr() > self.Speed.WalkSqr and self.Act.Swim or self.Act.SwimIdle
+		else
+			act = self.Act.Jump
+		end
 	elseif self.Memory.CrouchNav or self.Memory.Crouch then
 		self.DesiredSpeed = self.Speed.Crouched
 		act = velocity > 0 and self.Act.WalkCrouch or self.Act.IdleCrouch
@@ -34,6 +38,7 @@ function ENT:BodyUpdate()
 	end
 	self:BodyMoveXY()
 	
+	self:SetPoseParameter("move_x", 1)
 	self.loco:SetDesiredSpeed(self.DesiredSpeed)
 	self.loco:SetAcceleration(self.Speed.Acceleration)
 	self.loco:SetDeceleration(self.Speed.Deceleration)
