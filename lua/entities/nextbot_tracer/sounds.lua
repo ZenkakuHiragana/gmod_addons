@@ -4,9 +4,14 @@ util.PrecacheSound("entities/nextbot_tracer/blink2.wav")
 util.PrecacheSound("entities/nextbot_tracer/blink3.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/blink laugh.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/blink wicked.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/onspawn.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/recall ever get that feeling of.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/recall just in time.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/recall let's try that again.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/recall now, where were we.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/whee!.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/whoa.wav")
-util.PrecacheSound("entities/nextbot_tracer/vo/onspawn.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/yeah.wav")
 if SERVER then PrecacheScene("scenes/tracer_lipsync_cheerslove.vcd") end
 
 sound.Add({
@@ -40,6 +45,7 @@ sound.Add({
 		"entities/nextbot_tracer/vo/blink wicked.wav",
 		"entities/nextbot_tracer/vo/whee!.wav",
 		"entities/nextbot_tracer/vo/whoa.wav",
+		"entities/nextbot_tracer/vo/yeah.wav",
 	},
 })
 sound.Add({
@@ -48,6 +54,18 @@ sound.Add({
 	volume = 1,
 	level = 100,
 	sound = "entities/nextbot_tracer/vo/onspawn.wav",
+})
+sound.Add({
+	name = "Nextbot_Tracer.RecallVoice",
+	channel = CHAN_VOICE,
+	volume = 1,
+	level = 100,
+	sound = {
+		"entities/nextbot_tracer/vo/recall ever get that feeling of.wav",
+		"entities/nextbot_tracer/vo/recall just in time.wav",
+		"entities/nextbot_tracer/vo/recall let's try that again.wav",
+		"entities/nextbot_tracer/vo/recall now, where were we.wav",
+	},
 })
 
 if SERVER then
@@ -62,5 +80,9 @@ if SERVER then
 		end
 		
 		self.Equipment.Entity:EmitSound("Nextbot_Tracer.Blink" .. self.BlinkSoundLevel)
+	end
+	
+	function ENT:PlayRecall()
+		self:EmitSound("Nextbot_Tracer.RecallVoice")
 	end
 end

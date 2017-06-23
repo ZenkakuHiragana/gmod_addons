@@ -16,6 +16,8 @@ ENT.StepHeight = 30 --default: 20
 ENT.SearchAngle = 60 --FOV in degrees.
 ENT.MaxNavAreas = 720 --Maximum amount of searching NavAreas.
 ENT.Bravery = 6 --Parameter of Schedule.GetDanger()
+ENT.RecallInterval = 0.1 --Store my info every this seconds.
+ENT.RecallInfoSize = 3 / ENT.RecallInterval
 
 ENT.Act = {}
 ENT.Act.Idle = ACT_HL2MP_IDLE_DUEL
@@ -48,6 +50,9 @@ ENT.Dist.MobbedSqr = ENT.Dist.Mobbed^2
 
 ENT.HP = {}
 ENT.HP.Init = 150
+ENT.HP.MoreBlink = 75 --If my health is lower than that, do more blink.
+ENT.HP.HeavyDamage = 15 --If I've taken damage more than that at once, flag as HeavyDamage.
+ENT.HP.Recall = 80 / ENT.HP.Init --Damage fraction to be able to use recall.
 
 --GetConVar() needs to check if it's valid.  so this function wraps it.
 function ENT:GetConVarBool(var)
@@ -112,20 +117,25 @@ end
 
 --Returns if I can hear the given sound.
 function ENT:IsHearingSound(t)
-	return math.log10(t.Entity:GetPos():DistToSqr(self:GetEye().Pos)) < t.SoundLevel * 0.09
+	return math.log10(t.Entity:GetPos():DistToSqr(self:GetEye().Pos)) < t.SoundLevel * 0.085
 end
 
 --Data Tables for eye blink.
 function ENT:SetupDataTables()
 	self:NetworkVar("Vector", 0, "LookatAim")
 	self:NetworkVar("Bool", 0, "LookatEnemy")
-	self:NetworkVar("Float", 0, "TimePlayingScene")
+	self:NetworkVar("Bool", 1, "InvisibleFlag")
 	
 	if SERVER then
 		self:SetLookatAim(vector_origin)
 		self:SetLookatEnemy(false)
-		self:SetTimePlayingScene(CurTime() - 1)
+		self:SetInvisibleFlag(false)
 	end
+end
+
+if IsMounted("ep2") then
+    game.AddParticles( "particles/hunter_projectile.pcf" )
+	PrecacheParticleSystem( "hunter_muzzle_flash" )	
 end
 
 list.Set("NPC", ENT.classname, {

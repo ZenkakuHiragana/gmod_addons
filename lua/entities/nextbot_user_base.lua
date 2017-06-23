@@ -390,9 +390,22 @@ function ENT:RunBehaviour()
 					repath = 3,
 				}))
 				self:Anim(ACT_IDLE)
+			elseif Entity(1):KeyDown(IN_ATTACK) then
+				local e = EffectData()
+				e:SetOrigin(self:GetPos())
+			--	e:SetStart(self:GetPos())
+			--	e:SetScale(0.1)
+			--	e:SetRadius(0.1)
+			--	e:SetFlags(255)
+			--	e:SetMagnitude(0.1)
+			--	e:SetNormal(self:GetAngles():Forward())
+			--	e:SetEntity(self)
+				e:SetAngles(self:GetAngles())
+				util.Effect("AirboatMuzzleFlash", e)
+--				ParticleEffect("hunter_muzzle_flash", self:GetPos(), self:GetAngles())
 			else
 				self:Anim(ACT_IDLE)
-				self:MuzzleFlash()
+			--	self:MuzzleFlash()
 			end
 		end
 		coroutine.wait(0.1)

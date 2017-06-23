@@ -23,6 +23,7 @@ ENT.Condition = {
 	"CanBlink", --I can blink now.
 	"CanMeleeAttack", --I can swing my baton.
 	"CanPrimaryAttack", --The enemy is in enough range and ready to fire.
+	"CanRecall", --I can use the recall ability.
 	"CanSecondaryAttack", --The enemy is in close range and ready to fire.
 	"Done", --Schedule is done.
 	"EnemyApproaching", --Current enemy is moving toward me.
@@ -146,7 +147,7 @@ function ENT:BuildConditions(e)
 	
 	--Around my health.
 	c.LightDamage = self.State.Previous.Health - self:Health() > 1
-	c.HeavyDamage = self.State.Previous.Health - self:Health() > self:GetMaxHealth() / 10
+	c.HeavyDamage = self.State.Previous.Health - self:Health() > self.HP.HeavyDamage
 	c.RepeatedDamage = self.Time.Damage - self.Time.RepeatedDamage > self.Time.RepeatedDamageDuration
 	if c.RepeatedDamage then self.Time.RepeatedDamage = CurTime() end
 	
@@ -165,8 +166,9 @@ function ENT:BuildConditions(e)
 	end
 	c.MobbedByEnemies = d > self:Health() / self:GetMaxHealth() * self.Bravery
 	
-	--Can I blink now?
+	--Can I use my abilities now?
 	c.CanBlink = self.BlinkRemaining > 0 and CurTime() > self.Time.Blink
+	c.CanRecall = self.State.Previous.HealthForRecall - self:Health() > self:Health() * self.HP.Recall and CurTime() > self.Time.Recall
 	--I touched someone.
 	c.OnContact = math.abs(CurTime() - self.Time.Touch) < 0.05
 	

@@ -167,7 +167,7 @@ local function FireCallBack(attacker, tr, dmginfo)
 	if c == "npc_turret_floor" then
 		tr.Entity:Fire("SelfDestruct")
 	elseif c == "npc_rollermine" then
-		util.BlastDamage(attacker.Equipment.Entity, self, tr.Entity:GetPos(), 1, 1)
+		util.BlastDamage(game.GetWorld(), game.GetWorld(), tr.Entity:GetPos(), 1, 1)
 	end
 end
 
@@ -179,15 +179,22 @@ local function FireTracerPistols(self, weapon)
 	if self.Memory.Distance > self.Dist.ShootRange then return end
 	if not self:HasCondition("CanPrimaryAttack") then return end
 	
+	local att = {
+		self:LookupAttachment("anim_attachment_LH"),
+		self:LookupAttachment("anim_attachment_RH"),
+	}
 	local shootPos = {self:GetHand(true), self:GetHand()}
 	self.Equipment.Ammo = self.Equipment.Ammo - 1
 	self:AddGesture(self.Act.Attack)
 	weapon:EmitSound(self.Equipment.Sound.Fire)
 	
-	local ef = EffectData()
-	ef:SetEntity(weapon)
-	ef:SetEntIndex(weapon:EntIndex())
-	ef:SetScale(self.Equipment.Muzzle.Scale)
+	local ef
+	if not IsMounted("ep2") then
+		ef = EffectData()
+		ef:SetEntity(weapon)
+		ef:SetEntIndex(weapon:EntIndex())
+		ef:SetScale(self.Equipment.Muzzle.Scale)
+	end
 	local bullet = {
 		Attacker = self,
 		Num = 1,
@@ -205,10 +212,14 @@ local function FireTracerPistols(self, weapon)
 		bullet.Dir = (self.Memory.EnemyPosition - shootPos[i].Pos):GetNormalized() * 1000
 		
 		self:FireBullets(bullet)
-		ef:SetOrigin(shootPos[i].Pos + shootPos[i].Ang:Forward() * 10)
-		ef:SetAngles(shootPos[i].Ang)
 		if math.random() < self.Equipment.Muzzle.Probability then
-			util.Effect("MuzzleEffect", ef)
+			if IsMounted("ep2") then
+				ParticleEffectAttach("hunter_muzzle_flash", PATTACH_POINT_FOLLOW, self, att[i])
+			else
+				ef:SetOrigin(shootPos[i].Pos + shootPos[i].Ang:Forward() * 10)
+				ef:SetAngles(shootPos[i].Ang)
+				util.Effect("MuzzleEffect", ef)
+			end
 		end
 	end
 	
@@ -226,7 +237,7 @@ function ENT:CreatePulsePistols()
 	return self.Weapon.Create(self,
 	"tfa_tracer_nope", 20, 1, 150, 6, "Pistol",
 	{firerate = 1/20, reloadtime = 1, reloadsound = 0},
-	{probability = 0.4, scale = 0.7},
+	{probability = 0.6, scale = 0.7},
 	{fire = "NOPE_TRACER.1", reload = "NOPE_TRACER.RELOADFOLEY"},
 	FireTracerPistols)
 end

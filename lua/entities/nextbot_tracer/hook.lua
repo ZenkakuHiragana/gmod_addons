@@ -11,11 +11,11 @@ local function OnHearSound(self, t)
 			self:SetState(NPC_STATE_ALERT)
 			self.Path.DesiredPosition = pos
 			self:StartMove()
-		elseif self:GetState() == NPC_STATE_ALERT and self.Memory.Enemies == {} then
+		elseif self:GetState() == NPC_STATE_ALERT then
 			self:SetEnemy(t.Entity)
 		end
 	elseif self:GetState() ~= NPC_STATE_COMBAT then
-		if t.Channel == CHAN_WEAPON or t.SoundLevel > 70 then
+		if t.Channel == CHAN_WEAPON or t.SoundLevel >= 75 then
 			self:SetState(NPC_STATE_ALERT)
 			self.Path.DesiredPosition = pos
 			self:StartMove()
@@ -25,12 +25,14 @@ end
 
 --++Hooks++-----------------------------------{
 local classname = "nextbot_tracer"
+local targetname = "NextbotTracerRelationship"
 hook.Add("OnEntityCreated", "NextbotIsAlone!", function(e)
 	if IsValid(e) and e:GetClass() ~= classname and isfunction(e.AddEntityRelationship) then
-		timer.Simple(1, function()
-			if not IsValid(e) then return end
+		local t = targetname .. e:EntIndex()
+		timer.Create(t, 1, 0, function()
+			if not IsValid(e) then timer.Remove(t) return end
 			for k, v in pairs(ents.FindByClass(classname)) do
-				if IsValid(v) and e:Disposition(v) ~= D_HT then e:AddEntityRelationship(v, D_HT, 1) end
+				if IsValid(v) then e:AddEntityRelationship(v, D_HT, 1) end
 			end
 		end)
 	end
@@ -56,6 +58,9 @@ net.Receive("NextbotHearsSound", function(len, ply)
 		OnHearSound(bot, t)
 	end
 end)
+
+util.AddNetworkString("SetAimParameterRecall") --Sets aim position properly for recall.
+util.AddNetworkString("SetVisibleRecall") --Why can't I change my color on serverside!?
 
 --Called when the nextbot touches another entity.
 --Applies the physics damage.
@@ -101,13 +106,11 @@ function ENT:OnInjured(info)
 	
 	--Register the attacker's info.
 	if self:Validate(info:GetAttacker()) ~= 0 then return end
-	local newenemy = self:FindEnemy()
-	if newenemy then self:SetEnemy(newenemy) end
 	if self:GetState() == NPC_STATE_IDLE then
 		self:SetState(NPC_STATE_ALERT)
 		self.Path.DesiredPosition = info:GetAttacker():GetPos()
 		self:StartMove()
-	elseif self:GetState() == NPC_STATE_ALERT and self.Memory.Enemies == {} then
+	elseif self:GetState() == NPC_STATE_ALERT then
 		self:SetEnemy(info:GetAttacker())
 	end
 end
@@ -118,7 +121,7 @@ function ENT:OnRemove()
 end
 
 function ENT:OnKilled(info)
-	hook.Call("OnNPCKilled", GAMEMODE, self, info:GetAttacker(), info:GetInflictor())
+	hook.Run("OnNPCKilled", self, info:GetAttacker(), info:GetInflictor())
 	if IsValid(self.Equipment.Entity) then
 		local w = ents.Create(self.Equipment.Name)
 		w:SetPos(self.Equipment.Entity:GetPos())
@@ -126,6 +129,7 @@ function ENT:OnKilled(info)
 		w:SetVelocity(self.Equipment.Entity:GetAbsVelocity())
 		w:Spawn()
 		SafeRemoveEntity(self.Equipment.Entity)
+		SafeRemoveEntityDelayed(w, 10)
 	end
 	self:BecomeRagdoll(info)
 	self:OnRemove()

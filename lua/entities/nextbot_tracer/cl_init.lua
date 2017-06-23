@@ -2,10 +2,6 @@
 include("shared.lua")
 include("sounds.lua")
 local classname = "nextbot_tracer"
-local ColorAlly = Color(0, 128, 255, 192)
-local ColorEnemy = Color(255, 128, 0, 192)
-local TrailMat = "effects/blueblacklargebeam.vmt"
-local TrailWidth = {_start = 20, _end = 0}
 killicon.AddAlias(classname, "weapon_pistol")
 language.Add(classname, "Nextbot Tracer")
 
@@ -36,6 +32,25 @@ hook.Add("EntityEmitSound", "NextbotHearsSound", function(t)
 			net.SendToServer()
 		end
 	end
+end)
+
+net.Receive("SetAimParameterRecall", function(len, ply)
+	local bot = net.ReadEntity()
+	if not IsValid(bot) or bot:GetClass() ~= classname then return end
+	local aim_yaw = net.ReadFloat()
+	local aim_pitch = net.ReadFloat()
+	
+	bot.aim_yaw, bot.aim_pitch = aim_yaw, aim_pitch
+	bot:SetPoseParameter("aim_yaw", bot.aim_yaw)
+	bot:SetPoseParameter("aim_pitch", bot.aim_pitch)
+end)
+
+net.Receive("SetVisibleRecall", function(len, ply)
+	local bot = net.ReadEntity()
+	if not IsValid(bot) or bot:GetClass() ~= classname then return end
+	local invisible = net.ReadBool()
+	
+	bot.Invisible = invisible
 end)
 
 --Initializes this NPC.
@@ -157,18 +172,22 @@ function ENT:Think()
 	self:InvalidateBoneCache()
 	
 	--Eye blink
-	if CurTime() > self:GetTimePlayingScene() then
-		if CurTime() > self.TimeEyeBlink then
-			local delta = CurTime() - self.TimeEyeBlink
-			if delta < 0.05 then
-				self:SetFlexWeight(self:GetFlexIDByName("blink"), delta * 20)
-			elseif delta < 0.15 then
-				delta = 1 - (delta - 0.05) * 10
-				self:SetFlexWeight(self:GetFlexIDByName("blink"), delta^2)
-			else
-				self.TimeEyeBlink = CurTime() + math.Rand(1.15, 3.50)
-				self:SetFlexWeight(self:GetFlexIDByName("blink"), 0)
-			end
+	if CurTime() > self.TimeEyeBlink then
+		local delta = CurTime() - self.TimeEyeBlink
+		if delta < 0.05 then
+			self:SetFlexWeight(self:GetFlexIDByName("blink"), delta * 20)
+		elseif delta < 0.15 then
+			delta = 1 - (delta - 0.05) * 10
+			self:SetFlexWeight(self:GetFlexIDByName("blink"), delta^2)
+		else
+			self.TimeEyeBlink = CurTime() + math.Rand(1.15, 3.50)
+			self:SetFlexWeight(self:GetFlexIDByName("blink"), 0)
 		end
+	end
+end
+
+function ENT:Draw()
+	if not self:GetInvisibleFlag() then
+		self.BaseClass.Draw(self)
 	end
 end

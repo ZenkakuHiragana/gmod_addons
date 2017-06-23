@@ -40,6 +40,7 @@ function ENT:InitializeState()
 	self.State.Previous.ApproachingPos = vector_origin --For "EnemyApproaching" condition.
 	self.State.Previous.HaveEnemy = nil --Detecting the enemy went null or dead.
 	self.State.Previous.Health = self:GetMaxHealth() --Detecting damage.
+	self.State.Previous.HealthForRecall = self:GetMaxHealth() --Detecting damage, for recall.
 	self.State.Previous.Path = false --Hook for finished moving.
 	self.State.Build = self.BuildNPCState --Building function of NPCState.
 	self.State.FailReason = "NoReasonGiven" --This is why the previous schedule is failed.
@@ -153,10 +154,10 @@ ENT.Schedule:Add(
 		self.State.TaskVariable = math.Rand(20, 65)
 	end,
 	{
+		"HeavyDamage",
+		"LightDamage",
 		{"NearDanger", "Escape"},
 		"NewEnemy",
-		"LightDamage",
-		"HeavyDamage",
 		"ReceiveEnemyInfo",
 	},
 	{
@@ -172,10 +173,10 @@ ENT.Schedule:Add(
 		self.State.TaskVariable = math.Rand(20, 65)
 	end,
 	{
+		"HeavyDamage",
+		"LightDamage",
 		{"NearDanger", "Escape"},
 		"NewEnemy",
-		"LightDamage",
-		"HeavyDamage",
 		"ReceiveEnemyInfo",
 	},
 	{
@@ -198,7 +199,14 @@ ENT.Schedule:Add(
 		self.State.TaskVariable = math.Rand(100, 200)
 	end,
 	{
+		"CanRecall",
+		"EnemyDead",
+		"EnemyOccluded",
+		"HeavyDamage",
+		"LightDamage",
+		"NoPrimaryAmmo",
 		"OnContact",
+		"RepeatedDamage",
 	},
 	{
 		"SetFaceEnemy",
@@ -219,7 +227,14 @@ ENT.Schedule:Add(
 		self.State.TaskVariable = math.Rand(100, 200)
 	end,
 	{
+		"CanRecall",
+		"EnemyDead",
+		"EnemyOccluded",
+		"HeavyDamage",
+		"LightDamage",
+		"NewEnemy",
 		"OnContact",
+		"RepeatedDamage",
 	},
 	{
 		{"SetFaceEnemy", true},
@@ -240,7 +255,15 @@ ENT.Schedule:Add(
 		self.State.TaskVariable = math.Rand(100, 200)
 	end,
 	{
+		"CanRecall",
+		"EnemyApproaching",
+		"EnemyDead",
+		"HeavyDamage",
+		"LightDamage",
+		"MobbedByEnemies",
+		"NewEnemy",
 		"OnContact",
+		"RepeatedDamage",
 	},
 	{
 		{"SetFaceEnemy", true},
@@ -260,15 +283,16 @@ ENT.Schedule:Add(
 		end)
 	end,
 	{
-		"NewEnemy",
+		"CanRecall",
 		"EnemyApproaching",
-		"OnContact",
-		"LightDamage",
-		"HeavyDamage",
-		"RepeatedDamage",
 		"EnemyDead",
-		"MobbedByEnemies",
+		"HeavyDamage",
 		"InvalidPath",
+		"LightDamage",
+		"MobbedByEnemies",
+		"NewEnemy",
+		"OnContact",
+		"RepeatedDamage",
 	},
 	{
 		{"SetFailSchedule", "RunIntoEnemy"},
@@ -289,13 +313,13 @@ ENT.Schedule:Add(
 		end)
 	end,
 	{
-		"NewEnemy",
-		"LightDamage",
-		"HeavyDamage",
-		"RepeatedDamage",
 		"EnemyDead",
 		"EnemyOccluded",
+		"HeavyDamage",
 		{"InvalidPath", "RunFromEnemy"},
+		"LightDamage",
+		"NewEnemy",
+		"RepeatedDamage",
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
@@ -317,12 +341,13 @@ ENT.Schedule:Add(
 		end)
 	end,
 	{
-		"LightDamage",
-		"HeavyDamage",
-		"RepeatedDamage",
-		"NewEnemy",
 		"EnemyDead",
+		"HeavyDamage",
 		{"InvalidPath", "RunFromEnemy"},
+		"LightDamage",
+		"NewEnemy",
+		"NoPrimaryAmmo",
+		"RepeatedDamage",
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
@@ -341,13 +366,13 @@ ENT.Schedule:Add(
 		self.State.TaskVariable = math.Rand(0.8, 1.75)
 	end,
 	{
-		"NewEnemy",
-		"LightDamage",
-		"HeavyDamage",
-		"RepeatedDamage",
 		"EnemyDead",
 		{"EnemyOccluded", "AppearUntilSee"},
+		"HeavyDamage",
 		{"InvalidPath", "RunFromEnemy"},
+		"LightDamage",
+		"NewEnemy",
+		"RepeatedDamage",
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
@@ -362,13 +387,13 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"RangeAttack",
 	{
+		"EnemyDead",
+		"EnemyOccluded",
 		"NearDanger",
 		"NoPrimaryAmmo",
 		"NoSecondaryAmmo",
 		"LowPrimaryAmmo",
 		"LowSecondaryAmmo",
-		"EnemyDead",
-		"EnemyOccluded",
 	},
 	{
 		{"SetFaceEnemy", true},
@@ -390,16 +415,17 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"AppearUntilSee",
 	{
-		"NearDanger",
-		"HaveEnemyLOS",
-		"LightDamage",
-		"HeavyDamage",
-		"RepeatedDamage",
-		"CanPrimaryAttack",
-		"CanSecondaryAttack",
 		"CanMeleeAttack",
+		"CanPrimaryAttack",
+		"CanRecall",
+		"CanSecondaryAttack",
 		"EnemyDead",
+		"HaveEnemyLOS",
+		"HeavyDamage",
+		"LightDamage",
+		"NearDanger",
 		"NewEnemy",
+		"RepeatedDamage",
 	},
 	{
 		{"SetFailSchedule", "RunIntoEnemy"},
@@ -414,12 +440,12 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"HideAndReload",
 	{
-		"NewEnemy",
-		"LightDamage",
 		"HeavyDamage",
-		"RepeatedDamage",
-		"ReloadFinished",
+		"LightDamage",
 		"MobbedByEnemies",
+		"NewEnemy",
+		"ReloadFinished",
+		"RepeatedDamage",
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
@@ -469,8 +495,8 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"BlinkTowardEnemyAndReload",
 	{
-		"LightDamage",
 		"HeavyDamage",
+		"LightDamage",
 	},
 	{
 		"SetFaceEnemy",
@@ -507,6 +533,18 @@ ENT.Schedule:Add(
 		"SetFaceEnemy",
 		{"SetBlinkDirection", "Sidestep"},
 		"Blink",
+	}
+)
+--------------------------------}
+--==Recall==--------------------{
+ENT.Schedule:Add(
+	"Recall",
+	{
+	},
+	{
+		"InvalidatePath",
+		"SetFaceEnemy",
+		"Recall",
 	}
 )
 --------------------------------}

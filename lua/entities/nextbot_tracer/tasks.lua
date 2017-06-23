@@ -300,14 +300,19 @@ function ENT.Task.SetBlinkDirection(self, mode)
 	return self.Task.Complete(self)
 end
 
---Blink: Teleport to self.Memory.BlinkDirection.
+--Blink: Teleport to self.Memory.BlinkDirection
+local collision_delta = Vector(8, 8, 8)
 function ENT.Task.Blink(self)
 	self:PlayBlink()
+	local e = EffectData()
+	e:SetEntity(self)
+	util.Effect("tracerblinks", e)
 	
 	local destination = self:GetPos() + self.Memory.BlinkDirection * self.Dist.Blink
 	local tracedestination = destination + vector_up * self.StepHeight
 	local contents = bit.bor(CONTENTS_EMPTY, CONTENTS_WATER, CONTENTS_TESTFOGVOLUME, CONTENTS_TRANSLUCENT)
 	local mins, maxs = self:GetCollisionBounds()
+	mins, maxs = mins - collision_delta, maxs + collision_delta
 	local traceStructure = {
 		start = self:GetPos() + vector_up * self.StepHeight, endpos = tracedestination,
 		mins = mins, maxs = maxs, filter = {self, self.Equipment.Entity},
@@ -357,21 +362,24 @@ function ENT.Task.Blink(self)
 	
 	if self.Debug.BlinkDestination then debugoverlay.Sphere(destination, 20, 5, Color(0, 255, 0), true) end
 	if util.IsInWorld(destination) then
-		self.Trail:SetKeyValue("LifeTime", 0.6)
+		self.Trail:SetKeyValue("LifeTime", 0.8)
 	--	local trail = util.SpriteTrail(self, self:LookupAttachment("chest"), 
 		--	Color(0, 128, 255, 192), true, 40, 0, 1.2, 0.1, "effects/blueblacklargebeam.vmt")
 		self:SetPos(destination)
 		local blinktimer = "BlinkTrailRollback" .. self:EntIndex()
 		local timerfunc = timer.Exists(blinktimer) and timer.Adjust or timer.Create
-		timerfunc(blinktimer, 0.3, 1, function()
+		timerfunc(blinktimer, 0.4, 1, function()
 			if not IsValid(self) or not IsValid(self.Trail) then return end
-			self.Trail:SetKeyValue("LifeTime", 0.1)
+			self.Trail:SetKeyValue("LifeTime", 0.2)
 		end)
 	--	SafeRemoveEntityDelayed(trail, 1.2)
 		self.Time.Blink = CurTime() + 0.2
 		self.BlinkRemaining = self.BlinkRemaining - 1
-		timer.Simple(3, function()
-			if not IsValid(self) then return end
+		
+		blinktimer = "BlinkRecover" .. self:EntIndex()
+		timerfunc = timer.Exists(blinktimer) and timer.Adjust or timer.Create
+		timerfunc(blinktimer, 3, 3 - self.BlinkRemaining, function()
+			if not IsValid(self) or self.BlinkRemaining > 2 then return end
 			self.BlinkRemaining = self.BlinkRemaining + 1
 		end)
 		return self.Task.Complete(self)
@@ -379,4 +387,58 @@ function ENT.Task.Blink(self)
 		self.Time.Blink = CurTime() + 1
 		return self.Task.Fail(self)
 	end
+end
+
+--Recall: Rewinds to three seconds past, setting my health and position.
+function ENT.Task.Recall(self)
+	if CurTime() < self.Time.Recall then
+		self.Time.Recall = CurTime() + 1
+		return self.Task.Fail(self)
+	end
+	
+	--Tracer becomes invisible.
+	self:SetInvisibleFlag(true)
+	self.Equipment.Entity:SetNoDraw(true)
+	self.Equipment.Entity:DrawShadow(false)
+	self:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
+	self:SetHealth(1000000000000)
+	
+	--Place some effects here.
+	local e = EffectData()
+	e:SetOrigin(self:WorldSpaceCenter())
+	util.Effect("tracer_recallball", e)
+	
+	local start = CurTime()
+	local info = self.RecallInfo[(self.RecallNextWrite % self.RecallInfoSize) + 1]
+	local pos, ang, aim_yaw, aim_pitch, health = info.pos, info.ang, info.aim_yaw, info.aim_pitch
+	table.SortByMember(self.RecallInfo, "health")
+	health = self.RecallInfo[1].health
+	self:InitializeRecallInfo()
+	
+	coroutine.wait(1)
+	
+	self:SetPos(pos)
+	self:SetAngles(ang)
+	self:SetHealth(health)
+	net.Start("SetAimParameterRecall")
+	net.WriteEntity(self)
+	net.WriteFloat(aim_yaw)
+	net.WriteFloat(aim_pitch)
+	net.Broadcast()
+	
+	
+	--Place some effects here.
+	util.Effect("tracerblinks", e)
+	
+	
+	--Tracer now comes back to the world.
+	self:SetInvisibleFlag(false)
+	self.Equipment.Entity:SetNoDraw(false)
+	self.Equipment.Entity:DrawShadow(true)
+	self:SetCollisionGroup(COLLISION_GROUP_PLAYER)
+	
+	self:PlayRecall()
+	
+	self.Time.Recall = CurTime() + 12
+	self.Task.Complete(self)
 end

@@ -2,13 +2,13 @@
 --Plays a scene and sets a timer for preventing flex problem.
 --Argument:
 ----string scene | Filepath to scene.
-function ENT:SetScene(scene)
-	if CurTime() > self:GetTimePlayingScene() then
-		self:SetTimePlayingScene(CurTime() + self:PlayScene(scene))
-		return true
-	end
-	return false
-end
+--function ENT:SetScene(scene)
+--	if CurTime() > self:GetTimePlayingScene() then
+--		self:SetTimePlayingScene(CurTime() + self:PlayScene(scene))
+--		return true
+--	end
+--	return false
+--end
 
 function ENT:BodyUpdate()
 	--Set activity

@@ -77,7 +77,7 @@ CombatSchedule.Assault = function(self)
 	if self:HasCondition("CanBlink") and
 		(self:HasCondition("NearDanger") or
 		self:HasCondition("HeavyDamage") or
-		(self:Health() < self:GetMaxHealth() / 2 and
+		(self:Health() < self.HP.MoreBlink and
 		self:HasCondition("LightDamage"))) then
 		
 		if self:HasCondition("EnemyFacingMe") and 
@@ -112,7 +112,7 @@ CombatSchedule.Assault = function(self)
 		--Blink and approach it.
 		if self:HasCondition("CanBlink") then
 			if self:HasCondition("EnemyApproaching") and
-				self.Memory.Distance > self.Dist.Blink then
+				self.Memory.Distance < self.Dist.Blink then
 				return "BlinkSidestep"
 			else
 				return "BlinkTowardEnemy"
@@ -165,6 +165,9 @@ function ENT:BuildCombatSchedule()
 	if not self:HasCondition("MobbedByEnemies") and
 		self:HasCondition("CanMeleeAttack") and self:GetEnemy():Health() < 30 then
 		return "MeleeAttack"
+	--Recall and heal myself.
+	elseif self:HasCondition("CanRecall") then
+		return "Recall"
 	elseif isfunction(CombatSchedule[self.State.Mode]) then
 		return CombatSchedule[self.State.Mode](self)
 	else
