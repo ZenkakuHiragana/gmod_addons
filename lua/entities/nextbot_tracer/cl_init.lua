@@ -3,7 +3,7 @@ include("shared.lua")
 include("sounds.lua")
 local classname = "nextbot_tracer"
 killicon.AddAlias(classname, "weapon_pistol")
-language.Add(classname, "Nextbot Tracer")
+language.Add(classname, ENT.PrintName)
 
 util.PrecacheModel(ENT.Model)
 
@@ -24,7 +24,7 @@ local parameter_movedivision = 8
 hook.Add("EntityEmitSound", "NextbotHearsSound", function(t)
 	if not IsValid(t.Entity) then return end
 	for k, v in pairs(ents.FindByClass(classname)) do
-		if t.Entity == v or v:Validate(t.Entity) ~= 0 then return end
+		if t.Entity == v then return end
 		if v:IsHearingSound(t) then
 			net.Start("NextbotHearsSound")
 			net.WriteEntity(v)
@@ -124,6 +124,8 @@ function ENT:MoveEyeTarget(pos)
 end
 
 function ENT:Think()
+	self:DrawShadow(not self:GetInvisibleFlag())
+	
 	--Getting positions for aiming, rotating the head, and line of sight.
 	local lookat = self:GetLookatAim()
 	local lookat_eye = self.IdleLookatEye
@@ -188,6 +190,6 @@ end
 
 function ENT:Draw()
 	if not self:GetInvisibleFlag() then
-		self.BaseClass.Draw(self)
+		self:DrawModel()
 	end
 end

@@ -1,12 +1,12 @@
 
---Copied from propspawn.lua
-
-local col = Color(192, 255, 255)
+local color_ally = Color(192, 255, 255)
+local color_enemy = Color(255, 128, 128)
 
 function EFFECT:Init(data)
 	self:SetModel("models/effects/combineball.mdl")
 	self:SetPos(data:GetOrigin())
-	self:SetColor(col)
+	self.Color = data:GetFlags() == 1 and color_enemy or color_ally
+	self:SetColor(self.Color)
 	self.Scale = 4
 	self.Duration = 0.25
 	self.Begin = CurTime()
@@ -14,7 +14,7 @@ function EFFECT:Init(data)
 	
 	local l = DynamicLight(self:EntIndex())
 	l.Pos = self:GetPos()
-	l.r, l.g, l.b = col.r, col.g, col.b
+	l.r, l.g, l.b = self.Color.r, self.Color.g, self.Color.b
 	l.brightness = 2
 	l.Decay = 1000
 	l.Size = 256

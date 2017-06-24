@@ -43,7 +43,7 @@ function ENT:InitializeTimers()
 	self.Time.HealthChecked = CurTime()			--For "CanRecall" condition
 	self.Time.Melee = CurTime()					--Melee attack cooldown
 	self.Time.Move = CurTime()					--Start moving to somewhere
---	self.Time.PlayingScene = CurTime() - 1
+	self.Time.PlayingScene = CurTime() - 1
 	self.Time.Recall = CurTime()				--Recall cooldown
 	self.Time.RecordRecallInfo = CurTime()		--I had better use timer.Create(), perhaps.
 	self.Time.Reload = CurTime()				--Reloading
@@ -52,6 +52,8 @@ function ENT:InitializeTimers()
 	self.Time.SeeEnemy = CurTime()				--Last time the enemy seen
 	self.Time.Task = CurTime()					--Begin a task
 	self.Time.Touch = CurTime()	 - 1			--On contact someone
+	self.Time.VoiceMeleeFinalBlow = CurTime()	--Speak a final blow voice
+	self.Time.VoiceOnFire = CurTime()			--Speak when on fire
 	
 	self.Time.ApproachingInterval = 0.5			--For "EnemyApproaching" condition
 	self.Time.HealthCheckInterval = 2.5			--For "CanRecall" condition
@@ -59,11 +61,42 @@ function ENT:InitializeTimers()
 	self.Time.ResetRepeatedDamage = 2.5			--Reset "RepeatedDamage" condition timer after several seconds.
 end
 
+function ENT:GetBoneHitBox(bonename)
+	local hitbox, hitgroup = nil
+	for group = 0, self:GetHitBoxGroupCount() - 1 do
+		for box = 0, self:GetHitBoxCount(group) - 1 do
+			if self:GetHitBoxBone(box, group) == self:LookupBone(bonename) then
+				hitbox, hitgroup = box, group
+			end
+		end
+		
+		if hitbox then break end
+	end
+	
+	return hitbox, hitgroup
+end
+
 --Defines some variables.
 function ENT:InitializeVariables()
 	self.Equipment = self:CreatePulsePistols() --Weapons info
 	self.EyeHeight = self:GetEye().Pos.z - self:GetPos().z
 	self.DesiredSpeed = self.Speed.Run
+	
+	self.Act.Flinch.Back = self:GetSequenceActivity(
+		self:LookupSequence("flinch_back_01"))
+	self.Act.Flinch.Default = self:GetSequenceActivity(
+		self:LookupSequence("flinch_01")) --flinch_01 or flinch_02
+	self.Act.Flinch.ShoulderLeft = self:GetSequenceActivity(
+		self:LookupSequence("flinch_shoulder_l"))
+	self.Act.Flinch.ShoulderRight = self:GetSequenceActivity(
+		self:LookupSequence("flinch_shoulder_r"))
+	
+	--We need hitbox bound to check headshots and flinch.
+	self.HitBox, self.HitGroup = {}, {}
+	self.HitBox.Head, self.HitGroup.Head = self:GetBoneHitBox(self.Bone.Head)
+	self.HitBox.ShoulderLeft, self.HitGroup.ShoulderLeft = self:GetBoneHitBox(self.Bone.ShoulderLeft)
+	self.HitBox.ShoulderRight, self.HitGroup.ShoulderRight = self:GetBoneHitBox(self.Bone.ShoulderRight)
+	self.HitBox.Stomach, self.HitGroup.Stomach = self:GetBoneHitBox(self.Bone.Stomach)
 	
 	--Tracer's ability--------------
 	self.BlinkRemaining = 3
@@ -110,6 +143,10 @@ end
 --Initializes this NPC.
 local CheersLove_Time = CurTime()
 function ENT:Initialize()
+	if IsUselessModel(self.Model) then
+		Msg("Can't spawn nextbot: Tracer playermodel is not found!")
+		self:Remove()
+	end
 	--So that we can see through breakable things.
 	self.breakable_filter = ents.FindByClass("func_breakable")
 	table.Add(self.breakable_filter, ents.FindByClass("func_breakable_surf"))
@@ -126,6 +163,7 @@ function ENT:Initialize()
 	
 	--Server functions
 	self:InitializeVariables()
+	self:InitializeRelationship()
 	self:SetUseType(SIMPLE_USE)
 	self:SetMaxHealth(self.HP.Init)
 	self:StartActivity(self.Act.Idle)
@@ -137,13 +175,13 @@ function ENT:Initialize()
 	
 	--SpriteTrail on the back
 	self.Trail = util.SpriteTrail(self, self:LookupAttachment("chest"), 
-		Color(0, 128, 255, 192), true, 20, 0, 0.2, 0.1, "effects/blueblacklargebeam.vmt")
+		self.TrailColor, true, 20, 0, 0.2, 0.1, "effects/blueblacklargebeam.vmt")
 	self.Trail:DeleteOnRemove(self)
 	
 	--Cheers, love!  The cavalry's here!
 	if CurTime() > CheersLove_Time then
-	--	self:SetScene("scenes/nextbot_tracer_onspawn.vcd")
-		self:EmitSound("Nextbot_Tracer.OnSpawn")
+	--	self:EmitSound("Nextbot_Tracer.OnSpawn")
+		self:SetScene("scenes/nextbot_tracer_onspawn.vcd")
 		CheersLove_Time = CurTime() + math.Rand(15, 30)
 	end
 end
@@ -153,6 +191,13 @@ end
 function ENT:RunBehaviour()
 	while true do
 		if not self:GetConVarBool("ai_disabled") then
+			--Allies Tracer: Blue muzzle flash, Enemy Tracer: Red muzzle flash
+			self.MuzzleFlashParticleName = "hunter_muzzle_flash" ..
+				(self.Relationship[CLASS_PLAYER] == D_HT and "_red" or "")
+			self.TrailColor = self.Relationship[CLASS_PLAYER] == D_HT and
+				Color(255, 0, 0, 192) or Color(0, 128, 255, 192)
+			self.Trail:SetKeyValue("rendercolor", tostring(self.TrailColor))
+			
 			local sched, progress = self:GetSchedule()
 			if not istable(self.Schedule[sched]) then self:SetSchedule("Idle") end
 			

@@ -49,6 +49,27 @@ sound.Add({
 	},
 })
 sound.Add({
+	name = "Nextbot_Tracer.MeleeFinalBlow",
+	channel = CHAN_VOICE,
+	volume = 1,
+	level = 100,
+	sound = {
+		"entities/nextbot_tracer/vo/and stay down.wav",
+		"entities/nextbot_tracer/vo/down for the count.wav",
+		"entities/nextbot_tracer/vo/pow.wav",
+	},
+})
+sound.Add({
+	name = "Nextbot_Tracer.OnFire",
+	channel = CHAN_VOICE,
+	volume = 1,
+	level = 100,
+	sound = {
+		"entities/nextbot_tracer/vo/i'm on fire.wav",
+		"entities/nextbot_tracer/vo/i'm on fire really.wav",
+	},
+})
+sound.Add({
 	name = "Nextbot_Tracer.OnSpawn",
 	channel = CHAN_VOICE,
 	volume = 1,

@@ -1,13 +1,15 @@
 
+include("relationship.lua")
+
 --Gets personal enemy entity.
 function ENT:GetEnemy()
-	if self:Validate(self.Memory.Enemy) ~= 0 then return nil end
+	if self:Disposition(self.Memory.Enemy) ~= D_HT then return nil end
 	return self.Memory.Enemy
 end
 
 --Sets personal enemy memory.
 function ENT:SetEnemy(ent)
-	if self:Validate(ent) ~= 0 then return end
+	if self:Disposition(ent) ~= D_HT then return end
 	self.Memory.Enemy = ent
 	self.Memory.EnemyAimVector = self:GetEnemyAimVector()
 	self.Memory.EnemyPosition = self:GetEnemy():WorldSpaceCenter() --set the last position I saw
@@ -18,11 +20,20 @@ end
 function ENT:FindEnemy()
 	local lst = ents.FindInSphere(self:GetEye().Pos, self.Dist.Search)
 	local pos, nearestenemy = vector_origin, NULL
+	local relationship = D_ER
 	
 	for k, v in pairs(lst) do
-		if self:Validate(v) == 0 and self:GetAimVector(v:WorldSpaceCenter()):Dot(self:GetEye().Ang:Forward()) > math.cos(math.rad(self.SearchAngle)) then
-			pos = v:WorldSpaceCenter()
-			if self:CanSee(pos) then --normal entity and can see
+		pos = v:WorldSpaceCenter()
+		if self:CanSee(pos) and self:GetAimVector(pos):Dot(self:GetEye().Ang:Forward()) > math.cos(math.rad(self.SearchAngle)) then
+			relationship = self:Disposition(v)
+			
+			if relationship == D_LI then
+				if isfunction(v.GetEnemy) and IsValid(v:GetEnemy()) then
+					v = v:GetEnemy()
+					relationship = self:Disposition(v)
+				end
+			end
+			if relationship == D_HT then --normal entity and can see
 				self.Memory.Enemies[v] = {Pos = pos, Distance = self:GetRangeSquaredTo(v:GetPos()), Forward = self:GetEnemyAimVector(v)}
 			end
 		end
@@ -30,7 +41,7 @@ function ENT:FindEnemy()
 	
 	--Clean up old infomations.
 	for k, v in SortedPairsByMemberValue(self.Memory.Enemies, "Distance") do
-		if self:Validate(k) ~= 0 or 
+		if self:Disposition(k) ~= D_HT or 
 			(self:CanSee(v.Pos) and not self:CanSee(k:WorldSpaceCenter())) then
 			self.Memory.Enemies[k] = nil
 		end

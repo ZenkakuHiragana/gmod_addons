@@ -120,6 +120,12 @@ function ENT.Task.MeleeAttack(self)
 		if self:WorldSpaceCenter():DistToSqr(self:GetEnemy():WorldSpaceCenter()) > self.Dist.MeleeSqr then return end
 		if self:GetAimVector(self:GetEnemy():WorldSpaceCenter()):Dot(self:GetForward()) > math.cos(math.rad(60)) then
 			self:GetEnemy():TakeDamage(30, self, self)
+			if CurTime() > self.Time.VoiceMeleeFinalBlow and
+				(not IsValid(self:GetEnemy()) or
+				self:GetEnemy():Health() <= 0) then
+				self.Time.VoiceMeleeFinalBlow = CurTime() + math.Rand(12, 30)
+				self:EmitSound("Nextbot_Tracer.MeleeFinalBlow")
+			end
 		end
 	end)
 	self.Time.Melee = CurTime() + 1.1
@@ -249,8 +255,6 @@ function ENT.Task.SetBlinkDirection(self, mode)
 	local mode = isstring(mode) and mode or "TowardEnemy"
 	local dir = vector_origin
 	local aim = self:GetAimVector()
-	aim.z = 0
-	aim:Normalize()
 	if mode == "TowardEnemy" then
 		dir = aim
 		local path = Path("Follow")
@@ -290,6 +294,9 @@ function ENT.Task.SetBlinkDirection(self, mode)
 		end
 	end
 	
+	dir.z = 0
+	if dir:IsZero() then dir = self:GetForward() end
+	dir:Normalize()
 	self.Memory.BlinkDirection = dir
 	
 	if self.Debug.BlinkDestination then
@@ -306,6 +313,7 @@ function ENT.Task.Blink(self)
 	self:PlayBlink()
 	local e = EffectData()
 	e:SetEntity(self)
+	e:SetFlags(self.Relationship[CLASS_PLAYER] == D_HT and 1 or 0)
 	util.Effect("tracerblinks", e)
 	
 	local destination = self:GetPos() + self.Memory.BlinkDirection * self.Dist.Blink
@@ -398,6 +406,7 @@ function ENT.Task.Recall(self)
 	
 	--Tracer becomes invisible.
 	self:SetInvisibleFlag(true)
+	self:DrawShadow(false)
 	self.Equipment.Entity:SetNoDraw(true)
 	self.Equipment.Entity:DrawShadow(false)
 	self:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
@@ -406,6 +415,7 @@ function ENT.Task.Recall(self)
 	--Place some effects here.
 	local e = EffectData()
 	e:SetOrigin(self:WorldSpaceCenter())
+	e:SetFlags(self.Relationship[CLASS_PLAYER] == D_HT and 1 or 0)
 	util.Effect("tracer_recallball", e)
 	
 	local start = CurTime()
@@ -428,11 +438,13 @@ function ENT.Task.Recall(self)
 	
 	
 	--Place some effects here.
+	e:SetFlags(self.Relationship[CLASS_PLAYER] == D_HT and 1 or 0)
 	util.Effect("tracerblinks", e)
 	
 	
 	--Tracer now comes back to the world.
 	self:SetInvisibleFlag(false)
+	self:DrawShadow(true)
 	self.Equipment.Entity:SetNoDraw(false)
 	self.Equipment.Entity:DrawShadow(true)
 	self:SetCollisionGroup(COLLISION_GROUP_PLAYER)

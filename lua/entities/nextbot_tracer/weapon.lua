@@ -169,6 +169,7 @@ local function FireCallBack(attacker, tr, dmginfo)
 	elseif c == "npc_rollermine" then
 		util.BlastDamage(game.GetWorld(), game.GetWorld(), tr.Entity:GetPos(), 1, 1)
 	end
+	return true
 end
 
 --Fire function for Tracer's Pulse Pistols.
@@ -188,13 +189,6 @@ local function FireTracerPistols(self, weapon)
 	self:AddGesture(self.Act.Attack)
 	weapon:EmitSound(self.Equipment.Sound.Fire)
 	
-	local ef
-	if not IsMounted("ep2") then
-		ef = EffectData()
-		ef:SetEntity(weapon)
-		ef:SetEntIndex(weapon:EntIndex())
-		ef:SetScale(self.Equipment.Muzzle.Scale)
-	end
 	local bullet = {
 		Attacker = self,
 		Num = 1,
@@ -213,13 +207,7 @@ local function FireTracerPistols(self, weapon)
 		
 		self:FireBullets(bullet)
 		if math.random() < self.Equipment.Muzzle.Probability then
-			if IsMounted("ep2") then
-				ParticleEffectAttach("hunter_muzzle_flash", PATTACH_POINT_FOLLOW, self, att[i])
-			else
-				ef:SetOrigin(shootPos[i].Pos + shootPos[i].Ang:Forward() * 10)
-				ef:SetAngles(shootPos[i].Ang)
-				util.Effect("MuzzleEffect", ef)
-			end
+			ParticleEffectAttach(self.MuzzleFlashParticleName, PATTACH_POINT_FOLLOW, self, att[i])
 		end
 	end
 	

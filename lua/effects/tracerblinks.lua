@@ -1,8 +1,8 @@
 
 --Copied from propspawn.lua
 
-local matRefract = Material("models/spawn_effect")
-local matLight = Material("models/spawn_effect2")
+local mat_ally = Material("models/spawn_effect_blue")
+local mat_enemy = Material("models/spawn_effect_red")
 
 function EFFECT:Init(data)
 	
@@ -16,6 +16,7 @@ function EFFECT:Init(data)
 	if not (IsValid(ent) and ent:GetModel()) then return end
 	self.ParentEntity = ent
 	self:SetModel(ent:GetModel())
+	self.Material = data:GetFlags() == 1 and mat_enemy or mat_ally
 	self:SetPos(ent:GetPos())
 	self:SetAngles(ent:GetAngles())
 	self:SetParent(ent)
@@ -48,7 +49,7 @@ function EFFECT:RenderOverlay(entity)
 	ColFrac = math.Clamp(ColFrac, 0, 1)
 	
 	-- Change our model's alpha so the texture will fade out
-	self:SetColor( 255, 255, 255, 1 + 254 * (Fraction) )
+	self:SetColor(Color(255, 255, 255, 1 + 254 * (Fraction)))
 	
 	-- Place the camera a tiny bit closer to the entity.
 	-- It will draw a big bigger and we will skip any z buffer problems
@@ -56,33 +57,10 @@ function EFFECT:RenderOverlay(entity)
 	local Distance = EyeNormal:Length()
 	EyeNormal:Normalize()
 	
---	local Pos = EyePos() + EyeNormal * Distance * 0.02
---	-- Start the new 3d camera position
---	local bClipping = self:StartClip(entity, 8)
---	cam.Start3D(Pos, EyeAngles())
---		
---		-- If our card is DX8 or above draw the refraction effect
---		if (render.GetDXLevel() >= 80) then
---			-- Update the refraction texture with whatever is drawn right now
---			render.UpdateRefractTexture()
---			
---			matRefract:SetFloat("$refractamount", Fraction * 0.1)
---			
---			-- Draw model with refraction texture
---			render.MaterialOverride(matRefract)
---				entity:DrawModel()
---			render.MaterialOverride(0)
---		end
---		
---	-- Set the camera back to how it was
---	cam.End3D()
---	render.PopCustomClipPlane()
---	render.EnableClipping(bClipping)
-	
 	local bClipping = self:StartClip(entity, 2)
 	local Pos = EyePos() + EyeNormal * Distance * 0.01
 	cam.Start3D(Pos, EyeAngles())
-		render.MaterialOverride(matLight)
+		render.MaterialOverride(self.Material)
 			entity:DrawModel()
 		render.MaterialOverride(0)
 	cam.End3D()
@@ -91,15 +69,12 @@ function EFFECT:RenderOverlay(entity)
 end
 
 function EFFECT:RenderParent()
---	self:RemoveEffects(EF_BONEMERGE)
 	self.SpawnEffect:RenderOverlay(self)
 	
 	local bClipping = self.SpawnEffect:StartClip(self, 1)
 	self:DrawModel()
 	render.PopCustomClipPlane()
 	render.EnableClipping(bClipping)
-	
---	self:AddEffects(EF_BONEMERGE)
 end
 
 function EFFECT:StartClip( model, spd )

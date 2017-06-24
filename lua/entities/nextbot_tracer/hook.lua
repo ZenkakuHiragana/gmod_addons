@@ -6,7 +6,7 @@
 local function OnHearSound(self, t)
 	--TODO: Tell other mates to alert
 	local pos = isvector(t.Pos) and t.Pos or t.Entity:GetPos()
-	if self:Validate(t.Entity) == 0 then
+	if self:Disposition(t.Entity) == D_HT then
 		if self:GetState() == NPC_STATE_IDLE then
 			self:SetState(NPC_STATE_ALERT)
 			self.Path.DesiredPosition = pos
@@ -15,7 +15,7 @@ local function OnHearSound(self, t)
 			self:SetEnemy(t.Entity)
 		end
 	elseif self:GetState() ~= NPC_STATE_COMBAT then
-		if t.Channel == CHAN_WEAPON or t.SoundLevel >= 75 then
+		if t.Channel == CHAN_WEAPON then
 			self:SetState(NPC_STATE_ALERT)
 			self.Path.DesiredPosition = pos
 			self:StartMove()
@@ -32,7 +32,7 @@ hook.Add("OnEntityCreated", "NextbotIsAlone!", function(e)
 		timer.Create(t, 1, 0, function()
 			if not IsValid(e) then timer.Remove(t) return end
 			for k, v in pairs(ents.FindByClass(classname)) do
-				if IsValid(v) then e:AddEntityRelationship(v, D_HT, 1) end
+				if IsValid(v) then e:AddEntityRelationship(v, v:Disposition(e), 0) end
 			end
 		end)
 	end
@@ -93,25 +93,54 @@ function ENT:OnContact(v)
 	self:TakeDamageInfo(d)
 end
 
+--Returns whether or not the given position is in a certain hitbox.
+--Arguments:
+----Vector pos | The given position.
+----number box | HitBox number.
+----number group | HitGroup number.
+----string bone | Bone name.
+local boxdelta = Vector(1, 1, 1)
+function ENT:WithinHitBox(pos, box, group, bone)
+	local boxmin, boxmax = self:GetHitBoxBounds(box, group)
+	local bonepos, boneang = self:GetBonePosition(self:LookupBone(bone))
+	local dmgpos = WorldToLocal(pos, angle_zero, bonepos, boneang)
+	return dmgpos:WithinAABox(boxmin - boxdelta, boxmax + boxdelta)
+end
+
 function ENT:OnInjured(info)
-	if info:IsDamageType(DMG_BURN) then return end
+	if info:IsDamageType(DMG_BURN) then
+		if CurTime() > self.Time.VoiceOnFire then
+			self.Time.VoiceOnFire = CurTime() + math.Rand(15, 40)
+			self:EmitSound("Nextbot_Tracer.OnFire")
+		end
+		return
+	end
 	
-	--Damage doubles when take a headshot.
-	local tr = util.QuickTrace(info:GetDamagePosition(), info:GetDamageForce())
-	if tr.Entity == self and tr.HitGroup == HITGROUP_HEAD then info:ScaleDamage(2) end
+	--Damage doubles when it's a headshot.
+	self:PerformFlinch(info)
+	if self:WithinHitBox(info:GetDamagePosition(),
+		self.HitBox.Head, self.HitGroup.Head, self.Bone.Head) then
+		info:ScaleDamage(2)
+	end
 	
 	--For "RepeatedDamage" condition.
 	if CurTime() > self.Time.Damage + self.Time.ResetRepeatedDamage then self.Time.RepeatedDamage = CurTime() end
 	self.Time.Damage = CurTime()
 	
 	--Register the attacker's info.
-	if self:Validate(info:GetAttacker()) ~= 0 then return end
-	if self:GetState() == NPC_STATE_IDLE then
-		self:SetState(NPC_STATE_ALERT)
-		self.Path.DesiredPosition = info:GetAttacker():GetPos()
-		self:StartMove()
-	elseif self:GetState() == NPC_STATE_ALERT then
-		self:SetEnemy(info:GetAttacker())
+	local relationship = self:Disposition(info:GetAttacker())
+	if relationship == D_HT then
+		if self:GetState() == NPC_STATE_IDLE then
+			self:SetState(NPC_STATE_ALERT)
+			self.Path.DesiredPosition = info:GetAttacker():GetPos()
+			self:StartMove()
+		else
+			self:SetEnemy(info:GetAttacker())
+		end
+	elseif relationship == D_NU then
+		self:AddEntityRelationship(info:GetAttacker(), D_HT, 0)
+	elseif relationship == D_LI then
+		self:AddEntityRelationship(info:GetAttacker(), D_NU, 0)
 	end
 end
 

@@ -12,7 +12,8 @@ local function GetDanger(self)
 	for k, v in pairs(ents.FindInSphere(self:GetPos(), self.Dist.ShootRange)) do
 		if IsValid(v) then
 			local dist = v:WorldSpaceCenter():DistToSqr(self:WorldSpaceCenter())
-			if self:Validate(v) == 0 and self:CanSee(v:WorldSpaceCenter()) then
+			local relationship = self:Disposition(v)
+			if (relationship == D_HT or relationship == D_FR) and self:CanSee(v:WorldSpaceCenter()) then
 				bravery = bravery + (self:IsFacingMe(v) and 2 or 1)
 			elseif dist < self.Dist.GrenadeSqr and --Grenade is near, take cover
 				v:GetClass():find("grenade") then
@@ -209,7 +210,7 @@ ENT.Schedule:Add(
 		"RepeatedDamage",
 	},
 	{
-		"SetFaceEnemy",
+		{"SetFaceEnemy", true},
 		{"SetRandomPosition", {dist = 256}},
 		"StartMove",
 		{"WaitForMovement", {"FireWeapon"}},
@@ -234,13 +235,14 @@ ENT.Schedule:Add(
 		"LightDamage",
 		"NewEnemy",
 		"OnContact",
+		"ReloadFinished",
 		"RepeatedDamage",
 	},
 	{
 		{"SetFaceEnemy", true},
 		{"SetRunFromEnemy", {deg = 100, dist = 256}},
 		"StartMove",
-		{"WaitForMovement", {"FireWeapon"}},
+		{"WaitForMovement", {"Reload"}},
 	}
 )
 --------------------------------}
@@ -262,6 +264,7 @@ ENT.Schedule:Add(
 		"LightDamage",
 		"MobbedByEnemies",
 		"NewEnemy",
+		"NoPrimaryAmmo",
 		"OnContact",
 		"RepeatedDamage",
 	},
@@ -291,6 +294,7 @@ ENT.Schedule:Add(
 		"LightDamage",
 		"MobbedByEnemies",
 		"NewEnemy",
+		"NoPrimaryAmmo",
 		"OnContact",
 		"RepeatedDamage",
 	},
@@ -307,7 +311,7 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"Escape",
 	function(self)
-		timer.Simple(3, function()
+		timer.Simple(6, function()
 			if not IsValid(self) or self:GetSchedule() ~= "Escape" then return end
 			self.Task.Fail(self, self.FailReason.TimeOut)
 		end)
@@ -317,7 +321,6 @@ ENT.Schedule:Add(
 		"EnemyOccluded",
 		"HeavyDamage",
 		{"InvalidPath", "RunFromEnemy"},
-		"LightDamage",
 		"NewEnemy",
 		"RepeatedDamage",
 	},
@@ -326,7 +329,7 @@ ENT.Schedule:Add(
 		"SetFaceEnemy",
 		"Escape",
 		"StartMove",
-		{"WaitForMovement", {"FireWeapon"}},
+		{"WaitForMovement", {"Reload"}},
 		{"Wait", {time = 1.2}},
 	}
 )
@@ -344,7 +347,6 @@ ENT.Schedule:Add(
 		"EnemyDead",
 		"HeavyDamage",
 		{"InvalidPath", "RunFromEnemy"},
-		"LightDamage",
 		"NewEnemy",
 		"NoPrimaryAmmo",
 		"RepeatedDamage",
@@ -449,7 +451,7 @@ ENT.Schedule:Add(
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
-		{"SetFaceEnemy", true},
+		"SetFaceEnemy",
 		"Escape",
 		"StartMove",
 		{"WaitForMovement", {"Reload"}},

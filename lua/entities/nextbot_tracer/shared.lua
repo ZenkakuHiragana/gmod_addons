@@ -10,48 +10,62 @@ ENT.Contact = ""
 ENT.Purpose = ""
 ENT.Spawnable = false
 ENT.AutomaticFrameAdvance = true
-ENT.Model = "models/player/ow_tracer.mdl"
-ENT.MaxYawRate = 250 --default: 250
-ENT.StepHeight = 30 --default: 20
-ENT.SearchAngle = 60 --FOV in degrees.
-ENT.MaxNavAreas = 720 --Maximum amount of searching NavAreas.
 ENT.Bravery = 6 --Parameter of Schedule.GetDanger()
+ENT.MaxNavAreas = 720 --Maximum amount of searching NavAreas.
+ENT.MaxYawRate = 250 --default: 250
+ENT.Model = "models/player/ow_tracer.mdl"
 ENT.RecallInterval = 0.1 --Store my info every this seconds.
 ENT.RecallInfoSize = 3 / ENT.RecallInterval
+ENT.SearchAngle = 60 --FOV in degrees.
+ENT.StepHeight = 30 --default: 20
 
 ENT.Act = {}
+ENT.Act.Attack = ACT_HL2MP_GESTURE_RANGE_ATTACK_DUEL
+ENT.Act.Flinch = ENT.Act.Flinch or {}
+--ENT.Act.Flinch.Back = ACT_FLINCH_BACK
+--ENT.Act.Flinch.Default = ACT_FLINCH
+ENT.Act.Flinch.Head = ACT_FLINCH_HEAD
+ENT.Act.Flinch.Physics = ACT_FLINCH_PHYSICS
+--ENT.Act.Flinch.ShoulderLeft = ACT_FLINCH_SHOULDER_LEFT
+--ENT.Act.Flinch.ShoulderRight = ACT_FLINCH_SHOULDER_RIGHT
+ENT.Act.Flinch.Stomach = ACT_FLINCH_STOMACH
 ENT.Act.Idle = ACT_HL2MP_IDLE_DUEL
 ENT.Act.IdleCrouch = ACT_HL2MP_IDLE_CROUCH_DUEL
-ENT.Act.Run = ACT_HL2MP_RUN_DUEL
-ENT.Act.Walk = ACT_HL2MP_WALK_DUEL
-ENT.Act.WalkCrouch = ACT_HL2MP_WALK_CROUCH_DUEL
 ENT.Act.Jump = ACT_HL2MP_JUMP_DUEL
-ENT.Act.SwimIdle = ACT_HL2MP_SWIM_IDLE_DUEL
-ENT.Act.Swim = ACT_HL2MP_SWIM_DUEL
-ENT.Act.Attack = ACT_HL2MP_GESTURE_RANGE_ATTACK_DUEL
 ENT.Act.Melee = ACT_HL2MP_GESTURE_RANGE_ATTACK_MELEE
 ENT.Act.Reload = ACT_HL2MP_GESTURE_RELOAD_DUEL
+ENT.Act.Run = ACT_HL2MP_RUN_DUEL
+ENT.Act.Swim = ACT_HL2MP_SWIM_DUEL
+ENT.Act.SwimIdle = ACT_HL2MP_SWIM_IDLE_DUEL
+ENT.Act.Walk = ACT_HL2MP_WALK_DUEL
+ENT.Act.WalkCrouch = ACT_HL2MP_WALK_CROUCH_DUEL
+
+ENT.Bone = {}
+ENT.Bone.Head = "ValveBiped.Bip01_Head1"
+ENT.Bone.ShoulderLeft = "ValveBiped.Bip01_L_UpperArm"
+ENT.Bone.ShoulderRight = "ValveBiped.Bip01_R_UpperArm"
+ENT.Bone.Stomach = "ValveBiped.Bip01_Spine2"
 
 ENT.Dist = {}
 --blink distance in hammer unit, meters -> inches -> hammer units
 ENT.Dist.Blink = 7 * 3.280839895 * 16 --367.45406824
 ENT.Dist.BlinkSqr = ENT.Dist.Blink^2
-ENT.Dist.FindSpots = 1000 --Search radius for finding where the nextbot should move to.
+ENT.Dist.FindSpots = 3000 --Search radius for finding where the nextbot should move to.
 ENT.Dist.Grenade = 200 --Distance for detecting grenades.
 ENT.Dist.GrenadeSqr = ENT.Dist.Grenade^2
-ENT.Dist.Search = 1000 --Search radius for finding enemies.
-ENT.Dist.ShootRange = 500
 ENT.Dist.Manhack = ENT.Dist.Grenade / 2 --For Manhacks.
 ENT.Dist.ManhackSqr = ENT.Dist.Manhack^2
 ENT.Dist.Melee = 100
 ENT.Dist.MeleeSqr = ENT.Dist.Melee^2
 ENT.Dist.Mobbed = 90 --For Condition "Mobbed by Enemies"
 ENT.Dist.MobbedSqr = ENT.Dist.Mobbed^2
+ENT.Dist.Search = 2000 --Search radius for finding enemies.
+ENT.Dist.ShootRange = 500
 
 ENT.HP = {}
+ENT.HP.HeavyDamage = 15 --If I've taken damage more than that at once, flag as HeavyDamage.
 ENT.HP.Init = 150
 ENT.HP.MoreBlink = 75 --If my health is lower than that, do more blink.
-ENT.HP.HeavyDamage = 15 --If I've taken damage more than that at once, flag as HeavyDamage.
 ENT.HP.Recall = 80 / ENT.HP.Init --Damage fraction to be able to use recall.
 
 --GetConVar() needs to check if it's valid.  so this function wraps it.
@@ -90,31 +104,6 @@ function ENT:PercentageFrozen()
 	return 0
 end
 
---Determines whether given entity is targetable or not.
-function ENT:Validate(e)
-	if not IsValid(e) or e == self then return -1 end
-	
-	local c = e:GetClass()
-	if not isstring(c) then return -1
-	elseif c == "npc_rollermine" or c == "npc_turret_floor" then
-		return 0
-	elseif c ~= self.classname or IsAlone then
-		if e:Health() > 0 then
-			if not c:find("bullseye") and c ~= "env_flare" and
-			c ~= "npc_combinegunship" and c ~= "npc_helicopter" and c ~= "npc_strider" then
-				if e:IsNPC() or e.Type == "nextbot" or
-				(e:IsPlayer() and not (self:GetConVarBool("ai_ignoreplayers") or e:IsFlagSet(FL_NOTARGET))) then
-					return 0
-				end
-			end
-		end
-	else
-		return 1
-	end
-	
-	return -1
-end
-
 --Returns if I can hear the given sound.
 function ENT:IsHearingSound(t)
 	return math.log10(t.Entity:GetPos():DistToSqr(self:GetEye().Pos)) < t.SoundLevel * 0.085
@@ -133,13 +122,14 @@ function ENT:SetupDataTables()
 	end
 end
 
-if IsMounted("ep2") then
-    game.AddParticles( "particles/hunter_projectile.pcf" )
-	PrecacheParticleSystem( "hunter_muzzle_flash" )	
-end
+CreateConVar("nextbot_tracer_hates_nextbots", 1, FCVAR_ARCHIVE,
+	"Relationship between Tracer and other nextbots.  0: Neutural  1: Hate")
+game.AddParticles("particles/tracer_muzzleflash.pcf")
+PrecacheParticleSystem("hunter_muzzle_flash")
+PrecacheParticleSystem("hunter_muzzle_flash_red")
 
 list.Set("NPC", ENT.classname, {
-	Name = "Nextbot Tracer",
+	Name = ENT.PrintName,
 	Class = ENT.classname,
 	Category = "GreatZenkakuMan's NPCs"
 })

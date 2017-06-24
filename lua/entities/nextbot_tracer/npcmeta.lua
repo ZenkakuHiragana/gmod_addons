@@ -5,21 +5,17 @@ function metatable:IsNPC()
 	if not IsValid(self) then return false end
 	return self:GetClass() == self.classname or isnpc(self)
 end
-function ENT:AddEntityRelationship() end
-function ENT:AddRelationship() end
 function ENT:AlertSound() end
 function ENT:CapabilitiesAdd() end
 function ENT:CapabilitiesClear() end
 function ENT:CapabilitiesGet() return CAP_MOVE_GROUND end
 function ENT:CapabilitiesRemove() end
-function ENT:Classify() return CLASS_CITIZEN_REBEL end
 function ENT:ClearCondition() end
 function ENT:ClearEnemyMemory() end
 function ENT:ClearExpression() end
 function ENT:ClearGoal() end
 function ENT:ClearSchedule() end
 function ENT:ConditionName(id) return "Fake function lol" end
-function ENT:Disposition() return D_HT end
 function ENT:ExitScriptedSequence() end
 function ENT:FearSound() end
 function ENT:FoundEnemySound() end
