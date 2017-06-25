@@ -59,13 +59,12 @@ function ENT:BodyUpdate()
 			elseif velocity > 0 then
 				act = self.Act.Walk
 			end
-		else
+		elseif velocity > 0 then
 			self.DesiredSpeed = self.Speed.Walk
 			act = self.Act.Walk
 		end
 	end
 	
-	self:SetPoseParameter("move_x", 1)
 	self.loco:SetDesiredSpeed(self.DesiredSpeed)
 	self.loco:SetAcceleration(self.Speed.Acceleration)
 	self.loco:SetDeceleration(self.Speed.Deceleration)
@@ -77,7 +76,7 @@ function ENT:BodyUpdate()
 
 	if self.Memory.Look then self.loco:FaceTowards(self.Memory.EnemyPosition) end
 	
-	self:FrameAdvance()
+	self:BodyMoveXY()
 end
 
 
