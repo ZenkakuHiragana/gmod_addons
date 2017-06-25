@@ -445,8 +445,6 @@ ENT.Schedule:Add(
 		"NearDanger",
 		"NoPrimaryAmmo",
 		"NoSecondaryAmmo",
-		"LowPrimaryAmmo",
-		"LowSecondaryAmmo",
 	},
 	{
 		{"SetFaceEnemy", true},

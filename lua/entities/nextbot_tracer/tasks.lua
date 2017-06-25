@@ -453,7 +453,7 @@ function ENT.Task.Recall(self)
 	
 	--Place some effects here.
 	local e = EffectData()
-	e:SetOrigin(self:WorldSpaceCenter())
+	e:SetOrigin(self:WorldSpaceCenter() + vector_up * 10)
 	e:SetFlags(self.Relationship[CLASS_PLAYER] == D_HT and 1 or 0)
 	util.Effect("tracer_recallball", e)
 	
@@ -477,6 +477,7 @@ function ENT.Task.Recall(self)
 	net.Broadcast()
 	
 	--Place some effects here.
+	e:SetEntity(self)
 	e:SetFlags(self.Relationship[CLASS_PLAYER] == D_HT and 1 or 0)
 	util.Effect("tracerblinks", e)
 	

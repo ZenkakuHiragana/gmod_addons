@@ -5,7 +5,7 @@ local color_enemy = Color(255, 128, 128)
 function EFFECT:Init(data)
 	self:SetModel("models/effects/combineball.mdl")
 	self:SetPos(data:GetOrigin())
-	self:SetAngles(EyeAngles())
+	self:SetAngles(LocalPlayer():EyeAngles())
 	self.Color = data:GetFlags() == 1 and color_enemy or color_ally
 	self:SetColor(self.Color)
 	self.Scale = 4
@@ -23,12 +23,13 @@ function EFFECT:Init(data)
 end
 
 function EFFECT:Think()
+	self:SetAngles(LocalPlayer():EyeAngles())
 	return CurTime() < self.Begin + self.Duration
 end
 
 function EFFECT:Render()
 	local scale = (self.Duration - CurTime() + self.Begin) / self.Duration * self.Scale
 	self:SetModelScale(scale)
-	self:SetAngles(EyeAngles())
+	self:SetAngles(LocalPlayer():EyeAngles())
 	self:DrawModel()
 end
