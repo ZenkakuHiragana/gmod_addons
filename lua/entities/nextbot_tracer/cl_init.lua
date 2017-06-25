@@ -45,14 +45,6 @@ net.Receive("SetAimParameterRecall", function(len, ply)
 	bot:SetPoseParameter("aim_pitch", bot.aim_pitch)
 end)
 
-net.Receive("SetVisibleRecall", function(len, ply)
-	local bot = net.ReadEntity()
-	if not IsValid(bot) or bot:GetClass() ~= classname then return end
-	local invisible = net.ReadBool()
-	
-	bot.Invisible = invisible
-end)
-
 --Initializes this NPC.
 function ENT:Initialize()	
 	--Shared functions
@@ -124,8 +116,6 @@ function ENT:MoveEyeTarget(pos)
 end
 
 function ENT:Think()
-	self:DrawShadow(not self:GetInvisibleFlag())
-	
 	--Getting positions for aiming, rotating the head, and line of sight.
 	local lookat = self:GetLookatAim()
 	local lookat_eye = self.IdleLookatEye
@@ -191,5 +181,7 @@ end
 function ENT:Draw()
 	if not self:GetInvisibleFlag() then
 		self:DrawModel()
+	else
+		self:DestroyShadow()
 	end
 end

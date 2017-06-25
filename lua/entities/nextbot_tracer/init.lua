@@ -39,6 +39,7 @@ function ENT:InitializeTimers()
 	self.Time.Blink = CurTime()					--Blink cooldown
 	self.Time.Damage = CurTime()				--Last time damage taken
 	self.Time.FindEnemy = CurTime()				--Update enemy info
+	self.Time.FindHealthKit = CurTime()			--Re-find health kit
 	self.Time.Fire = CurTime()					--Fire primary weapon
 	self.Time.HealthChecked = CurTime()			--For "CanRecall" condition
 	self.Time.Melee = CurTime()					--Melee attack cooldown
@@ -50,6 +51,7 @@ function ENT:InitializeTimers()
 	self.Time.RepeatedDamage = CurTime()		--Flag as repeated damage
 	self.Time.Schedule = CurTime()				--Begin a schedule
 	self.Time.SeeEnemy = CurTime()				--Last time the enemy seen
+	self.Time.SetBehindEnemy = CurTime()		--Set an enemy behind me instead of current enemy
 	self.Time.Task = CurTime()					--Begin a task
 	self.Time.Touch = CurTime()	 - 1			--On contact someone
 	self.Time.VoiceMeleeFinalBlow = CurTime()	--Speak a final blow voice
@@ -57,7 +59,7 @@ function ENT:InitializeTimers()
 	
 	self.Time.ApproachingInterval = 0.5			--For "EnemyApproaching" condition
 	self.Time.HealthCheckInterval = 2.5			--For "CanRecall" condition
-	self.Time.RepeatedDamageDuration = 0.8		--If the nextbot has taken damage for this time, set "RepeatedDamage" condition.
+	self.Time.RepeatedDamageDuration = 1.2		--If the nextbot has taken damage for this time, set "RepeatedDamage" condition.
 	self.Time.ResetRepeatedDamage = 2.5			--Reset "RepeatedDamage" condition timer after several seconds.
 end
 
@@ -79,6 +81,7 @@ end
 --Defines some variables.
 function ENT:InitializeVariables()
 	self.Equipment = self:CreatePulsePistols() --Weapons info
+	if not self.Equipment then return end
 	self.EyeHeight = self:GetEye().Pos.z - self:GetPos().z
 	self.DesiredSpeed = self.Speed.Run
 	
@@ -138,15 +141,21 @@ function ENT:InitializeVariables()
 	--Conditions--------------------
 	self:InitializeState()
 	--------------------------------
+	
+	self.inpcIgnore = true
+	return true
 end
 
 --Initializes this NPC.
 local CheersLove_Time = CurTime()
+local AllyTracerSpawn = CurTime()
 function ENT:Initialize()
 	if IsUselessModel(self.Model) then
 		Msg("Can't spawn nextbot: Tracer playermodel is not found!")
 		self:Remove()
+		return
 	end
+	
 	--So that we can see through breakable things.
 	self.breakable_filter = ents.FindByClass("func_breakable")
 	table.Add(self.breakable_filter, ents.FindByClass("func_breakable_surf"))
@@ -154,15 +163,18 @@ function ENT:Initialize()
 	
 	--Shared functions
 	self:SetModel(self.Model)
---	self:SetFlexWeight(self:GetFlexIDByName("mouth_sideways"), 0.5)
---	self:SetFlexWeight(self:GetFlexIDByName("jaw_sideways"), 0.5)
 	self:SetHealth(self.HP.Init)
 	self:AddFlags(bit.bor(FL_NPC, FL_OBJECT, FL_AIMTARGET, FL_FAKECLIENT))
 	self:SetSolid(SOLID_BBOX)
 	self:MakePhysicsObjectAShadow(true, true)
 	
 	--Server functions
-	self:InitializeVariables()
+	if not self:InitializeVariables() then
+		Msg("Can't spawn pulse pistols!  Tracer has removed.")
+		self:Remove()
+		return
+	end
+	
 	self:InitializeRelationship()
 	self:SetUseType(SIMPLE_USE)
 	self:SetMaxHealth(self.HP.Init)
@@ -179,10 +191,12 @@ function ENT:Initialize()
 	self.Trail:DeleteOnRemove(self)
 	
 	--Cheers, love!  The cavalry's here!
-	if CurTime() > CheersLove_Time then
-	--	self:EmitSound("Nextbot_Tracer.OnSpawn")
-		self:SetScene("scenes/nextbot_tracer_onspawn.vcd")
+	if self.Relationship[CLASS_PLAYER] == D_HT and CurTime() > CheersLove_Time then
+		self:EmitSound("Nextbot_Tracer.OnSpawn")
 		CheersLove_Time = CurTime() + math.Rand(15, 30)
+	elseif self.Relationship[CLASS_PLAYER] ~= D_HT and CurTime() > AllyTracerSpawn then
+		self:EmitSound("Nextbot_Tracer.OnSpawnAlly")
+		AllyTracerSpawn = CurTime() + math.Rand(15, 30)
 	end
 end
 ----------------------------------------------}
@@ -198,14 +212,15 @@ function ENT:RunBehaviour()
 				Color(255, 0, 0, 192) or Color(0, 128, 255, 192)
 			self.Trail:SetKeyValue("rendercolor", tostring(self.TrailColor))
 			
+			--Get current schedule.
 			local sched, progress = self:GetSchedule()
 			if not istable(self.Schedule[sched]) then self:SetSchedule("Idle") end
 			
-			--Perform sensing.
+			--Finding enemies and refresh enemy pool.
 			if CurTime() > self.Time.FindEnemy then
 				local nearestenemy = self:FindEnemy()
 				if IsValid(nearestenemy) then self:SetEnemy(nearestenemy) end
-				self.Time.FindEnemy = CurTime() + 0.5
+				self.Time.FindEnemy = CurTime() + math.Rand(0.5, 1)
 			end
 			
 			--For "EnemyApproaching" condition.
@@ -232,6 +247,21 @@ function ENT:RunBehaviour()
 				
 				self.RecallNextWrite = (self.RecallNextWrite % self.RecallInfoSize) + 1
 				self.Time.RecordRecallInfo = CurTime() + self.RecallInterval
+			end
+			
+			--Get a health kit.
+			if self:Health() < self:GetMaxHealth() then
+				for k, v in pairs(ents.FindInSphere(self:WorldSpaceCenter(), 30)) do
+					if self:Health() >= self:GetMaxHealth() then break end
+					local c, h, s = v:GetClass(), 0, ""
+					if c == "item_healthkit" then h = 250 s = "HealthKit.Touch"
+					elseif c == "item_healthvial" then h = 75 s = "HealthVial.Touch" end
+					if h > 0 then
+						self:SetHealth(math.Clamp(self:Health() + h, 0, self:GetMaxHealth()))
+						self:EmitSound(s)
+						SafeRemoveEntity(v)
+					end
+				end
 			end
 			
 			self:UpdateEnemyMemory() --Update enemy info.
@@ -273,6 +303,9 @@ function ENT:RunBehaviour()
 						self.Time.Task = CurTime()
 						self.State.ScheduleProgress = self.State.ScheduleProgress + 1
 						if self.State.ScheduleProgress > #self.Schedule[sched] then
+							self.State.FailReason = "NoReasonGiven"
+							self.State.FailSchedule = nil
+							self.State.InterruptCondition = nil
 							break
 						end
 					end

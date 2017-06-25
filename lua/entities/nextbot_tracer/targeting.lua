@@ -89,7 +89,7 @@ end
 --Argument:
 ----Entity e | The given entity(Optional).
 function ENT:GetEnemyAimVector(e)
-	if not IsValid(e) and not IsValid(self.Memory.Enemy) then return self:WorldSpaceCenter() end
+	if not IsValid(e) and not IsValid(self.Memory.Enemy) then return vector_origin end
 	local ent = IsValid(e) and e or self.Memory.Enemy
 	return isfunction(ent.GetAimVector) and ent:GetAimVector() or ent:GetForward()
 end

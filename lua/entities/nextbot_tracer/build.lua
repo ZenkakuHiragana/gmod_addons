@@ -6,10 +6,12 @@ function ENT:BuildNPCState()
 	local s = NPC_STATE_IDLE
 	if self:GetEnemy() then
 		s = NPC_STATE_COMBAT
+		self.Memory.Walk = false
 	elseif self:GetState() == NPC_STATE_ALERT or
 		self:HasCondition("LostEnemy") or
 		self:HasCondition("EnemyDead") then
 		s = NPC_STATE_ALERT
+		self.Memory.Walk = true
 	end
 	if s ~= self:GetState() then self.State.ScheduleProgress = math.huge end
 	self:SetState(s)
@@ -17,8 +19,17 @@ end
 
 --Build shcedule for Idle state.
 function ENT:BuildIdleSchedule()
-	--Just wander around.
-	return "Idle"
+	if self.State.FailReason == self.FailReason.NoHealthKitFound then
+		self.State.FailReason = self.FailReason.NoReasonGiven
+		self.Time.FindHealthKit = CurTime() + 5
+	end
+	
+	if self:Health() < self:GetMaxHealth() and
+		CurTime() > self.Time.FindHealthKit then
+		return "GotoHealthKit"
+	else
+		return "Idle" --Just wander around.
+	end
 end
 
 --Build schedule for Alert state.
@@ -36,22 +47,27 @@ CombatSchedule.Assault = function(self)
 		self:HasCondition("MobbedByEnemies") then
 		
 		if self.Debug.Fleeing then
-			print("NearDanger: " .. self:HasCondition("NearDanger"),
-			"RepeatedDamage: ", self:HasCondition("RepeatedDamage"),
-			"MobbedByEnemies: " .. self:HasCondition("MobbedByEnemies"))
+			print("NearDanger: " .. tostring(self:HasCondition("NearDanger")),
+			"RepeatedDamage: ", tostring(self:HasCondition("RepeatedDamage")),
+			"MobbedByEnemies: " .. tostring(self:HasCondition("MobbedByEnemies")))
 		end
 		self.State.Mode = "Flee"
 	end
 	
 	--An enemy is behind me and it is nearer than the current one.
-	if self:HasCondition("BehindEnemy") then
+	if CurTime() > self.Time.SetBehindEnemy and
+		self:HasCondition("BehindEnemy") then
 		for k, v in SortedPairsByMemberValue(self.Memory.Enemies, "Distance") do
 			if self.Debug.BehindEnemy then
 				print("EnemyMemory: ", k, "CurrentEnemy: ", self:GetEnemy())
 			end
 			
-			if IsValid(k) then self:SetEnemy(k) end
+			if IsValid(k) and self.Memory.Enemies[k].Distance < self.Memory.Distance then
+				self:SetEnemy(k)
+				break
+			end
 		end
+		self.Time.SetBehindEnemy = CurTime() + math.Rand(2, 5)
 	end
 	
 	--No ammo.
@@ -105,20 +121,19 @@ CombatSchedule.Assault = function(self)
 				return "RangeAttack"
 			end
 		else --I can't blink but can attack.
-			return "RangeAttack"
+			if self:HasCondition("EnemyFacingMe") then
+				return "RunAroundAndFire"
+			else
+				return "RangeAttack"
+			end
 		end
 	--The enemy is out of range.
 	elseif self:HasCondition("EnemyTooFar") then
 		--Blink and approach it.
 		if self:HasCondition("CanBlink") then
-			if self:HasCondition("EnemyApproaching") and
-				self.Memory.Distance < self.Dist.Blink then
-				return "BlinkSidestep"
-			else
-				return "BlinkTowardEnemy"
-			end
+			return "BlinkTowardEnemy"
 		else --Approach it.
-			if self.State.InterruptCondition then
+			if self.State.InterruptCondition == "InvalidPath" then
 				return "RunAroundAndFire"
 			else
 				return "Advance"
@@ -154,7 +169,7 @@ CombatSchedule.Flee = function(self)
 		if self:HasCondition("CanBlink") then
 			return "BlinkFromEnemy"
 		elseif self:HasCondition("CanPrimaryAttack") then
-			return "TakeCover"
+			return "EscapeLimitedTime"
 		else
 			return "HideAndReload"
 		end

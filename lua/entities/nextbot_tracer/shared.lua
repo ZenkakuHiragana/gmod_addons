@@ -10,7 +10,7 @@ ENT.Contact = ""
 ENT.Purpose = ""
 ENT.Spawnable = false
 ENT.AutomaticFrameAdvance = true
-ENT.Bravery = 6 --Parameter of Schedule.GetDanger()
+ENT.Bravery = 7 --Parameter of Schedule.GetDanger()
 ENT.MaxNavAreas = 720 --Maximum amount of searching NavAreas.
 ENT.MaxYawRate = 250 --default: 250
 ENT.Model = "models/player/ow_tracer.mdl"
@@ -60,6 +60,7 @@ ENT.Dist.MeleeSqr = ENT.Dist.Melee^2
 ENT.Dist.Mobbed = 90 --For Condition "Mobbed by Enemies"
 ENT.Dist.MobbedSqr = ENT.Dist.Mobbed^2
 ENT.Dist.Search = 2000 --Search radius for finding enemies.
+ENT.Dist.SearchSqr = ENT.Dist.Search^2
 ENT.Dist.ShootRange = 500
 
 ENT.HP = {}

@@ -1,18 +1,23 @@
 
+util.PrecacheSound("entities/nextbot_tracer/vo/and stay down.wav")
 util.PrecacheSound("entities/nextbot_tracer/blink1.wav")
 util.PrecacheSound("entities/nextbot_tracer/blink2.wav")
 util.PrecacheSound("entities/nextbot_tracer/blink3.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/blink laugh.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/blink wicked.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/down for the count.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/i'm on fire.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/i'm on fire really.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/onspawn.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/pow.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/recall ever get that feeling of.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/recall just in time.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/recall let's try that again.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/recall now, where were we.wav")
+util.PrecacheSound("entities/nextbot_tracer/vo/tracer here.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/whee!.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/whoa.wav")
 util.PrecacheSound("entities/nextbot_tracer/vo/yeah.wav")
-if SERVER then PrecacheScene("scenes/tracer_lipsync_cheerslove.vcd") end
 
 sound.Add({
 	name = "Nextbot_Tracer.Blink1",
@@ -75,6 +80,13 @@ sound.Add({
 	volume = 1,
 	level = 100,
 	sound = "entities/nextbot_tracer/vo/onspawn.wav",
+})
+sound.Add({
+	name = "Nextbot_Tracer.OnSpawnAlly",
+	channel = CHAN_VOICE,
+	volume = 1,
+	level = 100,
+	sound = "entities/nextbot_tracer/vo/tracer here.wav",
 })
 sound.Add({
 	name = "Nextbot_Tracer.RecallVoice",

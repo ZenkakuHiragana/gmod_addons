@@ -61,7 +61,7 @@ function ENT:SetCurrentWeaponProficiency(proficiency) end
 function ENT:SetExpression(expression) end
 function ENT:SetHullSizeNormal() end
 function ENT:SetHullType(hulltype) end
-function ENT:SetLastPosition(position) end
+function ENT:SetLastPosition(position) self.m_vecLastPosition = position end
 function ENT:SetMaxRouteRebuildTime() end
 function ENT:SetMovementActivity(activity) end
 function ENT:SetMovementSequence(sequenceId) end

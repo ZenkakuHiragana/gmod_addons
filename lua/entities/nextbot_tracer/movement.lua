@@ -23,8 +23,6 @@ function ENT:UpdatePosition()
 	
 	local seg = self.Path.Main:GetCurrentGoal()
 	if seg then
-		self.Memory.Crouch = seg.area:HasAttributes(NAV_MESH_CROUCH)
-		self.Memory.Walk = seg.area:HasAttributes(NAV_MESH_WALK)
 		self.Memory.Jump = seg.area:HasAttributes(NAV_MESH_JUMP) or seg.type == 2
 	end
 	
@@ -72,8 +70,7 @@ function ENT:FindSpecifiedSpot(opt)
 			path:Invalidate()
 			path:Compute(self, pos) --Calcuate the length to reach.
 			if path:IsValid() then
-				local length = path:GetLength() < NearestDistance
-				if not opt.nearest then length = not length end
+				local length = opt.nearest and path:GetLength() < NearestDistance or path:GetLength() > NearestDistance
 				if length then
 					NearestDistance = path:GetLength()
 					vResult = pos

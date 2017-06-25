@@ -50,6 +50,7 @@ function ENT.Weapon.Create(self, name, clip, numbullets, spread, dmg, ammotype, 
 	local ent = ents.Create(name)
 	if not IsValid(ent) then
 		ent = NULL
+		return
 	else
 		local att = "anim_attachment_RH"
 		ent.Owner = self

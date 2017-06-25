@@ -62,6 +62,7 @@ end
 
 --Priority doesn't work for now.
 function ENT:AddEntityRelationship(entity, disposition, priority)
+	if entity == self then return end
 	self.RelationshipEntity[entity] = disposition
 end
 

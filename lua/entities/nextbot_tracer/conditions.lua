@@ -2,6 +2,7 @@
 ENT.FailReason = {
 	"InterruptByCcondition", --Schedule stopped by condition.
 	"InvalidPath", --Calculating path is failed.
+	"NoHealthKitFound", --There is no health kit around.
 	"NoSpotsFound", --Appropriate position is not found.
 	"NoReasonGiven", --No reason is given.
 	"TimeOut", --Time out to move to position.
@@ -46,7 +47,6 @@ ENT.Condition = {
 	"NoSecondaryAmmo", --I have no secondary ammo and need to reload.
 	"OnContact", --On contact someone.
 	"PathFinished", --I've just finished moving.
-	"ReceiveEnemyInfo", --Currently unused. Using this in squad coding.
 	"ReloadFinished", --I've just finished reloading.
 	"RepeatedDamage", --I take a damage repeatedly.
 }
@@ -67,9 +67,9 @@ function ENT:BuildConditions(e)
 	
 	if e then
 		--the enemy is approaching me.
-		c.EnemyApproaching = (self.Memory.EnemyPosition
-		-self.State.Previous.ApproachingPos):GetNormalized()
-		:Dot(self:GetAimVector()) < math.cos(math.rad(180 - 30))
+		local enemy_movement = self.Memory.EnemyPosition - self.State.Previous.ApproachingPos
+		c.EnemyApproaching = enemy_movement:LengthSqr() > 6400 and
+		enemy_movement:GetNormalized():Dot(self:GetAimVector()) > math.cos(math.rad(30))
 		
 		--the enemy is facing me.
 		c.EnemyFacingMe = self:IsFacingMe()
@@ -111,6 +111,7 @@ function ENT:BuildConditions(e)
 		CurTime() > self.Time.Melee and
 		self.Memory.Distance < self.Dist.Melee
 	else
+		c.EnemyApproaching = false
 		c.EnemyFacingMe = false
 		c.EnemyOccluded = false
 		c.EnemyTooFar = false
@@ -123,13 +124,16 @@ function ENT:BuildConditions(e)
 	
 	--Is there an enemy behind me?
 	c.BehindEnemy = false
-	for enemy in pairs(self.Memory.Enemies) do
-		if self:CanSee(enemy:WorldSpaceCenter()) and 
+	local mob_count = 0 --Mobbed by enemies.
+	for enemy, data in pairs(self.Memory.Enemies) do
+		if data.Distance < self.Dist.Mobbed then mob_count = mob_count + 1 end
+		if not c.BehindEnemy and self:CanSee(enemy:WorldSpaceCenter()) and 
 		self:GetAimVector(enemy:WorldSpaceCenter()):Dot(self:GetForward()) > 0.7 then
 			c.BehindEnemy = true
-			break
 		end
 	end
+	
+	c.MobbedByEnemies = mob_count > self:Health() / self:GetMaxHealth() * self.Bravery
 	
 	--Checking weapon ammunition.
 	c.NoPrimaryAmmo = self.Equipment.Ammo <= 0
@@ -159,12 +163,6 @@ function ENT:BuildConditions(e)
 		c.NearDanger = true
 		self.Memory.DangerEntity = ent
 	end
-	
-	d = 0 --Mobbed by enemies.
-	for enemy, data in pairs(self.Memory.Enemies) do
-		if data.Distance < self.Dist.Mobbed then d = d + 1 end
-	end
-	c.MobbedByEnemies = d > self:Health() / self:GetMaxHealth() * self.Bravery
 	
 	--Can I use my abilities now?
 	c.CanBlink = self.BlinkRemaining > 0 and CurTime() > self.Time.Blink

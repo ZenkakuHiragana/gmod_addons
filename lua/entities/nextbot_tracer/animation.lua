@@ -77,7 +77,7 @@ function ENT:BodyUpdate()
 
 	if self.Memory.Look then self.loco:FaceTowards(self.Memory.EnemyPosition) end
 	
-	self:BodyMoveXY()
+	self:FrameAdvance()
 end
 
 

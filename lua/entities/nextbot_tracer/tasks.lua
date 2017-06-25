@@ -60,7 +60,7 @@ function ENT.Task.Complete(self)
 end
 --Call when task is failed.
 function ENT.Task.Fail(self, reason)
-	self.State.FailReason = isstring(reason) and reason or "NoReasonGiven"
+	self.State.FailReason = isnumber(reason) and reason or self.FailReason.NoReasonGiven
 	self.State.TaskDone = "invalid"
 	return "invalid"
 end
@@ -155,7 +155,7 @@ function ENT.Task.Appear(self, wait)
 	if self:SetDesiredPosition() then
 		return self.Task.Complete(self)
 	else
-		self.Task.Fail(self)
+		return self.Task.Fail(self)
 	end
 end
 
@@ -208,6 +208,13 @@ function ENT.Task.SetRunIntoEnemy(self, opt)
 	self.Task.Complete(self)
 end
 
+--SetPositionToEntity: set the destination to the specified entity's position.
+function ENT.Task.SetPositionToEntity(self)
+	if not IsValid(self.State.TaskVariable) then return self.Task.Fail(self) end
+	self.Path.DesiredPosition = self.State.TaskVariable:WorldSpaceCenter()
+	self.Task.Complete(self)
+end
+
 --RecomputePath: recompute the current path.
 function ENT.Task.RecomputePath(self)
 	if self.Path.Main:IsValid() then
@@ -223,7 +230,12 @@ function ENT.Task.InvalidatePath(self)
 end
 
 --StartMove: start moving toward self.Path.DesiredPosition
-function ENT.Task.StartMove(self)
+function ENT.Task.StartMove(self, opt)
+	local opt = istable(opt) and opt or {tolerance = 10}
+	if isnumber(opt.tolerance) then
+		self.Path.Main:SetGoalTolerance(opt.tolerance)
+	end
+	
 	self:StartMove()
 	return self.Task.Complete(self)
 end
@@ -233,7 +245,7 @@ function ENT.Task.TurnBackToWall(self)
 	local mins, maxs = self:GetCollisionBounds()
 	local tr = util.TraceHull({
 		start = self:GetPos() + vector_up * self.StepHeight,
-		endpos = self:GetPos() + vector_up * self.StepHeight + self:GetForward() * 100,
+		endpos = self:GetPos() + vector_up * self.StepHeight + self:GetForward() * 300,
 		mins = mins, maxs = maxs, filter = {self, self.Equipment.Entity}
 	})
 	if tr.Hit then
@@ -241,6 +253,37 @@ function ENT.Task.TurnBackToWall(self)
 	else
 		self.Task.Complete(self)
 	end
+end
+
+--FaceTowardEntity: exactly what it says it does.
+function ENT.Task.FaceTowardEntity(self)
+	if not IsValid(self.State.TaskVariable) then return self.Task.Fail(self) end
+	self.loco:FaceTowards(self.State.TaskVariable:WorldSpaceCenter())
+	return self.Task.Complete(self)
+end
+
+--FindHealthKit: find the nearest health kit or health vial.
+function ENT.Task.FindHealthKit(self)
+	local health = ents.FindByClass("item_healthkit")
+	table.Add(health, ents.FindByClass("item_healthvial"))
+	local nearest, pickup = math.huge, NULL
+	
+	for k, v in pairs(health) do
+		if self:CanSee(v:WorldSpaceCenter()) then
+			local length = v:WorldSpaceCenter():DistToSqr(self:WorldSpaceCenter())
+			if length < self.Dist.SearchSqr and length < nearest then
+				if v:GetClass() ~= "item_healthcharger" or
+					v:GetSaveTable().m_iJuice > 0 then
+					self.State.TaskVariable = v
+				end
+			end
+		end
+	end
+	
+	if not IsValid(self.State.TaskVariable) then
+		return self.Task.Fail(self, self.FailReason.NoHealthKitFound)
+	end
+	self.Task.Complete(self)
 end
 
 --SetBlinkDirection: Sets the position after using blink.
@@ -323,7 +366,7 @@ function ENT.Task.Blink(self)
 	mins, maxs = mins - collision_delta, maxs + collision_delta
 	local traceStructure = {
 		start = self:GetPos() + vector_up * self.StepHeight, endpos = tracedestination,
-		mins = mins, maxs = maxs, filter = {self, self.Equipment.Entity},
+		mins = mins, maxs = maxs, filter = {self, self.Equipment.Entity}, mask = MASK_NPCSOLID_BRUSHONLY,
 	}
 	local straightTrace = util.TraceHull(traceStructure)
 	if self.Debug.BlinkTraces then
@@ -366,13 +409,10 @@ function ENT.Task.Blink(self)
 		end
 		coroutine.yield()
 	end
---	destination = destination + vector_up * self.StepHeight
 	
 	if self.Debug.BlinkDestination then debugoverlay.Sphere(destination, 20, 5, Color(0, 255, 0), true) end
 	if util.IsInWorld(destination) then
 		self.Trail:SetKeyValue("LifeTime", 0.8)
-	--	local trail = util.SpriteTrail(self, self:LookupAttachment("chest"), 
-		--	Color(0, 128, 255, 192), true, 40, 0, 1.2, 0.1, "effects/blueblacklargebeam.vmt")
 		self:SetPos(destination)
 		local blinktimer = "BlinkTrailRollback" .. self:EntIndex()
 		local timerfunc = timer.Exists(blinktimer) and timer.Adjust or timer.Create
@@ -380,7 +420,6 @@ function ENT.Task.Blink(self)
 			if not IsValid(self) or not IsValid(self.Trail) then return end
 			self.Trail:SetKeyValue("LifeTime", 0.2)
 		end)
-	--	SafeRemoveEntityDelayed(trail, 1.2)
 		self.Time.Blink = CurTime() + 0.2
 		self.BlinkRemaining = self.BlinkRemaining - 1
 		
@@ -424,6 +463,7 @@ function ENT.Task.Recall(self)
 	table.SortByMember(self.RecallInfo, "health")
 	health = self.RecallInfo[1].health
 	self:InitializeRecallInfo()
+	self:SetPos(self:GetPos() - vector_up * 80)
 	
 	coroutine.wait(1)
 	
@@ -436,11 +476,9 @@ function ENT.Task.Recall(self)
 	net.WriteFloat(aim_pitch)
 	net.Broadcast()
 	
-	
 	--Place some effects here.
 	e:SetFlags(self.Relationship[CLASS_PLAYER] == D_HT and 1 or 0)
 	util.Effect("tracerblinks", e)
-	
 	
 	--Tracer now comes back to the world.
 	self:SetInvisibleFlag(false)

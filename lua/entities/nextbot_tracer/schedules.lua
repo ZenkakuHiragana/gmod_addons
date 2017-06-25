@@ -28,7 +28,8 @@ local function GetDanger(self)
 				bravery = math.huge
 			end
 			
-			if self:Health() / self:GetMaxHealth() * math.Rand(self.Bravery, self.Bravery * 2) < bravery then
+			if self:Health() / self:GetMaxHealth()
+				* math.Rand(self.Bravery, self.Bravery * 2) < bravery then
 				return true, escapefrom
 			end
 		end
@@ -74,7 +75,20 @@ end
 --Starts the given schedule.
 --Argument: Table s | Schedule.
 function ENT:SetSchedule(s)
-	if not istable(self.Schedule[s]) then return end
+	if not istable(self.Schedule[s]) then
+		if isvector(self.m_vecLastPosition) then
+			if s == SCHED_FORCED_GO or s == SCHED_FORCED_GO_RUN then
+				self.Memory.Walk = (s == SCHED_FORCED_GO)
+				self.Path.DesiredPosition = self.m_vecLastPosition
+				self:StartMove()
+				s = "ForcedGo"
+			else
+				return
+			end
+		else
+			return
+		end
+	end
 	
 	if self.Debug.ShowPreviousSchedule then
 		print(self, "Previous schedule: " .. self.State.Schedule .. "    Schedule progress: " .. self.State.ScheduleProgress)
@@ -83,9 +97,6 @@ function ENT:SetSchedule(s)
 	end
 	
 	self.Schedule:SetInterrupt(true)
-	self.State.FailReason = "NoReasonGiven"
-	self.State.FailSchedule = nil
-	self.State.InterruptCondition = nil
 	self.State.Schedule = s --Schedule now executing.
 	self.State.ScheduleProgress = 1
 	self.Time.Schedule = CurTime()
@@ -148,22 +159,57 @@ ENT.Schedule.Build = {
 	[NPC_STATE_COMBAT] = ENT.BuildCombatSchedule,
 }
 
+--==ForcedGo==------------------{
+ENT.Schedule:Add(
+	"ForcedGo",
+	{
+		"HeavyDamage",
+		"InvalidPath",
+		"OnContact",
+	},
+	{
+		"SetFaceEnemy",
+		"StartMove",
+		"WaitForMovement",
+	}
+)
+--------------------------------}
 --==Idle==----------------------{
 ENT.Schedule:Add(
 	"Idle",
+	{
+		"HeavyDamage",
+		"LightDamage",
+		{"NearDanger", "Escape"},
+		"NewEnemy",
+	},
+	{
+		"SetFaceEnemy",
+		"Reload",
+		{"Wait", {time = 5, "TurnBackToWall"}},
+	}
+)
+--------------------------------}
+--==GotoHealthKit==-------------{
+ENT.Schedule:Add(
+	"GotoHealthKit",
 	function(self)
-		self.State.TaskVariable = math.Rand(20, 65)
+		self.State.TaskVariable = NULL
 	end,
 	{
 		"HeavyDamage",
 		"LightDamage",
 		{"NearDanger", "Escape"},
 		"NewEnemy",
-		"ReceiveEnemyInfo",
 	},
 	{
+		"SetFaceEnemy",
+		"FindHealthKit",
+		"SetPositionToEntity",
+		"StartMove",
 		"Reload",
-		"Wait",
+		"WaitForMovement",
+		{"Wait", {time = 0.5, "TurnBackToWall"}},
 	}
 )
 --------------------------------}
@@ -189,6 +235,9 @@ ENT.Schedule:Add(
 	}
 )
 --------------------------------}
+
+
+--Combat Schedule----------------
 --==RunAroundAndFire==----------{
 ENT.Schedule:Add(
 	"RunAroundAndFire",
@@ -203,8 +252,8 @@ ENT.Schedule:Add(
 		"CanRecall",
 		"EnemyDead",
 		"EnemyOccluded",
+		"EnemyTooFar",
 		"HeavyDamage",
-		"LightDamage",
 		"NoPrimaryAmmo",
 		"OnContact",
 		"RepeatedDamage",
@@ -232,7 +281,6 @@ ENT.Schedule:Add(
 		"EnemyDead",
 		"EnemyOccluded",
 		"HeavyDamage",
-		"LightDamage",
 		"NewEnemy",
 		"OnContact",
 		"ReloadFinished",
@@ -242,7 +290,8 @@ ENT.Schedule:Add(
 		{"SetFaceEnemy", true},
 		{"SetRunFromEnemy", {deg = 100, dist = 256}},
 		"StartMove",
-		{"WaitForMovement", {"Reload"}},
+		"Reload",
+		{"WaitForMovement", {"FireWeapon"}},
 	}
 )
 --------------------------------}
@@ -261,7 +310,6 @@ ENT.Schedule:Add(
 		"EnemyApproaching",
 		"EnemyDead",
 		"HeavyDamage",
-		"LightDamage",
 		"MobbedByEnemies",
 		"NewEnemy",
 		"NoPrimaryAmmo",
@@ -280,18 +328,17 @@ ENT.Schedule:Add(
 ENT.Schedule:Add(
 	"Advance",
 	function(self)
-		timer.Simple(3, function()
+		timer.Simple(5, function()
 			if not IsValid(self) or self:GetSchedule() ~= "Advance" then return end
 			self.Task.Fail(self, self.FailReason.TimeOut)
 		end)
 	end,
 	{
+		"CanMeleeAttack",
 		"CanRecall",
-		"EnemyApproaching",
 		"EnemyDead",
 		"HeavyDamage",
 		"InvalidPath",
-		"LightDamage",
 		"MobbedByEnemies",
 		"NewEnemy",
 		"NoPrimaryAmmo",
@@ -322,6 +369,7 @@ ENT.Schedule:Add(
 		"HeavyDamage",
 		{"InvalidPath", "RunFromEnemy"},
 		"NewEnemy",
+		"OnContact",
 		"RepeatedDamage",
 	},
 	{
@@ -329,7 +377,8 @@ ENT.Schedule:Add(
 		"SetFaceEnemy",
 		"Escape",
 		"StartMove",
-		{"WaitForMovement", {"Reload"}},
+		"Reload",
+		"WaitForMovement",
 		{"Wait", {time = 1.2}},
 	}
 )
@@ -349,6 +398,7 @@ ENT.Schedule:Add(
 		{"InvalidPath", "RunFromEnemy"},
 		"NewEnemy",
 		"NoPrimaryAmmo",
+		"OnContact",
 		"RepeatedDamage",
 	},
 	{
@@ -374,6 +424,7 @@ ENT.Schedule:Add(
 		{"InvalidPath", "RunFromEnemy"},
 		"LightDamage",
 		"NewEnemy",
+		"OnContact",
 		"RepeatedDamage",
 	},
 	{
@@ -427,6 +478,7 @@ ENT.Schedule:Add(
 		"LightDamage",
 		"NearDanger",
 		"NewEnemy",
+		"OnContact",
 		"RepeatedDamage",
 	},
 	{
@@ -434,7 +486,7 @@ ENT.Schedule:Add(
 		{"SetFaceEnemy", true},
 		"Appear",
 		"StartMove",
-		"WaitForMovement",
+		{"WaitForMovement", {"FireWeapon"}},
 	}
 )
 --------------------------------}
@@ -443,9 +495,9 @@ ENT.Schedule:Add(
 	"HideAndReload",
 	{
 		"HeavyDamage",
-		"LightDamage",
 		"MobbedByEnemies",
 		"NewEnemy",
+		"OnContact",
 		"ReloadFinished",
 		"RepeatedDamage",
 	},
@@ -454,8 +506,8 @@ ENT.Schedule:Add(
 		"SetFaceEnemy",
 		"Escape",
 		"StartMove",
-		{"WaitForMovement", {"Reload"}},
 		"Reload",
+		"WaitForMovement",
 	}
 )
 --------------------------------}

@@ -5,17 +5,18 @@
 ----Table t | Sound informations.
 local function OnHearSound(self, t)
 	--TODO: Tell other mates to alert
+	if self:GetState() == NPC_STATE_COMBAT then return end
 	local pos = isvector(t.Pos) and t.Pos or t.Entity:GetPos()
 	if self:Disposition(t.Entity) == D_HT then
 		if self:GetState() == NPC_STATE_IDLE then
 			self:SetState(NPC_STATE_ALERT)
-			self.Path.DesiredPosition = pos
-			self:StartMove()
 		elseif self:GetState() == NPC_STATE_ALERT then
 			self:SetEnemy(t.Entity)
 		end
-	elseif self:GetState() ~= NPC_STATE_COMBAT then
-		if t.Channel == CHAN_WEAPON then
+		self.Path.DesiredPosition = pos
+		self:StartMove()
+	else
+		if t.Channel == CHAN_WEAPON or self:GetState() == NPC_STATE_ALERT then
 			self:SetState(NPC_STATE_ALERT)
 			self.Path.DesiredPosition = pos
 			self:StartMove()
@@ -60,7 +61,6 @@ net.Receive("NextbotHearsSound", function(len, ply)
 end)
 
 util.AddNetworkString("SetAimParameterRecall") --Sets aim position properly for recall.
-util.AddNetworkString("SetVisibleRecall") --Why can't I change my color on serverside!?
 
 --Called when the nextbot touches another entity.
 --Applies the physics damage.
@@ -70,7 +70,7 @@ function ENT:OnContact(v)
 	if not IsValid(v) then return end
 	self.Time.Touch = CurTime()
 	
-	if v:IsPlayer() or v:IsNPC() or v.Type == "nextbot" then return end
+	if v:IsPlayer() or v:IsNPC() or v.Type == "nextbot" then return end	
 	local p = v:GetPhysicsObject() if not IsValid(p) then return end
 	local f = -p:GetVelocity()
 	
@@ -134,7 +134,7 @@ function ENT:OnInjured(info)
 			self:SetState(NPC_STATE_ALERT)
 			self.Path.DesiredPosition = info:GetAttacker():GetPos()
 			self:StartMove()
-		else
+		elseif not self:GetEnemy() then
 			self:SetEnemy(info:GetAttacker())
 		end
 	elseif relationship == D_NU then
@@ -158,7 +158,10 @@ function ENT:OnKilled(info)
 		w:SetVelocity(self.Equipment.Entity:GetAbsVelocity())
 		w:Spawn()
 		SafeRemoveEntity(self.Equipment.Entity)
-		SafeRemoveEntityDelayed(w, 10)
+		timer.Simple(10, function()
+			if not IsValid(w) or IsValid(w:GetOwner()) then return end
+			SafeRemoveEntity(w)
+		end)
 	end
 	self:BecomeRagdoll(info)
 	self:OnRemove()

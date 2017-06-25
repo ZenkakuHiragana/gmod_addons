@@ -5,6 +5,7 @@ local color_enemy = Color(255, 128, 128)
 function EFFECT:Init(data)
 	self:SetModel("models/effects/combineball.mdl")
 	self:SetPos(data:GetOrigin())
+	self:SetAngles(EyeAngles())
 	self.Color = data:GetFlags() == 1 and color_enemy or color_ally
 	self:SetColor(self.Color)
 	self.Scale = 4
