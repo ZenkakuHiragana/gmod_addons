@@ -146,7 +146,9 @@ function ENT:OnInjured(info)
 end
 
 function ENT:OnRemove()	
-	if IsValid(self.Equipment.Entity) then SafeRemoveEntity(self.Equipment.Entity) end
+	if istable(self.Equipment) and IsValid(self.Equipment.Entity) then
+		SafeRemoveEntity(self.Equipment.Entity)
+	end
 	if IsValid(self.Trail) then SafeRemoveEntity(self.Trail) end
 end
 
