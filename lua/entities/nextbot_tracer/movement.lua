@@ -16,7 +16,42 @@ function ENT:StartMove()
 end
 
 function ENT:UpdatePosition()
-	if not self.Path.Main:IsValid() then return end
+	--Following player
+	if IsValid(self.Memory.ChaseTarget) then
+		local followrange = self:GetState() == NPC_STATE_COMBAT
+			and self.Dist.SearchSqr or self.Dist.FollowPlayerSqr
+		local distance = self:GetRangeSquaredTo(self.Memory.ChaseTarget:GetPos())
+		if distance > followrange then
+			if self:GetState() == NPC_STATE_COMBAT or distance > followrange * 4 or self.Path.Chasing:IsValid() then
+				if self.Path.Chasing:GetAge() > 0.8 then
+					self.Path.Chasing:Compute(self, self.Memory.ChaseTarget:GetPos())
+				end
+				self.Path.Chasing:Update(self)
+			end
+		else
+			self.Path.Chasing:Invalidate()
+		end
+	elseif self:GetConVarBool("npc_citizen_auto_player_squad") then
+		if CurTime() > self.Time.SearchPlayer then
+			self.Time.SearchPlayer = CurTime() + 1
+			local distance, nearest, ply = 0, self.Dist.BlinkSqr, NULL
+			for k, v in pairs(ents.FindInSphere(self:GetPos(), self.Dist.Blink)) do
+				distance = self:GetRangeSquaredTo(v:GetPos())
+				if v ~= self and distance < nearest and self:Disposition(v) == D_LI then
+					nearest = distance
+					ply = v
+				end
+			end
+			
+			if IsValid(ply) then
+				self.Memory.ChaseTarget = ply
+				self.Path.Chasing:Compute(self, ply:GetPos())
+			end
+		end
+	end
+	
+	--Main path
+	if not self.Path.Main:IsValid() or self.Path.Chasing:IsValid() then return end
 	if self.Debug.DrawPath then self.Path.Main:Draw() end
 	
 	if self.Path.Main:GetAge() > 8 then self.Path.Main:Compute(self, self.Path.DesiredPosition) end

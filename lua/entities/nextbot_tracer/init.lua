@@ -44,14 +44,15 @@ function ENT:InitializeTimers()
 	self.Time.HealthChecked = CurTime()			--For "CanRecall" condition
 	self.Time.Melee = CurTime()					--Melee attack cooldown
 	self.Time.Move = CurTime()					--Start moving to somewhere
-	self.Time.PlayingScene = CurTime() - 1
 	self.Time.Recall = CurTime()				--Recall cooldown
 	self.Time.RecordRecallInfo = CurTime()		--I had better use timer.Create(), perhaps.
 	self.Time.Reload = CurTime()				--Reloading
 	self.Time.RepeatedDamage = CurTime()		--Flag as repeated damage
 	self.Time.Schedule = CurTime()				--Begin a schedule
+	self.Time.SearchPlayer = CurTime()			--Follow player automatically
 	self.Time.SeeEnemy = CurTime()				--Last time the enemy seen
 	self.Time.SetBehindEnemy = CurTime()		--Set an enemy behind me instead of current enemy
+	self.Time.SpeakUnderstood = CurTime()		--Prevent spamming "Understood!"
 	self.Time.Task = CurTime()					--Begin a task
 	self.Time.Touch = CurTime()	 - 1			--On contact someone
 	self.Time.VoiceMeleeFinalBlow = CurTime()	--Speak a final blow voice
@@ -112,6 +113,9 @@ function ENT:InitializeVariables()
 	
 	--Path finding------------------
 	self.Path = {}
+	self.Path.Chasing = Path("Follow") --I couldn't use "Chase" so I use "Follow" instead.
+	self.Path.Chasing:SetMinLookAheadDistance(self.Dist.FollowPlayer)
+	self.Path.Chasing:SetGoalTolerance(20)
 	self.Path.Main = Path("Follow")
 	self.Path.Main:SetMinLookAheadDistance(400)
 	self.Path.Main:SetGoalTolerance(20)
@@ -120,6 +124,8 @@ function ENT:InitializeVariables()
 	
 	--Personal memories-------------
 	self.Memory = {}
+	self.Memory.Allies = {} --Broadcasting enemy info.
+	self.Memory.ChaseTarget = nil --Following player who used Tracer.
 	self.Memory.Crouch = false --Crouch flag.
 	self.Memory.CrouchNav = false --Forced to crouch by navarea.
 	self.Memory.DangerEntity = nil --An entity that I should run away from.
@@ -325,7 +331,7 @@ function ENT:RunBehaviour()
 				end
 			end
 			
-			if self.Path.Main:IsValid() then self:UpdatePosition() end
+			self:UpdatePosition()
 		end
 		
 		coroutine.yield()

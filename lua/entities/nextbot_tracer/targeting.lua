@@ -12,8 +12,16 @@ function ENT:SetEnemy(ent)
 	if self:Disposition(ent) ~= D_HT then return end
 	self.Memory.Enemy = ent
 	self.Memory.EnemyAimVector = self:GetEnemyAimVector()
-	self.Memory.EnemyPosition = self:GetEnemy():WorldSpaceCenter() --set the last position I saw
+	self.Memory.EnemyPosition = ent:WorldSpaceCenter() --set the last position I saw
 	self.Memory.Distance = self:GetRangeTo(self.Memory.EnemyPosition)
+	
+	for ally, distance in pairs(self.Memory.Allies) do
+		if self:Disposition(ally) == D_LI and isfunction(ally.UpdateEnemyMemory) then
+			ally:UpdateEnemyMemory(ent, ent:WorldSpaceCenter())
+		else
+			self.Memory.Allies[ally] = nil
+		end
+	end
 end
 
 --Finds nearest enemy and returns it.
@@ -26,15 +34,18 @@ function ENT:FindEnemy()
 		pos = v:WorldSpaceCenter()
 		if self:CanSee(pos) and self:GetAimVector(pos):Dot(self:GetEye().Ang:Forward()) > math.cos(math.rad(self.SearchAngle)) then
 			relationship = self:Disposition(v)
-			
 			if relationship == D_LI then
 				if isfunction(v.GetEnemy) and IsValid(v:GetEnemy()) then
 					v = v:GetEnemy()
+					pos = v:WorldSpaceCenter()
 					relationship = self:Disposition(v)
 				end
+				
+				self.Memory.Allies[v] = self:GetRangeSquaredTo(v:GetPos())
 			end
+			
 			if relationship == D_HT then --normal entity and can see
-				self.Memory.Enemies[v] = {Pos = pos, Distance = self:GetRangeSquaredTo(v:GetPos()), Forward = self:GetEnemyAimVector(v)}
+				self.Memory.Enemies[v] = {Pos = pos, Distance = self:GetRangeSquaredTo(pos), Forward = self:GetEnemyAimVector(v)}
 			end
 		end
 	end

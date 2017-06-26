@@ -139,7 +139,7 @@ function ENT:Think()
 				ent = ent[math.random(1, #ent)]
 				if IsValid(ent) and ent ~= self and ent:GetParent() ~= self and ent ~= self.IdleLookatEntity then
 					self.IdleLookatEntity = ent
-					if ent:WorldSpaceCenter():DistToSqr(self:WorldSpaceCenter()) > 1600 and
+					if self:WorldSpaceCenter():DistToSqr(ent:WorldSpaceCenter()) > 1600 and
 						math.abs((ent:WorldSpaceCenter() - self:WorldSpaceCenter())
 						:GetNormalized():Dot(self:GetUp())) < math.cos(math.rad(head_pitch_max)) then
 						self.IdleLookatEye = ent:WorldSpaceCenter()

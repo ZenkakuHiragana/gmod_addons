@@ -11,7 +11,7 @@ local function GetDanger(self)
 	local escapefrom --Nextbot should escape from specified entity, such as grenades.
 	for k, v in pairs(ents.FindInSphere(self:GetPos(), self.Dist.ShootRange)) do
 		if IsValid(v) then
-			local dist = v:WorldSpaceCenter():DistToSqr(self:WorldSpaceCenter())
+			local dist = self:GetRangeSquaredTo(v:WorldSpaceCenter())
 			local relationship = self:Disposition(v)
 			if (relationship == D_HT or relationship == D_FR) and self:CanSee(v:WorldSpaceCenter()) then
 				bravery = bravery + (self:IsFacingMe(v) and 2 or 1)

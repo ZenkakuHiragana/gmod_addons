@@ -1,15 +1,4 @@
 
---Plays a scene and sets a timer for preventing flex problem.
---Argument:
-----string scene | Filepath to scene.
-function ENT:SetScene(scene)
-	if CurTime() > self.Time.PlayingScene then
-		self.Time.PlayingScene = CurTime() + self:PlayScene(scene)
-		return true
-	end
-	return false
-end
-
 --Plays a flinch gesture.
 --Arguments:
 ----CTakeDamageInfo info | Damage info given by NEXTBOT:OnInjured()
@@ -74,7 +63,11 @@ function ENT:BodyUpdate()
 	self:SetLookatEnemy(tobool(self:GetEnemy()))
 	self:SetLookatAim(self.Memory.EnemyPosition)
 
-	if self.Memory.Look then self.loco:FaceTowards(self.Memory.EnemyPosition) end
+	if self.Memory.Look then
+		self.loco:FaceTowards(self.Memory.EnemyPosition)
+	elseif self.loco:GetVelocity():LengthSqr() > self.Speed.WalkSqr / 4 then
+		self.loco:FaceTowards(self:GetPos() + self.loco:GetVelocity())
+	end
 	
 	self:BodyMoveXY()
 end

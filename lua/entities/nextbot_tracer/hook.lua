@@ -16,7 +16,8 @@ local function OnHearSound(self, t)
 		self.Path.DesiredPosition = pos
 		self:StartMove()
 	else
-		if t.Channel == CHAN_WEAPON or self:GetState() == NPC_STATE_ALERT then
+		if t.Channel == CHAN_WEAPON or not
+		(self:Disposition(t.Entity) == D_LI and t.Channel == CHAN_BODY) then
 			self:SetState(NPC_STATE_ALERT)
 			self.Path.DesiredPosition = pos
 			self:StartMove()
@@ -225,6 +226,21 @@ function ENT:OnStuck()
 	end
 	
 	self:SetPos(self:GetPos() + warpto)
+end
+
+function ENT:Use(activator, caller, type, value)
+	if self:Disposition(activator) == D_LI and activator:IsPlayer() then
+		if self.Memory.ChaseTarget == activator then
+			self.Memory.ChaseTarget = nil
+		else
+			self.Memory.ChaseTarget = activator
+			self.Path.Chasing:Compute(self, activator:GetPos())
+			if CurTime() > self.Time.SpeakUnderstood then
+				self.Time.SpeakUnderstood = CurTime() + math.Rand(15, 45)
+				self:EmitSound("Nextbot_Tracer.Understood")
+			end
+		end
+	end
 end
 ----------------------------------------------}
 

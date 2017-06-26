@@ -6,14 +6,11 @@ function ENT:BuildNPCState()
 	local s = NPC_STATE_IDLE
 	if self:GetEnemy() then
 		s = NPC_STATE_COMBAT
-		self.Memory.Walk = false
-	elseif self:GetState() == NPC_STATE_ALERT or
-		self:HasCondition("LostEnemy") or
-		self:HasCondition("EnemyDead") then
+	elseif self:GetState() == NPC_STATE_ALERT then
 		s = NPC_STATE_ALERT
-		self.Memory.Walk = true
 	end
 	if s ~= self:GetState() then self.State.ScheduleProgress = math.huge end
+	self.Memory.Walk = s ~= NPC_STATE_COMBAT
 	self:SetState(s)
 end
 

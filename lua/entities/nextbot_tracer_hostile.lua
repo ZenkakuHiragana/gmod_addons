@@ -43,6 +43,20 @@ if SERVER then
 		[CLASS_HACKED_ROLLERMINE] = D_HT,
 		[CLASS_COMBINE_HUNTER] = D_LI,
 	}
+	
+	local classname_hostile = ENT.classname
+	local targetname = "NextbotTracerRelationship(Hostile)"
+	hook.Add("OnEntityCreated", "NextbotIsAlone!(Hostile)", function(e)
+		if IsValid(e) and e:GetClass() ~= classname_hostile and isfunction(e.AddEntityRelationship) then
+			local t = targetname .. e:EntIndex()
+			timer.Create(t, 1, 0, function()
+				if not IsValid(e) then timer.Remove(t) return end
+				for k, v in pairs(ents.FindByClass(classname_hostile)) do
+					if IsValid(v) then e:AddEntityRelationship(v, v:Disposition(e), 0) end
+				end
+			end)
+		end
+	end)
 end
 
 list.Set("NPC", ENT.classname, {

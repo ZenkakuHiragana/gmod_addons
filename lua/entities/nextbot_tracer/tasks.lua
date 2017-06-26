@@ -117,7 +117,7 @@ function ENT.Task.MeleeAttack(self)
 	self:AddGesture(self.Act.Melee)
 	timer.Simple(0.2, function()
 		if not IsValid(self) or not self:GetEnemy() then return end
-		if self:WorldSpaceCenter():DistToSqr(self:GetEnemy():WorldSpaceCenter()) > self.Dist.MeleeSqr then return end
+		if self:GetRangeSquaredTo(self:GetEnemy():WorldSpaceCenter()) > self.Dist.MeleeSqr then return end
 		if self:GetAimVector(self:GetEnemy():WorldSpaceCenter()):Dot(self:GetForward()) > math.cos(math.rad(60)) then
 			self:GetEnemy():TakeDamage(30, self, self)
 			if CurTime() > self.Time.VoiceMeleeFinalBlow and
@@ -243,12 +243,14 @@ end
 --TurnBackToWall: turn my back to the wall.
 function ENT.Task.TurnBackToWall(self)
 	local mins, maxs = self:GetCollisionBounds()
+	local startpos = self:GetPos() + vector_up * self.StepHeight
 	local tr = util.TraceHull({
-		start = self:GetPos() + vector_up * self.StepHeight,
-		endpos = self:GetPos() + vector_up * self.StepHeight + self:GetForward() * 300,
-		mins = mins, maxs = maxs, filter = {self, self.Equipment.Entity}
+		start = startpos,
+		endpos = self:GetPos() + vector_up * self.StepHeight + self:GetForward() * 200,
+		mins = mins, maxs = maxs, filter = {self, self.Equipment.Entity},
+		mask = MASK_NPCSOLID_BRUSHONLY,
 	})
-	if tr.Hit then
+	if tr.Hit and tr.HitPos:DistToSqr(startpos) > self.Dist.MeleeSqr then
 		self.loco:FaceTowards(self:GetPos() + tr.HitNormal * 20)
 	else
 		self.Task.Complete(self)
@@ -270,7 +272,7 @@ function ENT.Task.FindHealthKit(self)
 	
 	for k, v in pairs(health) do
 		if self:CanSee(v:WorldSpaceCenter()) then
-			local length = v:WorldSpaceCenter():DistToSqr(self:WorldSpaceCenter())
+			local length = self:GetRangeSquaredTo(v:WorldSpaceCenter())
 			if length < self.Dist.SearchSqr and length < nearest then
 				if v:GetClass() ~= "item_healthcharger" or
 					v:GetSaveTable().m_iJuice > 0 then
@@ -377,7 +379,7 @@ function ENT.Task.Blink(self)
 	for i = 1, 20 do
 		if straightTrace.Hit and math.abs(straightTrace.HitNormal:Dot(vector_up)) > math.cos(math.rad(45)) then
 			traceStructure.start = straightTrace.HitPos
-			verticalStartZ = traceStructure.start.z
+			verticalStartZ = straightTrace.HitPos.z
 			traceStructure.endpos = straightTrace.HitPos + vector_up * 100000
 			verticalTrace = util.TraceHull(traceStructure)
 			if self.Debug.BlinkTraces then
@@ -396,8 +398,7 @@ function ENT.Task.Blink(self)
 			end
 		else
 			traceStructure.start = straightTrace.HitPos
-			traceStructure.endpos = straightTrace.HitPos
-			traceStructure.endpos.z = verticalStartZ
+			traceStructure.endpos = Vector(straightTrace.HitPos.x, straightTrace.HitPos.y, verticalStartZ)
 			verticalTrace = util.TraceHull(traceStructure)
 			destination = verticalTrace.HitPos
 			
