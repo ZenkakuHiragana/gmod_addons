@@ -42,6 +42,7 @@ function ENT:InitializeTimers()
 	self.Time.FindEnemy = CurTime()				--Update enemy info
 	self.Time.FindHealthKit = CurTime()			--Re-find health kit
 	self.Time.Fire = CurTime()					--Fire primary weapon
+	self.Time.GotoSoundSource = CurTime()		--When alert, go to where sound is heard from.
 	self.Time.HealthChecked = CurTime()			--For "CanRecall" condition
 	self.Time.Melee = CurTime()					--Melee attack cooldown
 	self.Time.Move = CurTime()					--Start moving to somewhere
@@ -333,6 +334,12 @@ function ENT:RunBehaviour()
 			end
 			
 			self:UpdatePosition()
+			
+			if self.Memory.Look then
+				self.loco:FaceTowards(self.Memory.EnemyPosition)
+			elseif self.loco:GetVelocity():LengthSqr() > 0 then
+				self.loco:FaceTowards(self:GetPos() + self.loco:GetVelocity())
+			end
 		end
 		
 		coroutine.yield()

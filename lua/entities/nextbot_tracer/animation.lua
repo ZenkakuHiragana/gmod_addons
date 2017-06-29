@@ -65,7 +65,7 @@ function ENT:BodyUpdate()
 
 	if self.Memory.Look then
 		self.loco:FaceTowards(self.Memory.EnemyPosition)
-	elseif self.loco:GetVelocity():LengthSqr() > self.Speed.WalkSqr / 4 then
+	elseif self.loco:GetVelocity():LengthSqr() > 0 then
 		self.loco:FaceTowards(self:GetPos() + self.loco:GetVelocity())
 	end
 	

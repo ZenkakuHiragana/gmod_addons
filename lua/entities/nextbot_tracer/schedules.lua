@@ -180,11 +180,12 @@ ENT.Schedule:Add(
 	{
 		"HeavyDamage",
 		"LightDamage",
-		{"NearDanger", "Escape"},
+		{"NearDanger", "EscapeFromGrenade"},
 		"NewEnemy",
 	},
 	{
 		"SetFaceEnemy",
+		{"SetWalkFlag", true},
 		"Reload",
 		{"Wait", {time = 5, "TurnBackToWall"}},
 	}
@@ -199,11 +200,12 @@ ENT.Schedule:Add(
 	{
 		"HeavyDamage",
 		"LightDamage",
-		{"NearDanger", "Escape"},
+		{"NearDanger", "EscapeFromGrenade"},
 		"NewEnemy",
 	},
 	{
 		"SetFaceEnemy",
+		"SetWalkFlag",
 		"FindHealthKit",
 		"SetPositionToEntity",
 		"StartMove",
@@ -222,12 +224,13 @@ ENT.Schedule:Add(
 	{
 		"HeavyDamage",
 		"LightDamage",
-		{"NearDanger", "Escape"},
+		{"NearDanger", "EscapeFromGrenade"},
 		"NewEnemy",
 		"ReceiveEnemyInfo",
 	},
 	{
 		"SetFaceEnemy",
+		{"SetWalkFlag", true},
 		"StartMove",
 		{"WaitForMovement", {"Reload"}},
 		{"Wait", {"TurnBackToWall"}},
@@ -380,6 +383,23 @@ ENT.Schedule:Add(
 		"Reload",
 		"WaitForMovement",
 		{"Wait", {time = 1.2}},
+	}
+)
+--------------------------------}
+--==EscapeFromGrenade==---------{
+ENT.Schedule:Add(
+	"EscapeFromGrenade",
+	{
+		"HeavyDamage",
+		"InvalidPath",
+		"OnContact",
+		"RepeatedDamage",
+	},
+	{
+		"SetWalkFlag",
+		"EscapeGrenade",
+		"StartMove",
+		"WaitForMovement",
 	}
 )
 --------------------------------}

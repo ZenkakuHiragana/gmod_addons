@@ -6,11 +6,11 @@ function ENT:BuildNPCState()
 	local s = NPC_STATE_IDLE
 	if self:GetEnemy() then
 		s = NPC_STATE_COMBAT
+		self.Memory.Walk = false
 	elseif self:GetState() == NPC_STATE_ALERT then
 		s = NPC_STATE_ALERT
 	end
 	if s ~= self:GetState() then self.State.ScheduleProgress = math.huge end
-	self.Memory.Walk = s ~= NPC_STATE_COMBAT
 	self:SetState(s)
 end
 
@@ -25,14 +25,23 @@ function ENT:BuildIdleSchedule()
 		CurTime() > self.Time.FindHealthKit then
 		return "GotoHealthKit"
 	else
-		return "Idle" --Just wander around.
+		return "Idle" --Just stand there.
 	end
 end
 
 --Build schedule for Alert state.
 function ENT:BuildAlertSchedule()
-	--TODO: Patrol around and hear the world.
-	return "PatrolAround"
+	if self.State.FailReason == self.FailReason.NoHealthKitFound then
+		self.State.FailReason = self.FailReason.NoReasonGiven
+		self.Time.FindHealthKit = CurTime() + math.Rand(5, 10)
+	end
+	
+	if self:Health() < self.HP.MoreBlink and
+		CurTime() > self.Time.FindHealthKit then
+		return "GotoHealthKit"
+	else
+		return "PatrolAround" --Just wander around.
+	end
 end
 
 local CombatSchedule = {}

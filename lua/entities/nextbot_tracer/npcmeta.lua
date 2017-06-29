@@ -54,6 +54,7 @@ ENT.Replacement[1] = function(self)
 	--Iterate all NPC functions
 	for k, v in pairs(FindMetaTable("NPC")) do
 		if not isstring(k) or k:find("__") then continue end --Skip if current function is meta event.
+		if k:find("VJ") then continue end --Avoid copying VJ functions.
 		if isstring(k) and isfunction(v) and --Make sure it has a string key and is a function.
 			(not self.Replacement[k] or isfunction(self.Replacement[k])) then
 			--Replace the function if Nextbot MetaTable has the same key.

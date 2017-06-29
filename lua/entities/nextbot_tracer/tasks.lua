@@ -104,9 +104,16 @@ function ENT.Task.WaitForMovement(self, opt)
 end
 
 --SetFaceEnemy: set flag of facing enemy.
---Argument: Bool bLooking | Flag.
+--Argument: bool bLooking | Flag.
 function ENT.Task.SetFaceEnemy(self, bLooking)
 	self.Memory.Look = bLooking
+	return self.Task.Complete(self)
+end
+
+--SetWalkFlag: determine whether or not the nextbot walks or runs.
+--Argument: bool bWalking | true to walk.
+function ENT.Task.SetWalkFlag(self, bWalking)
+	self.Memory.Walk = bWalking
 	return self.Task.Complete(self)
 end
 
@@ -181,6 +188,26 @@ function ENT.Task.Escape(self, opt)
 				self.Task.Fail(self, self.FailReason.InvalidPath)
 			end
 		end
+		return self.Task.Complete(self)
+	else
+		self.Task.Fail(self)
+	end
+end
+
+local function grenade(self, area, opt)
+	if not IsValid(self.Memory.DangerEntity) then return true end
+	local GrenadeToDestination = area:GetCenter() - self.Memory.DangerEntity:WorldSpaceCenter()
+	local GrenadeToMe = self:GetPos() - self.Memory.DangerEntity:WorldSpaceCenter()
+	GrenadeToDestination:Normalize()
+	GrenadeToMe:Normalize()
+	return GrenadeToDestination:Dot(GrenadeToMe) > math.cos(math.rad(75))
+end
+
+--EscapeGrenade: search a position that takes a cover from the enemy.
+function ENT.Task.EscapeGrenade(self, opt)
+	local opt = opt or {}
+	if self:SetDesiredPosition({spottype = "EscapeGrenade", nearest = true,
+		range = self.Dist.Grenade * 2, evaluation = grenade}) then
 		return self.Task.Complete(self)
 	else
 		self.Task.Fail(self)

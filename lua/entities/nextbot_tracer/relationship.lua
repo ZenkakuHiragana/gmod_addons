@@ -49,7 +49,7 @@ function ENT.Replacement:Disposition(e)
 	elseif e:IsPlayer() then
 		relationship = self.Relationship[CLASS_PLAYER]
 	elseif e.Type == "nextbot" then
-		relationship = self:GetConVarBool("nextbot_tracer_hates_nextbot") and D_HT or D_NU
+		relationship = self:GetConVarBool("nextbot_tracer_hates_nextbots") and D_HT or D_NU
 	end
 	
 	if (e:IsPlayer() and self:GetConVarBool("ai_ignoreplayers")) or

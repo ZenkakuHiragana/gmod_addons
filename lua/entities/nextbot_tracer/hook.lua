@@ -13,14 +13,18 @@ local function OnHearSound(self, t)
 		elseif self:GetState() == NPC_STATE_ALERT then
 			self:SetEnemy(t.Entity)
 		end
+		
 		self.Path.DesiredPosition = pos
 		self:StartMove()
-	else
+	elseif not (t.Entity:IsPlayer() or t.Entity:GetClass():find("grenade") or
+		CurTime() > self.Time.GotoSoundSource) then
 		if t.Channel == CHAN_WEAPON or not
 		(self:Disposition(t.Entity) == D_LI and t.Channel == CHAN_BODY) then
 			self:SetState(NPC_STATE_ALERT)
 			self.Path.DesiredPosition = pos
 			self:StartMove()
+			
+			self.Time.GotoSoundSource = CurTime() + math.Rand(5, 8)
 		end
 	end
 end
