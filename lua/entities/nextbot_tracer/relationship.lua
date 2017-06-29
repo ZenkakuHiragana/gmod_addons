@@ -34,11 +34,11 @@ function ENT:InitializeRelationship()
 end
 
 --nextbot_tracer allies itself with players.
-function ENT:Classify()
+function ENT.Replacement:Classify()
 	return self.NPCClass
 end
 
-function ENT:Disposition(e)
+function ENT.Replacement:Disposition(e)
 	if not IsValid(e) then return D_ER end
 	local relationship = D_NU
 	if self.RelationshipEntity[e] then
@@ -61,12 +61,12 @@ function ENT:Disposition(e)
 end
 
 --Priority doesn't work for now.
-function ENT:AddEntityRelationship(entity, disposition, priority)
+function ENT.Replacement:AddEntityRelationship(entity, disposition, priority)
 	if entity == self then return end
 	self.RelationshipEntity[entity] = disposition
 end
 
-function ENT:AddRelationship(relationstring)
+function ENT.Replacement:AddRelationship(relationstring)
 	local parse = string.Explode(" ", relationstring, false)
 	for _, ent in pairs(ents.FindByClass(parse[1])) do
 		self:AddEntityRelationship(ent, parse[2], parse[3])

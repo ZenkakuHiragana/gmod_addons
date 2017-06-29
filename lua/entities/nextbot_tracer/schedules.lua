@@ -11,7 +11,7 @@ local function GetDanger(self)
 	local escapefrom --Nextbot should escape from specified entity, such as grenades.
 	for k, v in pairs(ents.FindInSphere(self:GetPos(), self.Dist.ShootRange)) do
 		if IsValid(v) then
-			local dist = self:GetRangeSquaredTo(v:WorldSpaceCenter())
+			local dist = self:WorldSpaceCenter():DistToSqr(v:WorldSpaceCenter())
 			local relationship = self:Disposition(v)
 			if (relationship == D_HT or relationship == D_FR) and self:CanSee(v:WorldSpaceCenter()) then
 				bravery = bravery + (self:IsFacingMe(v) and 2 or 1)
@@ -63,18 +63,18 @@ end
 
 --Changes the state. Idle/Alert/Combat
 --Argument: number s | New state.
-function ENT:SetState(s)
+function ENT.Replacement:SetState(s)
 	self.State.State = s
 end
 
 --Gets the state. Idle/Alert/Combat
-function ENT:GetState()
+function ENT.Replacement:GetState()
 	return self.State.State
 end
 
 --Starts the given schedule.
 --Argument: Table s | Schedule.
-function ENT:SetSchedule(s)
+function ENT.Replacement:SetSchedule(s)
 	if not istable(self.Schedule[s]) then
 		if isvector(self.m_vecLastPosition) then
 			if s == SCHED_FORCED_GO or s == SCHED_FORCED_GO_RUN then
@@ -114,7 +114,7 @@ function ENT:SetSchedule(s)
 end
 
 --Gets the schedule which is executing.
-function ENT:GetSchedule()
+function ENT.Replacement:GetSchedule()
 	return self.State.Schedule, self.State.ScheduleProgress
 end
 

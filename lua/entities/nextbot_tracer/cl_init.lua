@@ -7,6 +7,12 @@ language.Add(classname, ENT.PrintName)
 
 util.PrecacheModel(ENT.Model)
 
+--The problem is functions between default Angle:Normalize() and SLVBase's one have different behaviour:
+--default one changes the given angle, SLV's one returns normalized angle.
+--So I need to branch the normalize function.  I hate SLVBase.
+local NormalizeAngle = FindMetaTable("Angle").Normalize
+if SLVBase then NormalizeAngle = function(ang) ang:Set(ang:Normalize()) end end
+
 -- move_y				-1	1
 -- move_x				-1	1
 -- aim_yaw				-63.407917022705	71.206367492676
@@ -77,7 +83,7 @@ end
 ----Vector pos | the position to aim at.
 function ENT:Aim(pos)
 	local Ang = self:WorldToLocal(pos - vector_up * self.EyeHeight):Angle()
-	Ang:Normalize()
+	NormalizeAngle(Ang)
 	local y, p = Ang.yaw, Ang.pitch
 	y = math.Clamp(y, aim_yaw_min, aim_yaw_max)
 	p = math.Clamp(p, aim_pitch_min, aim_pitch_max)
@@ -94,7 +100,7 @@ end
 ----Vector pos | the position to face at.
 function ENT:FaceHead(pos)
 	local Ang = self:WorldToLocal(pos - vector_up * self.EyeHeight):Angle()
-	Ang:Normalize()
+	NormalizeAngle(Ang)
 	local y, p = Ang.yaw, Ang.pitch
 	y = math.Clamp(y, head_yaw_min, head_yaw_max)
 	p = math.Clamp(p, head_pitch_min, head_pitch_max)

@@ -10,6 +10,7 @@ include("schedules.lua")
 include("targeting.lua")
 include("weapon.lua")
 include("sounds.lua")
+ENT.Replacement[1](ENT)
 
 ----------------------------------------------{
 --init.lua

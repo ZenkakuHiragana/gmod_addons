@@ -140,7 +140,7 @@ function ENT:OnInjured(info)
 		end
 	elseif relationship == D_NU then
 		self:AddEntityRelationship(info:GetAttacker(), D_HT, 0)
-	elseif relationship == D_LI then
+	elseif info:GetAttacker():IsPlayer() and relationship == D_LI then
 		self:AddEntityRelationship(info:GetAttacker(), D_NU, 0)
 	end
 end
@@ -156,7 +156,7 @@ function ENT:OnKilled(info)
 	hook.Run("OnNPCKilled", self, info:GetAttacker(), info:GetInflictor())
 	if IsValid(self.Equipment.Entity) then
 		local w = ents.Create(self.Equipment.Name)
-		w:SetPos(self.Equipment.Entity:GetPos())
+		w:SetPos(self:WorldSpaceCenter())
 		w:SetAngles(self.Equipment.Entity:GetAngles())
 		w:SetVelocity(self.Equipment.Entity:GetAbsVelocity())
 		w:Spawn()

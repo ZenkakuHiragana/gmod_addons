@@ -117,7 +117,7 @@ function ENT.Task.MeleeAttack(self)
 	self:AddGesture(self.Act.Melee)
 	timer.Simple(0.2, function()
 		if not IsValid(self) or not self:GetEnemy() then return end
-		if self:GetRangeSquaredTo(self:GetEnemy():WorldSpaceCenter()) > self.Dist.MeleeSqr then return end
+		if self:WorldSpaceCenter():DistToSqr(self:GetEnemy():WorldSpaceCenter()) > self.Dist.MeleeSqr then return end
 		if self:GetAimVector(self:GetEnemy():WorldSpaceCenter()):Dot(self:GetForward()) > math.cos(math.rad(60)) then
 			self:GetEnemy():TakeDamage(30, self, self)
 			if CurTime() > self.Time.VoiceMeleeFinalBlow and
@@ -272,7 +272,7 @@ function ENT.Task.FindHealthKit(self)
 	
 	for k, v in pairs(health) do
 		if self:CanSee(v:WorldSpaceCenter()) then
-			local length = self:GetRangeSquaredTo(v:WorldSpaceCenter())
+			local length = self:WorldSpaceCenter():DistToSqr(v:WorldSpaceCenter())
 			if length < self.Dist.SearchSqr and length < nearest then
 				if v:GetClass() ~= "item_healthcharger" or
 					v:GetSaveTable().m_iJuice > 0 then

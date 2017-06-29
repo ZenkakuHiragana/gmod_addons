@@ -2,13 +2,13 @@
 include("relationship.lua")
 
 --Gets personal enemy entity.
-function ENT:GetEnemy()
+function ENT.Replacement:GetEnemy()
 	if self:Disposition(self.Memory.Enemy) ~= D_HT then return nil end
 	return self.Memory.Enemy
 end
 
 --Sets personal enemy memory.
-function ENT:SetEnemy(ent)
+function ENT.Replacement:SetEnemy(ent)
 	if self:Disposition(ent) ~= D_HT then return end
 	self.Memory.Enemy = ent
 	self.Memory.EnemyAimVector = self:GetEnemyAimVector()
@@ -25,7 +25,7 @@ function ENT:SetEnemy(ent)
 end
 
 --Finds nearest enemy and returns it.
-function ENT:FindEnemy()
+function ENT.Replacement:FindEnemy()
 	local lst = ents.FindInSphere(self:GetEye().Pos, self.Dist.Search)
 	local pos, nearestenemy = vector_origin, NULL
 	local relationship = D_ER
@@ -41,11 +41,11 @@ function ENT:FindEnemy()
 					relationship = self:Disposition(v)
 				end
 				
-				self.Memory.Allies[v] = self:GetRangeSquaredTo(v:GetPos())
+				self.Memory.Allies[v] = self:GetPos():DistToSqr(v:GetPos())
 			end
 			
 			if relationship == D_HT then --normal entity and can see
-				self.Memory.Enemies[v] = {Pos = pos, Distance = self:GetRangeSquaredTo(pos), Forward = self:GetEnemyAimVector(v)}
+				self.Memory.Enemies[v] = {Pos = pos, Distance = self:GetPos():DistToSqr(pos), Forward = self:GetEnemyAimVector(v)}
 			end
 		end
 	end
@@ -80,7 +80,7 @@ end
 ----Table opt | Options.
 ------Vector start | The start position of the trace.
 ------Bool shoot | If true, check MASK_SHOT in place of visiblity.
-function ENT:CanSee(pos, opt)
+function ENT.Replacement:CanSee(pos, opt)
 	local opt = opt or {}
 	local e = pos or self.Memory.EnemyPosition
 	local filter = table.Copy(self.breakable_filter)
@@ -99,7 +99,7 @@ end
 --Returns where current enemy or the given entity is looking at.
 --Argument:
 ----Entity e | The given entity(Optional).
-function ENT:GetEnemyAimVector(e)
+function ENT.Replacement:GetEnemyAimVector(e)
 	if not IsValid(e) and not IsValid(self.Memory.Enemy) then return vector_origin end
 	local ent = IsValid(e) and e or self.Memory.Enemy
 	return isfunction(ent.GetAimVector) and ent:GetAimVector() or ent:GetForward()
@@ -108,7 +108,7 @@ end
 --Returns aiming direction vector.
 --Argument:
 ----Vector dir | Looking at this position(Optional).
-function ENT:GetAimVector(dir)
+function ENT.Replacement:GetAimVector(dir)
 	local aimat = dir or self.Memory.EnemyPosition
 	return (aimat - self:WorldSpaceCenter()):GetNormalized()
 end
@@ -116,7 +116,7 @@ end
 --Returns if the enemy or the given entity is facing me.
 --Argument:
 ----Entity e | The given entity(Optional).
-function ENT:IsFacingMe(e)
+function ENT.Replacement:IsFacingMe(e)
 	local vEnemyPos = IsValid(e) and e:WorldSpaceCenter() or self.Memory.EnemyPosition
 	local vEnemyAim = IsValid(e) and self:GetEnemyAimVector(e) or self.Memory.EnemyAimVector
 	local vEnemyToMe = -self:GetAimVector(vEnemyPos)
@@ -124,7 +124,7 @@ function ENT:IsFacingMe(e)
 end
 
 --Updates current enemy's information.
-function ENT:UpdateEnemyMemory()
+function ENT.Replacement:UpdateEnemyMemory()
 	if self:GetEnemy() and self.Memory.Look and self:HasCondition("HaveEnemyLOS") and
 		math.abs((self:GetEnemy():WorldSpaceCenter() - self:WorldSpaceCenter()):GetNormalized()
 		:Dot(self:GetEye().Ang:Forward())) > math.cos(math.rad(self.SearchAngle)) then

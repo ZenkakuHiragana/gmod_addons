@@ -23,31 +23,32 @@ ENT.Weapon = {}
 ----Arguments:
 ----Nextbot self | The owner of the weapon.
 ----Entity weapon | The weapon.
-function ENT.Weapon.Create(self, name, clip, numbullets, spread, dmg, ammotype, delay, muzzle, snd, firefunction)
-	local delay, muzzle, snd = delay, muzzle, snd
-	if not istable(delay) then
-		delay = {								--Table of timers
-			firerate = 0.1,						--Fire rate
-			reloadtime = 1,						--Time to reload
-			reloadsound = 0,					--Play a sound after a while from starting to reload
-		}
-	end
+local defaultparameter = {
+	name = "weapon_pistol",
+	clip = 18,
+	numbullets = 1,
+	spread = 10,
+	dmg = 5,
+	ammotype = "Pistol",
+	delay = {				--Table of cooldown timers
+		firerate = 0.4,		--Fire rate
+		reloadtime = 1.2,	--Time to reload
+		reloadsound = 0,	--Reload sound delay
+	},
+	muzzle = {				--Parameters of muzzle flash
+		probability = 0.5,	--How often the effect appears
+		scale = 0.6,		--Scale of the effect
+	},
+	snd = {					--Parameters of weapon sound
+		fire = "Weapon_Pistol.NPC_Single",	--Firing sound
+		reload = "Weapon_Pistol.NPC_Reload"	--Reloading sound
+	},
+	firefunction = ENT.Weapon.Fire,
+}
+function ENT.Weapon.Create(self, param)
+	local param = istable(param) and param or defaultparameter
 	
-	if not istable(muzzle) then
-		muzzle = {								--Parameters about muzzle flash
-			probability = 0.5,					--How often the effect appears
-			scale = 0.6,						--Scale of the effect
-		}
-	end
-	
-	if not istable(snd) then
-		snd = {									--Parameters about sound
-			fire = "Weapon_Pistol.NPC_Single",	--Firing sound
-			reload = "Weapon_Pistol.NPC_Reload"	--Reloading sound
-		}
-	end
-	
-	local ent = ents.Create(name)
+	local ent = ents.Create(param.name)
 	if not IsValid(ent) then
 		ent = NULL
 		return
@@ -64,34 +65,58 @@ function ENT.Weapon.Create(self, name, clip, numbullets, spread, dmg, ammotype, 
 	end
 	
 	return setmetatable({
-		Entity = ent,			--Weapon entity
-		Name = name,			--Weapon classname
-		Clip = clip,			--Clip size
-		Ammo = clip,			--Ammo that the weapon now has
-		Num = numbullets,		--Amount of bullets per shot
-		Spread = spread,		--Bullet spread
-		Damage = dmg,	 		--Damage per bullets
-		AmmoType = ammotype,	--Ammo type
-		Delay = {Fire = delay.firerate or 0.5, Reload = delay.reloadtime or 1, ReloadSound = delay.reloadsound or 0},
-		Muzzle = {Probability = muzzle.probability or 0.5, Scale = muzzle.scale or 0.6},
-		Sound = {Fire = snd.fire or "Weapon_Pistol.NPC_Single", Reload = snd.reload or "Weapon_Pistol.NPC_Reload"},
-		Fire = isfunction(firefunction) and firefunction or self.Weapon.Fire
+		Entity = ent,				--Weapon entity
+		Name = param.name,			--Weapon classname
+		Clip = param.clip,			--Clip size
+		Ammo = param.clip,			--Ammo that the weapon now has
+		Num = param.numbullets,		--Amount of bullets per shot
+		Spread = param.spread,		--Bullet spread
+		Damage = param.dmg,	 		--Damage per bullets
+		AmmoType = param.ammotype,	--Ammo type
+		Delay = {
+			Fire = param.delay.firerate,
+			Reload = param.delay.reloadtime,
+			ReloadSound = param.delay.reloadsound,
+		},
+		Muzzle = {
+			Probability = param.muzzle.probability,
+			Scale = param.muzzle.scale,
+		},
+		Sound = {
+			Fire = param.snd.fire,
+			Reload = param.snd.reload,
+		},
+		Fire = param.firefunction,
 	}, {__index = self.Weapon})
+end
+
+local function DefaultFireCallback(attacker, tr, dmginfo)
+	if not IsValid(attacker) or not istable(attacker.Equipment)
+		or not IsValid(attacker.Equipment.Entity) then return end
+	if not IsValid(tr.Entity) then return end
+	
+	dmginfo:SetInflictor(attacker.Equipment.Entity)
+	local c = tr.Entity:GetClass()			
+	if c == "npc_turret_floor" then
+		tr.Entity:Fire("SelfDestruct")
+	elseif c == "npc_rollermine" then
+		util.BlastDamage(game.GetWorld(), game.GetWorld(), tr.Entity:GetPos(), 1, 1)
+	end
 end
 
 --Default function to fire bullets.
 --Arguments:
 --Nextbot self | The owner of the weapon.
---Entity weapon | The weapon.
-function ENT.Weapon.Fire(self, weapon)
-	if not IsValid(self) or not IsValid(weapon) then return end
+function ENT.Weapon.Fire(self)
+	if not IsValid(self) or not istable(self.Equipment)
+		or not IsValid(self.Equipment.Entity) then return end
 	if self.Equipment.Ammo <= 0 then return end
 	if CurTime() < self.Time.Fire then return end
 	
-	local shootPos = self:GetHand()
+	local shootPos = self:GetAttachment(self:LookupAttachment("anim_attachment_RH"))
 	self.Equipment.Ammo = self.Equipment.Ammo - 1
 	self:AddGesture(self.Act.Attack)
-	weapon:EmitSound(self.Equipment.Sound.Fire)
+	self.Equipment.Entity:EmitSound(self.Equipment.Sound.Fire)
 	
 	local bullet = {
 		Attacker = self,
@@ -104,23 +129,13 @@ function ENT.Weapon.Fire(self, weapon)
 		TracerName = "Tracer",
 		Damage = self.Equipment.Damage,
 		AmmoType = self.Equipment.AmmoType,
-		Callback = function(attacker, tr, dmginfo)
-			if not IsValid(tr.Entity) then return end
-			
-			dmginfo:SetInflictor(weapon)
-			local c = tr.Entity:GetClass()			
-			if c == "npc_turret_floor" then
-				tr.Entity:Fire("SelfDestruct")
-			elseif c == "npc_rollermine" then
-				util.BlastDamage(weapon, self, tr.Entity:GetPos(), 1, 1)
-			end
-		end,
+		Callback = DefaultFireCallback,
 	}
 	self.Equipment.Entity:FireBullets(bullet)
 	
 	local ef = EffectData()
-	ef:SetEntity(weapon)
-	ef:SetEntIndex(weapon:EntIndex())
+	ef:SetEntity(self.Equipment.Entity)
+	ef:SetEntIndex(self.Equipment.Entity:EntIndex())
 	ef:SetOrigin(shootPos.Pos)
 	ef:SetAngles(shootPos.Ang)
 	ef:SetScale(self.Equipment.Muzzle.Scale)
@@ -128,7 +143,7 @@ function ENT.Weapon.Fire(self, weapon)
 		util.Effect("MuzzleEffect", ef)
 	end
 	
-	weapon:MuzzleFlash()
+	self.Equipment.Entity:MuzzleFlash()
 	self:MuzzleFlash()
 	self.Time.Fired = CurTime() + self.Equipment.Delay.Fire
 end
@@ -136,7 +151,6 @@ end
 --Default function to reload the weapon.
 --Arguments:
 --Nextbot self | The owner of the weapon.
---Entity weapon | The weapon.
 function ENT:ReloadWeapon()
 	if self.Time.Reload > CurTime() then return end
 	if self.Equipment.Ammo >= self.Equipment.Clip then return end
@@ -162,6 +176,8 @@ function ENT:ReloadWeapon()
 end
 
 local function FireCallBack(attacker, tr, dmginfo)
+	if not IsValid(attacker) or not istable(attacker.Equipment)
+		or not IsValid(attacker.Equipment.Entity) then return end
 	if not IsValid(tr.Entity) then return end
 	
 	local c = tr.Entity:GetClass()			
@@ -170,12 +186,12 @@ local function FireCallBack(attacker, tr, dmginfo)
 	elseif c == "npc_rollermine" then
 		util.BlastDamage(game.GetWorld(), game.GetWorld(), tr.Entity:GetPos(), 1, 1)
 	end
-	return true
 end
 
 --Fire function for Tracer's Pulse Pistols.
-local function FireTracerPistols(self, weapon)
-	if not IsValid(self) or not IsValid(weapon) then return end
+local function FireTracerPistols(self)
+	if not IsValid(self) or not istable(self.Equipment)
+		or not IsValid(self.Equipment.Entity) then return end
 	if self.Equipment.Ammo <= 0 then return end
 	if CurTime() < self.Time.Fire then return end
 	if self.Memory.Distance > self.Dist.ShootRange then return end
@@ -185,10 +201,13 @@ local function FireTracerPistols(self, weapon)
 		self:LookupAttachment("anim_attachment_LH"),
 		self:LookupAttachment("anim_attachment_RH"),
 	}
-	local shootPos = {self:GetHand(true), self:GetHand()}
+	local shootPos = {
+		self:GetAttachment(att[1]),
+		self:GetAttachment(att[2]),
+	}
 	self.Equipment.Ammo = self.Equipment.Ammo - 1
 	self:AddGesture(self.Act.Attack)
-	weapon:EmitSound(self.Equipment.Sound.Fire)
+	self.Equipment.Entity:EmitSound(self.Equipment.Sound.Fire)
 	
 	local bullet = {
 		Attacker = self,
@@ -212,7 +231,7 @@ local function FireTracerPistols(self, weapon)
 		end
 	end
 	
-	weapon:MuzzleFlash()
+	self.Equipment.Entity:MuzzleFlash()
 	self:MuzzleFlash()
 	self.Time.Fire = CurTime() + self.Equipment.Delay.Fire
 end
@@ -223,10 +242,26 @@ function ENT:CreatePulsePistols()
 	--distance: 11m - 30m
 	--fire rate: 40rps
 	--reload time: 1 second
-	return self.Weapon.Create(self,
-	"tfa_tracer_nope", 20, 1, 150, 6, "Pistol",
-	{firerate = 1/20, reloadtime = 1, reloadsound = 0},
-	{probability = 0.6, scale = 0.7},
-	{fire = "NOPE_TRACER.1", reload = "NOPE_TRACER.RELOADFOLEY"},
-	FireTracerPistols)
+	return self.Weapon.Create(self, {
+		name = "tfa_tracer_nope",
+		clip = 20,
+		numbullets = 1,
+		spread = 150,
+		dmg = 6,
+		ammotype = "Pistol",
+		delay = {
+			firerate = 1/20,
+			reloadtime = 1,
+			reloadsound = 0,
+		},
+		muzzle = {
+			probability = 0.6,
+			scale = 0.7,
+		},
+		snd = {
+			fire = "NOPE_TRACER.1",
+			reload = "NOPE_TRACER.RELOADFOLEY",
+		},
+		firefunction = FireTracerPistols
+	})
 end

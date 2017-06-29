@@ -10,6 +10,29 @@ ENT.Contact = ""
 ENT.Purpose = ""
 ENT.Spawnable = false
 ENT.AutomaticFrameAdvance = true
+
+ENT.NextBotIsFakeNPC = true
+ENT.Replacement = {} --Since we make ENT:IsNPC() returns true, we must define NPC Functions.
+ENT.Capabilities = {
+	["Total"] = 0,
+	CAP_MOVE_GROUND,
+	CAP_MOVE_JUMP,
+	CAP_MOVE_SHOOT,
+	CAP_USE,
+	CAP_WEAPON_RANGE_ATTACK1,
+	CAP_WEAPON_MELEE_ATTACK1,
+	CAP_USE_WEAPONS,
+	CAP_ANIMATEDFACE,
+	CAP_FRIENDLY_DMG_IMMUNE,
+	CAP_SQUAD,
+	CAP_DUCK,
+	CAP_AIM_GUN,
+	CAP_NO_HIT_SQUADMATES,
+}
+for k, v in ipairs(ENT.Capabilities) do
+	ENT.Capabilities.Total = bit.bor(ENT.Capabilities.Total, v)
+end
+
 ENT.Bravery = 7 --Parameter of Schedule.GetDanger()
 ENT.MaxNavAreas = 720 --Maximum amount of searching NavAreas.
 ENT.MaxYawRate = 250 --default: 250
@@ -22,13 +45,13 @@ ENT.StepHeight = 30 --default: 20
 ENT.Act = {}
 ENT.Act.Attack = ACT_HL2MP_GESTURE_RANGE_ATTACK_DUEL
 ENT.Act.Flinch = ENT.Act.Flinch or {}
---ENT.Act.Flinch.Back = ACT_FLINCH_BACK
---ENT.Act.Flinch.Default = ACT_FLINCH
-ENT.Act.Flinch.Head = ACT_FLINCH_HEAD
-ENT.Act.Flinch.Physics = ACT_FLINCH_PHYSICS
---ENT.Act.Flinch.ShoulderLeft = ACT_FLINCH_SHOULDER_LEFT
---ENT.Act.Flinch.ShoulderRight = ACT_FLINCH_SHOULDER_RIGHT
-ENT.Act.Flinch.Stomach = ACT_FLINCH_STOMACH
+	--ENT.Act.Flinch.Back = ACT_FLINCH_BACK
+	--ENT.Act.Flinch.Default = ACT_FLINCH
+	ENT.Act.Flinch.Head = ACT_FLINCH_HEAD
+	ENT.Act.Flinch.Physics = ACT_FLINCH_PHYSICS
+	--ENT.Act.Flinch.ShoulderLeft = ACT_FLINCH_SHOULDER_LEFT
+	--ENT.Act.Flinch.ShoulderRight = ACT_FLINCH_SHOULDER_RIGHT
+	ENT.Act.Flinch.Stomach = ACT_FLINCH_STOMACH
 ENT.Act.Idle = ACT_HL2MP_IDLE_DUEL
 ENT.Act.IdleCrouch = ACT_HL2MP_IDLE_CROUCH_DUEL
 ENT.Act.Jump = ACT_HL2MP_JUMP_DUEL
@@ -48,7 +71,7 @@ ENT.Bone.Stomach = "ValveBiped.Bip01_Spine2"
 
 ENT.Dist = {}
 --blink distance in hammer unit, meters -> inches -> hammer units
-ENT.Dist.Blink = 7 * 3.280839895 * 16 --367.45406824
+ENT.Dist.Blink = 367.45406824 --7 * 3.280839895 * 16
 ENT.Dist.BlinkSqr = ENT.Dist.Blink^2
 ENT.Dist.FindSpots = 3000 --Search radius for finding where the nextbot should move to.
 ENT.Dist.FollowPlayer = 100 --Following player.
@@ -59,7 +82,7 @@ ENT.Dist.Manhack = ENT.Dist.Grenade / 2 --For Manhacks.
 ENT.Dist.ManhackSqr = ENT.Dist.Manhack^2
 ENT.Dist.Melee = 50
 ENT.Dist.MeleeSqr = ENT.Dist.Melee^2
-ENT.Dist.Mobbed = 90 --For Condition "Mobbed by Enemies"
+ENT.Dist.Mobbed = 90 --For condition "Mobbed by Enemies"
 ENT.Dist.MobbedSqr = ENT.Dist.Mobbed^2
 ENT.Dist.Search = 2000 --Search radius for finding enemies.
 ENT.Dist.SearchSqr = ENT.Dist.Search^2
@@ -83,28 +106,14 @@ function ENT:GetEye()
 	return self:GetAttachment(self:LookupAttachment("eyes"))
 end
 
---Returns a table with information og what I am looking at.
-function ENT:GetEyeTrace(dist)
-	return util.QuickTrace(self:GetEye().Pos,
-		self:GetEye().Ang:Forward() * (dist or 80), self)
+--Returns the attachment of my left hand.
+function ENT:GetLeftHand()
+	return self:GetAttachment(self:LookupAttachment("anim_attachment_LH"))
 end
 
---Returns a table about the hand.
---Argument:
-----bool isleft | True if it is left hand.
-function ENT:GetHand(isleft)
-	local att = isleft and "anim_attachment_LH" or "anim_attachment_RH"
-	return self:GetAttachment(self:LookupAttachment(att))
-end
-
---For Half Life Renaissance Reconstructed
-function ENT:GetNoTarget()
-	return false
-end
-
---For Half Life Renaissance Reconstructed
-function ENT:PercentageFrozen()
-	return 0
+--Returns the attachment of my right hand.
+function ENT:GetRightHand()
+	return self:GetAttachment(self:LookupAttachment("anim_attachment_RH"))
 end
 
 --Returns if I can hear the given sound.
@@ -112,7 +121,7 @@ function ENT:IsHearingSound(t)
 	return math.log10(t.Entity:GetPos():DistToSqr(self:GetEye().Pos)) < t.SoundLevel * 0.085
 end
 
---Data Tables for eye blink.
+--Data Tables.
 function ENT:SetupDataTables()
 	self:NetworkVar("Vector", 0, "LookatAim")
 	self:NetworkVar("Bool", 0, "LookatEnemy")
