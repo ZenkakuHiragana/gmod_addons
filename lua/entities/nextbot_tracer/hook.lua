@@ -156,6 +156,10 @@ function ENT:OnRemove()
 	if IsValid(self.Trail) then SafeRemoveEntity(self.Trail) end
 end
 
+function ENT:OnLandOnGround()
+	if self:GetVelocity().z < -1 then self:AddGesture(ACT_LAND) end
+end
+
 function ENT:OnKilled(info)
 	hook.Run("OnNPCKilled", self, info:GetAttacker(), info:GetInflictor())
 	if IsValid(self.Equipment.Entity) then
