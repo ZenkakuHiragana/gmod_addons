@@ -1,0 +1,22 @@
+"VertexlitGeneric"
+{
+	//sentry core
+	$basetexture models/bastion/9B1E0B8118DA29C6/000000006CF5
+	$bumpmap models/bastion/9B1E0B8118DA29C6/000000006CF6metal
+	//$blendtintbybasealpha "1"
+	$selfillum 1
+	$selfillummask models/bastion/9B1E0B8118DA29C6/000000006CFB
+	
+	//correcting brightness
+	$color2 "[0.9 0.9 0.9]"
+	
+	$phong 1
+	$phongexponenttexture models/bastion/9B1E0B8118DA29C6/000000006CF7
+	$phongboost 8
+	$phongfresnelranges "[0.35 0.75 1.00]"
+	
+	$envmap env_cubemap
+	$normalmapalphaenvmapmask "1"
+	$envmapfresnel "1"
+	$envmaptint "[0.01 0.01 0.01]"
+}

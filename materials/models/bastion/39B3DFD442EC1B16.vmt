@@ -1,0 +1,23 @@
+"VertexlitGeneric"
+{
+	//bastion's body
+	$basetexture models/bastion/39B3DFD442EC1B16/0000000016FB
+	$bumpmap models/bastion/39B3DFD442EC1B16/0000000016FCmetal
+	$blendtintbybasealpha "1"
+	$selfillum 1
+	$selfillummask models/bastion/39B3DFD442EC1B16/0000000016FE
+	
+	//correcting brightness
+	$color2 "[0.9 0.9 0.9]"
+	
+	//using phong shader
+	$phong 1 //how can I use roughness map?
+	$phongexponenttexture models/bastion/39B3DFD442EC1B16/0000000016FD
+	$phongboost 8
+	$phongfresnelranges "[0.35 0.75 1.00]"
+	
+	$envmap env_cubemap
+	$normalmapalphaenvmapmask "1"
+	$envmapfresnel "1"
+	$envmaptint "[0.01 0.01 0.01]"
+}

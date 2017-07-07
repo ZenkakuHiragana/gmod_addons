@@ -1,0 +1,20 @@
+"VertexlitGeneric"
+{
+	//cannon detail
+	$basetexture models/bastion/705D33F3A88F3465/0000000028DFalpha
+	$bumpmap models/bastion/705D33F3A88F3465/0000000028E1metal
+	$translucent 1
+	
+	//correcting brightness
+	$color2 "[0.9 0.9 0.9]"
+	
+	$phong 1
+	$phongexponenttexture models/bastion/705D33F3A88F3465/0000000028E2
+	$phongboost 8
+	$phongfresnelranges "[0.35 0.75 1.00]"
+	
+	$envmap env_cubemap
+	$normalmapalphaenvmapmask "1"
+	$envmapfresnel "1"
+	$envmaptint "[0.01 0.01 0.01]"
+}

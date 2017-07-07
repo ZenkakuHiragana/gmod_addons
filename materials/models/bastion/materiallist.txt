@@ -1,0 +1,55 @@
+39B3DFD442EC1B16, body
+	0000000016FE, shading emit mask
+	0000000016FB, albedo; base texture
+	00000000000E, unknown, specular hardness
+	00000000000A, unknown, add specular color
+	0000000016FD, green/blue channel.  roughness map -> multiply diffuse intensity
+	0000000016FDr, red channel.  metalness map -> specular intensity
+	0000000016FC, normal map
+75D934586E0CE67B, caterpillar right
+	00000000000B, subtract albedo; use $color2 instead.
+	0000000028C8, albedo
+	00000000000E, unknown, specular hardness
+	00000000000A, unknown, add specular color
+	0000000028CA, green/blue channel.  roughness map -> multiply diffuse intensity
+	0000000028CAr, red channel.  metalness map -> specular intensity
+	0000000028C9, normal map
+5002175FE2528773, caterpillar left
+	same as 75D934586E0CE67B
+9B1E0B8118DA29C6, sentry core
+	000000006CFB, shading emit mask
+	000000006CF5, albedo
+	00000000000E, unknown, specular hardness
+	000000006CF8, prevent normal map -> subtract albedo x0.03
+	000000006CF7, green/blue channel.  roughness map -> multiply diffuse intensity
+	000000006CF7r, red channel.  metalness map -> specular intensity
+	000000006CF6, normal map
+56CC86B433942537, decals
+	0000000017E5, unknown, diffuse intensity
+	0000000017E2, albedo
+	0000000017E3, alpha mask
+A597868C4EB13971, cannon
+	same as 75D934586E0CE67B
+705D33F3A88F3465, cannon detail
+	----0000000028E7 originally here
+	0000000028DF, albedo
+	0000000028E7, unknown, multiply albedo
+	0000000028E0, alpha mask
+	0000000028E2, green/blue channel.  roughness map -> multiply diffuse intensity
+	0000000028E2r, red channel.  metalness map -> specular intensity
+	0000000028E1, normal map
+7AEE03F9AE2DAC44, weapon
+	0000000016A0, albedo
+	00000000000E, unknown, specular hardness
+	00000000000A, unknown, add specular color
+	0000000016A1, green/blue channel.  roughness map -> multiply diffuse intensity
+	0000000016A1r, red channel.  metalness map -> specular intensity
+	0000000016A3, normal map
+FCAE02E5B984CBE7, sentry gun
+	00000000189B, albedo (for muzzles)
+	000000001899, albedo (for body)
+	00000000000E, unknown, specular hardness
+	00000000000A, unknown, add specular color
+	00000000189A, green/blue channel.  roughness map -> multiply diffuse intensity
+	00000000189Ar, red channel.  metalness map -> specular intensity
+	00000000189C, normal map

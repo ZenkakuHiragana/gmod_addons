@@ -1,0 +1,20 @@
+"VertexlitGeneric"
+{
+	//weapon
+	$basetexture models/bastion/7AEE03F9AE2DAC44/0000000016A0
+	$bumpmap models/bastion/7AEE03F9AE2DAC44/0000000016A3metal
+	$blendtintbybasealpha "1"
+	
+	//correcting brightness
+	$color2 "[0.9 0.9 0.9]"
+	
+	$phong 1
+	$phongexponenttexture models/bastion/7AEE03F9AE2DAC44/
+	$phongboost 8
+	$phongfresnelranges "[0.35 0.75 1.00]"
+	
+	$envmap env_cubemap
+	$normalmapalphaenvmapmask "1"
+	$envmapfresnel "1"
+	$envmaptint "[0.01 0.01 0.01]"
+}
