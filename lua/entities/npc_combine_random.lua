@@ -194,6 +194,8 @@ if SERVER then
 	"Random Combine: Radius of searching ledge for rappeling in units.  Larger values might cause some problems.")
 	CreateConVar("random_combine_healthvial", 0.2, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
 	"Random Combine: Percentage of combines that drop a health vial on their death.  0 is none, 0.5 is half, 1 is 100% of them.")
+	CreateConVar("random_combine_manhacks", 0, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
+	"Random Combine: Amount of Manhacks that Rappel Polices have. Set this to -1 to have randomly.")
 	
 	--Weapon skills are also randomly selected.
 	local skills = {
@@ -335,6 +337,13 @@ if SERVER then
 		end
 	end
 	
+	local function setmanhack(self)
+		local manhack = GetConVar("random_combine_manhacks")
+		if manhack then manhack = manhack:GetInt() else manhack = 0 end
+		if manhack < 0 then manhack = math.random() < 0.5 and 0 or 1 end
+		self.npc:SetKeyValue("manhacks", manhack)
+	end
+	
 	function ENT:Initialize()
 		self:SetNoDraw(true)
 		self:SetModel( "models/Gibs/wood_gib01e.mdl" )
@@ -359,6 +368,7 @@ if SERVER then
 				end
 				
 				self.npc:SetKeyValue("additionalequipment", w)
+				setmanhack(self)
 			end,
 			
 			--Combine Random
@@ -417,6 +427,7 @@ if SERVER then
 				if m == models[#models] then --police
 					self.npc = ents.Create("npc_metropolice")
 					self.npc:SetKeyValue("additionalequipment", w)
+					setmanhack(self)
 				else
 					self.npc = ents.Create( "npc_combine_s" )
 					self.npc:SetKeyValue("model", m)
@@ -426,7 +437,7 @@ if SERVER then
 					if w == weaponlist[1] then
 						self.npc:SetKeyValue("skin", 1)
 					end
-					self.npc:SetKeyValue("NumGrenades", math.random(3, 20))
+					self.npc:SetKeyValue("NumGrenades", math.random(0, 20))
 				end
 				
 				if GetConVar("random_combine_start_patrolling"):GetBool() then
