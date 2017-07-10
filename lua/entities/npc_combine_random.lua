@@ -718,13 +718,18 @@ if SERVER then
 		
 		self.npc:SetPos(self:GetPos())
 		self.npc:SetAngles(self:GetAngles())
-		timer.Simple(0, function() --This is for Entity Group Spawner. it changes my angle after spawning.
-			if not (IsValid(self) and IsValid(self.npc)) then return end
-			self.npc:SetAngles(self:GetAngles())
-		end)
 		
 		self.npc:Spawn()
 		self.npc:Activate()
+		self:SetHealth(self.npc:Health())
+		self:SetMaxHealth(self.npc:GetMaxHealth())
+		timer.Simple(0, function() --This is for Entity Group Spawner. it changes my angle after spawning.
+			if not (IsValid(self) and IsValid(self.npc)) then return end
+			self.npc:SetHealth(self:Health()) --And this is for NPC Spawn Platforms v2.  it has a health multiplier.
+			self.npc:SetMaxHealth(self:GetMaxHealth())
+			self.npc:SetAngles(self:GetAngles())
+		end)
+		
 		self:SetSquadName()
 		--Compatible for Half-Life SNPCs.
 		if IsValid(self.npc:GetNWEntity("HLSNPC_NPCEntity", nil)) then
