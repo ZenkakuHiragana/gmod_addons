@@ -6,8 +6,9 @@ local CUPID = 488470325 --The addon ID of Combine Units +PLUS+
 local SpartansID = 686233970 --The addon ID of Combine Spartans.
 local SparbineID = 685698324 --The addon ID of Project Sparbine.
 local HLSNPCID = 759043063 --The addon ID of Half-Life SNPCs.
-local COMBINE_BETA_SNPCS_ID = 108511284 --Counter-Terrorist Machete conflicts with Combine Beta SNPCs.
-local HL_RENAISSANCE_RECONSTRUCTED_ID = 534755660 --Counter-Terrorist Machete conflicts with Half Life SNPCs.
+
+--These NPC lists all spawn npc_combine_random, and decide what NPCs should be spawned in ENT:Initialize()
+--This addon uses (probably) unused KeyValue "friction" to store the type of the NPC.
 local COMBINE_RANDOM, COMBINE_SOLDIER, COMBINE_SHOTGUN, 
 	COMBINE_PRISON, COMBINE_PRISON_SHOTGUN, COMBINE_ELITE, 
 	COMBINE_POLICE, COMBINE_PLUS, COMBINE_SPARTANS, COMBINE_SPARBINE, 
@@ -161,10 +162,14 @@ if HasAddon(HLSNPCID) then
 end
 
 --Check if Counter-Terrorist Machete can spawn.
-local CanSpawnCounterMachete = not (HasAddon(HL_RENAISSANCE_RECONSTRUCTED_ID) or HasAddon(COMBINE_BETA_SNPCS_ID))
+--Counter-Terrorist Machete conflicts with SLVBase.
+local CanSpawnCounterMachete = not tobool(SLVBase)
+
+--Rope texture for rappeling
+local RopeTexture = "cable/cable_metalwinch01"
 
 ENT.Base = "base_entity"
-ENT.Type = "anim"
+ENT.Type = "anim" --Actually, this isn't an NPC.
 
 ENT.PrintName = "Combine Random"
 ENT.Author = "Himajin Jichiku"
@@ -176,16 +181,19 @@ ENT.Spawnable = false
 if SERVER then
 	--Console Variables
 	CreateConVar("random_combine_start_patrolling", 1, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE,
-	"Random Combine: Set 1 to start patrolling automatically.")
+	"Random Combine: Set this to 1 to start patrolling automatically.")
 	CreateConVar("random_combine_plus", 0, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
 	"Random Combine: Spawns All of Combines including who can not rappel down.")
 	CreateConVar("random_combine_shield", 0, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
-	"Random Combine: *NEED Combine Units +PLUS+*  Percentage of combines that have shield(0-1)." .. 
-	"  0 is never, 0.5 is half, 1 is 100%.")
+	"Random Combine: *NEED Combine Units +PLUS+*  Percentage of combines that have shield(0-1).  0 is none, 0.5 is half, 1 is 100% of them.")
 	CreateConVar("random_combine_rappel", 1, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
 	"Random Combine: Whether combines can rappel down or not.")
 	CreateConVar("random_combine_additional_weapons", 0, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
 	"Random Combine: 1 to allow to use Annabelle and Crossbow.")
+	CreateConVar("random_combine_search_ledge_radius", 80, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
+	"Random Combine: Radius of searching ledge for rappeling in units.  Larger values might cause some problems.")
+	CreateConVar("random_combine_healthvial", 0.2, FCVAR_ARCHIVE + FCVAR_SERVER_CAN_EXECUTE, 
+	"Random Combine: Percentage of combines that drop a health vial on their death.  0 is none, 0.5 is half, 1 is 100% of them.")
 	
 	--Weapon skills are also randomly selected.
 	local skills = {
@@ -196,14 +204,34 @@ if SERVER then
 		WEAPON_PROFICIENCY_PERFECT
 	}
 	
-	--Rappel animations are for certain heights.
+	--Desired heights of rappel animations.
 	local rappelheight = {
 		384, 456, 480, 480, 552, 648
 	}
-	--6 Rappel animations for Combine Soldiers.
+	--Combine Soldiers have 6 rappel animations.
 	local rappelindex = {
 		"e", "c", "b", "f", "d", "a"
 	}
+	
+	--Makes a rope and gets ready for landing.
+	local function beginrappel(self, i)
+		if not (IsValid(self) and IsValid(self.npc) and IsValid(self.seq)) then return end
+		--I want to check whether or not the NPC is on ground, but somehow ENT:OnGround() doesn't work.
+		--So I perform a trace to check it.
+		local tr = util.QuickTrace(self.npc:GetPos(), -vector_up * 10, {self, self.npc})
+		if tr.Hit then
+			timer.Simple(0.3, function() beginrappel(self, i) end)
+		else --If the NPC already played rappel animation, it should be in air.
+			self.played = true
+			self.z = self.npc:GetPos().z - 1
+			self.const, self.rope = constraint.Rope( --Make a rope.
+				self, self.npc,
+				0, 0, --NPCs have only one PhysObj.
+				Vector(0, 0, 10), Vector(-26, 0, 48),
+				rappelheight[i] / 3, 10,
+				0, 2, RopeTexture, false)
+		end
+	end
 	
 	--Start a wall-rappelling animation.
 	function ENT:SetRappelling(rope)
@@ -212,13 +240,17 @@ if SERVER then
 		if IsValid(self.seq) then return end
 		if not IsValid(self.npc) then return end
 		if self.npc:LookupSequence("rappel_" .. rappelindex[1]) == -1 then
-			timer.Remove("rappel" .. self:EntIndex())
+			--The NPC doesn't have rappel animations.
+			timer.Remove("rappel" .. self:EntIndex()) --Removes the timer so this function will no longer be called.
 			return
 		end
 		
 		--Perform some traces and check if it should be a good time to rappel.
 		local filter = {self, self.npc}
-		local lookahead, lookdown, lookup = 40, 680, 60
+		local lookahead, lookdown, lookup = 80, 680, 60
+		if GetConVar("random_combine_search_ledge_radius") then
+			lookahead = GetConVar("random_combine_search_ledge_radius"):GetInt()
+		end
 		
 		if util.QuickTrace(
 			self.npc:GetPos() + Vector(0, 0, lookup),
@@ -231,7 +263,7 @@ if SERVER then
 		local i = 6
 		
 		if t.Hit then
-			for x = 1, 6 do
+			for x = 1, 6 do --Determines a suitable animation.
 				local d = self.npc:GetPos().z - t.HitPos.z - rappelheight[x]
 				if d < 0 then
 					if x > 1 then
@@ -256,6 +288,7 @@ if SERVER then
 			end
 		end
 		
+		--"rope" is a boolean value, whether or not this is the first time of rappeling.
 		if rope or not t.StartSolid and i > 0 then
 			local tr = util.QuickTrace(
 				t.StartPos - Vector(0, 0, lookup + 20),
@@ -264,7 +297,7 @@ if SERVER then
 			if rope or tr.HitNormal:Dot(self.npc:GetForward()) > 0.7 then
 				local pos = tr.HitPos - self.npc:GetForward() * 32 + Vector(0, 0, 20)
 				local ang = tr.HitNormal:Angle()
-				local moveto = "5"
+				local moveto = "2" --Move to position.
 				if rope then
 					if i == 0 then i = 1 end
 					pos = self.pos
@@ -277,22 +310,7 @@ if SERVER then
 					self.pos = pos
 					self.angle = ang
 					self:SetPos(tr.HitPos + tr.HitNormal)
-					timer.Simple(0.8, function()
-						if IsValid(self) and IsValid(self.npc) then
-							self.played = true
-							self.z = self.npc:GetPos().z - 1
-							self.const, self.rope = constraint.Rope(
-								self, self.npc,
-								0, 0,
-								Vector(0, 0, 10), Vector(-26, 0, 48),-- self.npc:GetLocalPos(),
-								rappelheight[i] / 3, 10,
-								0, 2, "cable/cable_metalwinch01", false)
-							if IsValid(self.rope) then
-								self.rope:Activate()
-							end
-						--	self.npc:SetSequence(self.npc:LookupSequence(rappelindex[i]))
-						end
-					end)
+					timer.Simple(0.8, function() beginrappel(self, i) end)
 				end
 				self.npc:Fire("StopPatrolling")
 				self.seq = ents.Create("scripted_sequence")
@@ -307,14 +325,11 @@ if SERVER then
 				
 				self.seq:Spawn()
 				self.seq:Fire("beginsequence")
-			--	self.npc:SetSequence("Run_turretCarry_ALL")
-			--	PrintTable(self.npc:GetSequenceList())
 				
 				if IsValid(self.parent) then
 					self.parent:NextThink(CurTime() + 5)
 				end
 				
-			--	self.inpcIgnore = true --iNPC Compatible
 				self.npc.inpcIgnore = true --iNPC Compatible
 			end
 		end
@@ -325,10 +340,11 @@ if SERVER then
 		self:SetModel( "models/Gibs/wood_gib01e.mdl" )
 		self:PhysicsInit(SOLID_VPHYSICS)
 		self:SetMoveType(MOVETYPE_NONE)
+		self:SetNotSolid(true)
 		self.kind = self:GetKeyValues()["friction"]
 		
-		local f = 256		
-		local switch = {
+		local f = 256 --Spawnflags.
+		local switch = { --Actual spawn functions.
 			--Rappel Police
 			[COMBINE_POLICE] = function(self)
 				local weaponlist = {
@@ -560,6 +576,7 @@ if SERVER then
 					"monster_bs_gruntcigar",
 					"monster_bs_shotgun",
 					"monster_heavy_assault",
+					"monster_heavy_grunt_hostile",
 					"monster_human_hlgruntsnip",
 					"monster_human_hlcigar",
 					"monster_human_hlcigar2",
@@ -682,7 +699,9 @@ if SERVER then
 		--Spawn a NPC randomly.
 		switch[self.kind](self)
 		
-		if math.random() < 0.2 then
+		local health = GetConVar("random_combine_healthvial")
+		if health then health = health:GetFloat() else health = 0.2 end
+		if math.random() < health then
 			f = f + 8	--Drop health vial
 		end
 		
@@ -699,15 +718,20 @@ if SERVER then
 		
 		self.npc:SetPos(self:GetPos())
 		self.npc:SetAngles(self:GetAngles())
+		timer.Simple(0, function() --This is for Entity Group Spawner. it changes my angle after spawning.
+			if not (IsValid(self) and IsValid(self.npc)) then return end
+			self.npc:SetAngles(self:GetAngles())
+		end)
 		
 		self.npc:Spawn()
 		self.npc:Activate()
+		self:SetSquadName()
 		--Compatible for Half-Life SNPCs.
 		if IsValid(self.npc:GetNWEntity("HLSNPC_NPCEntity", nil)) then
 			self.parent = self.npc
 			self.npc = self.npc:GetNWEntity("HLSNPC_NPCEntity", nil)
 		end
-		--Compatible for Combine +PLUS+
+		--Compatible for Combine Units +PLUS+
 		if IsValid(self.npc.npc) then
 			self.parent = self.npc
 			self.npc = self.npc.npc
@@ -722,14 +746,7 @@ if SERVER then
 		
 		--Perform a spawn effect.
 		local e = EffectData()
-		e:SetAngles(self.npc:GetAngles())
 		e:SetEntity(self.npc)
-		e:SetFlags(0)
-		e:SetNormal(self.npc:GetUp())
-		e:SetOrigin(self.npc:GetPos())
-		e:SetRadius(0.1)
-		e:SetScale(10)
-		e:SetStart(self.npc:GetPos())
 		util.Effect("propspawn", e)
 		
 		timer.Create("rappel" .. self:EntIndex(), 2, 0, function()
@@ -740,7 +757,6 @@ if SERVER then
 		--Make a shield.
 		if HasAddon(CUPID) and
 			math.random() < GetConVar("random_combine_shield"):GetFloat() then
-		--	PrintTable(self.npc:GetAttachments())
 			self.shield = ents.Create("cup_shield")
 			self.shield:SetPos(self.npc:GetPos() + self.npc:GetForward() * 30 + self.npc:GetUp() * 20)
 			self.shield:SetParent(self.npc, 0)
@@ -753,24 +769,30 @@ if SERVER then
 	end
 	
 	function ENT:OnRemove()
-		if IsValid(self.seq) then
-			self.seq:Remove()
-		end
-		if IsValid(self.shield) then
-			self.shield:Remove()
-		end
-		if IsValid(self.npc) then
-			self.npc:Remove()
-		end
-		if IsValid(self.parent) then
-			self.parent:Remove()
+		local deletelist = {
+			self.seq, self.shield, self.npc, self.parent, self.const, self.rope
+		}
+		for k, v in pairs(deletelist) do
+			if IsValid(v) then
+				constraint.RemoveAll(v)
+				SafeRemoveEntity(v)
+			end
 		end
 		timer.Remove("rappel" .. self:EntIndex())
 	end
 	
+	--Begins to rappel(straight down).
 	function ENT:BeginRappel()
+		self:SetPos(self.npc:GetAttachment(self.npc:LookupAttachment("anim_attachment_LH")).Pos)
 		self.npc:EmitSound("npc/combine_soldier/zipline_clip" .. math.random(1, 2) .. ".wav")
 		self.Rappel = false
+		
+		constraint.Rope(
+			self, self.npc,
+			0, 0,
+			Vector(0, 0, 10), Vector(0 , 0, 70),
+			100, 10,
+			0, 2, "cable/cable_metalwinch01", false)
 		
 		timer.Simple(0.3, function()
 			if IsValid(self) and IsValid(self.npc) then
@@ -780,12 +802,7 @@ if SERVER then
 		end)
 	end
 	
-	function ENT:Think()
-		if not IsValid(self.npc) then self:Remove() return end
-		self:NextThink(CurTime() + 0.4)
-		
-		if self.kind >= GRUNT then return end
-		if self.npc:Health() <= 0 then self:Remove() return end
+	function ENT:SetSquadName()
 		if self.kind < COMBINE_PLUS then
 			local sq = self.npc:GetKeyValues()["squadname"]
 			if sq ~= "novaprospekt" or sq ~= "overwatch" then
@@ -796,6 +813,14 @@ if SERVER then
 				end
 			end
 		end
+	end
+	
+	function ENT:Think()
+		if not IsValid(self.npc) then self:Remove() return end
+		self:NextThink(CurTime() + 0.4)
+		
+		if self.kind >= GRUNT then return end
+		if self.npc:Health() <= 0 then self:Remove() return end
 		
 		--Check if the NPC should begin rappelling.
 		if self.Rappel then
@@ -831,7 +856,7 @@ if SERVER then
 					})
 					if t.Entity == v or t.HitPos:DistToSqr(v:WorldSpaceCenter()) < 200 then
 						self:BeginRappel()
-						break
+						return
 					end
 				end
 			end
@@ -843,6 +868,7 @@ if SERVER then
 				self.npc:EmitSound("npc/combine_soldier/zipline_hitground" .. math.random(1, 2) .. ".wav")
 				self.Rappel = nil
 				self.npc.inpcIgnore = false --iNPC Compatible
+				constraint.RemoveAll(self.npc)
 			end
 		--The NPC already played a rappel animation.
 		elseif self.played then
