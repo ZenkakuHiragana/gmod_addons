@@ -1,6 +1,6 @@
 
 ENT.Speed = {}
-ENT.Speed.Run = 315						--approximately 6 m/s, player default: 200
+ENT.Speed.Run = 288.71391076			--5.5 m/s, player default: 200
 ENT.Speed.RunSqr = ENT.Speed.Run^2
 ENT.Speed.Walk = ENT.Speed.Run / 2		--player default: 60 
 ENT.Speed.WalkSqr = ENT.Speed.Walk^2
