@@ -736,8 +736,10 @@ if SERVER then
 		self:SetMaxHealth(self.npc:GetMaxHealth())
 		timer.Simple(0, function() --This is for Entity Group Spawner. it changes my angle after spawning.
 			if not (IsValid(self) and IsValid(self.npc)) then return end
-			self.npc:SetHealth(self:Health()) --And this is for NPC Spawn Platforms v2.  it has a health multiplier.
-			self.npc:SetMaxHealth(self:GetMaxHealth())
+			if self:Health() > 0 then --And this is for NPC Spawn Platforms v2.  it has a health multiplier.
+				self.npc:SetHealth(self:Health())
+				self.npc:SetMaxHealth(self:GetMaxHealth())
+			end
 			self.npc:SetAngles(self:GetAngles())
 		end)
 		
