@@ -10,7 +10,7 @@ SWEP.Purpose = "Weapon for development."
 SWEP.Slot = 1
 SWEP.SlotPos = 2
 
-SWEP.Spawnable = true
+SWEP.Spawnable = false
 
 SWEP.ViewModel = Model( "models/weapons/c_smg1.mdl" )
 SWEP.WorldModel = Model( "models/weapons/w_smg1.mdl" )
