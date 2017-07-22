@@ -1,67 +1,53 @@
 
-if not IsMounted("ep2") then return end
---include "ai_translations.lua"
 AddCSLuaFile()
+local ShootSound = Sound( "NPC_Hunter.FlechetteShoot" )
 
 SWEP.PrintName = "GreatZenkakuMan's Sandbox"
 SWEP.Author = "GreatZenkakuMan"
+SWEP.Contact = ""
 SWEP.Purpose = "Weapon for development."
+SWEP.Instructions = "Primary Attack: Do something nicely."
+SWEP.AccurateCrosshair = true
+SWEP.DrawAmmo = false
+SWEP.DrawCrosshair = false
 
 SWEP.Slot = 1
 SWEP.SlotPos = 2
-
 SWEP.Spawnable = false
+SWEP.AdminOnly = true
 
-SWEP.ViewModel = Model( "models/weapons/c_smg1.mdl" )
-SWEP.WorldModel = Model( "models/weapons/w_smg1.mdl" )
-SWEP.ViewModelFOV = 54
+SWEP.HoldType = "crossbow"
+SWEP.ViewModelFOV = 60
+SWEP.ViewModelFlip = false
 SWEP.UseHands = true
+SWEP.ViewModel = "models/weapons/c_irifle.mdl"
+SWEP.WorldModel = "models/weapons/w_irifle.mdl"
 
+SWEP.Primary = istable(SWEP.Primary) and SWEP.Primary or {}
 SWEP.Primary.ClipSize = -1
 SWEP.Primary.DefaultClip = -1
 SWEP.Primary.Automatic = true
 SWEP.Primary.Ammo = "none"
 
+SWEP.Secondary = istable(SWEP.Secondary) and SWEP.Secondary or {}
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
 SWEP.Secondary.Automatic = true
 SWEP.Secondary.Ammo = "none"
 
-SWEP.DrawAmmo = false
-SWEP.AdminOnly = true
-
-game.AddParticles( "particles/hunter_flechette.pcf" )
-game.AddParticles( "particles/hunter_projectile.pcf" )
-
-local ShootSound = Sound( "NPC_Hunter.FlechetteShoot" )
-
-
 function SWEP:Initialize()
-	self:SetHoldType("shotgun")
-	self.HoldType = "smg"
-	self.ShootCount = 0
-end
-
-function SWEP:Deploy()
---	hook.Add("PostDrawTranslucentRenderables", "drawsurface" .. self.EntIndex(), function(writingdepth, sky)
---		for k,v in pairs(self.Surface) do
---			render.DrawLine(v.HitPos, v.HitPos + v.HitNormal * 100, Color(0,255,0,255),false)
---		end
---	end)
-	return true
+	self.WepSelectIcon = surface.GetTextureID("weapons/swep")
 end
 
 function SWEP:Think()
---	if SERVER then return end
---	for k,v in ipairs(self.Surface) do
---		render.DrawLine(v.HitPos, v.HitPos + v.HitNormal * 100, Color(0,255,0,255),false)
---		debugoverlay.Line(v.HitPos, v.HitPos + v.HitNormal * 100, 0.1, Color(0,255,0,255),false)
---	end
+end
+
+--Predicted Hooks
+function SWEP:Deploy()
+	return true
 end
 
 function SWEP:Holster()
-	self.Surface = {}
---	hook.Remove("PostDrawTranslucentRenderables", "drawsurface" .. self.EntIndex())
 	return true
 end
 
@@ -70,22 +56,36 @@ function SWEP:Reload()
 end
 
 function SWEP:PrimaryAttack()
+	if not self:CanPrimaryAttack() then return end
 	self:SetNextPrimaryFire(CurTime() + 0.1)
 	self:EmitSound(ShootSound)
 	self:MuzzleFlash()
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
---	ParticleEffectAttach("hunter_muzzle_flash", PATTACH_POINT_FOLLOW, self, self:LookupAttachment("muzzle"))
+	
+	if IsFirstTimePredicted() then
+		
+	end
 end
 
 function SWEP:SecondaryAttack()
-	self:SetNextSecondaryFire(CurTime() + 0.05)
+	if not self:CanSecondaryAttack() then return end
+	self:SetNextSecondaryFire(CurTime() + 0.5)
+	self:EmitSound(ShootSound)
+	self:MuzzleFlash()
+	self:SendWeaponAnim(ACT_VM_SECONDARYATTACK)
+	
+	if IsFirstTimePredicted() then
+		
+	end
 end
 
-function SWEP:ShouldDropOnDie()
-	return true
-end
 
-if SERVER then return end
+if SERVER then
+	function SWEP:ShouldDropOnDie()
+		return true
+	end
+	return
+end
 
 function SWEP:CalcViewModelView(vm, oldPos, oldAng, pos, ang)
 	local p, a = oldPos, ang
