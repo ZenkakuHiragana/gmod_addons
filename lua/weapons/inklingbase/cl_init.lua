@@ -204,6 +204,11 @@ function SWEP:CreateModels(t)
 			(not IsValid(v.modelEnt) or v.createdModel ~= v.model) and 
 			v.model:find(".mdl") and file.Exists(v.model, "GAME") then
 			
+			if not util.IsValidModel(v.model) then
+				chat.AddText("Splatoon SWEPs: Required model is not found!")
+				continue
+			end
+			
 			v.modelEnt = ClientsideModel(v.model, RENDERGROUP_VIEWMODEL)
 			if IsValid(v.modelEnt) then
 				v.modelEnt.GetInkColorProxy = function()
@@ -251,6 +256,11 @@ function SWEP:CreateModels(t)
 end
 
 function SWEP:Initialize()
+	if not util.IsValidModel(self.SquidModelName) then
+		chat.AddText("Inkling playermodel is not found!")
+		return
+	end
+	
 	--we build a render order because sprites need to be drawn after models
 	self.vRenderOrder = {}
 	self.wRenderOrder = {}
@@ -340,7 +350,7 @@ function SWEP:ViewModelDrawn()
 		if v.hide then continue end
 		if not v.bone then continue end
 		
-		local model, sprite = v.modelEnt, v.spriteMaterial		
+		local model, sprite = v.modelEnt, v.spriteMaterial
 		local pos, ang = self:GetBoneOrientation(self.VElements, v, vm)
 		if not pos then continue end
 		
