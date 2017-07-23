@@ -7,7 +7,7 @@ include "shared.lua"
 util.PrecacheModel(SWEP.SquidModelName)
 
 function SWEP:Initialize()
-	if not util.IsModelLoaded(self.SquidModelName) then
+	if not util.IsValidModel(self.SquidModelName) then
 		self:Remove()
 		return
 	end
