@@ -1,4 +1,6 @@
 
+AddCSLuaFile("sounds.lua")
+
 util.PrecacheSound("entities/nextbot_tracer/vo/and stay down.wav")
 util.PrecacheSound("entities/nextbot_tracer/blink1.wav")
 util.PrecacheSound("entities/nextbot_tracer/blink2.wav")

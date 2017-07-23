@@ -1,5 +1,4 @@
 
-include "../inklingbase/baseinfo.lua"
 include "shared.lua"
 
 --When the weapon is fired, it slightly expands.  This is maximum time to get back to normal size.

@@ -10,7 +10,7 @@ Shift: Squid Beakon menu.
 Crouch: Become squid.
 ]]
 SWEP.Author = "GreatZenkakuMan"
-SWEP.Category = "Splatoon SWEPs!!!"
+SWEP.Category = "Splatoon SWEPs"
 SWEP.Contact = "GitHub repository URL here."
 SWEP.DrawAmmo = false
 SWEP.DrawCrosshair = false

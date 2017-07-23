@@ -14,6 +14,7 @@ list.Set("NPC", "npc_sniper", {
 
 AddCSLuaFile("nextbot_user_base.lua")
 AddCSLuaFile("acts.lua")
+AddCSLuaFile("ainodes.lua")
 include("acts.lua")
 include("ainodes.lua")
 

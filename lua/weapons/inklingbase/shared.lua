@@ -348,7 +348,6 @@ function SWEP:SetupDataTables()
 	self:SetNextHealTime(CurTime())
 	self:SetNextReloadTime(CurTime())
 	self:SetInk(100)
-	self:SetInkColorProxy(vector_origin)
 	self:SetCurrentInkColor(vector_origin)
 	
 	if isfunction(self.CustomDataTables) then self:CustomDataTables() end

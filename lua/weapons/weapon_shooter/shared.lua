@@ -2,10 +2,27 @@
 SWEP.Base = "inklingbase"
 SWEP.PrintName = "Shooter base"
 SWEP.Spawnable = true
+SWEP.FirePosition = Vector(6, -8, -8)
 
 --Serverside: create ink projectile.
 local function paint(self)
+	local p = ents.Create("projectile_ink")
+	local ang = self.Owner:GetAimVector():Angle()
+	local delta_position = Vector(self.FirePosition)
+	delta_position:Rotate(self.Owner:EyeAngles())
+	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
+	p:SetOwner(self.Owner)
+	p:SetPhysicsAttacker(self.Owner)
+	p:SetAngles(ang)
+	p:SetPos(self.Owner:GetShootPos() + delta_position)
+	p.InkColor = self:GetInkColorProxy()
+	p:SetCurrentInkColor(self:GetCurrentInkColor())
+	p.Damage = self.Damage
+	p:Spawn()
 	
+	local ph = p:GetPhysicsObject()
+	if not IsValid(ph) then p:Remove() return end
+	ph:ApplyForceCenter(self.Owner:GetAimVector() * 100000)
 end
 
 function SWEP:CustomDeploy()
