@@ -7,10 +7,6 @@ include "shared.lua"
 util.PrecacheModel(SWEP.SquidModelName)
 
 function SWEP:Initialize()
-	if not util.IsValidModel(self.SquidModelName) then
-		self:Remove()
-		return
-	end
 	self:SetHoldType(self.HoldType)
 	self.MaxSpeed = 250
 	self.ViewAnim = ACT_VM_IDLE
