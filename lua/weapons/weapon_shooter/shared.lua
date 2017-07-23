@@ -4,17 +4,16 @@ local ColorCodes = {
 	Color(255, 128, 0),
 	Color(255, 0, 255),
 	Color(128, 0, 255),
-	Color(0, 0, 255),
+	Color(0, 255, 0),
 	Color(0, 255, 255),
 	Color(0, 0, 255)
 }
+
 SWEP.InklingModel = {
 	Girl = "models/drlilrobot/splatoon/ply/inkling_girl.mdl",
 	Boy = "models/drlilrobot/splatoon/ply/inkling_boy.mdl",
 }
 SWEP.IsSplatoonWeapon = true
-SWEP.Color = ColorCodes[math.random(1, #ColorCodes)]
-SWEP.VectorColor = Vector(SWEP.Color.r / 255, SWEP.Color.g / 255, SWEP.Color.b / 255)
 
 --Model from Enhanced Inklings 
 SWEP.SquidModelName = "models/props_splatoon/squids/squid_beta.mdl"
@@ -107,7 +106,6 @@ function SWEP:Deploy()
 		Color = self.Owner:GetColor(),
 		Flags = self.Owner:GetFlags(),
 		JumpPower = self.Owner:GetJumpPower(),
-		NoDraw = self.Owner:GetNoDraw(),
 		RenderMode = self:GetRenderMode(),
 		Speed = {
 			Crouched = self.Owner:GetCrouchedWalkSpeed(),
@@ -137,15 +135,21 @@ function SWEP:Deploy()
 	self.Owner:SetRunSpeed(self.MaxSpeed)
 	self.Owner:SetWalkSpeed(self.MaxSpeed)
 	
-	self:ChangePlayermodel({
-		Model = self.InklingModel.Girl,
-		Skin = 0,
-		BodyGroups = {},
-		SetOffsets = true,
-		PlayerColor = self.VectorColor,
-	})
+	if SERVER then
+		self.Color = ColorCodes[math.random(1, #ColorCodes)]
+		self.VectorColor = Vector(self.Color.r / 255, self.Color.g / 255, self.Color.b / 255)
+		self:SetInkColorProxy(self.VectorColor)
+		self:SetCurrentInkColor(Vector(self.Color.r, self.Color.g, self.Color.b))
+		
+		self:ChangePlayermodel({
+			Model = self.InklingModel.Girl,
+			Skin = 0,
+			BodyGroups = {},
+			SetOffsets = true,
+			PlayerColor = self.VectorColor,
+		})
+	end
 	
-	self:SetInkColorProxy(self.VectorColor)
 	return true
 end
 
@@ -154,12 +158,13 @@ function SWEP:Holster()
 	if game.SinglePlayer() then self:CallOnClient("Holster") end
 	
 	--Restores owner's information.
-	if istable(self.BackupPlayerInfo) then
+	if SERVER and istable(self.BackupPlayerInfo) then
 		self.Owner:SetColor(self.BackupPlayerInfo.Color)
 	--	self.Owner:RemoveFlags(self.Owner:GetFlags())
 	--	self.Owner:AddFlags(self.BackupPlayerInfo.Flags)
 		self.Owner:SetJumpPower(self.BackupPlayerInfo.JumpPower)
-		self.Owner:SetNoDraw(self.BackupPlayerInfo.NoDraw)
+		self.Owner:DrawShadow(true)
+		self.Owner:SetMaterial("")
 		self.Owner:SetRenderMode(self.BackupPlayerInfo.RenderMode)
 		self.Owner:SetCrouchedWalkSpeed(self.BackupPlayerInfo.Speed.Crouched)
 		self.Owner:SetDuckSpeed(self.BackupPlayerInfo.Speed.Duck)
@@ -206,14 +211,18 @@ function SWEP:Think()
 			self:SetNextReloadTime(CurTime() + delay)
 		end
 		
-		self.Owner:SetNoDraw(issquid)
+		--I don't prevent playermodel from drawing its shadow
+		--because it seems no way to make clientside entity draw its shadow.
+		local material = issquid and "color" or ""
+		self.Owner:SetMaterial(material)
+		self:DrawShadow(not issquid)
 	end
 	
-	if CLIENT then
+	if CLIENT then --Move clientside model to player's position.
 		local a = (self.Owner:GetVelocity() + self.Owner:GetForward() * 40):Angle()
-		if self.Owner:GetVelocity():LengthSqr() < 16 then
+		if self.Owner:GetVelocity():LengthSqr() < 16 then --Speed limit: 
 			a.p = 0
-		elseif a.p > 45 and a.p <= 90 then
+		elseif a.p > 45 and a.p <= 90 then --Angle limit: up and down
 			a.p = 45
 		elseif a.p >= 270 and a.p < 300 then
 			a.p = 300
@@ -226,13 +235,11 @@ function SWEP:Think()
 		
 		self.Squid:SetAngles(a)
 		self.Squid:SetPos(self.Owner:GetPos())
+		--It seems changing eye position doesn't work.
 		self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
 		
+		--Tell DrawWorldModel() to draw squid instead of weapon model.
 		self.Squid.ShouldDraw = issquid and not self.ViewModelFlag
-		if issquid then
-			self.Squid:DrawModel()
-			self.Squid:CreateShadow()
-		end
 	end
 end
 
@@ -274,13 +281,13 @@ function SWEP:SetupDataTables()
 	self:NetworkVar("Float", 0, "NextHealTime") --Owner heals gradually.
 	self:NetworkVar("Float", 1, "NextReloadTime") --Owner recharging ink gradually.
 	self:NetworkVar("Vector", 0, "InkColorProxy") --For material proxy.
-	self:NetworkVar("Vector", 1, "CorrectInkColor")
+	self:NetworkVar("Vector", 1, "CurrentInkColor") --Hex Color code
 	
 	self:SetInInk(false)
 	self:SetNextHealTime(CurTime())
 	self:SetNextReloadTime(CurTime())
-	self:SetInkColorProxy(self.VectorColor)
-	self:SetCorrectInkColor(Vector(self.Color.r, self.Color.g, self.Color.b))
+	self:SetInkColorProxy(vector_origin)
+	self:SetCurrentInkColor(vector_origin)
 	
 	if isfunction(self.CustomDataTables) then self:CustomDataTables() end
 end

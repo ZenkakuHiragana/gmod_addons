@@ -195,7 +195,13 @@ function SWEP:CreateModels(t)
 			
 			v.modelEnt = ClientsideModel(v.model, RENDERGROUP_VIEWMODEL)
 			if IsValid(v.modelEnt) then
-				v.modelEnt.GetInkColorProxy = function() return self:GetInkColorProxy() end
+				v.modelEnt.GetInkColorProxy = function()
+					if IsValid(self) then
+						return self:GetInkColorProxy()
+					else
+						return Vector(1, 1, 1)
+					end
+				end
 				v.modelEnt:SetPos(self:GetPos())
 				v.modelEnt:SetAngles(self:GetAngles())
 				v.modelEnt:SetParent(self)
@@ -291,7 +297,7 @@ function SWEP:Initialize()
 	self.Squid:SetAngles(self:GetAngles())
 	self.Squid:SetNoDraw(true)
 	self.Squid:DrawShadow(false)
-	self.Squid:SetPredictable(true)
+	--self.Squid:SetPredictable(true)
 	self.Squid.GetInkColorProxy = function()
 		if IsValid(self) then
 			return self:GetInkColorProxy()
@@ -299,10 +305,6 @@ function SWEP:Initialize()
 			return Vector(1, 1, 1)
 		end
 	end
-	
-	local color = self:GetCorrectInkColor()
-	self.Color = Color(color.x, color.y, color.z)
-	self.VectorColor = Vector(self.Color.r / 255, self.Color.g / 255, self.Color.b / 255)
 end
 
 function SWEP:ViewModelDrawn()
@@ -396,10 +398,13 @@ function SWEP:ViewModelDrawn()
 end
 
 function SWEP:DrawWorldModel()
-	self:DrawShadow(not self.Owner:GetNoDraw())
-	if self.Owner:GetNoDraw() then return end
 	if self.ShowWorldModel == nil or self.ShowWorldModel then
 		self:DrawModel()
+	end
+	if self.Squid.ShouldDraw then
+		self.Squid:DrawModel()
+		self.Squid:CreateShadow()
+		return
 	end
 	
 	if not self.WElements then return end	
@@ -415,7 +420,8 @@ function SWEP:DrawWorldModel()
 		if not v then self.wRenderOrder = nil break end
 		if v.hide then continue end
 		
-		local pos, ang = self:GetBoneOrientation(self.WElements, v, bone_ent, not v.bone and "ValveBiped.Bip01_R_Hand")
+		local pos, ang = self:GetBoneOrientation(self.WElements, v, bone_ent, 
+							not v.bone and "ValveBiped.Bip01_R_Hand")
 		if not pos then continue end
 		
 		local model, sprite = v.modelEnt, v.spriteMaterial
@@ -484,12 +490,6 @@ function SWEP:DrawWorldModel()
 			v.draw_func( self )
 			cam.End3D2D()
 		end
-	end
-end
-
-function SWEP:DrawHUD()
-	if self.Squid.ShouldDraw then
-		self.Squid:DrawModel()
 	end
 end
 
