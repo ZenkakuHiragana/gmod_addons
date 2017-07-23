@@ -204,7 +204,7 @@ function SWEP:CreateModels(t)
 			(not IsValid(v.modelEnt) or v.createdModel ~= v.model) and 
 			v.model:find(".mdl") and file.Exists(v.model, "GAME") then
 			
-			if not util.IsValidModel(v.model) then
+			if not util.IsModelLoaded(v.model) then
 				chat.AddText("Splatoon SWEPs: Required model is not found!")
 				continue
 			end
@@ -256,7 +256,7 @@ function SWEP:CreateModels(t)
 end
 
 function SWEP:Initialize()
-	if not util.IsValidModel(self.SquidModelName) then
+	if not util.IsModelLoaded(self.SquidModelName) then
 		chat.AddText("Inkling playermodel is not found!")
 		return
 	end
