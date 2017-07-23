@@ -25,6 +25,7 @@ end
 function SWEP:CustomPrimaryAttack(canattack)
 	self:SetAimingDuration(CurTime() + self.Primary.Delay * 5)
 	
+	if SERVER and canattack then
 		self:SetModifyWeaponSize(CurTime()) --Expand weapon model
 		self:SetInk(self:GetInk() - self.Primary.TakeAmmo)
 		paint(self)
