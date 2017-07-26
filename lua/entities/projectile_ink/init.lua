@@ -44,8 +44,10 @@ local function SetupVertices(self, coldata)
 	local surf = {} --Surfaces that are affected by painting
 	local pos, normal = coldata.HitPos, coldata.HitNormal --Just for convenience
 	if SplatoonSWEPs then --This section doesn't search displacements; I must analyze BSP format.
-		for i = 1, #SplatoonSWEPs.Surface do --This section searches all surfaces.  I have to cut some of them.
-			local s = SplatoonSWEPs.Surface[i]
+		local targetsurf = SplatoonSWEPs.Check(pos)
+		for i, s in pairs(targetsurf) do --This section searches all surfaces.  I have to cut some of them.
+			if not istable(s) then continue end
+			if not (s.normal and s.vertices) then continue end
 			--Surfaces that have almost same normal as the given data.
 			if s.normal:Dot(normal) > math.cos(math.rad(inkdegrees)) then
 				for k = 1, 3 do
@@ -62,7 +64,10 @@ local function SetupVertices(self, coldata)
 						if line:Cross(v1):LengthSqr() / line:LengthSqr() < self.InkRadiusSqr then
 							if (v1:Dot(line) < 0 and v2:Dot(line) > 0) or
 								math.min(v2:LengthSqr(), v1:LengthSqr()) < self.InkRadiusSqr then
-								table.insert(surf, s.vertices)
+								table.insert(surf, {
+									s.vertices[1] - s.normal,
+									s.vertices[2] - s.normal,
+									s.vertices[3] - s.normal})
 								break
 							end
 						end
@@ -77,9 +82,9 @@ local function SetupVertices(self, coldata)
 	--	debugoverlay.Line(v[1] + vector_up, v[2] + vector_up, 10, Color(0, 255, 0), true)
 	--	debugoverlay.Line(v[2] + vector_up, v[3] + vector_up, 10, Color(0, 255, 0), true)
 	--	debugoverlay.Line(v[3] + vector_up, v[1] + vector_up, 10, Color(0, 255, 0), true)
-		table.insert(tb, {pos = v[1] - normal * 1, u = math.random(), v = math.random()})
-		table.insert(tb, {pos = v[2] - normal * 1, u = math.random(), v = math.random()})
-		table.insert(tb, {pos = v[3] - normal * 1, u = math.random(), v = math.random()})
+		table.insert(tb, {pos = v[1] - normal * .1, u = math.random(), v = math.random()})
+		table.insert(tb, {pos = v[2] - normal * .1, u = math.random(), v = math.random()})
+		table.insert(tb, {pos = v[3] - normal * .1, u = math.random(), v = math.random()})
 		isempty = false
 	end
 	
@@ -118,13 +123,12 @@ function ENT:Initialize()
 	self:SharedInit()
 	self:SetIsInk(false)
 	self:SetInkColorProxy(self.InkColor or vector_origin)
-	self:SetInkColorProxy(VectorRand())
 	
 	local ph = self:GetPhysicsObject()
 	if not IsValid(ph) then return end
 	ph:SetMaterial("watermelon") --or "flesh"
 	
-	self.InkRadius = 100
+	self.InkRadius = 500
 	self.InkRadiusSqr = self.InkRadius^2
 	
 	if displacementOverlay then
@@ -161,7 +165,7 @@ function ENT:PhysicsCollide(coldata, collider)
 	local snapped = SnapToGrid(coldata.HitPos) - coldata.HitNormal
 	
 	self:SetIsInk(true)
-	self:SetHitPos(snapped)
+	self:SetHitPos(coldata.HitPos)
 	self:SetHitNormal(coldata.HitNormal)
 	self:SetAngles(coldata.HitNormal:Angle())
 	self:DrawShadow(false)
@@ -170,7 +174,7 @@ function ENT:PhysicsCollide(coldata, collider)
 		if not IsValid(self) then return end
 		self:SetMoveType(MOVETYPE_NONE)
 		self:PhysicsInit(SOLID_NONE)
-		self:SetPos(snapped)
+		self:SetPos(coldata.HitPos)
 	end)
 	
 	net.Start("SplatoonSWEPs: Receive vertices info")
