@@ -1,6 +1,5 @@
 
---Code from BSP Snap.
-local chunksize = 512
+--Part of code from BSP Snap.
 local LUMP_VERTEXES		=  3 + 1
 local LUMP_EDGES		= 12 + 1
 local LUMP_SURFEDGES	= 13 + 1
@@ -15,7 +14,10 @@ local Debug = {
 	WriteGeometryInfo = false,
 }
 
-SplatoonSWEPs = { Initialize = function()
+SplatoonSWEPs = {
+ChunkSize = 384,
+Initialize = function()
+	local chunksize = SplatoonSWEPs.ChunkSize
 	local taketime = SysTime()
 	local points = game.GetWorld():GetPhysicsObject()
 	if not IsValid(points) then print("invalid world physics object") return end
@@ -411,10 +413,13 @@ SplatoonSWEPs = { Initialize = function()
 end,
 
 Check = function(point)
-	local x = point.x - point.x % chunksize
-	local y = point.y - point.y % chunksize
-	local z = point.z - point.z % chunksize
---	debugoverlay.Box(Vector(x, y, z), vector_origin, Vector(chunksize, chunksize, chunksize), 5, Color(0,255,0))
+	local x = point.x - point.x % SplatoonSWEPs.ChunkSize
+	local y = point.y - point.y % SplatoonSWEPs.ChunkSize
+	local z = point.z - point.z % SplatoonSWEPs.ChunkSize
+--	debugoverlay.Box(Vector(x, y, z), vector_origin,
+--	Vector(SplatoonSWEPs.ChunkSize, SplatoonSWEPs.ChunkSize, SplatoonSWEPs.ChunkSize), 5, Color(0,255,0))
 	return SplatoonSWEPs.GridSurf[x][y][z]
 end,}
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
+
+include "splatoon_inkmanager.lua"

@@ -29,15 +29,6 @@ local function SnapToGrid(vec)
 	return Vector(x, y, z)
 end
 
---[[SplatoonSWEPs = {
-	Point = {Vector(), Vector(), ...},
-	Grid = {?},
-	Surface = {
-		{vertices = {v1, v2, v3}, normal = Vector(), center = Vector()},
-		...
-	}
-}
-]]
 local inkdegrees = 45
 local circle_polys = 16
 local reference_polys = {}
@@ -50,15 +41,14 @@ for i = 1, circle_polys do
 end
 --reference_polys = {
 --	{Vector(0, 0, 0), Vector(1/2^0.5, 1/2^0.5, 0), Vector(1, 0, 0)},
---	{Vector(0, 0, 0), Vector(0, 1, 0), Vector(1/2^0.5, 1/2^0.5, 0)}
---}
+--	{Vector(0, 0, 0), Vector(0, 1, 0), Vector(1/2^0.5, 1/2^0.5, 0)}}
 for k, v in ipairs(reference_polys) do
 	for i = 1, 3 do
 		v[i] = Vector(0, v[i].x, v[i].y)
 	end
 end
 
-local move_normal_distance = 1
+local move_normal_distance = .1
 local function SetupVertices(self, coldata)
 	local tb = {} --Result vertices table
 	local surf = {} --Surfaces that are affected by painting
@@ -76,8 +66,8 @@ local function SetupVertices(self, coldata)
 					--Surface.Z is near HitPos
 					local v1 = s.vertices[k]
 					local rel1 = v1 - pos
-					local dot1 = normal:Dot(rel1)
-					if dot1 > 0 and dot1 < 10 then
+					local dot1 = s.normal:Dot(rel1)
+					if dot1 > 0 and dot1 < self.InkRadius * math.sin(math.rad(inkdegrees)) then
 						--Vertices is within InkRadius
 						local v2 = s.vertices[i % 3 + 1]
 						local rel2 = v2 - pos
@@ -91,9 +81,6 @@ local function SetupVertices(self, coldata)
 									s.vertices[2] - s.normal * move_normal_distance,
 									s.vertices[3] - s.normal * move_normal_distance
 								})
-					debugoverlay.Line(surf[#surf][1], surf[#surf][2], 6, Color(255,255,0),true)
-					debugoverlay.Line(surf[#surf][2], surf[#surf][3], 6, Color(255,255,0),true)
-					debugoverlay.Line(surf[#surf][3], surf[#surf][1], 6, Color(255,255,0),true)
 								break
 							end
 						end
@@ -109,9 +96,8 @@ local function SetupVertices(self, coldata)
 	local cross1, cross2 = vector_origin, vector_origin
 	local drawable_vertices = {vector_origin, vector_origin, vector_origin}
 	local d_in_ref, ref_in_d = {true, true, true}, false
-	for __, reference in ipairs(reference_polys) do
+	for _, reference in ipairs(reference_polys) do
 		for _, drawable in ipairs(surf) do
-		--	if _ ~= 1 then continue end
 			tb = {}
 			d_in_ref = {true, true, true}
 			for i = 1, 3 do --Look into each line segments
@@ -128,10 +114,9 @@ local function SetupVertices(self, coldata)
 					--Check crossing each other
 					cross1 = v2:Cross(v1).x
 					cross1, cross2 = v2:Cross(k1 - i1).x / cross1, v1:Cross(k1 - i1).x / cross1
-					if cross1 >= 0 and cross1 <= 1 and cross2 >= 0 and cross2 <= 1 then
+					if cross1 >= 0 and cross2 >= 0 and cross1 <= 1 and cross2 <= 1 then
 						intersection = i1 + cross1 * v1
 						table.insert(tb, {pos = intersection, z = intersection.z})
-					debugoverlay.Line(i1 + cross1 * v1, i1 + cross1 * v1 + Vector(1, 0, 0) * 50, 6, Color(0,255,0),true)
 					end
 					--is reference vertex in drawable triangle?
 					if v2:Cross(i1 - k2).x < 0 then
@@ -141,13 +126,10 @@ local function SetupVertices(self, coldata)
 					if v1:Cross(k1 - i2).x >= 0 then
 						d_in_ref[k] = false
 					end
-					debugoverlay.Line(k1, k2, 6, Color(255,255,0),true)
 				end
 				if ref_in_d then
-					debugoverlay.Line(i1, i1 + normal * 50, 6, Color(255,255,255),true)
 					table.insert(tb, {pos = i1, z = i1.z})
 				end
-				debugoverlay.Line(i1, i2, 6, Color(0,255,0),true)
 			end
 			for k, within in ipairs(d_in_ref) do
 				if within then
@@ -159,49 +141,49 @@ local function SetupVertices(self, coldata)
 			local base = Vector(0, 1, 0)
 			for k, v in SortedPairsByMemberValue(tb, "z", true) do
 				if not v1 then
-					v1 = v.pos
-					tb[k].rad = -math.huge
+					v1, tb[k].rad = v.pos, -math.huge
 				else
-					local cos, sin = base:Dot(v.pos - v1), base:Cross(v.pos - v1).x
-					tb[k].rad = math.atan2(sin, cos)
+					v2 = (v.pos - v1):GetNormalized()
+					tb[k].rad = math.atan2(base:Cross(v2).x, base:Dot(v2))
 				end
 			end
 			table.SortByMember(tb, "rad", true)
-			v1, v2 = drawable[1], (drawable[2] - drawable[1]):Cross(drawable[3] - drawable[2]):GetNormalized()
-			tb.plane = {pos = v1, normal = v2}
+			tb.plane = {pos = drawable[1], normal = 
+			(drawable[2] - drawable[1]):Cross(drawable[3] - drawable[2]):GetNormalized()}
 			table.insert(verts, tb)
 		end
 	end
---	PrintTable(verts)
-	--TODO: split into triangles
-	--		get back to world coordinate
+	
+	--split polygons into triangles
+	--get back to world coordinate
 	local tris, tri_prev, tri_prev2, trivector, i = {}, {}, {}, vector_origin, 1
 	local planepos, planenormal = vector_origin, vector_origin
 	for __, poly in ipairs(verts) do
 		if #poly == 0 then continue end
 		planepos = poly.plane.pos
 		planenormal = poly.plane.normal
-	--	PrintTable(poly)
 		i = 1
 		while i <= #poly do
 			trivector = LocalToWorld(poly[i].pos, angle_zero, pos, ang)
 			trivector = trivector - (planenormal:Dot(trivector - planepos) / planenormal:Dot(normal)) * normal
-			debugoverlay.Line(trivector, trivector + normal * 50, 4, Color(0,255,0),true)
+			tb = {pos = trivector,
+				u = math.abs(poly[i].pos.y) / self.InkRadius,
+				v = math.abs(poly[i].pos.z) / self.InkRadius}
 			
 			if i > 3 then
-				tb = {pos = trivector, u = math.random(), v = math.random()}
-				tri_prev = tris[#tris - 2]
-				table.insert(tris, tris[#tris])
-			--	print("poly")
-				v1 = tri_prev.pos - tris[#tris - 1].pos
-				v2 = trivector - tris[#tris - 1].pos
+				i1 = i % 2 == 1 and 1 or 2
+				tri_prev = tris[#tris]
+				tri_prev2 = tris[#tris - i1]
+				table.insert(tris, tri_prev)
+				v1 = tri_prev2.pos - tri_prev.pos
+				v2 = trivector - tri_prev.pos
 				cross1 = v1:Cross(v2)
 				if cross1:Dot(planenormal) >= 0 then
-					table.insert(tris, tri_prev)
+					table.insert(tris, tri_prev2)
 					table.insert(tris, tb)
 				else
 					table.insert(tris, tb)
-					table.insert(tris, tri_prev)
+					table.insert(tris, tri_prev2)
 				end
 				i = i + 1
 			else
@@ -209,19 +191,23 @@ local function SetupVertices(self, coldata)
 				v2 = LocalToWorld(poly[i + 2].pos, angle_zero, pos, ang)
 				v1 = v1 - (planenormal:Dot(v1 - planepos) / planenormal:Dot(normal)) * normal
 				v2 = v2 - (planenormal:Dot(v2 - planepos) / planenormal:Dot(normal)) * normal
-				table.insert(tris, {pos = trivector, u = math.random(), v = math.random()})
+				table.insert(tris, tb)
 				
-				debugoverlay.Line(trivector, v1, 4, Color(0,255,255),true)
-				debugoverlay.Line(trivector, v2, 4, Color(255,255,0),true)
-				debugoverlay.Line(v1, v1 + normal * 50, 4, Color(0,255,0),true)
-				debugoverlay.Line(v2, v2 + normal * 50, 4, Color(255,0,0),true)
 				cross1 = (v1 - trivector):Cross(v2 - trivector)
 				if cross1:Dot(planenormal) >= 0 then
-					table.insert(tris, {pos = v1, u = math.random(), v = math.random()})
-					table.insert(tris, {pos = v2, u = math.random(), v = math.random()})
+					table.insert(tris, {pos = v1,
+						u = math.abs(poly[i + 1].pos.y) / self.InkRadius,
+						v = math.abs(poly[i + 1].pos.z) / self.InkRadius})
+					table.insert(tris, {pos = v2,
+						u = math.abs(poly[i + 2].pos.y) / self.InkRadius,
+						v = math.abs(poly[i + 2].pos.z) / self.InkRadius})
 				else
-					table.insert(tris, {pos = v2, u = math.random(), v = math.random()})
-					table.insert(tris, {pos = v1, u = math.random(), v = math.random()})
+					table.insert(tris, {pos = v2,
+						u = math.abs(poly[i + 2].pos.y) / self.InkRadius,
+						v = math.abs(poly[i + 2].pos.z) / self.InkRadius})
+					table.insert(tris, {pos = v1,
+						u = math.abs(poly[i + 1].pos.y) / self.InkRadius,
+						v = math.abs(poly[i + 1].pos.z) / self.InkRadius})
 				end
 				i = i + 3
 			end
@@ -229,13 +215,13 @@ local function SetupVertices(self, coldata)
 	end
 	
 --	print("triangles: " .. #tris / 3)
-	for i = 1, 2, 3 do
-		if i + 2 <= #tris then
-			debugoverlay.Line(tris[i].pos, tris[i + 1].pos, 4, Color(0,0,255),true)
-			debugoverlay.Line(tris[i + 1].pos, tris[i + 2].pos, 4, Color(0,0,255),true)
-			debugoverlay.Line(tris[i + 2].pos, tris[i].pos, 4, Color(0,0,255),true)
-		end
-	end
+--	for i = 1, 2, 3 do
+--		if i + 2 <= #tris then
+--			debugoverlay.Line(tris[i].pos, tris[i + 1].pos, 4, Color(0,0,255),true)
+--			debugoverlay.Line(tris[i + 1].pos, tris[i + 2].pos, 4, Color(0,0,255),true)
+--			debugoverlay.Line(tris[i + 2].pos, tris[i].pos, 4, Color(0,0,255),true)
+--		end
+--	end
 	return tris
 end
 
@@ -255,7 +241,7 @@ function ENT:Initialize()
 	if not IsValid(ph) then return end
 	ph:SetMaterial("watermelon") --or "flesh"
 	
-	self.InkRadius = 50
+	self.InkRadius = math.random(60, 100)
 	self.InkRadiusSqr = self.InkRadius^2
 	
 	if displacementOverlay then
@@ -288,7 +274,10 @@ function ENT:Initialize()
 end
 
 function ENT:PhysicsCollide(coldata, collider)
-	if coldata.HitSky then self:Remove() return end
+	if util.QuickTrace(coldata.HitPos, coldata.HitNormal, self).HitSky then
+		SafeRemoveEntityDelayed(self, 0)
+		return
+	end
 	local snapped = SnapToGrid(coldata.HitPos) - coldata.HitNormal
 	
 	self:SetIsInk(true)
@@ -310,36 +299,8 @@ function ENT:PhysicsCollide(coldata, collider)
 	net.Broadcast()
 end
 
-function ENT:OnRemove()
-	if IsValid(self.proj) then self.proj:Remove() end
-end
-
 function ENT:Think()
 	if Entity(1):KeyDown(IN_ATTACK2) then
 		self:Remove()
 	end
 end
-
--- Spawning env_sprite_oriented
--- local ang = coldata.HitNormal:Angle()
--- ang:Normalize()
--- local p = ents.Create("env_sprite_oriented")
--- p:SetPos(coldata.HitPos)
--- p:SetAngles(ang)
--- p:SetParent(self)
--- local color = self:GetCurrentInkColor()
--- color = Color(color.x, color.y, color.z)
--- p:SetColor(color)
--- p:SetLocalPos(vector_origin)
--- p:SetLocalAngles(angle_zero)
-
--- local c, b = self:GetCurrentInkColor(), 8
--- p:Input("rendercolor", Format("%i %i %i 255", c.r * b, c.g * b, c.b * b ))
--- ang.p = -ang.p
--- p:SetKeyValue("angles", tostring(ang))
--- p:SetKeyValue("rendermode", "1")
--- p:SetKeyValue("model", "sprites/splatoonink.vmt")
--- p:SetKeyValue("spawnflags", "1")
--- p:SetKeyValue("scale", "0.125")
-
--- p:Spawn()
