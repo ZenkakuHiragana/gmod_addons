@@ -39,23 +39,32 @@ end
 }
 ]]
 local inkdegrees = 45
-local circle_polys = 8
+local circle_polys = 16
 local reference_polys = {}
 local reference_vert = Vector(1, 0, 0)
 local referense_vert45 = Vector(1, 0, 0)
 for i = 1, circle_polys do
 	referense_vert45:Rotate(Angle(0, 360 / circle_polys, 0))
-	table.insert(reference_polys, {Vector(0, 0, 0), referense_vert45, reference_vert})
+	table.insert(reference_polys, {Vector(0, 0, 0), Vector(referense_vert45), Vector(reference_vert)})
 	reference_vert:Rotate(Angle(0, 360 / circle_polys, 0))
 end
+--reference_polys = {
+--	{Vector(0, 0, 0), Vector(1/2^0.5, 1/2^0.5, 0), Vector(1, 0, 0)},
+--	{Vector(0, 0, 0), Vector(0, 1, 0), Vector(1/2^0.5, 1/2^0.5, 0)}
+--}
+for k, v in ipairs(reference_polys) do
+	for i = 1, 3 do
+		v[i] = Vector(0, v[i].x, v[i].y)
+	end
+end
 
-reference_polys = {{Vector(0, 0, 0), Vector(1/2^0.5, 1/2^0.5, 0), Vector(1, 0, 0)}}
-
-local move_normal_distance = 0.8
+local move_normal_distance = 1
 local function SetupVertices(self, coldata)
 	local tb = {} --Result vertices table
 	local surf = {} --Surfaces that are affected by painting
 	local pos, normal = coldata.HitPos, coldata.HitNormal --Just for convenience
+	local ang = normal:Angle()
+	ang:RotateAroundAxis(normal, -self.Owner:EyeAngles().yaw + 180)
 	if SplatoonSWEPs then --This section doesn't search displacements; I must analyze BSP format.
 		local targetsurf = SplatoonSWEPs.Check(pos)
 		for i, s in pairs(targetsurf) do --This section searches all surfaces.  I have to cut some of them.
@@ -68,13 +77,13 @@ local function SetupVertices(self, coldata)
 					local v1 = s.vertices[k]
 					local rel1 = v1 - pos
 					local dot1 = normal:Dot(rel1)
-					if dot1 > 0 and dot1 < self.InkRadius * math.cos(math.rad(inkdegrees)) then
+					if dot1 > 0 and dot1 < 10 then
 						--Vertices is within InkRadius
 						local v2 = s.vertices[i % 3 + 1]
 						local rel2 = v2 - pos
 						local line = v2 - v1 --now v1 and v2 are relative vector
 						v1, v2 = rel1 - normal * dot1, rel2 - normal * normal:Dot(rel2)
-						if line:Cross(v1):LengthSqr() / line:LengthSqr() < self.InkRadiusSqr then
+						if line:GetNormalized():Cross(v1):Dot(normal) < self.InkRadius then
 							if (v1:Dot(line) < 0 and v2:Dot(line) > 0) or
 								math.min(v2:LengthSqr(), v1:LengthSqr()) < self.InkRadiusSqr then
 								table.insert(surf, {
@@ -82,6 +91,9 @@ local function SetupVertices(self, coldata)
 									s.vertices[2] - s.normal * move_normal_distance,
 									s.vertices[3] - s.normal * move_normal_distance
 								})
+					debugoverlay.Line(surf[#surf][1], surf[#surf][2], 6, Color(255,255,0),true)
+					debugoverlay.Line(surf[#surf][2], surf[#surf][3], 6, Color(255,255,0),true)
+					debugoverlay.Line(surf[#surf][3], surf[#surf][1], 6, Color(255,255,0),true)
 								break
 							end
 						end
@@ -93,80 +105,135 @@ local function SetupVertices(self, coldata)
 	
 	local verts = {} --Vertices for polygon that we attempt to draw
 	local i1, i2, k1, k2 = vector_origin, vector_origin, vector_origin, vector_origin
-	local v1, v2 = vector_origin, vector_origin
+	local v1, v2, intersection = vector_origin, vector_origin, vector_origin
 	local cross1, cross2 = vector_origin, vector_origin
 	local drawable_vertices = {vector_origin, vector_origin, vector_origin}
-	local base, intersection, cos, sin = Vector(1, 0, 0), vector_origin, 0, 0
 	local d_in_ref, ref_in_d = {true, true, true}, false
-	for _, reference in ipairs(reference_polys) do
+	for __, reference in ipairs(reference_polys) do
 		for _, drawable in ipairs(surf) do
-			v1, v2 = WorldToLocal(drawable[1], angle_zero, pos, normal:Angle()),
-			WorldToLocal(drawable[1]:Cross(drawable[2]), angle_zero, pos, normal:Angle())
-			table.insert(verts, {plane = {pos = v1, normal = v2}})
+		--	if _ ~= 1 then continue end
+			tb = {}
 			d_in_ref = {true, true, true}
 			for i = 1, 3 do --Look into each line segments
 				ref_in_d = true
-				i1 = WorldToLocal(reference[i], angle_zero, pos, normal:Angle())
-				i2 = WorldToLocal(reference[i % 3 + 1], angle_zero, pos, normal:Angle())
-				i1, i2 = Vector(i1.y, i1.z, 0), Vector(i2.y, i2.z, 0)
+				i1 = reference[i] * self.InkRadius
+				i2 = reference[i % 3 + 1] * self.InkRadius
+				drawable_vertices = {vector_origin, vector_origin, vector_origin}
 				for k = 1, 3 do
-					k1 = WorldToLocal(drawable[k], angle_zero, pos, normal:Angle())
-					k2 = WorldToLocal(drawable[k % 3 + 1], angle_zero, pos, normal:Angle())
-					k1, k2 = Vector(k1.y, k1.z, 0), Vector(k2.y, k2.z, 0)
+					k1 = WorldToLocal(drawable[k], angle_zero, pos, ang)
+					k2 = WorldToLocal(drawable[k % 3 + 1], angle_zero, pos, ang)
+					k1, k2 = Vector(0, k1.y, k1.z), Vector(0, k2.y, k2.z)
 					v1, v2 = i2 - i1, k2 - k1
 					drawable_vertices[k] = k1
 					--Check crossing each other
-					cross1, cross2 = v1:Cross(k1 - i1).z / v2:Cross(v1).z, v2:Cross(k1 - i1).z / v1:Cross(v2).z
-					if cross1 > 0 and cross1 <= 1 and cross2 > 0 and cross2 <= 1 then
+					cross1 = v2:Cross(v1).x
+					cross1, cross2 = v2:Cross(k1 - i1).x / cross1, v1:Cross(k1 - i1).x / cross1
+					if cross1 >= 0 and cross1 <= 1 and cross2 >= 0 and cross2 <= 1 then
 						intersection = i1 + cross1 * v1
-						cos = intersection:GetNormalized():Dot(base)
-						sin = intersection:GetNormalized():Cross(base).z
-						table.insert(verts[#verts], {pos = intersection, rad = math.atan(sin/cos)})
+						table.insert(tb, {pos = intersection, z = intersection.z})
+					debugoverlay.Line(i1 + cross1 * v1, i1 + cross1 * v1 + Vector(1, 0, 0) * 50, 6, Color(0,255,0),true)
 					end
 					--is reference vertex in drawable triangle?
-					if v1:Cross(i1 - k1).z > 0 then
+					if v2:Cross(i1 - k2).x < 0 then
 						ref_in_d = false
 					end
 					--is drawable vertex in reference triangle?
-					if v2:Cross(k1 - i1).z > 0 then
+					if v1:Cross(k1 - i2).x >= 0 then
 						d_in_ref[k] = false
 					end
+					debugoverlay.Line(k1, k2, 6, Color(255,255,0),true)
 				end
 				if ref_in_d then
-					cos = i1:GetNormalized():Dot(base)
-					sin = i1:GetNormalized():Cross(base).z
-					table.insert(verts[#verts], {pos = i1, rad = math.atan(sin/cos)})
+					debugoverlay.Line(i1, i1 + normal * 50, 6, Color(255,255,255),true)
+					table.insert(tb, {pos = i1, z = i1.z})
 				end
+				debugoverlay.Line(i1, i2, 6, Color(0,255,0),true)
 			end
 			for k, within in ipairs(d_in_ref) do
 				if within then
-					cos = drawable_vertices[k]:GetNormalized():Dot(base)
-					sin = drawable_vertices[k]:GetNormalized():Cross(base).z
-					table.insert(verts[#verts], {pos = drawable_vertices[k], rad = math.atan(sin/cos)})
+					table.insert(tb, {pos = drawable_vertices[k], z = drawable_vertices[k].z})
 				end
+			end
+			
+			v1 = nil
+			local base = Vector(0, 1, 0)
+			for k, v in SortedPairsByMemberValue(tb, "z", true) do
+				if not v1 then
+					v1 = v.pos
+					tb[k].rad = -math.huge
+				else
+					local cos, sin = base:Dot(v.pos - v1), base:Cross(v.pos - v1).x
+					tb[k].rad = math.atan2(sin, cos)
+				end
+			end
+			table.SortByMember(tb, "rad", true)
+			v1, v2 = drawable[1], (drawable[2] - drawable[1]):Cross(drawable[3] - drawable[2]):GetNormalized()
+			tb.plane = {pos = v1, normal = v2}
+			table.insert(verts, tb)
+		end
+	end
+--	PrintTable(verts)
+	--TODO: split into triangles
+	--		get back to world coordinate
+	local tris, tri_prev, tri_prev2, trivector, i = {}, {}, {}, vector_origin, 1
+	local planepos, planenormal = vector_origin, vector_origin
+	for __, poly in ipairs(verts) do
+		if #poly == 0 then continue end
+		planepos = poly.plane.pos
+		planenormal = poly.plane.normal
+	--	PrintTable(poly)
+		i = 1
+		while i <= #poly do
+			trivector = LocalToWorld(poly[i].pos, angle_zero, pos, ang)
+			trivector = trivector - (planenormal:Dot(trivector - planepos) / planenormal:Dot(normal)) * normal
+			debugoverlay.Line(trivector, trivector + normal * 50, 4, Color(0,255,0),true)
+			
+			if i > 3 then
+				tb = {pos = trivector, u = math.random(), v = math.random()}
+				tri_prev = tris[#tris - 2]
+				table.insert(tris, tris[#tris])
+			--	print("poly")
+				v1 = tri_prev.pos - tris[#tris - 1].pos
+				v2 = trivector - tris[#tris - 1].pos
+				cross1 = v1:Cross(v2)
+				if cross1:Dot(planenormal) >= 0 then
+					table.insert(tris, tri_prev)
+					table.insert(tris, tb)
+				else
+					table.insert(tris, tb)
+					table.insert(tris, tri_prev)
+				end
+				i = i + 1
+			else
+				v1 = LocalToWorld(poly[i + 1].pos, angle_zero, pos, ang)
+				v2 = LocalToWorld(poly[i + 2].pos, angle_zero, pos, ang)
+				v1 = v1 - (planenormal:Dot(v1 - planepos) / planenormal:Dot(normal)) * normal
+				v2 = v2 - (planenormal:Dot(v2 - planepos) / planenormal:Dot(normal)) * normal
+				table.insert(tris, {pos = trivector, u = math.random(), v = math.random()})
+				
+				debugoverlay.Line(trivector, v1, 4, Color(0,255,255),true)
+				debugoverlay.Line(trivector, v2, 4, Color(255,255,0),true)
+				debugoverlay.Line(v1, v1 + normal * 50, 4, Color(0,255,0),true)
+				debugoverlay.Line(v2, v2 + normal * 50, 4, Color(255,0,0),true)
+				cross1 = (v1 - trivector):Cross(v2 - trivector)
+				if cross1:Dot(planenormal) >= 0 then
+					table.insert(tris, {pos = v1, u = math.random(), v = math.random()})
+					table.insert(tris, {pos = v2, u = math.random(), v = math.random()})
+				else
+					table.insert(tris, {pos = v2, u = math.random(), v = math.random()})
+					table.insert(tris, {pos = v1, u = math.random(), v = math.random()})
+				end
+				i = i + 3
 			end
 		end
 	end
 	
-	--TODO: split into triangles
-	--		get back to world coordinate
-	local tris, tricount, trivectors = {}, 1. {}
-	local planepos, planenormal = vector_origin, vector_origin
-	for _, poly in ipairs(verts) do
-		planepos = poly.plane.pos
-		planenormal = poly.plane.normal
-		for i, v in SortedPairsByMemberValue(poly, "rad", true) do
-			v.pos = Vector(0, v.pos.x, v.pos.y)
-			v.pos = LocalToWorld(v.pos, normal:Angle(), vector_origin, angle_zero)
-			v.pos = v.pos - (planenormal:Dot(v.pos - planepos) / planenormal:Dot(normal)) * normal
-			
-			table.insert(tris, {pos = v.pos, u = math.random(), v = math.random())
-			tricount = tricount + 1
-			if (tricount - 1) % 3 == 0 then
-				table.insert(tris, tris[1])
-				table.insert(tris, tris[#tris])
-				tricount = tricount + 2
-			end
+--	print("triangles: " .. #tris / 3)
+	for i = 1, 2, 3 do
+		if i + 2 <= #tris then
+			debugoverlay.Line(tris[i].pos, tris[i + 1].pos, 4, Color(0,0,255),true)
+			debugoverlay.Line(tris[i + 1].pos, tris[i + 2].pos, 4, Color(0,0,255),true)
+			debugoverlay.Line(tris[i + 2].pos, tris[i].pos, 4, Color(0,0,255),true)
 		end
 	end
 	return tris
@@ -188,7 +255,7 @@ function ENT:Initialize()
 	if not IsValid(ph) then return end
 	ph:SetMaterial("watermelon") --or "flesh"
 	
-	self.InkRadius = 500
+	self.InkRadius = 50
 	self.InkRadiusSqr = self.InkRadius^2
 	
 	if displacementOverlay then

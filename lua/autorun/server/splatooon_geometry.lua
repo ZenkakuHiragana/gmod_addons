@@ -1,6 +1,6 @@
 
 --Code from BSP Snap.
-local chunksize = 250
+local chunksize = 512
 local LUMP_VERTEXES		=  3 + 1
 local LUMP_EDGES		= 12 + 1
 local LUMP_SURFEDGES	= 13 + 1
@@ -17,7 +17,9 @@ local Debug = {
 
 SplatoonSWEPs = { Initialize = function()
 	local taketime = SysTime()
-	local points = Entity(0):GetPhysicsObject():GetMesh()
+	local points = game.GetWorld():GetPhysicsObject()
+	if not IsValid(points) then print("invalid world physics object") return end
+	points = points:GetMesh()
 	local surf = {} --Get triangles of the map, except displacements
 	for i = 1, #points, 3 do
 		local vert = {points[i].pos, points[i + 1].pos, points[i + 2].pos}
@@ -416,4 +418,3 @@ Check = function(point)
 	return SplatoonSWEPs.GridSurf[x][y][z]
 end,}
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
-SplatoonSWEPs.Initialize()

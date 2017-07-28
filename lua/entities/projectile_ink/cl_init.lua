@@ -8,6 +8,8 @@ net.Receive("SplatoonSWEPs: Receive vertices info", function(len, ply)
 	self.Vertices = vert
 end)
 
+local sqr = Material("sprites/splatoonink.vmt")
+local dbg = Material("debug/debugdecalwireframe")
 function ENT:Initialize()
 	if not util.IsValidModel(self.FlyingModel) then
 		chat.AddText("Splatoon SWEPs: Can't spawn ink!  Required model is not found!")
@@ -15,14 +17,24 @@ function ENT:Initialize()
 	end
 	
 	self:SharedInit()
-	self:SetInkColorProxy(VectorRand())
-	self.IMaterial = Material("sprites/splatoonink.vmt")
+--	self:SetInkColorProxy(VectorRand())
+	self.IMaterial = sqr
 	self.IMaterial:SetVector("$color", self:GetInkColorProxy())
 end
 
 function ENT:OnRemove()
 	if IsValid(self.pr) then self.pr:Remove() end
 	if self.IMesh then self.IMesh:Destroy() end
+end
+
+function ENT:Think()
+	if LocalPlayer():KeyDown(IN_USE) then
+		if self.IMaterial == sqr then
+			self.IMaterial = dbg
+		else
+			self.IMaterial = sqr
+		end
+	end
 end
 
 function ENT:Draw()

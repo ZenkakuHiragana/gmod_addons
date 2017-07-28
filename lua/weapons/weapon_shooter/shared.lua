@@ -7,6 +7,7 @@ SWEP.FirePosition = Vector(6, -8, -8)
 --Serverside: create ink projectile.
 local function paint(self)
 	local p = ents.Create("projectile_ink")
+	if not IsValid(p) then return end
 	local ang = self.Owner:GetAimVector():Angle()
 	local delta_position = Vector(self.FirePosition)
 	delta_position:Rotate(self.Owner:EyeAngles())
