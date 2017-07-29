@@ -337,7 +337,7 @@ Initialize = function()
 			--		debugoverlay.Line(v1 + vector_up, v2 + vector_up, 10, Color(0, 255, 0), true)
 			--		debugoverlay.Box(a, vector_origin, chunkbound, 5, Color(0,255,0))
 			--	end
-				if not table.HasValue(g, s) then
+				if not g[s] then
 				--	local plane = {a + chunkbound, a}
 				--	local hit = v1:WithinAABox(a, a + chunkbound)
 				--				or v2:WithinAABox(a, a + chunkbound)
@@ -366,7 +366,7 @@ Initialize = function()
 				--	end
 					
 				--	if hit then
-						table.insert(g, s)
+						g[s] = true
 				--	end
 				end
 			end
@@ -406,6 +406,7 @@ Initialize = function()
 --		end
 --	end
 	
+	SplatoonSWEPs.MapSize = mapsize
 	SplatoonSWEPs.GridSurf = grid
 	if Debug.TakeTime then
 		print("SplatoonSWEPs: Finished parsing map vertices, with " .. SysTime() - taketime .. " seconds!")

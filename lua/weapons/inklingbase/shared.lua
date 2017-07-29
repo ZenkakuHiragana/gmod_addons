@@ -270,8 +270,9 @@ function SWEP:Think()
 	end
 	
 	if CLIENT then --Move clientside model to player's position.
-		local a = (self.Owner:GetVelocity() + self.Owner:GetForward() * 40):Angle()
-		if self.Owner:GetVelocity():LengthSqr() < 16 then --Speed limit: 
+		local v = self.Owner:GetVelocity()
+		local a = (v + self.Owner:GetForward() * 40):Angle()
+		if v:LengthSqr() < 16 then --Speed limit: 
 			a.p = 0
 		elseif a.p > 45 and a.p <= 90 then --Angle limit: up and down
 			a.p = 45
@@ -315,7 +316,9 @@ function SWEP:CommonFire(isprimary)
 	
 	local rnda = Weapon.Recoil * -1
 	local rndb = Weapon.Recoil * math.Rand(-1, 1)
-	self.Owner:ViewPunch(Angle( rnda,rndb,rnda )) --Apply viewmodel punch
+	if IsValid(self.Owner) then
+		self.Owner:ViewPunch(Angle(rnda,rndb,rnda)) --Apply viewmodel punch
+	end
 	return true
 end
 

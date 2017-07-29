@@ -16,29 +16,38 @@ function ENT:Initialize()
 	
 	self:SharedInit()
 --	self:SetInkColorProxy(VectorRand())
-	self.IMaterial = Material("sprites/splatoonink.vmt")
-	self.IMaterial:SetVector("$color", self:GetInkColorProxy())
+--	self.IMaterial = Material("sprites/splatoonink.vmt")
+--	self.IMaterial:SetVector("$color", self:GetInkColorProxy())
 end
 
 function ENT:OnRemove()
-	if IsValid(self.pr) then self.pr:Remove() end
 	if self.IMesh then self.IMesh:Destroy() end
+end
+
+function ENT:Think()
+	if LocalPlayer():KeyDown(IN_USE) then
+		ClearInk()
+	end
 end
 
 function ENT:Draw()
 	if self:GetIsInk() then
-		if not self.IMesh then
-			if self.Vertices then
-				self.IMesh = Mesh()
-				self.IMesh:BuildFromTriangles(self.Vertices)
-			end
-		else
+	--	if not self.IMesh then
+	--		if self.Vertices then
+	--			self.IMesh = Mesh()
+	--			self.IMesh:BuildFromTriangles(self.Vertices)
+	--		end
+	--	else
 		--	debugoverlay.Line(self:GetPos(), self:GetPos() + Vector(0, 0, 200), 0.1, Color(0,255,0),true)
-			render.SetMaterial(self.IMaterial)
-			self.IMesh:Draw()
+		--	render.SetMaterial(self.IMaterial)
+		--	self.IMesh:Draw()
 		--	mat:SetVector("$color", Vector(1, 1, 1))
 		--	self:DrawModel()
-		end
+			
+		--	if not AABBAABB and self.Vertices then
+		--		AABBAABB = self.Vertices
+		--	end
+	--	end
 	else
 		self:DrawModel()
 	end

@@ -51,8 +51,8 @@ SWEP.WElements = {
 		model = "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl",
 		bone = "ValveBiped.Bip01_Spine4",
 		rel = "",
-		pos = Vector(-20, 4, 0),
-		angle = Angle(0, 80, 90),
+		pos = Vector(-20, 3, 0),
+		angle = Angle(0, 75, 90),
 		size = Vector(1, 1, 1),
 		color = Color(255, 255, 255, 255),
 		surpresslightning = false,
@@ -60,7 +60,21 @@ SWEP.WElements = {
 		skin = 0,
 		bodygroup = {},
 		inktank = true
-	}
+	},
+	["subweaponusable"] = {
+		type = "Sprite",
+		sprite = "sprites/flare1",
+		bone = "ValveBiped.Bip01_Spine4",
+		rel = "inktank",
+		pos = Vector(0, 0, 25.5),
+		size = {x = 12, y = 12},
+		color = Color(255, 255, 255, 255),
+		nocull = true,
+		additive = true,
+		vertexalpha = true,
+		vertexcolor = true,
+		ignorez = false
+	},
 }
 
 --Fully copies the table, meaning all tables inside this table are copied too and so on
@@ -305,6 +319,7 @@ function SWEP:Initialize()
 	self.ViewAnim = ACT_VM_IDLE
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:SetInk(100)
+	self.JustUsableTime = CurTime() - 1 --For animation of ink tank light
 	
 	self.Squid = ClientsideModel(self.SquidModelName, RENDERGROUP_BOTH)
 	self.Squid:SetPos(self:GetPos())
@@ -422,11 +437,13 @@ function SWEP:DrawWorldModel()
 	if self.ShowWorldModel == nil or self.ShowWorldModel then
 		self:DrawModel()
 	end
-	if self.Owner:Crouching() then
+	if IsValid(self.Owner) and self.Owner:Crouching() then
 		if not self:GetInInk() then
 			self.Squid:DrawModel()
+			self.Squid:DrawShadow(true)
 			self.Squid:CreateShadow()
 		end
+		self.JustUsableTime = CurTime() - 1
 		return
 	end
 	
@@ -440,6 +457,17 @@ function SWEP:DrawWorldModel()
 	for k, name in pairs(self.wRenderOrder) do
 		local v = self.WElements[name]
 		if not v then self.wRenderOrder = nil break end
+		if name == "subweaponusable" then
+			if v.hide and self:GetInk() >= 100 * self.Secondary.TakeAmmo and
+				self:GetInk() < 100 * self.Secondary.TakeAmmo + 1 then
+				self.JustUsableTime = CurTime()
+			end
+			v.hide = self:GetInk() < 100 * self.Secondary.TakeAmmo
+			
+			local fraction = math.Clamp(self.JustUsableTime + 0.15 - CurTime(), 0, 0.15)
+			local size = -1600 * (fraction - 0.075)^2 + 20
+			v.size = {x = size, y = size}
+		end
 		if v.hide then continue end
 		
 		local pos, ang = self:GetBoneOrientation(self.WElements, v, bone_ent, 
