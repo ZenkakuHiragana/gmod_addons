@@ -13,23 +13,31 @@ local WaterOverwrap = Material("splatoon/splatoonwater.vmt")
 local IMesh = {}
 local Triangles = {}
 local Dummies = {}
+
+local Receiving = {}
 net.Receive("SplatoonSWEPs: Broadcast ink vertices", function(len, ply)
 	local m = net.ReadTable()
+	table.insert(Receiving, m)
+end)
+
+net.Receive("SplatoonSWEPs: Finalize ink refreshment", function(len, ply)
 	local color = net.ReadVector()
 	local org = net.ReadVector()
 	local normal = net.ReadVector()
 	local imesh = Mesh()
-	local dummy = ClientsideModel("error.mdl")
+	local dummy = ClientsideModel("models/error.mdl")
 	dummy:SetModelScale(0)
-	imesh:BuildFromTriangles(m)
-	table.Add(IMesh, {{imesh = imesh, color = color, pos = org, normal = -normal}})
-	table.Add(Triangles, {m})
-	table.Add(Dummies, {dummy})
+	imesh:BuildFromTriangles(Receiving)
+	table.insert(IMesh, {imesh = imesh, color = color, pos = org, normal = -normal})
+	table.insert(Triangles, Receiving)
+	table.insert(Dummies, dummy)
+	
+	Receiving = {}
 end)
 
 function ClearInk()
 	for i, e in ipairs(Dummies) do e:Remove() end
-	IMesh, Triangles, Dummies = {}, {}, {}
+	Receiving, IMesh, Triangles, Dummies = {}, {}, {}, {}
 end
 
 local function DrawMeshes()

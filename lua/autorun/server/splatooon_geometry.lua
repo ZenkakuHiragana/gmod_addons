@@ -313,25 +313,27 @@ Initialize = function()
 			local dir = v2 - v1
 			local x1, y1, z1 = v1.x - v1.x % chunksize, v1.y - v1.y % chunksize, v1.z - v1.z % chunksize
 			local x2, y2, z2 = v2.x - v2.x % chunksize, v2.y - v2.y % chunksize, v2.z - v2.z % chunksize
-			local addlist = {x = {}, y = {}, z = {}}
+			local gx, gy, gz = {}, {}, {}
+			local addlist = {}
 			if x1 > x2 then x1, x2 = x2, x1 end
 			if y1 > y2 then y1, y2 = y2, y1 end
 			if z1 > z2 then z1, z2 = z2, z1 end
-			for x = x1, x2, chunksize do table.insert(addlist.x, x - x % chunksize) end
-			for y = y1, y2, chunksize do table.insert(addlist.y, y - y % chunksize) end
-			for z = z1, z2, chunksize do table.insert(addlist.z, z - z % chunksize) end
-			for _, x in ipairs(addlist.x) do
-				for _, y in ipairs(addlist.y) do
-					for _, z in ipairs(addlist.z) do
-						table.insert(addlist, Vector(x, y, z))
+			for x = x1, x2, chunksize do gx[x - x % chunksize] = true end
+			for y = y1, y2, chunksize do gy[y - y % chunksize] = true end
+			for z = z1, z2, chunksize do gz[z - z % chunksize] = true end
+			for x in pairs(gx) do
+				for y in pairs(gy) do
+					for z in pairs(gz) do
+						addlist[Vector(x, y, z)] = true
 					end
 				end
 			end
+			gz, gy, gz = {}, {}, {}
 			
 			 --I couldn't handle collision detection between AABB and line segment
 			local g --So I'll just add surfaces to all suggested grids
-			local d1, d2 = 0, 0
-			for _, a in ipairs(addlist) do
+		--	local d1, d2 = 0, 0
+			for a in pairs(addlist) do
 				g = grid[a.x][a.y][a.z]
 			--	if k == 9763 then
 			--		debugoverlay.Line(v1 + vector_up, v2 + vector_up, 10, Color(0, 255, 0), true)

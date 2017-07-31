@@ -110,4 +110,7 @@ function ENT:Think()
 	if Entity(1):KeyDown(IN_ATTACK2) then
 		self:Remove()
 	end
+	if Entity(1):KeyDown(IN_USE) then
+		ClearInk()
+	end
 end
