@@ -7,14 +7,14 @@ local function CheckCross(queue, intersections, segs, seg1, seg2)
 	local ds = s2[1] - s1[1]
 	local v1, v2 = s1[2] - s1[1], s2[2] - s2[1]
 	local cross, cross1, cross2 = v2:Cross(v1).x, 0, 0
-	crossA = v2:Cross(ds).x / cross
-	crossB = v1:Cross(ds).x / cross
+	crossA, crossB = v2:Cross(ds).x / cross, v1:Cross(ds).x / cross
 	if crossA >= 0 and crossA <= 1 and crossB >= 0 and crossB <= 1 then
-		intersection = s2[1] + crossB * v2
+		intersection = s2[1] + crossB * v2 --closed line segment so we use >= and <=
 	end
 	
+	--make sure it is new intersection point
 	if intersection and (q.y > intersection.y or (q.y == intersection.y and q.z > intersection.z)) then
-		if s1[1].y > s2[1].y then
+		if s1[1].y > s2[1].y then --sort to make seg1 be left
 			seg1, seg2 = seg2, seg1
 		end
 		intersection = {
@@ -26,7 +26,7 @@ local function CheckCross(queue, intersections, segs, seg1, seg2)
 			seg2 = seg2,
 		}
 		table.insert(queue, intersection)
-		table.insert(intersections, intersection.pos)
+		table.insert(intersections, intersection.pos) --result table
 	end
 end
 
@@ -47,11 +47,11 @@ local function GetIntersections(__Segments)
 	local eventlist, queue, status = {}, {}, {}
 	local segments = {}
 	local start, endpos = vector_origin, vector_origin
-	for i = 1, #__Segments, 2 do
+	for i = 1, #__Segments, 2 do --set up data structures
 		if not __Segments[i + 1] then break end
 		start, endpos = __Segments[i], __Segments[i + 1]
 		if start.y > endpos.y or (start.y == endpos.y and start.z > endpos.z) then
-			start, endpos = endpos, start
+			start, endpos = endpos, start --make sure start.y < end.y and start.z < end.z
 		end
 		
 		table.insert(segments, {
@@ -63,7 +63,7 @@ local function GetIntersections(__Segments)
 			y = start.y,
 			z = start.z,
 			type = "start",
-			seg1 = math.floor(i / 2) + 1,
+			seg1 = math.floor(i / 2) + 1, --index of segments
 		})
 		table.insert(queue, {
 			pos = endpos,
@@ -74,11 +74,9 @@ local function GetIntersections(__Segments)
 		})
 	end
 	
-	local preventstuck = 1
+	local preventstuck = 1 --probably this is not needed, but I'm afraid of infinite loop
 	local q = nil
-	local intersection = nil
-	local segmentindex = 1
-	local segleft, segright = -1, -1
+	local segmentindex, segleft, segright = -1, -1, -1
 	while #queue > 0 do
 		table.sort(queue, function(q1, q2)
 			return not (q1.y > q2.y or (q1.y == q2.y and (q1.z > q2.z or
@@ -87,11 +85,11 @@ local function GetIntersections(__Segments)
 		
 		q = queue[1]
 		table.remove(queue, 1)
-		if q.type == "start" then
+		if q.type == "start" then --sweep line meets the start point of new segment
 			table.insert(status, q)
 			table.SortByMember(status, "z", true)
 			segmentindex = -1
-			for index, seg in ipairs(status) do
+			for index, seg in ipairs(status) do --Using self-balancing binary search tree makes faster
 				if seg.seg1 == q.seg1 then
 					segmentindex = index
 					break
@@ -104,12 +102,12 @@ local function GetIntersections(__Segments)
 			if segmentindex < #status then
 				CheckCross(queue, intersections, segments, status[segmentindex].seg1,	status[segmentindex + 1].seg1)
 			end
-		elseif q.type == "end" then
+		elseif q.type == "end" then --sweep line meets the end point of segment in status
 			segmentindex = table.RemoveByValue(status, q)
 			if segmentindex and segmentindex > 1 then
 				CheckCross(queue, intersections, segments, status[segmentindex - 1].seg1,	status[segmentindex].seg1)
 			end
-		else --q.type == "intersection"
+		else --q.type == "intersection" --sweep line meets intersection point
 			segleft, segright = -1, -1
 			for index, seg in ipairs(status) do
 				if segleft < 0 and seg.seg1 == q.seg1 then
