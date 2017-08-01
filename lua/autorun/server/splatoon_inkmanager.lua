@@ -14,13 +14,15 @@ local function BuildIntersection(pA, pB, convex)
 	local AinB, BinA = true, {true, true, true} --Vertex A is in Triangle B, Vertex B is in Triangle A
 	local vA = {pA[2] - pA[1], pA[3] - pA[2], pA[1] - pA[3]} --Direction vectors
 	local vB = {pB[2] - pB[1], pB[3] - pB[2], pB[1] - pB[3]}
-	local lines = {
-		[pA[1]] = pA[2], --First point and second point
-		[pA[2]] = pA[3], --Intersection points will be added
-		[pA[3]] = pA[1],
-		[pB[1]] = pB[2],
-		[pB[2]] = pB[3],
-		[pB[3]] = pB[1],
+	local lineA = {
+		[tostring(pA[1])] = pA[2], --First point and second point
+		[tostring(pA[2])] = pA[3], --Intersection points will be added
+		[tostring(pA[3])] = pA[1],
+	}
+	local lineB = {
+		[tostring(pB[1])] = pB[2],
+		[tostring(pB[2])] = pB[3],
+		[tostring(pB[3])] = pB[1],
 	}
 	local iP = {} --Intersection points
 	local AInTriB, BInTriA = {}, {} --Vertex A is in Triangle B, Vertex B is in Triangle A
@@ -52,10 +54,13 @@ local function BuildIntersection(pA, pB, convex)
 		
 		if interA[a][1] then
 			if not interA[a][2] then interA[a][2], icA[a][2] = interA[a][1], icA[a][1] end
-			if icA[a][1] > icA[a][2] then icA[a][1], icA[a][2] = icA[a][2], icA[a][1] end
-			lines[pA[a]] = interA[a][1]
-			lines[interA[a][1]] = interA[a][2]
-			lines[interA[a][2]] = pA[a % 3 + 1]
+			if icA[a][1] > icA[a][2] then
+				interA[a][1], interA[a][2] = interA[a][2], interA[a][1]
+				icA[a][1], icA[a][2] = icA[a][2], icA[a][1]
+			end
+			lineA[tostring(pA[a])] = interA[a][1]
+		--	lineA[tostring(interA[a][1])] = interA[a][2]
+			lineA[tostring(interA[a][2])] = pA[a % 3 + 1]
 		end
 	end
 	for b = 1, 3 do
@@ -63,14 +68,21 @@ local function BuildIntersection(pA, pB, convex)
 		table.insert(tb, pB[b])
 		if interB[b][1] then
 			if not interB[b][2] then interB[b][2], icB[b][2] = interB[b][1], icB[b][1] end
-			if icB[b][1] > icB[b][2] then icB[b][1], icB[b][2] = icB[b][2], icB[b][1] end
-			lines[pB[b]] = interB[b][1]
-			lines[interB[b][1]] = interB[b][2]
-			lines[interB[b][2]] = pB[b % 3 + 1]
+			if icB[b][1] > icB[b][2] then
+				interB[b][1], interB[b][2] = interB[b][2], interB[b][1]
+				icB[b][1], icB[b][2] = icB[b][2], icB[b][1]
+			end
+			lineB[tostring(pB[b])] = interB[b][1]
+			if interB[b][1] ~= interB[b][2] then
+				lineB[tostring(interB[b][1])] = interB[b][2]
+				lineB[tostring(interB[b][2])] = pB[b % 3 + 1]
+			else
+				lineB[tostring(interB[b][1])] = pB[b % 3 + 1]
+			end
 		end
 	end
 	
-	return iP, AInTriB, BInTriA, AOutTriB, BOutTriA, lines
+	return iP, AInTriB, BInTriA, AOutTriB, BOutTriA, lineA, lineB
 end
 
 local RadianBaseVector = Vector(0, 1, 0)
@@ -90,21 +102,62 @@ local function SortByRadian(verts)
 	end
 end
 
-local function SortBySegments(verts, lines)
+local function HasVectorValue(tb, vec)
+	local has = false 
+	if vec then
+		for _, v in ipairs(tb) do
+			if v:IsEqualTol(vec, 0.0001) then has = true break end
+		end
+	end
+	return has
+end
+
+local function SortBySegments(verts, lineA, lineB)
 	local result = {}
 	local vec = verts[1]
+	local vec_next = vector_origin
 	local tb = {vec}
-	print(lines[vec])
-	for i = 1, #verts do
-		if not lines[vec] or not table.HasValue(verts, lines[vec]) then
-			print("aaaaaaaaaa")
-			table.insert(result, tb)
-			tb = {}
-		else
-			print(lines[vec])
-			table.insert(tb, lines[vec])
-			vec = lines[vec]
+	local lines = lineA
+	local veclist = {}
+	local done = {}
+	for i, v in ipairs(verts) do
+		veclist[tostring(v)] = true
+	end
+	veclist[tostring(vec)] = nil
+	done[tostring(vec)] = true
+	
+	print("verts") PrintTable(verts)
+	print("lineA") PrintTable(lineA)
+	print("lineB") PrintTable(lineB)
+	while table.Count(veclist) > 0 do
+		vec_next = veclist[tostring(lines[tostring(vec)])]
+		if not vec_next then
+			lines = lines == lineA and lineB or lineA
+			print("lines: ", lines == lineA and "A" or "B")
+			vec_next = veclist[tostring(lines[tostring(vec)])]
+			if not vec_next or done[tostring(lines[tostring(vec)])] then
+			print("switched", "vec", vec, "line", lines[tostring(vec)])
+			--	table.insert(tb, lines[tostring(vec)])
+				table.insert(result, tb)
+				tb = {}
+				for v in pairs(veclist) do
+					vec = v
+					break
+				end
+				vec_next = veclist[tostring(lines[tostring(vec)])]
+				veclist[tostring(vec)] = nil
+				done[tostring(vec)] = true
+			end
 		end
+		
+		if vec_next then
+			print("vec", vec, "line", lines[tostring(vec)])
+			table.insert(tb, lines[tostring(vec)])
+			vec = lines[tostring(vec)]
+			veclist[tostring(vec)] = nil
+			done[tostring(vec)] = true
+		end
+		coroutine.yield()
 	end
 	if #tb > 0 then table.insert(result, tb) end
 	
@@ -145,10 +198,10 @@ local function OverwriteInk(meshvertex, triangles, pos, normal, color)
 		--Overwriting ink
 		local meshtemp, g = {}, {}
 		local verts, pA, pB = {}, {}, {}
-		local tb, AinB, BinA, AoutB, BoutA, lines = {}, {}, {}, {}, {}, {}, {}
+		local tb, AinB, BinA, AoutB, BoutA, lineA, lineB = {}, {}, {}, {}, {}, {}, {}
 	--	for a in pairs(addlist) do
-		--	if gx[a.x] and gy[a.y] and gz[a.z] then continue end
-		--	gx[a.x], gy[a.y], gz[a.z] = true, true, true
+	--		if gx[a.x] and gy[a.y] and gz[a.z] then continue end
+	--		gx[a.x], gy[a.y], gz[a.z] = true, true, true
 			g = InkGroup--[a.x][a.y][a.z]
 			
 			verts = {} --verts = existing ink - new ink
@@ -157,17 +210,24 @@ local function OverwriteInk(meshvertex, triangles, pos, normal, color)
 				normal = Vector(1, 0, 0), color = Vector(255, 255, 255),
 			}
 			local tri = {
-				Vector(0, 30, 10), Vector(0, 100, 80), Vector(0, 130, 10),
+				Vector(0, 30, 10), Vector(0, 70, 50), Vector(0, 100, 0),
 				normal = Vector(1, 0, 0), color = Vector(255, 255, 255),
 			}
+			v, tri = tri, v
+			tri = table.Sanitise(tri)
 			
 		--	for tri in pairs(g) do --Iterate all triangles of ink mesh in grids
-				if table.Count(tri) <= 0 then continue end
-				if not tri.normal:IsEqualTol(v.normal, 0.0001) then continue end
+				local desanitised = table.DeSanitise(tri)
+				if table.Count(desanitised) <= 0 then continue end
+				if not desanitised.normal:IsEqualTol(v.normal, 0.0001) then continue end
 				for i = 1, 3 do
-					pA[i] = tri[i]--WorldToLocal(tri[i], angle_zero, pos, ang)
-					pB[i] = v[4-i]--WorldToLocal(v[4 - i], angle_zero, pos, ang)
+					pA[i] = desanitised[i]	--WorldToLocal(desanitised[i], angle_zero, pos, ang)
+					pB[i] = v[i]			--WorldToLocal(v[i], angle_zero, pos, ang)
 					pA[i].x, pB[i].x = 0, 0
+				end
+				
+				if (pA[2] - pA[1]):Cross(pA[3] - pA[2]).x * (pB[2] - pB[1]):Cross(pB[3] - pB[2]).x > 0 then
+					pB[1], pB[2], pB[3] = pB[3], pB[2], pB[1]
 				end
 				
 					debugoverlay.Line(pA[1], pA[2], 5, Color(0,255,0), true)
@@ -176,22 +236,26 @@ local function OverwriteInk(meshvertex, triangles, pos, normal, color)
 					debugoverlay.Line(pB[1]+Vector(1,0,0), pB[2]+Vector(1,0,0), 5, Color(255,255,0), true)
 					debugoverlay.Line(pB[2]+Vector(1,0,0), pB[3]+Vector(1,0,0), 5, Color(255,255,0), true)
 					debugoverlay.Line(pB[3]+Vector(1,0,0), pB[1]+Vector(1,0,0), 5, Color(255,255,0), true)
-				tb, AinB, BinA, AoutB, BoutA, lines = BuildIntersection(pA, pB, false) --Group of vertices
-				if #tb == 0 then continue end --no intersection point found
+				tb, AinB, BinA, AoutB, BoutA, lineA, lineB = BuildIntersection(pA, pB, false) --Group of vertices
+				if #tb == 0 and #BinA == 0 and #AoutB == 0 then continue end --no intersection point found
 				
 				table.Add(tb, BinA)
 				table.Add(tb, AoutB)
 				
-				tb = SortBySegments(tb, lines) --tb = {{vertices}, {vertices}, ...}
-				tb.color = tri.color
+				tb = SortBySegments(tb, lineA, lineB) --tb = {{vertices}, {vertices}, ...}
+				tb.color = desanitised.color
 				tb.plane = {
-					pos = tri[1],
-					normal = tri.normal
+					pos = desanitised[1],
+					normal = desanitised.normal
 				}
 				
+				print(#tb)
 				for i = 1, #tb do
 					for k = 1, #tb[i] - 1 do
 						debugoverlay.Line(tb[i][k], tb[i][k + 1] + Vector(1,0,0), 6, Color(0, 255, 255), true)
+					end
+					if #tb[i] > 0 then
+						debugoverlay.Line(tb[i][#tb[i]], tb[i][1] + Vector(1,0,0), 6, Color(0, 255, 255), true)
 					end
 				end
 					
@@ -249,7 +313,7 @@ local function OverwriteInk(meshvertex, triangles, pos, normal, color)
 									normal = planenormal,
 								}
 								table.insert(tb, t)
-								g[t] = true
+								g[table.Sanitise(t)] = true
 								break
 							end
 							
@@ -262,17 +326,17 @@ local function OverwriteInk(meshvertex, triangles, pos, normal, color)
 				table.insert(meshvertex_exist, meshtemp)
 				table.insert(meshfinalize, {pos = planepos, normal = planenormal, color = planecolor})
 			end
-			g[v] = true
+			g[table.Sanitise(v)] = true
 			break
 	--	end
-	--	for t in pairs(g) do
-		--	if not t[1] then continue end
+		-- for santised in pairs(g) do
+			-- local t = table.DeSanitise(santised)
+			-- if not t[1] then continue end
 				-- debugoverlay.Line(t[1], t[2], 5, Color(t.color.x, t.color.y, t.color.z), true)
 				-- debugoverlay.Line(t[2], t[3], 5, Color(t.color.x, t.color.y, t.color.z), true)
 				-- debugoverlay.Line(t[3], t[1], 5, Color(t.color.x, t.color.y, t.color.z), true)
-	--	end
+		-- end
 	end
-	
 	
 	table.insert(meshvertex_exist, meshvertex)
 	table.insert(meshfinalize, {pos = pos, normal = normal, color = color})
@@ -565,3 +629,5 @@ function ClearInk()
 	PaintQueue = {}
 	InitTriangles()
 end
+
+include "splatoon_geometry.lua"
