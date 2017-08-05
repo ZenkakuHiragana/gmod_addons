@@ -27,7 +27,7 @@ Initialize = function()
 		local vert = {points[i].pos, points[i + 1].pos, points[i + 2].pos}
 		local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 		local center = (vert[1] + vert[2] + vert[3]) / 3
-		table.insert(surf, {vertices = vert, normal = normal, center = center})
+		table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 	end
 	
 	--Parse bsp and get displacement info
@@ -223,7 +223,7 @@ Initialize = function()
 						local vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
 						local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						local center = (vert[1] + vert[2] + vert[3]) / 3
-						table.insert(surf, {vertices = vert, normal = normal, center = center})
+						table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 						table.insert(points, {pos = vert[1]})
 						table.insert(points, {pos = vert[2]})
 						table.insert(points, {pos = vert[3]})
@@ -238,7 +238,7 @@ Initialize = function()
 						vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
 						normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						center = (vert[1] + vert[2] + vert[3]) / 3
-						table.insert(surf, {vertices = vert, normal = normal, center = center})
+						table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 						table.insert(points, {pos = vert[1]})
 						table.insert(points, {pos = vert[2]})
 						table.insert(points, {pos = vert[3]})
@@ -318,6 +318,7 @@ Initialize = function()
 			if x1 > x2 then x1, x2 = x2, x1 end
 			if y1 > y2 then y1, y2 = y2, y1 end
 			if z1 > z2 then z1, z2 = z2, z1 end
+			x2, y2, z2 = x2 + chunksize, y2 + chunksize, z2 + chunksize
 			for x = x1, x2, chunksize do gx[x - x % chunksize] = true end
 			for y = y1, y2, chunksize do gy[y - y % chunksize] = true end
 			for z = z1, z2, chunksize do gz[z - z % chunksize] = true end

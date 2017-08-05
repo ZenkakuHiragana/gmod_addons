@@ -8,82 +8,7 @@ local PaintQueue = {}
 local InkGroup = {}
 util.AddNetworkString("SplatoonSWEPs: Broadcast ink vertices")
 util.AddNetworkString("SplatoonSWEPs: Finalize ink refreshment")
-
---pA = {pA1, pA2, pA3}, pB = {pB1, pB2, pB3},  WorldToLocal()'d respectively.
-local function BuildIntersection(pA, pB, convex)
-	local AinB, BinA = true, {true, true, true} --Vertex A is in Triangle B, Vertex B is in Triangle A
-	local vA = {pA[2] - pA[1], pA[3] - pA[2], pA[1] - pA[3]} --Direction vectors
-	local vB = {pB[2] - pB[1], pB[3] - pB[2], pB[1] - pB[3]}
-	local lineA = {
-		[tostring(pA[1])] = pA[2], --First point and second point
-		[tostring(pA[2])] = pA[3], --Intersection points will be added
-		[tostring(pA[3])] = pA[1],
-	}
-	local lineB = {
-		[tostring(pB[1])] = pB[2],
-		[tostring(pB[2])] = pB[3],
-		[tostring(pB[3])] = pB[1],
-	}
-	local iP = {} --Intersection points
-	local AInTriB, BInTriA = {}, {} --Vertex A is in Triangle B, Vertex B is in Triangle A
-	local AOutTriB, BOutTriA = {}, {} --Vertex A is out of Triangle B, Vertex B is out of Triangle A
-	local cross, crossA, crossB = vector_origin, vector_origin, vector_origin --Temporary variables
-	local interA, interB, icA, icB = {{}, {}, {}}, {{}, {}, {}}, {{}, {}, {}}, {{}, {}, {}}
-	local tb = {} --Temporary variables
-	for a = 1, 3 do
-		AinB = true
-		for b = 1, 3 do
-			cross = vB[b]:Cross(vA[a]).x
-			crossA = vB[b]:Cross(pB[b] - pA[a]).x / cross
-			crossB = vA[a]:Cross(pB[b] - pA[a]).x / cross
-			if crossA > 0 and crossA < 1 and crossB > 0 and crossB < 1 then
-				intersection = pB[b] + crossB * vB[b]
-				table.insert(iP, intersection)
-				if not convex then
-					table.insert(interA[a], intersection)
-					table.insert(interB[b], intersection)
-					table.insert(icA[a], crossA)
-					table.insert(icB[b], crossB)
-				end
-			end
-			AinB = AinB and vB[b]:Cross(pA[a] - pB[b]).x > 0
-			BinA[b] = BinA[b] and vA[a]:Cross(pB[b] - pA[a]).x < 0
-		end
-		tb = AinB and AInTriB or AOutTriB
-		table.insert(tb, pA[a])
-		
-		if interA[a][1] then
-			if not interA[a][2] then interA[a][2], icA[a][2] = interA[a][1], icA[a][1] end
-			if icA[a][1] > icA[a][2] then
-				interA[a][1], interA[a][2] = interA[a][2], interA[a][1]
-				icA[a][1], icA[a][2] = icA[a][2], icA[a][1]
-			end
-			lineA[tostring(pA[a])] = interA[a][1]
-		--	lineA[tostring(interA[a][1])] = interA[a][2]
-			lineA[tostring(interA[a][2])] = pA[a % 3 + 1]
-		end
-	end
-	for b = 1, 3 do
-		tb = BinA[b] and BInTriA or BOutTriA
-		table.insert(tb, pB[b])
-		if interB[b][1] then
-			if not interB[b][2] then interB[b][2], icB[b][2] = interB[b][1], icB[b][1] end
-			if icB[b][1] > icB[b][2] then
-				interB[b][1], interB[b][2] = interB[b][2], interB[b][1]
-				icB[b][1], icB[b][2] = icB[b][2], icB[b][1]
-			end
-			lineB[tostring(pB[b])] = interB[b][1]
-			if interB[b][1] ~= interB[b][2] then
-				lineB[tostring(interB[b][1])] = interB[b][2]
-				lineB[tostring(interB[b][2])] = pB[b % 3 + 1]
-			else
-				lineB[tostring(interB[b][1])] = pB[b % 3 + 1]
-			end
-		end
-	end
-	
-	return iP, AInTriB, BInTriA, AOutTriB, BOutTriA, lineA, lineB
-end
+util.AddNetworkString("SplatoonSWEPs: ")
 
 local RadianBaseVector = Vector(0, 1, 0)
 local function SortByRadian(verts)
@@ -102,71 +27,170 @@ local function SortByRadian(verts)
 	end
 end
 
-local function HasVectorValue(tb, vec)
-	local has = false 
-	if vec then
-		for _, v in ipairs(tb) do
-			if v:IsEqualTol(vec, 0.0001) then has = true break end
-		end
-	end
-	return has
-end
-
-local function SortBySegments(verts, lineA, lineB)
-	local result = {}
-	local vec = verts[1]
-	local vec_next = vector_origin
-	local tb = {vec}
-	local lines = lineA
-	local veclist = {}
-	local done = {}
-	for i, v in ipairs(verts) do
-		veclist[tostring(v)] = true
-	end
-	veclist[tostring(vec)] = nil
-	done[tostring(vec)] = true
-	
-	print("verts") PrintTable(verts)
-	print("lineA") PrintTable(lineA)
-	print("lineB") PrintTable(lineB)
-	while table.Count(veclist) > 0 do
-		vec_next = veclist[tostring(lines[tostring(vec)])]
-		if not vec_next then
-			lines = lines == lineA and lineB or lineA
-			print("lines: ", lines == lineA and "A" or "B")
-			vec_next = veclist[tostring(lines[tostring(vec)])]
-			if not vec_next or done[tostring(lines[tostring(vec)])] then
-			print("switched", "vec", vec, "line", lines[tostring(vec)])
-			--	table.insert(tb, lines[tostring(vec)])
-				table.insert(result, tb)
-				tb = {}
-				for v in pairs(veclist) do
-					vec = v
-					break
+--pA = {pA1, pA2, pA3}, pB = {pB1, pB2, pB3},  WorldToLocal()'d respectively.
+local function BuildIntersection(pA, pB, bool)
+	local A, B, both = {["A"] = true}, {["B"] = true}, {["A"] = true, ["B"] = true}
+	local lines = {
+		[pA[1]] = {
+			pos = pA[2],
+			left = A,
+			right = {},
+		},
+		[pA[2]] = {
+			pos = pA[3],
+			left = A,
+			right = {},
+		},
+		[pA[3]] = {
+			pos = pA[1],
+			left = A,
+			right = {},
+		},
+		[pB[1]] = {
+			pos = pB[2],
+			left = B,
+			right = {},
+		},
+		[pB[2]] = {
+			pos = pB[3],
+			left = B,
+			right = {},
+		},
+		[pB[3]] = {
+			pos = pB[1],
+			left = B,
+			right = {},
+		},
+	}
+	local function modifylines(iP, P, i, isA)
+		if iP[1] then
+			if iP[2] then -- pA[a]->pA[a + 1] => pA[a]->iP[1].pos->iP[2].pos->pA[a + 1]
+				if iP[1].fraction > iP[2].fraction then
+					iP[1], iP[2] = iP[2], iP[1]
 				end
-				vec_next = veclist[tostring(lines[tostring(vec)])]
-				veclist[tostring(vec)] = nil
-				done[tostring(vec)] = true
+				lines[P[i]] = {
+					pos = iP[1].pos,
+					left = isA and A or B,
+					right = {},
+				}
+				lines[iP[1].pos] = {
+					pos = iP[2].pos,
+					left = both,
+					right = not isA and A or B,
+				}
+				lines[iP[2].pos] = {
+					pos = P[i % 3 + 1],
+					left = isA and A or B,
+					right = {},
+				}
+			else -- pA[a]->pA[a + 1] => pA[a]->iP[1].pos->pA[a + 1]
+				local newleft = iP[1].isin and both or (isA and A or B)
+				local newleft2 = not iP[1].isin and both or (isA and A or B)
+				local newright = iP[1].isin and (not isA and A or B) or {}
+				local newright2 = not iP[1].isin and (not isA and A or B) or {}
+				lines[P[i]] = {
+					pos = iP[1].pos,
+					left = newleft,
+					right = newright,
+				}
+				lines[iP[1].pos] = {
+					pos = P[i % 3 + 1],
+					left = newleft2,
+					right = newright2,
+				}
 			end
 		end
-		
-		if vec_next then
-			print("vec", vec, "line", lines[tostring(vec)])
-			table.insert(tb, lines[tostring(vec)])
-			vec = lines[tostring(vec)]
-			veclist[tostring(vec)] = nil
-			done[tostring(vec)] = true
-		end
-		coroutine.yield()
 	end
-	if #tb > 0 then table.insert(result, tb) end
 	
+	
+	local AinB, BinA = true, {true, true, true}
+	local vA = {pA[2] - pA[1], pA[3] - pA[2], pA[1] - pA[3]} --Direction vectors
+	local vB = {pB[2] - pB[1], pB[3] - pB[2], pB[1] - pB[3]}
+	local cross, crossA, crossB = vector_origin, vector_origin, vector_origin --Temporary variables
+	local iA, iB, intersection = {{}, {}, {}}, {{}, {}, {}}, vector_origin
+	for a = 1, 3 do
+		AinB = true
+		for b = 1, 3 do
+			cross = vB[b]:Cross(vA[a]).x
+			crossA = vB[b]:Cross(pB[b] - pA[a]).x / cross
+			crossB = vA[a]:Cross(pB[b] - pA[a]).x / cross
+			if crossA > 0 and crossA < 1 and crossB > 0 and crossB < 1 then
+				intersection = pB[b] + crossB * vB[b]
+				table.insert(iA[a], {
+					pos = intersection,
+					fraction = crossA,
+					isin = vA[a]:Cross(pB[b] - pA[a]).x < 0,
+					a = a, b = b
+				})
+				table.insert(iB[b], {
+					pos = Vector(intersection),
+					fraction = crossB,
+					isin = vB[b]:Cross(pA[a] - pB[b]).x < 0,
+					a = a, b = b
+				})
+			end
+			AinB = AinB and vB[b]:Cross(pA[a] - pB[b]).x > 0
+			BinA[b] = BinA[b] and vA[a]:Cross(pB[b] - pA[a]).x > 0
+		end
+		
+		modifylines(iA[a], pA, a, true)
+		if AinB then
+			lines[pA[a]].left = both
+			lines[pA[a]].right = B
+		end
+	end
+	for b = 1, 3 do
+		modifylines(iB[b], pB, b, false)
+		if BinA[b] then
+			lines[pB[b]].left = both
+			lines[pB[b]].right = A
+		end
+	end
+	
+	local result, filter = {}, {}
+	for i, v in pairs(lines) do
+		if bool == "AND" and v.left.A and v.left.B
+			or bool == "A" and v.left.A and not v.left.B then
+			filter[i] = v
+		elseif bool == "A" and v.right.A and not v.right.B then
+			filter[v.pos] = {
+				pos = i,
+				left = v.right,
+				right = v.left,
+			}
+		end
+	end
+	
+	local prev = Vector(-1, -1, -1)
+	for i = 1, 60 do
+		if table.Count(filter) == 0 then break end
+		if not filter[prev] then
+			for k, v in pairs(filter) do
+				if k == prev then
+					prev = k
+					break
+				end
+			end
+			
+			if not filter[prev] then
+				for k, v in pairs(filter) do
+					prev = k
+					break
+				end
+				table.insert(result, {})
+				if #result > 1 then SortByRadian(result[#result - 1]) end
+			end
+		end
+		if filter[prev] then
+			table.insert(result[#result], filter[prev].pos)
+			prev, filter[prev] = filter[prev].pos, nil
+		end
+	end	
 	return result
 end
 
 local function OverwriteInk(meshvertex, triangles, pos, normal, color)
 	--Listing up existing ink mesh
-	local dbg = 1
 	local meshvertex_exist, meshfinalize = {}, {}
 	local chunksize = SplatoonSWEPs.ChunkSize
 	for k, v in ipairs(triangles) do --For each new triangles
@@ -199,18 +223,18 @@ local function OverwriteInk(meshvertex, triangles, pos, normal, color)
 		local meshtemp, g = {}, {}
 		local verts, pA, pB = {}, {}, {}
 		local tb, AinB, BinA, AoutB, BoutA, lineA, lineB = {}, {}, {}, {}, {}, {}, {}
-	--	for a in pairs(addlist) do
-	--		if gx[a.x] and gy[a.y] and gz[a.z] then continue end
-	--		gx[a.x], gy[a.y], gz[a.z] = true, true, true
+		-- for a in pairs(addlist) do
+			-- if gx[a.x] and gy[a.y] and gz[a.z] then continue end
+			-- gx[a.x], gy[a.y], gz[a.z] = true, true, true
 			g = InkGroup--[a.x][a.y][a.z]
 			
 			verts = {} --verts = existing ink - new ink
 			local v = {
-				Vector(0, 0, 0), Vector(0, 70, 70), Vector(0, 100, 0),
+				Vector(0, 0, 0), Vector(0, 100, 0), Vector(0, 70, 70),
 				normal = Vector(1, 0, 0), color = Vector(255, 255, 255),
 			}
 			local tri = {
-				Vector(0, 30, 10), Vector(0, 70, 50), Vector(0, 100, 0),
+				Vector(0, 30, 60), Vector(0, 90, 50), Vector(0, 80, 10),
 				normal = Vector(1, 0, 0), color = Vector(255, 255, 255),
 			}
 			v, tri = tri, v
@@ -226,44 +250,28 @@ local function OverwriteInk(meshvertex, triangles, pos, normal, color)
 					pA[i].x, pB[i].x = 0, 0
 				end
 				
-				if (pA[2] - pA[1]):Cross(pA[3] - pA[2]).x * (pB[2] - pB[1]):Cross(pB[3] - pB[2]).x > 0 then
+				if (pA[2] - pA[1]):Cross(pA[3] - pA[2]).x * (pB[2] - pB[1]):Cross(pB[3] - pB[2]).x < 0 then
 					pB[1], pB[2], pB[3] = pB[3], pB[2], pB[1]
 				end
 				
-					debugoverlay.Line(pA[1], pA[2], 5, Color(0,255,0), true)
-					debugoverlay.Line(pA[2], pA[3], 5, Color(0,255,0), true)
-					debugoverlay.Line(pA[3], pA[1], 5, Color(0,255,0), true)
-					debugoverlay.Line(pB[1]+Vector(1,0,0), pB[2]+Vector(1,0,0), 5, Color(255,255,0), true)
-					debugoverlay.Line(pB[2]+Vector(1,0,0), pB[3]+Vector(1,0,0), 5, Color(255,255,0), true)
-					debugoverlay.Line(pB[3]+Vector(1,0,0), pB[1]+Vector(1,0,0), 5, Color(255,255,0), true)
-				tb, AinB, BinA, AoutB, BoutA, lineA, lineB = BuildIntersection(pA, pB, false) --Group of vertices
-				if #tb == 0 and #BinA == 0 and #AoutB == 0 then continue end --no intersection point found
-				
-				table.Add(tb, BinA)
-				table.Add(tb, AoutB)
-				
-				tb = SortBySegments(tb, lineA, lineB) --tb = {{vertices}, {vertices}, ...}
+				debugoverlay.Line(pA[1], pA[2], 5, Color(0,255,0), true)
+				debugoverlay.Line(pA[2], pA[3], 5, Color(0,255,0), true)
+				debugoverlay.Line(pA[3], pA[1], 5, Color(0,255,0), true)
+				debugoverlay.Line(pB[1]+Vector(1,0,0), pB[2]+Vector(1,0,0), 5, Color(255,255,0), true)
+				debugoverlay.Line(pB[2]+Vector(1,0,0), pB[3]+Vector(1,0,0), 5, Color(255,255,0), true)
+				debugoverlay.Line(pB[3]+Vector(1,0,0), pB[1]+Vector(1,0,0), 5, Color(255,255,0), true)
+				tb = BuildIntersection(pA, pB, "A")
 				tb.color = desanitised.color
 				tb.plane = {
 					pos = desanitised[1],
 					normal = desanitised.normal
 				}
-				
-				print(#tb)
-				for i = 1, #tb do
-					for k = 1, #tb[i] - 1 do
-						debugoverlay.Line(tb[i][k], tb[i][k + 1] + Vector(1,0,0), 6, Color(0, 255, 255), true)
-					end
-					if #tb[i] > 0 then
-						debugoverlay.Line(tb[i][#tb[i]], tb[i][1] + Vector(1,0,0), 6, Color(0, 255, 255), true)
-					end
-				end
 					
 				verts[tb] = true
 				g[tri] = nil
 		--	end
 			
-			local t, plus1, minus1, delta, including = {}, 1, -1, 1, false
+			local t, plus1, minus1, delta, including = {}, 1, -1, 0, false
 			local v12, v23, v31, vtemp, p = vector_origin, vector_origin, vector_origin, vector_origin, {}
 			local planepos, planenormal, planecolor = vector_origin, vector_origin, nil
 			for poly in pairs(verts) do --poly = {{vertices}, ...}
@@ -274,7 +282,7 @@ local function OverwriteInk(meshvertex, triangles, pos, normal, color)
 				--Split into triangles
 				for index, vertices in ipairs(poly) do
 					for k, vec in ipairs(vertices) do
-						delta = 1
+						delta = 0
 						plus1 = (k + delta) % #vertices + 1
 						minus1 = (#vertices + k - 2) % #vertices + 1
 						while plus1 ~= minus1 do
@@ -376,17 +384,17 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 		if not (s.normal and s.vertices) then continue end
 		--Surfaces that have almost same normal as the given data.
 		if s.normal:Dot(normal) > math.cos(math.rad(inkdegrees)) then
-			for k = 1, 3 do
-				--Surface.Z is near HitPos
-				local v1 = s.vertices[k]
-				local rel1 = v1 - pos
-				local dot1 = s.normal:Dot(rel1)
-				if math.abs(dot1) < radius * math.cos(math.rad(inkdegrees)) then
+			--Surface.Z is near HitPos
+			local dot1 = s.normal:Dot(s.vertices[1] - pos)
+			if math.abs(dot1) < radius * math.cos(math.rad(inkdegrees)) then
+				for k = 1, 3 do
 					--Vertices is within InkRadius
+					local v1 = s.vertices[1]
+					local rel1 = v1 - pos
 					local v2 = s.vertices[k % 3 + 1]
 					local rel2 = v2 - pos
 					local line = v2 - v1 --now v1 and v2 are relative vector
-					v1, v2 = rel1 - normal * dot1, rel2 - normal * normal:Dot(rel2)
+					v1, v2 = rel1 - normal * normal:Dot(rel1), rel2 - normal * normal:Dot(rel2)
 					if line:GetNormalized():Cross(v1):Dot(normal) < radius then
 						if (v1:Dot(line) < 0 and v2:Dot(line) > 0) or
 							math.min(v2:LengthSqr(), v1:LengthSqr()) < radiusSqr then
@@ -398,120 +406,161 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 							break
 						end
 					end
-				end --if dot1 > 0
-			end --for k = 1, 3
+				end --for k = 1, 3
+			end --if dot1 > 0
 		end --if s.normal:Dot
 	end --for #SplatoonSWEPs.Surface
 	
 	coroutine.yield()
 	
 	local verts = {} --Vertices for polygon that we attempt to draw
-	local pA, pB = {}, {}
-	local AinB, BinA, AoutB, BoutA = {}, {}, {}, {}, {}
+	local pA, pB, vertexlist = {}, {}, {}
 	for _, reference in ipairs(polys) do
+		pA = {
+			reference[1] * radius,
+			reference[2] * radius,
+			reference[3] * radius,
+		}
 		for drawable in pairs(surf) do
-			tb = {}
 			for i = 1, 3 do
-				pA[i] = reference[i] * radius
 				pB[i] = WorldToLocal(drawable[i], angle_zero, pos, ang)
 				pB[i].x = 0
 			end
-			tb, AinB, BinA, AoutB, BoutA = BuildIntersection(pA, pB, true)
+	-- debugoverlay.Line(pA[1], pA[2], 2, Color(0, 255, 0), true)
+	-- debugoverlay.Line(pA[2], pA[3], 2, Color(0, 255, 0), true)
+	-- debugoverlay.Line(pA[3], pA[1], 2, Color(0, 255, 0), true)
+	-- debugoverlay.Line(pB[1], pB[2], 2, Color(255, 255, 0), true)
+	-- debugoverlay.Line(pB[2], pB[3], 2, Color(255, 255, 0), true)
+	-- debugoverlay.Line(pB[3], pB[1], 2, Color(255, 255, 0), true)
+			vertexlist = BuildIntersection(pA, pB, "AND")
 			
-			table.Add(tb, AinB)
-			table.Add(tb, BinA)
-			SortByRadian(tb)
-			
-			tb.plane = {
+			vertexlist.plane = {
 				pos = drawable[1],
 				normal = (drawable[2] - drawable[1]):Cross(drawable[3] - drawable[2]):GetNormalized()
 			}
-			verts[tb] = true
+			verts[vertexlist] = true
 		end
 	end
 	
-	coroutine.yield()
+	-- pA = {
+		-- Vector(0, 0, 0),
+		-- Vector(0, 100, 0),
+		-- Vector(0, 70, 70),
+	-- }
+	-- pB = {
+		-- Vector(0, -10, -10),
+		-- Vector(0, 110, -10),
+		-- Vector(0, 80, 90),
+	-- }
+	-- PrintTable(BuildIntersection(pA, pB, "AND"))
+	-- local i = 1
+	-- for k, v in pairs(verts) do
+		-- if #k > 0 then
+			-- print("vertex") PrintTable(k)
+			-- i = i + 1 if i > 5 then break end
+		-- end
+	-- end
 	
+	coroutine.yield()
 	--split polygons into triangles
 	--get back to world coordinate
 	local meshvertex, tri1, tri2, trivector = {}, {}, {}, vector_origin
 	local i, i1, tri_index = 1, 1, 1
 	local planepos, planenormal, v1, v2 = vector_origin, vector_origin, vector_origin, vector_origin
-	for poly in pairs(verts) do
-		if #poly == 0 then continue end
-		planepos = poly.plane.pos
-		planenormal = poly.plane.normal
-		i = 1
-		while i <= #poly do
-			trivector = LocalToWorld(poly[i], angle_zero, pos, ang)
-			trivector = trivector - (planenormal:Dot(trivector - planepos) / planenormal:Dot(normal)) * normal
-			tb = {pos = trivector,
-				u = math.abs(poly[i].y) / radius,
-				v = math.abs(poly[i].z) / radius,
-				color = color,
-			}
-			
-			if i > 3 then
-				i1 = i % 2 == 1 and 1 or 2
-				tri_index = #meshvertex - i1
-				tri1 = meshvertex[#meshvertex]
-				tri2 = meshvertex[tri_index]
-				v1 = tri2.pos - tri1.pos
-				v2 = trivector - tri1.pos
-				cross = v1:Cross(v2)
-				if cross:Dot(planenormal) < 0 then
-					tri2, tb = tb, tri2
-				end
-				table.insert(meshvertex, tri1)
-				table.insert(meshvertex, tri2)
-				table.insert(meshvertex, tb)
-				table.insert(triangles, {
-					tri1.pos, tri2.pos, tb.pos,
-					u = {tri1.u, tri2.u, tb.u},
-					v = {tri1.v, tri2.v, tb.v},
-					color = color,
-					normal = planenormal,
-					area = (tri2.pos - tri1.pos):Cross(tb.pos - tri1.pos).x / 2,
-				})
-				i = i + 1
-			else
-				v1 = LocalToWorld(poly[i + 1], angle_zero, pos, ang)
-				v2 = LocalToWorld(poly[i + 2], angle_zero, pos, ang)
-				v1 = v1 - (planenormal:Dot(v1 - planepos) / planenormal:Dot(normal)) * normal
-				v2 = v2 - (planenormal:Dot(v2 - planepos) / planenormal:Dot(normal)) * normal
-				cross = (v1 - trivector):Cross(v2 - trivector)
-				tri1 = {
-					pos = v1,
-					u = math.abs(poly[i + 1].y) / radius,
-					v = math.abs(poly[i + 1].z) / radius,
+	for polygons in pairs(verts) do
+		if #polygons == 0 then continue end
+		planepos = polygons.plane.pos
+		planenormal = polygons.plane.normal
+		for _, poly in ipairs(polygons) do
+			if #poly < 3 then print("invalid polygon: ", #poly) continue end
+			i = 1
+			while i <= #poly do
+				trivector = LocalToWorld(poly[i], angle_zero, pos, ang)
+				trivector = trivector - (planenormal:Dot(trivector - planepos) / planenormal:Dot(normal)) * normal
+				tb = {pos = trivector,
+					u = math.abs(poly[i].y) / radius,
+					v = math.abs(poly[i].z) / radius,
 					color = color,
 				}
-				tri2 = {
-					pos = v2,
-					u = math.abs(poly[i + 2].y) / radius,
-					v = math.abs(poly[i + 2].z) / radius,
-					color = color,
-				}
-				if cross:Dot(planenormal) < 0 then
-					tri1, tri2 = tri2, tri1
-					v1, v2 = v2, v1
-				end
 				
-				table.insert(meshvertex, tb)
-				table.insert(meshvertex, tri1)
-				table.insert(meshvertex, tri2)
-				table.insert(triangles, {
-					trivector, v1, v2,
-					u = {tb.u, tri1.u, tri2.u},
-					v = {tb.v, tri1.v, tri2.v},
-					color = color,
-					normal = planenormal,
-					area = (poly[i + 1] - poly[i]):Cross(poly[i + 2] - poly[i]).x / 2,
-				})
-				i = i + 3
+				if i > 3 then
+					i1 = i % 2 == 1 and 1 or 2
+					tri_index = #meshvertex - i1
+					tri1 = meshvertex[#meshvertex]
+					tri2 = meshvertex[tri_index]
+					v1 = tri2.pos - tri1.pos
+					v2 = trivector - tri1.pos
+					cross = v1:Cross(v2)
+					if cross:Dot(planenormal) < 0 then
+						tri2, tb = tb, tri2
+					end
+					debugoverlay.Line(tri1.pos, tri2.pos, 2, Color(0,255,0),true)
+					debugoverlay.Line(tri2.pos, tb.pos, 2, Color(0,255,0),true)
+					debugoverlay.Line(tb.pos, tri1.pos, 2, Color(0,255,0),true)
+					table.insert(meshvertex, tri1)
+					table.insert(meshvertex, tri2)
+					table.insert(meshvertex, tb)
+					table.insert(triangles, {
+						tri1.pos, tri2.pos, tb.pos,
+						u = {tri1.u, tri2.u, tb.u},
+						v = {tri1.v, tri2.v, tb.v},
+						color = color,
+						normal = planenormal,
+						area = (tri2.pos - tri1.pos):Cross(tb.pos - tri1.pos).x / 2,
+					})
+					i = i + 1
+				else
+					v1 = LocalToWorld(poly[i + 1], angle_zero, pos, ang)
+					v2 = LocalToWorld(poly[i + 2], angle_zero, pos, ang)
+					v1 = v1 - (planenormal:Dot(v1 - planepos) / planenormal:Dot(normal)) * normal
+					v2 = v2 - (planenormal:Dot(v2 - planepos) / planenormal:Dot(normal)) * normal
+					cross = (v1 - trivector):Cross(v2 - trivector)
+					tri1 = {
+						pos = v1,
+						u = math.abs(poly[i + 1].y) / radius,
+						v = math.abs(poly[i + 1].z) / radius,
+						color = color,
+					}
+					tri2 = {
+						pos = v2,
+						u = math.abs(poly[i + 2].y) / radius,
+						v = math.abs(poly[i + 2].z) / radius,
+						color = color,
+					}
+					if cross:Dot(planenormal) < 0 then
+						tri1, tri2 = tri2, tri1
+						v1, v2 = v2, v1
+					end
+					-- print(tri1.pos, tri2.pos, tb.pos, #poly, poly[1], poly[2], poly[3])
+					-- debugoverlay.Line(tri1.pos, tri2.pos, 2, Color(0,255,0),true)
+					-- debugoverlay.Line(tri2.pos, tb.pos, 2, Color(0,255,0),true)
+					-- debugoverlay.Line(tb.pos, tri1.pos, 2, Color(0,255,0),true)
+					table.insert(meshvertex, tb)
+					table.insert(meshvertex, tri1)
+					table.insert(meshvertex, tri2)
+					table.insert(triangles, {
+						trivector, v1, v2,
+						u = {tb.u, tri1.u, tri2.u},
+						v = {tb.v, tri1.v, tri2.v},
+						color = color,
+						normal = planenormal,
+						area = (poly[i + 1] - poly[i]):Cross(poly[i + 2] - poly[i]).x / 2,
+					})
+					i = i + 3
+				end
+				debugoverlay.Line(poly[1], poly[2], 2, Color(0,255,0),true)
+				debugoverlay.Line(poly[2], poly[3], 2, Color(0,255,0),true)
+				debugoverlay.Line(poly[3], poly[1], 2, Color(0,255,0),true)
 			end
 		end
 	end
+	
+	net.Start("SplatoonSWEPs: ")
+	net.WriteTable(meshvertex)
+	net.WriteVector(Vector(color.r / 255, color.g / 255, color.b / 255))
+	net.WriteVector(pos)
+	net.WriteVector(normal)
+	net.Broadcast()
 	
 	coroutine.yield(meshvertex, triangles)
 end
@@ -528,10 +577,11 @@ local function ProcessQueue()
 			
 			local ok, meshvertex, triangles = coroutine.resume(
 				v.co, v.pos, v.normal, v.ang, v.radius, v.color, v.polys)
+			print("coroutine end: ", ok, meshvertex)
 			if ok and meshvertex and triangles then
 				queue[i] = nil				
 				coroutine.yield()
-				OverwriteInk(meshvertex, triangles, v.pos, v.normal, v.color)
+			--	OverwriteInk(meshvertex, triangles, v.pos, v.normal, v.color)
 			elseif not ok then
 				queue[i] = nil
 			end
@@ -604,6 +654,7 @@ SplatoonSWEPsInkManager = {
 		})
 	end,
 }
+
 local function InitTriangles()
 	if not SplatoonSWEPs then return end
 	local chunksize = SplatoonSWEPs.ChunkSize

@@ -17,7 +17,8 @@ local Dummies = {}
 local Receiving = {}
 net.Receive("SplatoonSWEPs: Broadcast ink vertices", function(len, ply)
 	local m = net.ReadTable()
-	table.insert(Receiving, m)
+	print() PrintTable(m)
+	table.Add(Receiving, m)
 end)
 
 net.Receive("SplatoonSWEPs: Finalize ink refreshment", function(len, ply)
@@ -31,8 +32,21 @@ net.Receive("SplatoonSWEPs: Finalize ink refreshment", function(len, ply)
 	table.insert(IMesh, {imesh = imesh, color = color, pos = org, normal = -normal})
 	table.insert(Triangles, Receiving)
 	table.insert(Dummies, dummy)
-	
 	Receiving = {}
+end)
+
+net.Receive("SplatoonSWEPs: ", function(len, ply)
+	local m = net.ReadTable()
+	local color = net.ReadVector()
+	local org = net.ReadVector()
+	local normal = net.ReadVector()
+	local imesh = Mesh()
+	local dummy = ClientsideModel("models/error.mdl")
+	dummy:SetModelScale(0)
+	imesh:BuildFromTriangles(m)
+	table.insert(IMesh, {imesh = imesh, color = color, pos = org, normal = -normal})
+	table.insert(Triangles, m)
+	table.insert(Dummies, dummy)
 end)
 
 function ClearInk()

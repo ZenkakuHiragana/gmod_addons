@@ -8,15 +8,15 @@ util.AddNetworkString("SplatoonSWEPs: Receive vertices info")
 local circle_polys = 16
 local reference_polys = {}
 local reference_vert = Vector(1, 0, 0)
-local referense_vert45 = Vector(1, 0, 0)
+local reference_vert45 = Vector(1, 0, 0)
 for i = 1, circle_polys do
-	referense_vert45:Rotate(Angle(0, 360 / circle_polys, 0))
-	table.insert(reference_polys, {Vector(0, 0, 0), Vector(referense_vert45), Vector(reference_vert)})
+	reference_vert45:Rotate(Angle(0, 360 / circle_polys, 0))
+	table.insert(reference_polys, {Vector(0, 0, 0), Vector(reference_vert), Vector(reference_vert45)})
 	reference_vert:Rotate(Angle(0, 360 / circle_polys, 0))
 end
---reference_polys = {
---	{Vector(0, 0, 0), Vector(1/2^0.5, 1/2^0.5, 0), Vector(1, 0, 0)},
---	{Vector(0, 0, 0), Vector(0, 1, 0), Vector(1/2^0.5, 1/2^0.5, 0)}}
+reference_polys = {
+	{Vector(0, 0, 0), Vector(1/2^0.5, 1/2^0.5, 0), Vector(1, 0, 0)},
+	{Vector(0, 0, 0), Vector(0, 1, 0), Vector(1/2^0.5, 1/2^0.5, 0)}}
 for k, v in ipairs(reference_polys) do
 	for i = 1, 3 do
 		v[i] = Vector(0, v[i].x, v[i].y)
@@ -68,6 +68,9 @@ function ENT:Initialize()
 			debugoverlay.Line(info.vertices[4], info.vertices[4] + vector_up * 50, 10, Color(255,255,0), true)
 	--	end
 	end
+	
+	self:Remove()
+	SplatoonSWEPsGeometry.TestFunction()
 end
 
 function ENT:PhysicsCollide(coldata, collider)
