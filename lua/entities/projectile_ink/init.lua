@@ -64,8 +64,8 @@ function ENT:Initialize()
 	--	end
 	end
 	
-	self:Remove()
-	SplatoonSWEPs.BuildOverlap()
+	-- self:Remove()
+	-- SplatoonSWEPs.BuildOverlap()
 end
 
 function ENT:PhysicsCollide(coldata, collider)

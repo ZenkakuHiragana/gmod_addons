@@ -9,38 +9,12 @@ local PaintQueue = {}
 local InkGroup = {}
 util.AddNetworkString("SplatoonSWEPs: Broadcast ink vertices")
 util.AddNetworkString("SplatoonSWEPs: Finalize ink refreshment")
-util.AddNetworkString("SplatoonSWEPs: ")
-
-local function foo()
-	table.insert(meshvertex_exist, meshvertex)
-	table.insert(meshfinalize, {pos = pos, normal = normal, color = color})
-	
-	-- local sendcolor, sendpos, sendnormal = color_white, vector_origin, vector_origin
-	-- for i, m in ipairs(meshvertex_exist) do
-		-- local send = {} --32 bytes per vertex
-		-- for k = 1, (65536 - 3) / 32 - 3 do
-			-- table.insert(send, m[k])
-			-- if k > #m then break end
-		-- end
-		
-		-- for k, s in ipairs(send) do
-			-- net.Start("SplatoonSWEPs: Broadcast ink vertices")
-			-- net.WriteTable(s)
-			-- net.Broadcast()
-		-- end
-		
-		-- sendcolor = meshfinalize[i].color
-		-- sendpos = meshfinalize[i].pos
-		-- sendnormal = meshfinalize[i].normal
-		-- net.Start("SplatoonSWEPs: Finalize ink refreshment")
-		-- net.WriteVector(Vector(sendcolor.r / 255, sendcolor.g / 255, sendcolor.b / 255))
-		-- net.WriteVector(sendpos)
-		-- net.WriteVector(sendnormal)
-		-- net.Broadcast()
-	-- end
-end
+util.AddNetworkString("SplatoonSWEPs: Reset ink mesh by ID")
 
 local MAX_SIZE = 300
+local MAX_MESSAGE_SEND = 20
+local MAX_POLYS_OVERWRITE_AT_TIME = 10
+local MAX_OVERWRITE_AT_TIME = 10
 local function GetMeshTriangle(triangles, orgpos, orgnormal, organg, planepos, planenormal, planedot, planecolor)
 	local vertices, result = {}, {}
 	for _, poly in ipairs(triangles) do
@@ -72,7 +46,7 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 		if s.normal:Dot(normal) > math.cos(math.rad(inkdegrees)) then
 			--Surface.Z is near HitPos
 			local dot1 = s.normal:Dot(s.vertices[1] - pos)
-			if math.abs(dot1) < radius * math.cos(math.rad(inkdegrees)) then
+			if math.abs(dot1) < radius * math.sin(math.rad(inkdegrees)) then
 				for k = 1, 3 do
 					--Vertices is within InkRadius
 					local v1 = s.vertices[1]
@@ -100,8 +74,6 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 		end --if s.normal:Dot
 	end --for #SplatoonSWEPs.Surface
 	
-	coroutine.yield()
-	
 	for i, v in ipairs(polys) do
 		polys[i] = v * radius
 	end
@@ -126,18 +98,19 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 	end
 	
 	coroutine.yield()
-	net.Start("SplatoonSWEPs: Finalize ink refreshment")
-	net.Broadcast()
 	
 	--PolygonData.Poly -> Ink buffer, PolygonData.Tri -> MeshVertex structure
-	local meshvertex, existVertices, existTriangles = {{}}, {}, {}
+	local meshvertex, meshinfo, existVertices, existTriangles = {}, {}, {}, {}
 	local planepos, planenormal, planecolor, planedot, planeid
 		= vector_origin, vector_origin, color_white, 0, 0
+	local polysprocessed = 0
 	for PolygonData in pairs(vertexlist) do
 		planepos, planenormal = PolygonData.Plane.pos, PolygonData.Plane.normal
 		planecolor, planeid = PolygonData.Plane.color, PolygonData.Plane.id
 		planedot = planenormal:Dot(normal)
 		local inklist = InkGroup[planeid]
+		table.insert(meshvertex, {})
+		table.insert(meshinfo, {pos = pos, normal = planenormal, color = planecolor, id = planeid})
 		table.Add(meshvertex[#meshvertex], GetMeshTriangle(
 			PolygonData.Tri, pos, normal, ang, planepos, planenormal, planedot, planecolor))
 		for _, poly in ipairs(PolygonData.Poly) do
@@ -145,11 +118,24 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 			poly.color = planecolor --build data structure
 			poly.origin = pos
 			poly.angle = ang
+			poly.radius = radius
+			poly.triangles = meshvertex[#meshvertex]
 			
 			--Overwrite existing ink
 			InkGroup[planeid] = {}
 			if inklist then
-				for _, exist in ipairs(inklist) do
+				local processed = 0
+				for times, exist in ipairs(inklist) do
+					processed = processed + 1
+					if processed % MAX_OVERWRITE_AT_TIME == 0 then coroutine.yield() end
+					
+					if pos:DistToSqr(exist.origin) > (radius + exist.radius)^2 then
+						table.insert(InkGroup[planeid], exist)
+						table.insert(meshvertex, {})
+						table.insert(meshinfo, {pos = exist.origin, normal = planenormal, color = exist.color, id = planeid})
+						table.Add(meshvertex[#meshvertex], exist.triangles)
+						continue
+					end
 					local subtrahend = {}
 					local existOrigin = WorldToLocal(pos, angle_zero, exist.origin, exist.angle)
 					existOrigin.x = 0
@@ -158,44 +144,74 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 					end
 					
 					existVertices, existTriangles = SplatoonSWEPs.BuildOverlap(exist, subtrahend, true)
-				--	print(pos, exist.origin, existOrigin)
-				--	print("existVertices: ") PrintTable(existVertices)
+					table.insert(meshvertex, {})
+					table.insert(meshinfo, {pos = exist.origin, normal = planenormal, color = exist.color, id = planeid})
+					table.Add(meshvertex[#meshvertex], GetMeshTriangle(
+						existTriangles, exist.origin, normal, ang, planepos, planenormal, planedot, exist.color))
+					
 					for _, existpoly in ipairs(existVertices) do
 						if #existpoly < 3 then continue end
 						existpoly.color = exist.color
-						existpoly.origin = exist.origin						
-						existpoly.angle = exist.angle						
+						existpoly.origin = exist.origin
+						existpoly.angle = exist.angle
+						existpoly.radius = exist.radius
+						existpoly.triangles = meshvertex[#meshvertex]
 						table.insert(InkGroup[planeid], existpoly)
 						
-						for k, v in ipairs(existpoly) do
-							v = LocalToWorld(v, angle_zero, exist.origin, ang)
-							v = v - (planenormal:Dot(v - planepos) / planedot) * normal
-							local w = LocalToWorld(existpoly[k % #existpoly + 1], angle_zero, exist.origin, ang)
-							w = w - (planenormal:Dot(w - planepos) / planedot) * normal
-							debugoverlay.Line(v, w, 5, Color(exist.color.x, exist.color.y, exist.color.z), true)
-						end
+						-- for k, v in ipairs(existpoly) do
+							-- v = LocalToWorld(v, angle_zero, exist.origin, ang)
+							-- v = v - (planenormal:Dot(v - planepos) / planedot) * normal
+							-- local w = LocalToWorld(existpoly[k % #existpoly + 1], angle_zero, exist.origin, ang)
+							-- w = w - (planenormal:Dot(w - planepos) / planedot) * normal
+							-- debugoverlay.Line(v, w, 5, Color(exist.color.x, exist.color.y, exist.color.z), true)
+						-- end
 					end
-					
-					table.insert(meshvertex, {})
-					table.Add(meshvertex[#meshvertex], GetMeshTriangle(
-						existTriangles, exist.origin, normal, ang, planepos, planenormal, planedot, exist.color))
 				end
 			end
 			table.insert(InkGroup[planeid], poly)
+			polysprocessed = polysprocessed + 1
+			if polysprocessed % MAX_POLYS_OVERWRITE_AT_TIME == 0 then coroutine.yield() end
 		end
 	end
 	
-	-- for i = 1, #meshvertex do
-		-- if #meshvertex[i] < 3 or #meshvertex[i] % 3 > 0 then continue end
-		-- net.Start("SplatoonSWEPs: ")
-		-- net.WriteTable(meshvertex[i])
-		-- net.WriteVector(Vector(meshvertex[i][1].color.r / 255, meshvertex[i][1].color.g / 255, meshvertex[i][1].color.b / 255))
-		-- net.WriteVector(pos)
-		-- net.WriteVector(normal)
-		-- net.Broadcast()
-	-- end
+	local sendcolor = vector_origin
+	local refreshedid = {}
+	local message_sent = 0
+	for i, m in ipairs(meshvertex) do
+		if #m < 3 then continue end
+		if not refreshedid[meshinfo[i].id] then
+			net.Start("SplatoonSWEPs: Reset ink mesh by ID")
+			net.WriteInt(meshinfo[i].id, 32)
+			net.Broadcast()
+			refreshedid[meshinfo[i].id] = true
+		end
+		
+		local sentindex = 1
+		while sentindex < #m do
+			local send = {} --32 bytes per vertex
+			for k = 1, (65536 - 3) / 32 / 2 do
+				table.insert(send, m[sentindex])
+				if sentindex > #m then break end
+				sentindex = sentindex + 1
+			end
+			net.Start("SplatoonSWEPs: Broadcast ink vertices")
+			net.WriteTable(send)
+			net.Broadcast()
+		end
+		
+		sendcolor = meshinfo[i].color
+		net.Start("SplatoonSWEPs: Finalize ink refreshment")
+		net.WriteVector(Vector(sendcolor.x / 255, sendcolor.y / 255, sendcolor.z / 255))
+		net.WriteVector(meshinfo[i].pos)
+		net.WriteVector(meshinfo[i].normal)
+		net.WriteInt(meshinfo[i].id, 32)
+		net.Broadcast()
+		
+		message_sent = message_sent + 1
+		if message_sent % MAX_MESSAGE_SEND == 0 then coroutine.yield() end
+	end
 	
-	coroutine.yield(meshvertex, triangles)
+	coroutine.yield(true)
 end
 
 local function ProcessQueue()
@@ -208,10 +224,10 @@ local function ProcessQueue()
 				continue
 			end
 			
-			local ok, meshvertex, triangles = coroutine.resume(
+			local ok, message = coroutine.resume(
 				v.co, v.pos, v.normal, v.ang, v.radius, v.color, v.polys)
-			print("coroutine end: ", ok, meshvertex)
-			if ok and meshvertex and triangles then
+		--	print("coroutine end: ", ok, message)
+			if ok and message then
 				queue[i] = nil				
 				coroutine.yield()
 			elseif not ok then

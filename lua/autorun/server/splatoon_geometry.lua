@@ -3,16 +3,43 @@ if not SplatoonSWEPs then return end
 
 local testbool = true
 local pointA = {
-	Vector(0, 0, 0),
+	Vector(0, 30, 0),
+	Vector(0, 60, -40),
 	Vector(0, 100, 0),
 	Vector(0, 70, 70),
+	Vector(0, 10, 70),
 }
 local pointB = {
 	Vector(0, 110, 30),
-	Vector(0, -10, 40),
-	Vector(0, 10, 0),
+	Vector(0, 50, 50),
+	Vector(0, 30, 20),
 	Vector(0, -50, 10),
-	Vector(0, 10, -50),
+	Vector(0, 0, -50),
+}
+
+pointA = {
+	Vector(0, 0, 0),
+	Vector(0, 20, 10),
+	Vector(0, 50, 10),
+	Vector(0, 90, -10),
+	Vector(0, 100, 0),
+	Vector(0, 100, 100),
+	Vector(0, 90, 110),
+	Vector(0, 50, 90),
+	Vector(0, 20, 90),
+	Vector(0, 0, 100),
+}
+
+pointB = {
+	Vector(0, 10, 50),
+	Vector(0, 50, -20),
+	Vector(0, 120, 30),
+	Vector(0, 60, 30),
+	Vector(0, 80, 40),
+	Vector(0, 80, 60),
+	Vector(0, 60, 70),
+	Vector(0, 120, 70),
+	Vector(0, 50, 120),
 }
 
 pointA = {
@@ -37,21 +64,21 @@ pointA = {
 	-Vector(0.000000,  1.592013, 68.950859),
 }
 
---pointA = {}
-pointB = {}
-local circle_polys = 16
-local reference_vert = Vector(0, -60, 0)
-for i = 1, circle_polys do
---	table.insert(pointA, Vector(reference_vert))
-	table.insert(pointB, Vector(reference_vert))
-	reference_vert:Rotate(Angle(0, 360 / circle_polys, 0))
-end
-for i, v in ipairs(pointA) do
---	pointA[i] = Vector(0, v.x, v.y)
-end
-for i, v in ipairs(pointB) do
-	pointB[i] = Vector(0, v.x + 50, v.y / 2 - 10)
-end
+-- pointA = {}
+-- pointB = {}
+-- local circle_polys = 16
+-- local reference_vert = Vector(0, -60, 0)
+-- for i = 1, circle_polys do
+	-- table.insert(pointA, Vector(reference_vert))
+	-- table.insert(pointB, Vector(reference_vert))
+	-- reference_vert:Rotate(Angle(0, 360 / circle_polys, 0))
+-- end
+-- for i, v in ipairs(pointA) do
+	-- pointA[i] = Vector(0, v.x, v.y)
+-- end
+-- for i, v in ipairs(pointB) do
+	-- pointB[i] = Vector(0, v.x + 20, v.y / 2 - 10)
+-- end
 
 local function IsInTriangle(p1, p2, p3, p)
 	return (p2 - p1):Cross(p - p1).x > 0 and
@@ -115,13 +142,15 @@ local function TriangulatePolygon(source)
 						table.insert(result, {source[minus1], source[basepos], source[plus1]})
 						triangulateflag[basepos] = nil
 					end
+				else
+					basepos = plus1
 				end
 				if basepos ~= plus1 then break end
-				if _ == n * 2 then print("infinite, 2") end
+			--	if _ == n * 2 then print("infinite, 2") end
 			end
 		end
 		if vertexcount < 4 then break end
-		if __ == n * 2 then print("infinite, 1") end
+	--	if __ == n * 2 then print("infinite, 1") end
 	end
 	
 	if vertexcount == 3 then
@@ -140,24 +169,24 @@ end
 --Otherwise, the result will be polyA AND polyB.
 local epsilon = 0.0001
 function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
-	polyA, polyB, getDifference = pointA, pointB, testbool
-	local AinB, BinA = true, {}
+--	polyA, polyB, getDifference = pointA, pointB, testbool
+	local AinB, BinA = 0, {}
 	local A, B, both = {["A"] = true}, {["B"] = true}, {["A"] = true, ["B"] = true}
 	local pA, pB, vA, vB, iA, iB, lines = {}, {}, {}, {}, {}, {}, {}
 	for i, v in ipairs(polyA) do
-		debugoverlay.Line(v, polyA[i % #polyA + 1], 2, Color(0, 255, 0), true)
-		debugoverlay.Text(v, "A" .. i, 2, Color(0, 255, 0), true)
+	--	debugoverlay.Line(v, polyA[i % #polyA + 1], 2, Color(0, 255, 0), true)
+	--	debugoverlay.Text(v, "A" .. i, 2, Color(0, 255, 0), true)
 		table.insert(pA, v + Vector(0, math.Rand(-epsilon, epsilon), math.Rand(-epsilon, epsilon)))
 		table.insert(vA, polyA[i % #polyA + 1] - v)
 		table.insert(iA, {})
 	end
 	for i, v in ipairs(polyB) do
-		debugoverlay.Line(v, polyB[i % #polyB + 1], 2, Color(255, 255, 0), true)
-		debugoverlay.Text(v, "B" .. i, 2, Color(255, 255, 0), true)
+	--	debugoverlay.Line(v, polyB[i % #polyB + 1], 2, Color(255, 255, 0), true)
+	--	debugoverlay.Text(v, "B" .. i, 2, Color(255, 255, 0), true)
 		table.insert(pB, v + Vector(0, math.Rand(-epsilon, epsilon), math.Rand(-epsilon, epsilon)))
 		table.insert(vB, polyB[i % #polyB + 1] - v)
 		table.insert(iB, {})
-		table.insert(BinA, true)
+		table.insert(BinA, 0)
 	end
 	for i, v in ipairs(pA) do
 		lines[v] = {pos = pA[i % #pA + 1], left = A, right = {}}
@@ -166,80 +195,66 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 		lines[v] = {pos = pB[i % #pB + 1], left = B, right = {}}
 	end
 	
-	local function modifylines(iP, P, i, isA)
-		if iP[1] then
-			if iP[2] then -- pA[a]->pA[a + 1] => pA[a]->iP[1].pos->iP[2].pos->pA[a + 1]
-				if iP[1].fraction > iP[2].fraction then
-					iP[1], iP[2] = iP[2], iP[1]
-				end
-				lines[P[i]] = {
-					pos = iP[1].pos,
-					left = isA and A or B,
-					right = {},
-				}
-				lines[iP[1].pos] = {
-					pos = iP[2].pos,
-					left = both,
-					right = not isA and A or B,
-				}
-				lines[iP[2].pos] = {
-					pos = P[i % #P + 1],
-					left = isA and A or B,
-					right = {},
-				}
-			else -- pA[a]->pA[a + 1] => pA[a]->iP[1].pos->pA[a + 1]
-				local newleft = iP[1].isin and both or (isA and A or B)
-				local newleft2 = not iP[1].isin and both or (isA and A or B)
-				local newright = iP[1].isin and (not isA and A or B) or {}
-				local newright2 = not iP[1].isin and (not isA and A or B) or {}
-				lines[P[i]] = {
-					pos = iP[1].pos,
-					left = newleft,
-					right = newright,
-				}
-				lines[iP[1].pos] = {
-					pos = P[i % #P + 1],
-					left = newleft2,
-					right = newright2,
-				}
-			end
+	local function modifylines(intersection, P, i, isA)
+		local istart, iend = P[i], lines[P[i]].pos
+		local area = isA and A or B
+		local oppositearea = isA and B or A
+		while intersection.fraction > (lines[iend].fraction or 1) do
+			istart = lines[istart].pos
+			iend = lines[istart].pos
 		end
+		
+		lines[istart] = {
+			pos = intersection.pos,
+			left = intersection.isin and both or area,
+			right = intersection.isin and oppositearea or {},
+			fraction = lines[istart].fraction,
+		}
+		lines[intersection.pos] = {
+			pos = iend,
+			left = intersection.isin and area or both,
+			right = intersection.isin and {} or oppositearea,
+			fraction = intersection.fraction,
+		}
 	end
 	
+	local vrad1, vrad2 = vector_origin, vector_origin
 	local cross, crossA, crossB = vector_origin, vector_origin, vector_origin --Temporary variables
 	local intersection = vector_origin
 	for a = 1, #pA do
-		AinB = true
+		AinB = 0
 		for b = 1, #pB do
 			cross = vB[b]:Cross(vA[a]).x
 			crossA = vB[b]:Cross(pB[b] - pA[a]).x / cross
 			crossB = vA[a]:Cross(pB[b] - pA[a]).x / cross
 			if crossA > 0 and crossA < 1 and crossB > 0 and crossB < 1 then
 				intersection = pB[b] + crossB * vB[b]
-				table.insert(iA[a], {
+				modifylines({
 					pos = intersection,
 					fraction = crossA,
 					isin = vA[a]:Cross(pB[b] - pA[a]).x < 0,
-				})
-				table.insert(iB[b], {
+				}, pA, a, true)
+				modifylines({
 					pos = Vector(intersection),
 					fraction = crossB,
 					isin = vB[b]:Cross(pA[a] - pB[b]).x < 0,
-				})
+				}, pB, b, false)
 			end
-			AinB = AinB and vB[b]:Cross(pA[a] - pB[b]).x > 0
-			BinA[b] = BinA[b] and vA[a]:Cross(pB[b] - pA[a]).x > 0
+			
+			vrad1 = (pB[b] - pA[a]):GetNormalized()
+			vrad2 = (pB[b] + vB[b] - pA[a]):GetNormalized()
+			AinB = AinB + math.atan2(vrad1:Cross(vrad2).x, vrad1:Dot(vrad2))
+			vrad2 = (pA[a] + vA[a] - pB[b]):GetNormalized()
+			vrad1 = (pA[a] - pB[b]):GetNormalized()
+			BinA[b] = BinA[b] + math.atan2(vrad1:Cross(vrad2).x, vrad1:Dot(vrad2))
 		end
-		if #iA[a] > 2 then print(#iA[a]) end
-		modifylines(iA[a], pA, a, true)
-		if AinB then
+		if 2 * math.pi - epsilon < AinB then
 			lines[pA[a]].left = both
 			lines[pA[a]].right = B
 		end
 	end
 	for b = 1, #pB do
-		modifylines(iB[b], pB, b, false)
-		if BinA[b] then
+		if 2 * math.pi - epsilon < BinA[b] then
 			lines[pB[b]].left = both
 			lines[pB[b]].right = A
 		end
@@ -309,22 +324,23 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	end
 	
 	-- print("result: ") PrintTable(result) print()
-	 print("orderResult: ") PrintTable(orderResult) print()
+	-- print("orderResult: ") PrintTable(orderResult) print()
 	-- print("triangulated: ") PrintTable(triangulated) print()
-	for _, tri in ipairs(orderResult) do
-		for i, t in ipairs(tri) do
-			debugoverlay.Line(t + Vector(1, 0, 0),
-				tri[i % #tri + 1] + Vector(1, 0, 0), 2, Color(0, 255, 255), true)
-			debugoverlay.Text(t + Vector(1, 0, -3), tostring(i), 2)
-		end
-	end
-	for _, tri in ipairs(triangulated) do
-		for i, t in ipairs(tri) do
-			for i = 1, 3 do
-				debugoverlay.Line(t[i] + Vector(1, 0, 0),
-					t[i % 3 + 1] + Vector(1, 0, 0), 2, Color(0, 255, 255), true)
-			end
-		end
-	end
+	-- for _, tri in ipairs(orderResult) do
+		-- for i, t in ipairs(tri) do
+			-- debugoverlay.Line(t + Vector(1, 0.1, 0.1),
+				-- tri[i % #tri + 1] + Vector(1, 0.1, 0.1), 2, Color(0, 255, 255), true)
+			-- debugoverlay.Text(t + Vector(1, 0, -3), tostring(i), 2)
+		-- end
+	-- end
+	-- for _, tri in ipairs(triangulated) do
+		-- for i, t in ipairs(tri) do
+			-- for i = 1, 3 do
+				-- debugoverlay.Line(t[i] + Vector(1, 0, 0),
+					-- t[i % 3 + 1] + Vector(1, 0, 0), 2, Color(0, 255, 255), true)
+			-- end
+		-- end
+	-- end
+	-- debugoverlay.Axis(vector_origin, angle_zero, 50, 2)
 	return orderResult, triangulated
 end
