@@ -10,17 +10,12 @@ local reference_polys = {}
 local reference_vert = Vector(1, 0, 0)
 local reference_vert45 = Vector(1, 0, 0)
 for i = 1, circle_polys do
-	reference_vert45:Rotate(Angle(0, 360 / circle_polys, 0))
-	table.insert(reference_polys, {Vector(0, 0, 0), Vector(reference_vert), Vector(reference_vert45)})
+	table.insert(reference_polys, Vector(reference_vert))
 	reference_vert:Rotate(Angle(0, 360 / circle_polys, 0))
 end
-reference_polys = {
-	{Vector(0, 0, 0), Vector(1/2^0.5, 1/2^0.5, 0), Vector(1, 0, 0)},
-	{Vector(0, 0, 0), Vector(0, 1, 0), Vector(1/2^0.5, 1/2^0.5, 0)}}
+--reference_polys = {Vector(0, 0, 0), Vector(100, 0, 0), Vector(70, 70, 0)}
 for k, v in ipairs(reference_polys) do
-	for i = 1, 3 do
-		v[i] = Vector(0, v[i].x, v[i].y)
-	end
+	reference_polys[k] = Vector(0, v.x, v.y)
 end
 
 local displacementOverlay = false
@@ -70,7 +65,7 @@ function ENT:Initialize()
 	end
 	
 	self:Remove()
-	SplatoonSWEPsGeometry.TestFunction()
+	SplatoonSWEPs.BuildOverlap()
 end
 
 function ENT:PhysicsCollide(coldata, collider)
