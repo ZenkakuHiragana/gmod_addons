@@ -87,11 +87,11 @@ function ENT:PhysicsCollide(coldata, collider)
 		self:SetPos(coldata.HitPos)
 	end)
 	
-	local ang = coldata.HitNormal:Angle()
+	local ang = (-coldata.HitNormal):Angle()
 	--ang:RotateAroundAxis(coldata.HitNormal,
 	--	(IsValid(self.Owner) and -self.Owner:EyeAngles().yaw or self:GetAngles().yaw) + 180)
 	SplatoonSWEPsInkManager.AddQueue(
-		coldata.HitPos, coldata.HitNormal, ang, self.InkRadius, self:GetCurrentInkColor(), reference_polys)
+		coldata.HitPos, -coldata.HitNormal, ang, self.InkRadius, self:GetCurrentInkColor(), reference_polys)
 	
 --	local m = SetupVertices(self, coldata)
 --	net.Start("SplatoonSWEPs: Receive vertices info")

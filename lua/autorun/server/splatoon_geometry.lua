@@ -146,11 +146,11 @@ local function TriangulatePolygon(source)
 					basepos = plus1
 				end
 				if basepos ~= plus1 then break end
-			--	if _ == n * 2 then print("infinite, 2") end
+				if _ == n * 2 then print("infinite, 2") end
 			end
 		end
 		if vertexcount < 4 then break end
-	--	if __ == n * 2 then print("infinite, 1") end
+		if __ == n * 2 then print("infinite, 1") end
 	end
 	
 	if vertexcount == 3 then
@@ -176,15 +176,18 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	for i, v in ipairs(polyA) do
 	--	debugoverlay.Line(v, polyA[i % #polyA + 1], 2, Color(0, 255, 0), true)
 	--	debugoverlay.Text(v, "A" .. i, 2, Color(0, 255, 0), true)
-		table.insert(pA, v + Vector(0, math.Rand(-epsilon, epsilon), math.Rand(-epsilon, epsilon)))
-		table.insert(vA, polyA[i % #polyA + 1] - v)
+		table.insert(pA, v)-- + Vector(0, math.Rand(-epsilon, epsilon), math.Rand(-epsilon, epsilon)))
+		table.insert(vA, polyA[i % #polyA + 1] - pA[#pA])
 		table.insert(iA, {})
 	end
 	for i, v in ipairs(polyB) do
 	--	debugoverlay.Line(v, polyB[i % #polyB + 1], 2, Color(255, 255, 0), true)
 	--	debugoverlay.Text(v, "B" .. i, 2, Color(255, 255, 0), true)
-		table.insert(pB, v + Vector(0, math.Rand(-epsilon, epsilon), math.Rand(-epsilon, epsilon)))
-		table.insert(vB, polyB[i % #polyB + 1] - v)
+		local dymin, dymax, dzmin, dzmax = -epsilon, epsilon, -epsilon, epsilon
+		if v.y > 0 then dymin = 0 else dymax = 0 end
+		if v.z > 0 then dzmin = 0 else dzmax = 0 end
+		table.insert(pB, v + Vector(0, math.Rand(dymin, dymax), math.Rand(dzmin, dzmax)))
+		table.insert(vB, polyB[i % #polyB + 1] - pB[#pB])
 		table.insert(iB, {})
 		table.insert(BinA, 0)
 	end

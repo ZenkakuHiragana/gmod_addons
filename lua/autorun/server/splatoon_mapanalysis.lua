@@ -1,5 +1,6 @@
 
 --Part of code from BSP Snap.
+local LUMP_PLANES		=  1 + 1
 local LUMP_VERTEXES		=  3 + 1
 local LUMP_EDGES		= 12 + 1
 local LUMP_SURFEDGES	= 13 + 1
@@ -24,14 +25,14 @@ Initialize = function()
 	points = points:GetMesh()
 	local surf = {} --Get triangles of the map, except displacements
 	for i = 1, #points, 3 do
-		local vert = {points[i].pos, points[i + 1].pos, points[i + 2].pos}
+		local vert = {points[i + 2].pos, points[i + 1].pos, points[i].pos}
 		local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 		local center = (vert[1] + vert[2] + vert[3]) / 3
 		table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 	end
 	
 	--Parse bsp and get displacement info
-	local lumps, vertexes, edges, surfedges, faces = {}, {}, {}, {}, {}
+	local lumps, planes, vertexes, edges, surfedges, faces = {}, {}, {}, {}, {}, {}
 	local dispinfo = {} --Lump 26 DispInfo structure
 	local dispvertices = {} --The actual vertices
 	local mapname = "maps/" .. game.GetMap() .. ".bsp"
@@ -45,15 +46,28 @@ Initialize = function()
 			table.insert(lumps, {fileofs = fileofs, filelen = filelen})
 		end
 		
-		--Vertexes, all vertices including displacements
-		f:Seek(lumps[LUMP_VERTEXES].fileofs)
+		--Planes, normal and distance
+		f:Seek(lumps[LUMP_PLANES].fileofs)
 		local x, y, z, i = 0, 0, 0, 0
-		while 12 * i < lumps[LUMP_VERTEXES].filelen do
-			f:Seek(lumps[LUMP_VERTEXES].fileofs + 12 * i)
+		while 20 * i < lumps[LUMP_PLANES].filelen do
+			f:Seek(lumps[LUMP_PLANES].fileofs + 20 * i)
+			i = i + 1
 			x = f:ReadFloat()
 			y = f:ReadFloat()
 			z = f:ReadFloat()
+			planes[i] = {}
+			planes[i].normal = Vector(x, y, z)
+			planes[i].dist = f:ReadFloat()
+		end
+		
+		i = 0 --Vertexes, all vertices including displacements
+		f:Seek(lumps[LUMP_VERTEXES].fileofs)
+		while 12 * i < lumps[LUMP_VERTEXES].filelen do
+			f:Seek(lumps[LUMP_VERTEXES].fileofs + 12 * i)
 			i = i + 1
+			x = f:ReadFloat()
+			y = f:ReadFloat()
+			z = f:ReadFloat()
 			vertexes[i] = Vector(x, y, z)
 		end
 		
@@ -79,12 +93,33 @@ Initialize = function()
 		i = 0 --Faces
 		f:Seek(lumps[LUMP_FACES].fileofs)
 		while 56 * i < lumps[LUMP_FACES].filelen do
-			--Skipped: unsigned short planenum, byte side, byte onNode
-			f:Seek(lumps[LUMP_FACES].fileofs + 56 * i + 2 + 1 + 1)
+			f:Seek(lumps[LUMP_FACES].fileofs + 56 * i)
 			i = i + 1
 			faces[i] = {}
+			faces[i].planenum = f:Read(2)
+			faces[i].planenum = string.byte(faces[i].planenum[1]) + bit.lshift(string.byte(faces[i].planenum[2]), 8)
+			f:Skip(1 + 1) --byte side, byte onNode
 			faces[i].firstedge = f:ReadLong()
 			faces[i].numedges = f:ReadShort()
+			
+			-- local vert = {}
+			-- local normal = planes[faces[i].planenum + 1].normal
+			-- local center = vector_origin
+			-- for e = faces[i].numedges, 1, -1 do
+				-- local index = surfedges[faces[i].firstedge + e]
+				-- local edgeindex = index > 0 and 1 or 2
+				-- local v = vertexes[edges[math.abs(index) + 1][edgeindex] + 1]
+				-- if #vert > 1 then
+					-- local v1, v2 = vert[#vert - 1], vert[#vert]
+					-- if (v2 - v1):Cross(v - v1):LengthSqr() < 0.04 then
+						-- table.remove(vert)
+					-- end
+				-- end
+				-- table.insert(vert, v)
+				-- center = center + v
+			-- end
+			-- center = center / faces[i].numedges
+			-- table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 		end
 		
 		i = 0 --DispInfo, information of displacements
@@ -175,9 +210,7 @@ Initialize = function()
 				--Get the original positions of the displacement geometry
 				local power, div1, div2 = 2^v.power + 1, vector_origin, vector_origin
 				local u1, u2, v1, v2 = vector_origin, vector_origin, vector_origin, vector_origin
-				if #v.vertices ~= 4 then
-					print("Displacement No." .. k .. ": Displacement with other than 4 corners!")
-				else
+				if #v.vertices == 4 then
 					u1 = v.vertices[4] - v.vertices[1]
 					u2 = v.vertices[3] - v.vertices[2]
 					v1 = v.vertices[2] - v.vertices[1]
@@ -189,6 +222,8 @@ Initialize = function()
 						div2 = div2 - div1
 						w.origin = div1 + div2 * x / (power - 1)
 					end
+				else
+					print("Displacement No." .. k .. ": Displacement that does not have 4 corners!")
 				end
 				
 				--Get the actual positions of the displacement geometry
@@ -223,7 +258,7 @@ Initialize = function()
 						local vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
 						local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						local center = (vert[1] + vert[2] + vert[3]) / 3
-						table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
+						table.insert(surf, {id = #surf + 1, vertices = vert, normal = -normal, center = center})
 						table.insert(points, {pos = vert[1]})
 						table.insert(points, {pos = vert[2]})
 						table.insert(points, {pos = vert[3]})
@@ -238,7 +273,7 @@ Initialize = function()
 						vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
 						normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						center = (vert[1] + vert[2] + vert[3]) / 3
-						table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
+						table.insert(surf, {id = #surf + 1, vertices = vert, normal = -normal, center = center})
 						table.insert(points, {pos = vert[1]})
 						table.insert(points, {pos = vert[2]})
 						table.insert(points, {pos = vert[3]})
@@ -307,9 +342,9 @@ Initialize = function()
 --		Vector(0, 0, 1), Vector(0, 0, -1),
 --	}
 	for k, s in ipairs(surf) do
-		for i = 1, 3 do
+		for i = 1, #s.vertices do
 			local v1 = s.vertices[i]
-			local v2 = s.vertices[i % 3 + 1]
+			local v2 = s.vertices[i % #s.vertices + 1]
 			local dir = v2 - v1
 			local x1, y1, z1 = v1.x - v1.x % chunksize, v1.y - v1.y % chunksize, v1.z - v1.z % chunksize
 			local x2, y2, z2 = v2.x - v2.x % chunksize, v2.y - v2.y % chunksize, v2.z - v2.z % chunksize
