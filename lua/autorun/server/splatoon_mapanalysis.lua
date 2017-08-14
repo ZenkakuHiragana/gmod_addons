@@ -246,11 +246,9 @@ Initialize = function()
 				for i = 1, #dispvertices[k] do
 					local row = math.floor((i - 1) / power)
 					local tri_inv = i % 2 ~= 0
-					if (i - 1) % power < power - 1 and row < power - 1 then
-					--	if row % 2 ~= 0 then tri_inv = not tri_inv end
-						
-						x, y, z = i, i + power, i + 1
-						if tri_inv then y = y + 1 end
+					if (i - 1) % power < power - 1 and row < power - 1 then						
+						x, y, z = i, i + 1, i + power
+						if tri_inv then z = z + 1 end
 					--	4, 13, 5 |\
 					--	3, 13, 4 |/
 					--	2, 11, 3 |\
@@ -258,22 +256,24 @@ Initialize = function()
 						local vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
 						local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						local center = (vert[1] + vert[2] + vert[3]) / 3
-						table.insert(surf, {id = #surf + 1, vertices = vert, normal = -normal, center = center})
+						table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 						table.insert(points, {pos = vert[1]})
 						table.insert(points, {pos = vert[2]})
 						table.insert(points, {pos = vert[3]})
 						if Debug.DrawMesh and k == 1 then
-							debugoverlay.Line(vert[1], vert[2], 10, Color(0,255,0), true)
+							debugoverlay.Text(vert[1], i, 10, true)
+							debugoverlay.Line(vert[1], vert[1] + normal * 50, 10, Color(255,255,0), true)
+							debugoverlay.Line(vert[1], vert[2], 10, Color(0,255,255), true)
 							debugoverlay.Line(vert[2], vert[3], 10, Color(0,255,0), true)
 							debugoverlay.Line(vert[3], vert[1], 10, Color(0,255,0), true)
 						end
 						
-						x, y, z = i + power + 1, i, i + power
-						if not tri_inv then y = y + 1 end
+						x, y, z = i + power + 1, i + power, i
+						if not tri_inv then z = z + 1 end
 						vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
 						normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						center = (vert[1] + vert[2] + vert[3]) / 3
-						table.insert(surf, {id = #surf + 1, vertices = vert, normal = -normal, center = center})
+						table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 						table.insert(points, {pos = vert[1]})
 						table.insert(points, {pos = vert[2]})
 						table.insert(points, {pos = vert[3]})

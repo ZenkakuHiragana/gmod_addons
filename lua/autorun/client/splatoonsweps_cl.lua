@@ -13,63 +13,68 @@ local reference_polys = {
 
 local mat = Material("debug/debugbrushwireframe")
 local IMaterial = Material("splatoon/splatoonink.vmt")
-local WaterOverwrap = Material("splatoon/splatoonwater.vmt")
-local IMesh = IMesh or {}
-local Triangles = Triangles or {}
-local Dummies = Dummies or {}
-local Receiving = Receiving or {}
-
-net.Receive("SplatoonSWEPs: Reset ink mesh by ID", function(len, ply)
-	local id = net.ReadInt(32)
-	IMesh[id] = {}
-	Triangles[id] = {}
-	if Dummies[id] then
-		for k, v in ipairs(Dummies[id]) do
-			if IsValid(v) then v:Remove() end
-		end
-	end
-	Dummies[id] = {}
-	Receiving = {}
-end)
+local WaterOverlap = Material("splatoon/splatoonwater.vmt")
+local InkGroup = {}
 
 net.Receive("SplatoonSWEPs: Broadcast ink vertices", function(len, ply)
-	local m = net.ReadTable()
-	for k, v in ipairs(m) do
-		table.insert(Receiving, v)
+	if not LocalPlayer().IsReceivingInkData then
+		LocalPlayer().IsReceivingInkData = true
+		LocalPlayer().ReceivingInkData = {}
+	end
+	
+	local pos, u, v = vector_origin, 0, 0
+	for i = 1, len / 8 do
+		pos = net.ReadVector()
+		u = net.ReadFloat()
+		v = net.ReadFloat()
+		if pos == vector_origin then break end
+		table.insert(LocalPlayer().ReceivingInkData, {pos = pos, u = u, v = v})
 	end
 end)
 
-net.Receive("SplatoonSWEPs: Finalize ink refreshment", function(len, ply)
-	local color = net.ReadVector()
+net.Receive("SplatoonSWEPs: Finalize ink refreshment", function(...)
 	local org = net.ReadVector()
 	local normal = net.ReadVector()
+	local color = net.ReadColor()
 	local id = net.ReadInt(32)
-	local imesh = Mesh()
-	local dummy = ClientsideModel("models/error.mdl")
-	dummy:SetModelScale(0)
-	dummy:SetPos(org + normal)
-	dummy:SetAngles(normal:Angle())
---	imesh:BuildFromTriangles(Receiving)
-
-	mesh.Begin(imesh, MATERIAL_POLYGON, #Receiving)
-	for i = #Receiving, 1, -1 do
-		mesh.Position(Receiving[i].pos)
-		mesh.Normal(normal)
-		mesh.Color(color.x, color.y, color.z, 255)
-		mesh.TexCoord(0, Receiving[i].u, Receiving[i].v)
-		mesh.AdvanceVertex()
-		if #Receiving > 16 then debugoverlay.Text(Receiving[i].pos, i, 4) end
+	local inkid = net.ReadDouble()
+	local newink = LocalPlayer().ReceivingInkData
+	if not InkGroup[id] then InkGroup[id] = {} end
+	if InkGroup[id].imesh then
+		InkGroup[id].imesh:Destroy()
 	end
-	mesh.End()
-	table.insert(IMesh[id], {imesh = imesh, color = color, pos = org, normal = normal})
-	table.insert(Triangles[id], Receiving)
-	table.insert(Dummies[id], dummy)
-	Receiving = {}
+	InkGroup[id].imesh = Mesh()
+	InkGroup[id][inkid] = {}
+	
+	local triangles = {}
+	local lightcolor, r, g, b = vector_origin, 0, 0, 0
+	for i, v in ipairs(newink) do
+		lightcolor = render.ComputeLighting(v.pos, normal) + Vector(0.1, 0.1, 0.1)
+		r = math.Clamp(color.r * lightcolor.x, 0, 255)
+		g = math.Clamp(color.g * lightcolor.y, 0, 255)
+		b = math.Clamp(color.b * lightcolor.z, 0, 255)
+		newink[i].color = Color(r, g, b)
+		table.insert(InkGroup[id][inkid], newink[i])
+	end
+	
+	for i, ink in pairs(InkGroup[id]) do
+		if not isnumber(i) then continue end
+		for k, v in ipairs(ink) do
+			table.insert(triangles, v)
+		end
+	end
+	triangles = table.Reverse(triangles)
+	
+	InkGroup[id].imesh:BuildFromTriangles(triangles)
+	LocalPlayer().IsReceivingInkData = nil
+	LocalPlayer().ReceivingInkData = {}
 end)
 
 function ClearInk()
-	for i, e in ipairs(Dummies) do e:Remove() end
-	Receiving, IMesh, Triangles, Dummies = {}, {}, {}, {}
+	for k, v in pairs(InkGroup) do
+		if v.imesh then v.imesh:Destroy() end
+	end
+	InkGroup = {}
 end
 
 local im = Mesh()
@@ -84,7 +89,7 @@ mesh.Begin(im, MATERIAL_POLYGON, #reference_polys)
 for i = #reference_polys, 1, -1 do
 	mesh.Position(reference_polys[i].pos)
 	mesh.Normal(Vector(0.7, 0, 1))
-	mesh.Color(255, 0, 255, 128)
+	mesh.Color(math.random(0, 255), 255, 255, 255)
 	mesh.TexCoord(0, u[i], v[i])
 	mesh.AdvanceVertex()
 	debugoverlay.Text(reference_polys[i].pos, i, 4)
@@ -92,28 +97,17 @@ end
 mesh.End()
 
 local function DrawMeshes()
-	dummy:DrawModel()
-	for i, m in pairs(IMesh) do
-		for k, v in ipairs(m) do
-			render.SetMaterial(IMaterial)
-			IMaterial:SetVector("$color", v.color)
-			v.imesh:Draw()
-			render.SetMaterial(WaterOverwrap)
-			v.imesh:Draw()
-		end
+	for id, ink in pairs(InkGroup) do
+		render.SetMaterial(IMaterial)
+		ink.imesh:Draw()
+		render.SetMaterial(WaterOverlap)
+		ink.imesh:Draw()
 	end
-	IMaterial:SetVector("$color", Vector(1, 1, 1))
-	-- dummy:SetPos(vector_origin)
-	-- dummy:SetAngles(angle_zero)
-	-- dummy:SetColor(Color(255, 0, 255))
-	-- dummy:DrawModel()
-	-- render.SetMaterial(mat)
+	
 	-- for i = #reference_polys, 1, -1 do
 		-- debugoverlay.Text(reference_polys[i].pos, i, 0.1)
 	-- end
 	-- render.SetMaterial(IMaterial)
---	im:Draw()
-	-- render.SetColorMaterial()
 	-- im:Draw()
 end
 hook.Add("PostDrawOpaqueRenderables", "SplatoonSWEPsDrawInk", DrawMeshes)
