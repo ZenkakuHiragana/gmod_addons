@@ -186,8 +186,8 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	
 	for i, v in ipairs(polyA) do
 		if getDifference then
-		debugoverlay.Line(v, polyA[i % #polyA + 1], 2, Color(0, 255, 0), true)
-		debugoverlay.Text(v, "A" .. i, 2, Color(0, 255, 0), true)
+		-- debugoverlay.Line(v, polyA[i % #polyA + 1], 2, Color(0, 255, 0), true)
+		-- debugoverlay.Text(v, "A" .. i, 2, Color(0, 255, 0), true)
 		end
 		table.insert(pA, v)
 		table.insert(iA, {})
@@ -210,8 +210,8 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	end
 	for i, v in ipairs(pB) do
 		if getDifference then
-		debugoverlay.Line(v, pB[i % #pB + 1], 2, Color(255, 255, 0), true)
-		debugoverlay.Text(v, "B" .. i, 2, Color(255, 255, 0), true)
+		-- debugoverlay.Line(v, pB[i % #pB + 1], 2, Color(255, 255, 0), true)
+		-- debugoverlay.Text(v, "B" .. i, 2, Color(255, 255, 0), true)
 		end
 		table.insert(vB, pB[i % #pB + 1] - v)
 		lines[v] = {pos = pB[i % #pB + 1], left = B, right = {}}

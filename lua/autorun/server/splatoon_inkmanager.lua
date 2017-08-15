@@ -11,10 +11,11 @@ util.AddNetworkString("SplatoonSWEPs: Finalize ink refreshment")
 
 local INK_SURFACE_DELTA_NORMAL = 0.5
 local MAX_SIZE = 300
-local MAX_PROCESS_QUEUE_AT_ONCE = 3
-local MAX_MESSAGE_SENT = 20
+local MAX_COROUTINES_AT_ONCE = 10
+local MAX_PROCESS_QUEUE_AT_ONCE = 5
+local MAX_MESSAGE_SENT = 10
 local MAX_POLYS_OVERWRITE_AT_ONCE = 10
-local MAX_OVERWRITE_AT_ONCE = 10
+local MAX_OVERWRITE_AT_ONCE = 20
 local MAX_NET_SEND_SIZE = 64 * 1024 - 3 - 20
 local function GetMeshTriangle(triangles, orgpos, orgnormal, organg, planepos, planenormal, planedot, planecolor)
 	local vertices, result = {}, {}
@@ -52,10 +53,6 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 			-- debugoverlay.Text(s.center, dot1, 5, true)
 			-- debugoverlay.Text(s.center + s.normal * 10, radius * (1.1 - normal_cos) + 0.5, 5, true)
 			if math.abs(dot1) < radius * (1.1 - normal_cos) then
-							for i, v in ipairs(s.vertices) do
-								debugoverlay.Line(v, s.vertices[i % #s.vertices + 1], 5, Color(255, 255, 0), true)
-								debugoverlay.Text(v, i, 5, Color(255, 255, 0), true)
-							end
 				for k = 1, #s.vertices do
 					--Vertices is within InkRadius
 					local v1 = s.vertices[k]
@@ -74,9 +71,11 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 							}
 							for i, v in ipairs(s.vertices) do
 								table.insert(surfadd, v)
-								debugoverlay.Line(v, s.vertices[i % #s.vertices + 1], 5, Color(255, 255, 0), true)
-								debugoverlay.Text(v, i, 5, Color(255, 255, 0), true)
 							end
+							-- for i, v in ipairs(s.vertices) do
+								-- debugoverlay.Line(v, s.vertices[i % #s.vertices + 1], 5, Color(255, 255, 0), true)
+								-- debugoverlay.Text(v, i, 5, Color(255, 255, 0), true)
+							-- end
 							surf[surfadd] = true
 							break
 						end
@@ -86,8 +85,9 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 		end --if s.normal:Dot
 	end --for #SplatoonSWEPs.Surface
 	
+	local reference_polys = {}
 	for i, v in ipairs(polys) do
-		polys[i] = v * radius
+		reference_polys[i] = v * radius
 	end
 	
 	local vertexlist = {} --Vertices for polygon that we attempt to draw
@@ -98,7 +98,7 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 			planarsurf[i].x = 0
 		end
 		
-		intersection.Poly, intersection.Tri = SplatoonSWEPs.BuildOverlap(planarsurf, polys, false)
+		intersection.Poly, intersection.Tri = SplatoonSWEPs.BuildOverlap(planarsurf, reference_polys, false)
 		if table.Count(intersection.Poly) > 0 then
 			intersection.Plane = {
 				pos = drawable.center + drawable.normal * INK_SURFACE_DELTA_NORMAL,
@@ -138,18 +138,18 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 			if inklist then
 				local overwrite_at_once = 0
 				for times, exist in ipairs(inklist) do
-					-- if pos:DistToSqr(exist.origin) > (radius + exist.radius)^2 then
-						-- table.insert(InkGroup[planeid], exist)
-						-- continue
-					-- end
-					
-					if not dd then
-						for k, v in ipairs(exist.poly3D) do
-							debugoverlay.Line(v.pos + exist.normal * 50,
-								exist.poly3D[k % #exist.poly3D + 1].pos + exist.normal * 50, 2, Color(0, 255, 0), false)
-							debugoverlay.Text(v.pos + exist.normal * 50, "A" .. k, 2)
-						end
+					if pos:DistToSqr(exist.origin) > (radius + exist.radius)^2 then
+						table.insert(InkGroup[planeid], exist)
+						continue
 					end
+					
+					-- if not dd then
+						-- for k, v in ipairs(exist.poly3D) do
+							-- debugoverlay.Line(v.pos + exist.normal * 50,
+								-- exist.poly3D[k % #exist.poly3D + 1].pos + exist.normal * 50, 2, Color(0, 255, 0), false)
+							-- debugoverlay.Text(v.pos + exist.normal * 50, "A" .. k, 2)
+						-- end
+					-- end
 					
 					local subtrahend = {}
 					for i, v in ipairs(poly2D) do
@@ -193,13 +193,13 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 							triangles = existmesh,
 						})
 						
-						if not dd then
-							for k, v in ipairs(existpoly3D) do
-								debugoverlay.Line(v.pos + exist.normal * 100,
-									existpoly3D[k % #existpoly3D + 1].pos + exist.normal * 100, 2, Color(exist.color.x, exist.color.y, exist.color.z), false)
-								debugoverlay.Text(v.pos + exist.normal * 100, "C" .. k, 2)
-							end
-						end
+						-- if not dd then
+							-- for k, v in ipairs(existpoly3D) do
+								-- debugoverlay.Line(v.pos + exist.normal * 100,
+									-- existpoly3D[k % #existpoly3D + 1].pos + exist.normal * 100, 2, Color(exist.color.x, exist.color.y, exist.color.z), false)
+								-- debugoverlay.Text(v.pos + exist.normal * 100, "C" .. k, 2)
+							-- end
+						-- end
 					end
 					
 					overwrite_at_once = overwrite_at_once + 1
@@ -215,13 +215,13 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 					v = (v.z + MAX_SIZE / 2) / MAX_SIZE,
 				}
 			end
-			if not dd then
-				for k, v in ipairs(poly3D) do
-					debugoverlay.Line(v.pos + normal * 50, poly3D[k % #poly3D + 1].pos + normal * 50, 2, Color(255, 255, 0), false)
-					debugoverlay.Text(v.pos + normal * 50, "B" .. k, 2)
-				end
-				-- dd = true
-			end
+			-- if not dd then
+				-- for k, v in ipairs(poly3D) do
+					-- debugoverlay.Line(v.pos + normal * 50, poly3D[k % #poly3D + 1].pos + normal * 50, 2, Color(255, 255, 0), false)
+					-- debugoverlay.Text(v.pos + normal * 50, "B" .. k, 2)
+				-- end
+			-- end
+			-- dd = true
 			
 			table.insert(InkGroup[planeid], {
 				poly2D = poly2D,
@@ -270,37 +270,32 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 		if message_sent % MAX_MESSAGE_SENT == 0 then coroutine.yield() end
 	end
 	
---	print("wholetime: ", CurTime() - wholetime)
+	-- print("wholetime: ", CurTime() - wholetime)
 	coroutine.yield(true)
 end
 
 local function ProcessQueue()
-	local done = 0
 	while true do
-		local queue = table.Copy(PaintQueue)
-		for i, v in ipairs(queue) do
-			if coroutine.status(v.co) == "dead" then
-				queue[i] = nil
-				continue
-			end
-			
+		local done = 0
+		for i, v in ipairs(PaintQueue) do
+			if coroutine.status(v.co) == "dead" then continue end
 			local ok, message = coroutine.resume(
 				v.co, v.pos, v.normal, v.ang, v.radius, v.color, v.polys)
-			if not ok then print("coroutine end: ", message) end
 			if ok and message then
-				queue[i] = nil				
+				v.done = true
 				coroutine.yield()
 			elseif not ok then
-				queue[i] = nil
+				print("coroutine end: ", message)
 			end
 			
 			done = done + 1
-			if done > 20 then
-				coroutine.yield()
-				done = 0
-			end
+			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
-		done = 0
+		local newqueue = {}
+		for i, v in ipairs(PaintQueue) do
+			if not v.done then table.insert(newqueue, v) end
+		end
+		PaintQueue = newqueue
 		coroutine.yield()
 	end
 end
@@ -314,7 +309,7 @@ local function DoCoroutines()
 		for i, co in pairs(threads) do
 			--Give a silent warning to developers if Think(n) has returned
 			if coroutine.status(co)  == "dead" then
-				Msg(self, "\tSplatoonSWEPs Warning: Coroutine " .. i .. " has finished executing\n")
+				Msg(self, "\tSplatoonSWEPs Warning: Coroutine " .. i .. " has finished executing.\n")
 				threads[i] = nil
 				continue
 			end
@@ -325,12 +320,8 @@ local function DoCoroutines()
 			end
 			
 			done = done + 1
-			if done > MAX_PROCESS_QUEUE_AT_ONCE then
-				coroutine.yield()
-				done = 0
-			end
+			if done % MAX_COROUTINES_AT_ONCE == 0 then coroutine.yield() end
 		end
-		done = 0
 		coroutine.yield()
 	end
 end
@@ -351,6 +342,10 @@ SplatoonSWEPsInkManager = {
 		end
 	end,
 	AddQueue = function(pos, normal, ang, radius, color, polys)
+		-- print(coroutine.status(SplatoonSWEPsInkManager.Threads.ProcessQueue))
+		-- if coroutine.status(SplatoonSWEPsInkManager.Threads.ProcessQueue) == "running" then
+			-- SplatoonSWEPsInkManager.Threads.ProcessQueue = coroutine.create(ProcessQueue)
+		-- end
 		table.insert(PaintQueue, {
 			pos = pos,
 			normal = normal,
@@ -360,6 +355,15 @@ SplatoonSWEPsInkManager = {
 			polys = polys,
 			co = coroutine.create(QueueCoroutine),
 		})
+	end,
+	DrawInkGroup = function()
+		for _, g in pairs(InkGroup) do
+			for __, s in ipairs(g) do
+				for i, v in ipairs(s.poly3D) do
+					debugoverlay.Line(v.pos, s.poly3D[i % #s.poly3D + 1].pos, 5, Color(0, 255, 0), true)
+				end
+			end
+		end
 	end,
 }
 hook.Add("Tick", "SplatoonSWEPsDoInkCoroutines", SplatoonSWEPsInkManager.Think)

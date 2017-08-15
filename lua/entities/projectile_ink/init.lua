@@ -5,17 +5,13 @@ AddCSLuaFile "shared.lua"
 include "shared.lua"
 util.AddNetworkString("SplatoonSWEPs: Receive vertices info")
 
-local circle_polys = 16
+local circle_polys = 12
 local reference_polys = {}
-local reference_vert = Vector(1, 0, 0)
-local reference_vert45 = Vector(1, 0, 0)
+local reference_vert = Vector(0, 1, 0)
+local reference_vert45 = Vector(0, 1, 0)
 for i = 1, circle_polys do
 	table.insert(reference_polys, Vector(reference_vert))
-	reference_vert:Rotate(Angle(0, 360 / circle_polys, 0))
-end
---reference_polys = {Vector(0, 0, 0), Vector(100, 0, 0), Vector(70, 70, 0)}
-for k, v in ipairs(reference_polys) do
-	reference_polys[k] = Vector(0, v.x, v.y)
+	reference_vert:Rotate(Angle(0, 0, 360 / circle_polys))
 end
 
 local displacementOverlay = false
@@ -69,10 +65,13 @@ function ENT:Initialize()
 end
 
 function ENT:PhysicsCollide(coldata, collider)
-	if util.QuickTrace(coldata.HitPos, coldata.HitNormal, self).HitSky then
+	local tr = util.QuickTrace(coldata.HitPos, coldata.HitNormal, self)
+	if tr.HitSky or not tr.HitWorld then
 		SafeRemoveEntityDelayed(self, 0)
 		return
 	end
+	local ang = (-coldata.HitNormal):Angle()
+	ang:RotateAroundAxis(-coldata.HitNormal, self:GetAngles().yaw)
 	
 	self:SetIsInk(true)
 	self:SetHitPos(coldata.HitPos)
@@ -87,21 +86,12 @@ function ENT:PhysicsCollide(coldata, collider)
 		self:SetPos(coldata.HitPos)
 	end)
 	
-	local ang = (-coldata.HitNormal):Angle()
-	--ang:RotateAroundAxis(coldata.HitNormal,
-	--	(IsValid(self.Owner) and -self.Owner:EyeAngles().yaw or self:GetAngles().yaw) + 180)
+	-- local polys = reference_polys
+	-- for i, v in ipairs(polys) do
+		-- polys[i] = v * ((math.random(1000000) / 10000000) + 0.95)
+	-- end
 	SplatoonSWEPsInkManager.AddQueue(
 		coldata.HitPos, -coldata.HitNormal, ang, self.InkRadius, self:GetCurrentInkColor(), reference_polys)
-	
---	local m = SetupVertices(self, coldata)
---	net.Start("SplatoonSWEPs: Receive vertices info")
---	net.WriteEntity(self)
---	net.WriteTable(m)
---	net.Broadcast()
---	
---	net.Start("SplatoonSWEPs: ")
---	net.WriteTable(m)
---	net.Broadcast()
 end
 
 function ENT:Think()

@@ -1,6 +1,5 @@
 
---Part of code from BSP Snap.
-local LUMP_PLANES		=  1 + 1
+--Some parts of code are from BSP Snap.
 local LUMP_VERTEXES		=  3 + 1
 local LUMP_EDGES		= 12 + 1
 local LUMP_SURFEDGES	= 13 + 1
@@ -8,17 +7,38 @@ local LUMP_FACES		=  7 + 1
 local LUMP_DISPINFO		= 26 + 1
 local LUMP_DISP_VERTS	= 33 + 1
 local LUMP_DISP_TRIS	= 48 + 1
+
+local chunksize = 384
+local chunkrate = chunksize / 2
+local chunkbound = Vector(chunksize, chunksize, chunksize)
+local function IsExternalSurface(verts, center, normal)
+	normal = normal * 0.5
+	return
+		bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 or
+		bit.band(util.PointContents(verts[1] + normal), ALL_VISIBLE_CONTENTS) == 0 or
+		bit.band(util.PointContents(verts[2] + normal), ALL_VISIBLE_CONTENTS) == 0 or
+		bit.band(util.PointContents(verts[3] + normal), ALL_VISIBLE_CONTENTS) == 0
+end
+
+local time = SysTime()
+local loadtime = 0
 local Debug = {
 	CornerModulation = false,
 	DrawMesh = false,
-	TakeTime = false,
+	TakeTime = true,
 	WriteGeometryInfo = false,
 }
+local function ShowTime(str)
+	if not Debug.TakeTime then return end
+	loadtime = loadtime + SysTime() - time
+	print("SplatoonSWEPs: " .. SysTime() - time .. " seconds.", str)
+	time = SysTime()
+end
 
 SplatoonSWEPs = {
-ChunkSize = 384,
 Initialize = function()
-	local taketime = SysTime()
+	time, loadtime = SysTime(), 0
+	
 	local points = game.GetWorld():GetPhysicsObject()
 	if not IsValid(points) then print("invalid world physics object") return end
 	points = points:GetMesh()
@@ -27,13 +47,15 @@ Initialize = function()
 		local vert = {points[i + 2].pos, points[i + 1].pos, points[i].pos}
 		local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 		local center = (vert[1] + vert[2] + vert[3]) / 3
-		if bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 then
+		if IsExternalSurface(vert, center, normal) then
 			table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 		end
 	end
 	
+	ShowTime("Map Physics Mesh Loaded")
+	
 	--Parse bsp and get displacement info
-	local lumps, planes, vertexes, edges, surfedges, faces = {}, {}, {}, {}, {}, {}
+	local lumps, vertexes, edges, surfedges, faces = {}, {}, {}, {}, {}
 	local dispinfo = {} --Lump 26 DispInfo structure
 	local dispvertices = {} --The actual vertices
 	local mapname = "maps/" .. game.GetMap() .. ".bsp"
@@ -47,22 +69,9 @@ Initialize = function()
 			table.insert(lumps, {fileofs = fileofs, filelen = filelen})
 		end
 		
-		--Planes, normal and distance
-		f:Seek(lumps[LUMP_PLANES].fileofs)
-		local x, y, z, i = 0, 0, 0, 0
-		while 20 * i < lumps[LUMP_PLANES].filelen do
-			f:Seek(lumps[LUMP_PLANES].fileofs + 20 * i)
-			i = i + 1
-			x = f:ReadFloat()
-			y = f:ReadFloat()
-			z = f:ReadFloat()
-			planes[i] = {}
-			planes[i].normal = Vector(x, y, z)
-			planes[i].dist = f:ReadFloat()
-		end
-		
-		i = 0 --Vertexes, all vertices including displacements
+		--Vertexes, all vertices including displacements
 		f:Seek(lumps[LUMP_VERTEXES].fileofs)
+		local x, y, z, i = 0, 0, 0, 0
 		while 12 * i < lumps[LUMP_VERTEXES].filelen do
 			f:Seek(lumps[LUMP_VERTEXES].fileofs + 12 * i)
 			i = i + 1
@@ -94,33 +103,11 @@ Initialize = function()
 		i = 0 --Faces
 		f:Seek(lumps[LUMP_FACES].fileofs)
 		while 56 * i < lumps[LUMP_FACES].filelen do
-			f:Seek(lumps[LUMP_FACES].fileofs + 56 * i)
+			f:Seek(lumps[LUMP_FACES].fileofs + 56 * i + 2 + 1 + 1) --short planenum, byte side, byte onNode
 			i = i + 1
 			faces[i] = {}
-			faces[i].planenum = f:Read(2)
-			faces[i].planenum = string.byte(faces[i].planenum[1]) + bit.lshift(string.byte(faces[i].planenum[2]), 8)
-			f:Skip(1 + 1) --byte side, byte onNode
 			faces[i].firstedge = f:ReadLong()
 			faces[i].numedges = f:ReadShort()
-			
-			-- local vert = {}
-			-- local normal = planes[faces[i].planenum + 1].normal
-			-- local center = vector_origin
-			-- for e = faces[i].numedges, 1, -1 do
-				-- local index = surfedges[faces[i].firstedge + e]
-				-- local edgeindex = index > 0 and 1 or 2
-				-- local v = vertexes[edges[math.abs(index) + 1][edgeindex] + 1]
-				-- if #vert > 1 then
-					-- local v1, v2 = vert[#vert - 1], vert[#vert]
-					-- if (v2 - v1):Cross(v - v1):LengthSqr() < 0.04 then
-						-- table.remove(vert)
-					-- end
-				-- end
-				-- table.insert(vert, v)
-				-- center = center + v
-			-- end
-			-- center = center / faces[i].numedges
-			-- table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 		end
 		
 		i = 0 --DispInfo, information of displacements
@@ -151,11 +138,16 @@ Initialize = function()
 				dispinfo[i].dispverts[k].vec = Vector(x, y, z)
 				dispinfo[i].dispverts[k].dist = f:ReadFloat()
 			end
+			dispinfo[i].surf = {}
+			dispinfo[i].surf.face = faces[dispinfo[i].MapFace + 1] --firstedge, numedges
+			dispinfo[i].surf.edge = {} --Corner edges of the displacement
+			dispinfo[i].vertices = {} --Corner positions of the displacement
 		end
+		
 		--Finished fetching data
+		ShowTime("BSP Loaded")
 		if Debug.WriteGeometryInfo then
 			PrintTable(lumps) print("")
-			PrintTable(planes) print("")
 			PrintTable(vertexes) print("")
 			PrintTable(edges) print("")
 			PrintTable(surfedges) print("")
@@ -164,24 +156,20 @@ Initialize = function()
 		
 		--Make DispInfo more convenient
 		for k, v in ipairs(dispinfo) do
-			v.surf = {}
-			v.surf.face = faces[v.MapFace + 1] --planenum, firstedge, numedges
-			v.surf.edge = {} --Corner edges of the displacement
-			v.vertices = {} --Corner positions of the displacement
 			local edgeindex, v1, v2 = 0, 0, 0
 			for i = v.surf.face.firstedge, v.surf.face.firstedge + v.surf.face.numedges - 1 do
 				edgeindex = math.abs(surfedges[i + 1]) + 1 --wiki says surface number can be negative
 				v1, v2 = edges[edgeindex][1] + 1, edges[edgeindex][2] + 1
 				if surfedges[i + 1] < 0 then v1, v2 = v2, v1 end --If it is negative, it is inversed
 				v1, v2 = vertexes[v1], vertexes[v2] --Get actual vectors from vector indices
-				v.vertices[#v.vertices + 1] = v1 --We use the first one
+				table.insert(v.vertices, v1) --We use the first one
 			end
 			
 			--DispInfo.startPosition isn't always equal to vertices[1] so let's find the correct one
 			if #v.vertices == 4 then
 				local index, startedge = {}, 0
 				for i = 1, 4 do
-					if v.startPosition:DistToSqr(v.vertices[i]) < 0.01 then
+					if v.startPosition:DistToSqr(v.vertices[i]) < 0.02 then
 						startedge = i
 						break
 					end
@@ -209,38 +197,24 @@ Initialize = function()
 					v.vertices[index[4]]
 				
 				--Get the original positions of the displacement geometry
-				local power, div1, div2 = 2^v.power + 1, vector_origin, vector_origin
-				local u1, u2, v1, v2 = vector_origin, vector_origin, vector_origin, vector_origin
-				if #v.vertices == 4 then
-					u1 = v.vertices[4] - v.vertices[1]
-					u2 = v.vertices[3] - v.vertices[2]
-					v1 = v.vertices[2] - v.vertices[1]
-					v2 = v.vertices[3] - v.vertices[4]
-					for i, w in ipairs(v.dispverts) do
-						x = (i - 1) % power --0 <= x <= power
-						y = math.floor((i - 1) / power) -- 0 <= y <= power
-						div1, div2 = v1 * y / (power - 1), u1 + v2 * y / (power - 1)
-						div2 = div2 - div1
-						w.origin = div1 + div2 * x / (power - 1)
-					end
-				else
-					print("Displacement No." .. k .. ": Displacement that does not have 4 corners!")
+				local power = 2^v.power + 1
+				local u1 = v.vertices[4] - v.vertices[1]
+				local u2 = v.vertices[3] - v.vertices[2]
+				local v1 = v.vertices[2] - v.vertices[1]
+				local v2 = v.vertices[3] - v.vertices[4]
+				local div1, div2 = vector_origin, vector_origin
+				for i, w in ipairs(v.dispverts) do
+					x = (i - 1) % power --0 <= x <= power
+					y = math.floor((i - 1) / power) -- 0 <= y <= power
+					div1, div2 = v1 * y / (power - 1), u1 + v2 * y / (power - 1)
+					div2 = div2 - div1
+					w.origin = div1 + div2 * x / (power - 1)
 				end
 				
 				--Get the actual positions of the displacement geometry
-				local origin, offsetOrigin, offsetVector, offsetScalar, pos
-					= vector_origin, vector_origin, vector_origin, 0, vector_origin
 				dispvertices[k] = {}
 				for i, w in ipairs(v.dispverts) do
-					origin, offsetOrigin, offsetVector, offsetScalar = v.startPosition, w.origin, w.vec, w.dist
-					pos = origin + offsetOrigin + offsetVector * offsetScalar
-					dispvertices[k][i] = {
-						origin = origin,
-						offsetVector = offsetVector,
-						offsetScalar = offsetScalar,
-						pos = pos,
-						power = v.power
-					}
+					dispvertices[k][i] = v.startPosition + w.origin + w.vec * w.dist
 				end
 				
 				--Generate triangles from positions
@@ -254,10 +228,10 @@ Initialize = function()
 					--	3, 13, 4 |/
 					--	2, 11, 3 |\
 					--	1, 11, 2 |/
-						local vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
+						local vert = {dispvertices[k][x], dispvertices[k][y], dispvertices[k][z]}
 						local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						local center = (vert[1] + vert[2] + vert[3]) / 3
-						if bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 then
+						if IsExternalSurface(vert, center, normal) then
 							table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 							table.insert(points, {pos = vert[1]})
 							table.insert(points, {pos = vert[2]})
@@ -273,10 +247,10 @@ Initialize = function()
 						
 						x, y, z = i + power + 1, i + power, i
 						if not tri_inv then z = z + 1 end
-						vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
+						vert = {dispvertices[k][x], dispvertices[k][y], dispvertices[k][z]}
 						normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						center = (vert[1] + vert[2] + vert[3]) / 3
-						if bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 then
+						if IsExternalSurface(vert, center, normal) then
 							table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 							table.insert(points, {pos = vert[1]})
 							table.insert(points, {pos = vert[2]})
@@ -299,17 +273,13 @@ Initialize = function()
 		f:Close()
 	end
 	
---	print([[SplatoonSWEPs World Geometry:
---		Points: ]] .. #SplatoonSWEPs.Points .. [[
---		Grids: ]] .. #SplatoonSWEPs.Grid .. [[
---		Surface: ]] .. #SplatoonSWEPs.Surface .. [[
---	]])
+	ShowTime("Displacement Analyzed")
 	
---	Tear into pieces from BSP Snap
-	local min = Vector(math.huge, math.huge, math.huge) --Map bound
-	local max = -min
+	--Tear into pieces from BSP Snap
+	--Map bound
+	local min, max = Vector(math.huge, math.huge, math.huge), Vector(-math.huge, -math.huge, -math.huge)
 	for i, p in ipairs(points) do --calculate minimum and maximum vector of map
-		for _, d in pairs({"x", "y", "z"}) do
+		for _, d in ipairs({"x", "y", "z"}) do
 			if p.pos[d] < min[d] then
 				min[d] = p.pos[d]
 			elseif p.pos[d] > max[d] then
@@ -318,52 +288,36 @@ Initialize = function()
 		end
 	end
 
-	local chunksize = SplatoonSWEPs.ChunkSize
-	local chunkrate = SplatoonSWEPs.ChunkSize / 2
-	local max_scalar = math.max(max.x, max.y, max.z, -min.x, -min.y, -min.z)
 	local grid = {}
+	local max_scalar = math.max(math.abs(max.x), math.abs(max.y), math.abs(max.z),
+								math.abs(min.x), math.abs(min.y), math.abs(min.z))
 	local mapsize = max_scalar - max_scalar % chunksize + chunksize
 	for x = -mapsize, mapsize, chunkrate do
-		grid[x - x % chunkrate] = {} -- = grid[x]
+		grid[x] = {}
 		for y = -mapsize, mapsize, chunkrate do
-			grid[x - x % chunkrate][y - y % chunkrate] = {} -- = grid[x][y]
+			grid[x][y] = {}
 			for z = -mapsize, mapsize, chunkrate do
-				grid[x - x % chunkrate][y - y % chunkrate][z - z % chunkrate] = {} -- = grid[x][y][z]
+				grid[x][y][z] = {}
 			end
 		end
 	end
 	
---	for i, p in ipairs(points) do
---		local g = grid
---			[p.pos.x - p.pos.x % chunksize] --x
---			[p.pos.y - p.pos.y % chunksize] --y
---			[p.pos.z - p.pos.z % chunksize] --z
---		table.insert(g, p.pos)
---	end
-	
 	--Put surfaces into grids
-	local chunkbound = Vector(chunksize, chunksize, chunksize)
---	local AABBPlanes = {
---		Vector(1, 0, 0), Vector(-1, 0, 0),
---		Vector(0, 1, 0), Vector(0, -1, 0),
---		Vector(0, 0, 1), Vector(0, 0, -1),
---	}
-	for k, s in ipairs(surf) do
+	for _, s in ipairs(surf) do
 		for i = 1, #s.vertices do
 			local v1 = s.vertices[i]
 			local v2 = s.vertices[i % #s.vertices + 1]
-			local dir = v2 - v1
 			local x1, y1, z1 = v1.x - v1.x % chunksize, v1.y - v1.y % chunksize, v1.z - v1.z % chunksize
 			local x2, y2, z2 = v2.x - v2.x % chunksize, v2.y - v2.y % chunksize, v2.z - v2.z % chunksize
-			local gx, gy, gz = {}, {}, {}
-			local addlist = {}
+			local gx, gy, gz, addlist = {}, {}, {}, {}
 			if x1 > x2 then x1, x2 = x2, x1 end
 			if y1 > y2 then y1, y2 = y2, y1 end
 			if z1 > z2 then z1, z2 = z2, z1 end
 			x2, y2, z2 = x2 + chunksize, y2 + chunksize, z2 + chunksize
-			for x = x1, x2, chunkrate do gx[x - x % chunkrate] = true end
-			for y = y1, y2, chunkrate do gy[y - y % chunkrate] = true end
-			for z = z1, z2, chunkrate do gz[z - z % chunkrate] = true end
+			x1, y1, z1 = x1 - chunksize, y1 - chunksize, z1 - chunksize
+			for x = x1, x2, chunkrate do gx[x] = true end
+			for y = y1, y2, chunkrate do gy[y] = true end
+			for z = z1, z2, chunkrate do gz[z] = true end
 			for x in pairs(gx) do
 				for y in pairs(gy) do
 					for z in pairs(gz) do
@@ -373,97 +327,30 @@ Initialize = function()
 			end
 			gz, gy, gz = {}, {}, {}
 			
-			 --I couldn't handle collision detection between AABB and line segment
-			local g --So I'll just add surfaces to all suggested grids
-		--	local d1, d2 = 0, 0
+			--I couldn't handle collision detection between AABB and line segment
+			--So I'll just add surfaces to all suggested grids
 			for a in pairs(addlist) do
-				g = grid[a.x][a.y][a.z]
-			--	if k == 9763 then
-			--		debugoverlay.Line(v1 + vector_up, v2 + vector_up, 10, Color(0, 255, 0), true)
-			--		debugoverlay.Box(a, vector_origin, chunkbound, 5, Color(0,255,0))
-			--	end
-				-- if not g[s] then
-				--	local plane = {a + chunkbound, a}
-				--	local hit = v1:WithinAABox(a, a + chunkbound)
-				--				or v2:WithinAABox(a, a + chunkbound)
-				--	if not hit then
-				--		--xin, xout, yin, yout, zin, zout
-				--		local dimension = {"x", "x", "y", "y", "z", "z"}
-				--		local fraction = {-math.huge, math.huge, -math.huge, math.huge, -math.huge, math.huge}
-				--		local _in, _out = math.huge, -math.huge
-				--		for normal = 1, 6, 2 do
-				--			if a.x == 1250 and a.y == -1500 and a.z == 1250 then
-				--				print(normal)
-				--			end
-				--			d1 = AABBPlanes[normal]:Dot(v1 - plane[normal % 2])
-				--			d2 = AABBPlanes[normal + 1]:Dot(v1 - plane[normal % 2 + 1])
-				--			if d1 >= 0 or d2 >= 0 then
-				--				fraction[normal] = (plane[normal % 2][dimension[normal]] - v1[dimension[normal]]) / dir[dimension[normal]]
-				--				fraction[normal + 1] = (plane[normal % 2 + 1][dimension[normal]] - v1[dimension[normal]]) / dir[dimension[normal]]
-				--				if d1 > d2 then
-				--					fraction[normal], fraction[normal + 1] = fraction[normal + 1], fraction[normal]
-				--				end
-				--			end
-				--		end
-				--		_in = math.max(fraction[1], fraction[3], fraction[5])
-				--		_out = math.min(fraction[2], fraction[4], fraction[6])
-				--		hit = _out - _in > 0
-				--	end
-					
-				--	if hit then
-						g[s] = true
-				--	end
-				-- end
+				if grid[a.x] and grid[a.x][a.y] and grid[a.x][a.y][a.z] then
+					grid[a.x][a.y][a.z][s] = true
+				end
 			end
 		end
 	end
 	
---	local empty = 0	-- amount of empty grids
---	local total = 0	-- amount of total grids
---	local full = 0	-- amount of grids that have points -> total = empty + full
---	for x = -mapsize, mapsize, chunksize do
---		for y = -mapsize, mapsize, chunksize do
---			for z = -mapsize, mapsize, chunksize do
---				local g = grid[x - x % chunksize][y - y % chunksize][z - z % chunksize]
---				total = total + 1
---				if #g == 0 then
---					empty = empty + 1
---					--grid[x - x % chunksize][y - y % chunksize][z - z % chunksize] = nil
---				else
---					full = full + 1
---				end
---			end
---		end
---	end
-	
---	local a, b, c = true, true, true
---	for x, v in pairs(grid) do
---		if a then
---			a = false
---			for y, w in pairs(v) do
---				if b then
---					b = false
---					for z, u in pairs(w) do
---						PrintTable(u)
---					end
---				end
---			end
---		end
---	end
-	
 	SplatoonSWEPs.MapSize = mapsize
 	SplatoonSWEPs.GridSurf = grid
 	if Debug.TakeTime then
-		print("SplatoonSWEPs: Finished parsing map vertices, with " .. SysTime() - taketime .. " seconds!")
+		ShowTime("Grid Generated")
+		print("SplatoonSWEPs: Finished parsing map vertices, with " .. loadtime .. " seconds!")
 	end
 end,
 
 Check = function(point)
-	local x = point.x - point.x % (SplatoonSWEPs.ChunkSize / 2)
-	local y = point.y - point.y % (SplatoonSWEPs.ChunkSize / 2)
-	local z = point.z - point.z % (SplatoonSWEPs.ChunkSize / 2)
+	local x = point.x - point.x % chunkrate
+	local y = point.y - point.y % chunkrate
+	local z = point.z - point.z % chunkrate
 	-- debugoverlay.Box(Vector(x, y, z), vector_origin,
-	-- Vector(SplatoonSWEPs.ChunkSize, SplatoonSWEPs.ChunkSize, SplatoonSWEPs.ChunkSize), 5, Color(0,255,0))
+	-- Vector(chunksize, chunksize, chunksize), 5, Color(0,255,0))
 	return SplatoonSWEPs.GridSurf[x][y][z]
 end,}
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
