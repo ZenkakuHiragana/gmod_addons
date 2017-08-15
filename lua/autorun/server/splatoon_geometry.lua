@@ -63,22 +63,32 @@ pointA = {
 	-Vector(0.000000,-20.085226, 36.508305),
 	-Vector(0.000000,  1.592013, 68.950859),
 }
+-- 1	=	0.000000 -41.569206 24.000004
+-- 2	=	0.000000 -70.906143 -12.502650
+-- 3	=	0.000000 -30.853806 -36.770115
+-- 4	=	0.000000 -6.695038 -45.563202
+-- 5	=	0.000000 -7.270855 -18.335157
+-- 6	=	0.000000 -22.353874 26.000053
+-- 7	=	0.000000 23.583138 35.105305
+-- 8	=	0.000000 35.057571 41.410439
+-- 9	=	0.000000 16.416969 45.105236
+-- 10	=	0.000000 -24.625435 67.657860
 
--- pointA = {}
--- pointB = {}
--- local circle_polys = 16
--- local reference_vert = Vector(0, -60, 0)
--- for i = 1, circle_polys do
-	-- table.insert(pointA, Vector(reference_vert))
-	-- table.insert(pointB, Vector(reference_vert))
-	-- reference_vert:Rotate(Angle(0, 360 / circle_polys, 0))
--- end
--- for i, v in ipairs(pointA) do
-	-- pointA[i] = Vector(0, v.x, v.y)
--- end
--- for i, v in ipairs(pointB) do
-	-- pointB[i] = Vector(0, v.x + 20, v.y / 2 - 10)
--- end
+pointA = {}
+pointB = {}
+local circle_polys = 9
+local reference_vert = Vector(0, -60, 0)
+for i = 1, circle_polys + 1 do
+	table.insert(pointA, Vector(reference_vert))-- * ((i % 2 == 0) and 1.2 or 0.8))
+	table.insert(pointB, Vector(reference_vert))-- * ((i % 2 == 1) and 1.2 or 0.8))
+	reference_vert:Rotate(Angle(0, 360 / circle_polys / 2, 0))
+end
+for i, v in ipairs(pointA) do
+	pointA[i] = Vector(0, v.x - 5, v.y)
+end
+for i, v in ipairs(pointB) do
+	pointB[i] = Vector(0, v.x - 5, v.y - 40)
+end
 
 local function IsInTriangle(p1, p2, p3, p)
 	return (p2 - p1):Cross(p - p1).x > 0 and
@@ -169,32 +179,41 @@ end
 --Otherwise, the result will be polyA AND polyB.
 local epsilon = 0.0001
 function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
---	polyA, polyB, getDifference = pointA, pointB, testbool
+	-- polyA, polyB, getDifference = pointA, pointB, testbool
 	local AinB, BinA = 0, {}
 	local A, B, both = {["A"] = true}, {["B"] = true}, {["A"] = true, ["B"] = true}
 	local pA, pB, vA, vB, iA, iB, lines = {}, {}, {}, {}, {}, {}, {}
+	
 	for i, v in ipairs(polyA) do
-	--	debugoverlay.Line(v, polyA[i % #polyA + 1], 2, Color(0, 255, 0), true)
-	--	debugoverlay.Text(v, "A" .. i, 2, Color(0, 255, 0), true)
-		table.insert(pA, v)-- + Vector(0, math.Rand(-epsilon, epsilon), math.Rand(-epsilon, epsilon)))
-		table.insert(vA, polyA[i % #polyA + 1] - pA[#pA])
+		if getDifference then
+		debugoverlay.Line(v, polyA[i % #polyA + 1], 2, Color(0, 255, 0), true)
+		debugoverlay.Text(v, "A" .. i, 2, Color(0, 255, 0), true)
+		end
+		table.insert(pA, v)
 		table.insert(iA, {})
 	end
+	
+	local center = vector_origin
 	for i, v in ipairs(polyB) do
-	--	debugoverlay.Line(v, polyB[i % #polyB + 1], 2, Color(255, 255, 0), true)
-	--	debugoverlay.Text(v, "B" .. i, 2, Color(255, 255, 0), true)
-		local dymin, dymax, dzmin, dzmax = -epsilon, epsilon, -epsilon, epsilon
-		if v.y > 0 then dymin = 0 else dymax = 0 end
-		if v.z > 0 then dzmin = 0 else dzmax = 0 end
-		table.insert(pB, v + Vector(0, math.Rand(dymin, dymax), math.Rand(dzmin, dzmax)))
-		table.insert(vB, polyB[i % #polyB + 1] - pB[#pB])
+		center = center + v
+	end
+	center = center / #polyB
+	for i, v in ipairs(polyB) do
+		local dir = v - center
+		table.insert(pB, v + dir * math.Rand(0, epsilon))
 		table.insert(iB, {})
 		table.insert(BinA, 0)
 	end
 	for i, v in ipairs(pA) do
+		table.insert(vA, pA[i % #pA + 1] - v)
 		lines[v] = {pos = pA[i % #pA + 1], left = A, right = {}}
 	end
 	for i, v in ipairs(pB) do
+		if getDifference then
+		debugoverlay.Line(v, pB[i % #pB + 1], 2, Color(255, 255, 0), true)
+		debugoverlay.Text(v, "B" .. i, 2, Color(255, 255, 0), true)
+		end
+		table.insert(vB, pB[i % #pB + 1] - v)
 		lines[v] = {pos = pB[i % #pB + 1], left = B, right = {}}
 	end
 	

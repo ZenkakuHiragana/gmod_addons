@@ -18,7 +18,6 @@ local Debug = {
 SplatoonSWEPs = {
 ChunkSize = 384,
 Initialize = function()
-	local chunksize = SplatoonSWEPs.ChunkSize
 	local taketime = SysTime()
 	local points = game.GetWorld():GetPhysicsObject()
 	if not IsValid(points) then print("invalid world physics object") return end
@@ -28,7 +27,9 @@ Initialize = function()
 		local vert = {points[i + 2].pos, points[i + 1].pos, points[i].pos}
 		local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 		local center = (vert[1] + vert[2] + vert[3]) / 3
-		table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
+		if bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 then
+			table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
+		end
 	end
 	
 	--Parse bsp and get displacement info
@@ -256,16 +257,18 @@ Initialize = function()
 						local vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
 						local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						local center = (vert[1] + vert[2] + vert[3]) / 3
-						table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
-						table.insert(points, {pos = vert[1]})
-						table.insert(points, {pos = vert[2]})
-						table.insert(points, {pos = vert[3]})
-						if Debug.DrawMesh and k == 1 then
-							debugoverlay.Text(vert[1], i, 10, true)
-							debugoverlay.Line(vert[1], vert[1] + normal * 50, 10, Color(255,255,0), true)
-							debugoverlay.Line(vert[1], vert[2], 10, Color(0,255,255), true)
-							debugoverlay.Line(vert[2], vert[3], 10, Color(0,255,0), true)
-							debugoverlay.Line(vert[3], vert[1], 10, Color(0,255,0), true)
+						if bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 then
+							table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
+							table.insert(points, {pos = vert[1]})
+							table.insert(points, {pos = vert[2]})
+							table.insert(points, {pos = vert[3]})
+							if Debug.DrawMesh and k == 1 then
+								debugoverlay.Text(vert[1], i, 10, true)
+								debugoverlay.Line(vert[1], vert[1] + normal * 50, 10, Color(255,255,0), true)
+								debugoverlay.Line(vert[1], vert[2], 10, Color(0,255,255), true)
+								debugoverlay.Line(vert[2], vert[3], 10, Color(0,255,0), true)
+								debugoverlay.Line(vert[3], vert[1], 10, Color(0,255,0), true)
+							end
 						end
 						
 						x, y, z = i + power + 1, i + power, i
@@ -273,14 +276,16 @@ Initialize = function()
 						vert = {dispvertices[k][x].pos, dispvertices[k][y].pos, dispvertices[k][z].pos}
 						normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 						center = (vert[1] + vert[2] + vert[3]) / 3
-						table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
-						table.insert(points, {pos = vert[1]})
-						table.insert(points, {pos = vert[2]})
-						table.insert(points, {pos = vert[3]})
-						if Debug.DrawMesh and k == 1 then
-							debugoverlay.Line(vert[1], vert[2], 10, Color(0,255,0), true)
-							debugoverlay.Line(vert[2], vert[3], 10, Color(0,255,0), true)
-							debugoverlay.Line(vert[3], vert[1], 10, Color(0,255,0), true)
+						if bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 then
+							table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
+							table.insert(points, {pos = vert[1]})
+							table.insert(points, {pos = vert[2]})
+							table.insert(points, {pos = vert[3]})
+							if Debug.DrawMesh and k == 1 then
+								debugoverlay.Line(vert[1], vert[2], 10, Color(0,255,0), true)
+								debugoverlay.Line(vert[2], vert[3], 10, Color(0,255,0), true)
+								debugoverlay.Line(vert[3], vert[1], 10, Color(0,255,0), true)
+							end
 						end
 					end
 				end
@@ -313,15 +318,17 @@ Initialize = function()
 		end
 	end
 
+	local chunksize = SplatoonSWEPs.ChunkSize
+	local chunkrate = SplatoonSWEPs.ChunkSize / 2
 	local max_scalar = math.max(max.x, max.y, max.z, -min.x, -min.y, -min.z)
 	local grid = {}
 	local mapsize = max_scalar - max_scalar % chunksize + chunksize
-	for x = -mapsize, mapsize, chunksize do
-		grid[x - x % chunksize] = {} -- = grid[x]
-		for y = -mapsize, mapsize, chunksize do
-			grid[x - x % chunksize][y - y % chunksize] = {} -- = grid[x][y]
-			for z = -mapsize, mapsize, chunksize do
-				grid[x - x % chunksize][y - y % chunksize][z - z % chunksize] = {} -- = grid[x][y][z]
+	for x = -mapsize, mapsize, chunkrate do
+		grid[x - x % chunkrate] = {} -- = grid[x]
+		for y = -mapsize, mapsize, chunkrate do
+			grid[x - x % chunkrate][y - y % chunkrate] = {} -- = grid[x][y]
+			for z = -mapsize, mapsize, chunkrate do
+				grid[x - x % chunkrate][y - y % chunkrate][z - z % chunkrate] = {} -- = grid[x][y][z]
 			end
 		end
 	end
@@ -354,9 +361,9 @@ Initialize = function()
 			if y1 > y2 then y1, y2 = y2, y1 end
 			if z1 > z2 then z1, z2 = z2, z1 end
 			x2, y2, z2 = x2 + chunksize, y2 + chunksize, z2 + chunksize
-			for x = x1, x2, chunksize do gx[x - x % chunksize] = true end
-			for y = y1, y2, chunksize do gy[y - y % chunksize] = true end
-			for z = z1, z2, chunksize do gz[z - z % chunksize] = true end
+			for x = x1, x2, chunkrate do gx[x - x % chunkrate] = true end
+			for y = y1, y2, chunkrate do gy[y - y % chunkrate] = true end
+			for z = z1, z2, chunkrate do gz[z - z % chunkrate] = true end
 			for x in pairs(gx) do
 				for y in pairs(gy) do
 					for z in pairs(gz) do
@@ -375,7 +382,7 @@ Initialize = function()
 			--		debugoverlay.Line(v1 + vector_up, v2 + vector_up, 10, Color(0, 255, 0), true)
 			--		debugoverlay.Box(a, vector_origin, chunkbound, 5, Color(0,255,0))
 			--	end
-				if not g[s] then
+				-- if not g[s] then
 				--	local plane = {a + chunkbound, a}
 				--	local hit = v1:WithinAABox(a, a + chunkbound)
 				--				or v2:WithinAABox(a, a + chunkbound)
@@ -406,7 +413,7 @@ Initialize = function()
 				--	if hit then
 						g[s] = true
 				--	end
-				end
+				-- end
 			end
 		end
 	end
@@ -452,11 +459,11 @@ Initialize = function()
 end,
 
 Check = function(point)
-	local x = point.x - point.x % SplatoonSWEPs.ChunkSize
-	local y = point.y - point.y % SplatoonSWEPs.ChunkSize
-	local z = point.z - point.z % SplatoonSWEPs.ChunkSize
---	debugoverlay.Box(Vector(x, y, z), vector_origin,
---	Vector(SplatoonSWEPs.ChunkSize, SplatoonSWEPs.ChunkSize, SplatoonSWEPs.ChunkSize), 5, Color(0,255,0))
+	local x = point.x - point.x % (SplatoonSWEPs.ChunkSize / 2)
+	local y = point.y - point.y % (SplatoonSWEPs.ChunkSize / 2)
+	local z = point.z - point.z % (SplatoonSWEPs.ChunkSize / 2)
+	-- debugoverlay.Box(Vector(x, y, z), vector_origin,
+	-- Vector(SplatoonSWEPs.ChunkSize, SplatoonSWEPs.ChunkSize, SplatoonSWEPs.ChunkSize), 5, Color(0,255,0))
 	return SplatoonSWEPs.GridSurf[x][y][z]
 end,}
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)

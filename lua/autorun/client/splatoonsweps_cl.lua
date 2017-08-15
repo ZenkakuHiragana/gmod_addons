@@ -100,8 +100,8 @@ local function DrawMeshes()
 	for id, ink in pairs(InkGroup) do
 		render.SetMaterial(IMaterial)
 		ink.imesh:Draw()
-		render.SetMaterial(WaterOverlap)
-		ink.imesh:Draw()
+		-- render.SetMaterial(WaterOverlap)
+		-- ink.imesh:Draw()
 	end
 	
 	-- for i = #reference_polys, 1, -1 do
