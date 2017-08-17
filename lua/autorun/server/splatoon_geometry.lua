@@ -173,7 +173,7 @@ local function TriangulatePolygon(source)
 	end
 	return result
 end
-
+local debugtime = 5
 --Boolean operation between polyA and polyB.
 --If getDifference is true, the result will be polyA - polyB.
 --Otherwise, the result will be polyA AND polyB.
@@ -185,10 +185,10 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	local pA, pB, vA, vB, iA, iB, lines = {}, {}, {}, {}, {}, {}, {}
 	
 	for i, v in ipairs(polyA) do
-		if getDifference then
-		-- debugoverlay.Line(v, polyA[i % #polyA + 1], 2, Color(0, 255, 0), true)
-		-- debugoverlay.Text(v, "A" .. i, 2, Color(0, 255, 0), true)
-		end
+		-- if getDifference then
+		-- debugoverlay.Line(v, polyA[i % #polyA + 1], debugtime, Color(0, 255, 0), true)
+		-- debugoverlay.Text(v, "A" .. i, debugtime, Color(0, 255, 0), true)
+		-- end
 		table.insert(pA, v)
 		table.insert(iA, {})
 	end
@@ -209,10 +209,10 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 		lines[v] = {pos = pA[i % #pA + 1], left = A, right = {}}
 	end
 	for i, v in ipairs(pB) do
-		if getDifference then
-		-- debugoverlay.Line(v, pB[i % #pB + 1], 2, Color(255, 255, 0), true)
-		-- debugoverlay.Text(v, "B" .. i, 2, Color(255, 255, 0), true)
-		end
+		-- if getDifference then
+		-- debugoverlay.Line(v, pB[i % #pB + 1], debugtime, Color(255, 255, 0), true)
+		-- debugoverlay.Text(v, "B" .. i, debugtime, Color(255, 255, 0), true)
+		-- end
 		table.insert(vB, pB[i % #pB + 1] - v)
 		lines[v] = {pos = pB[i % #pB + 1], left = B, right = {}}
 	end
@@ -365,4 +365,32 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	-- end
 	-- debugoverlay.Axis(vector_origin, angle_zero, 50, 2)
 	return orderResult, triangulated
+end
+
+function SplatoonSWEPs.GetPlaneProjection(pos, planeorigin, planenormal)
+	return pos - planenormal * planenormal:Dot(pos - planeorigin)
+end
+
+local MAX_SIZE = 300
+function SplatoonSWEPs.BuildMeshVertex(pos, localorigin, localangle, planepos, planenormal)
+	local vertex = LocalToWorld(pos, angle_zero, localorigin, localangle)
+	vertex = SplatoonSWEPs.GetPlaneProjection(vertex, planepos, planenormal)
+	return {
+		pos = vertex,
+		u = (pos.y + MAX_SIZE / 2) / MAX_SIZE,
+		v = (pos.z + MAX_SIZE / 2) / MAX_SIZE,
+	}
+end
+
+function SplatoonSWEPs.GetMeshTriangle(polygons, localorigin, localangle, planepos, planenormal)
+	local result, vertex = {}, vector_origin
+	for _, triangles in ipairs(polygons) do
+		for _, tri in ipairs(triangles) do
+			if #tri < 3 then continue end
+			for i = 1, 3 do
+				table.insert(result, SplatoonSWEPs.BuildMeshVertex(tri[i], localorigin, localangle, planepos, planenormal))
+			end
+		end
+	end
+	return result
 end

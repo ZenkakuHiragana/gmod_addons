@@ -54,14 +54,12 @@ net.Receive("SplatoonSWEPs: Broadcast ink vertices", function(len, ply)
 end)
 
 net.Receive("SplatoonSWEPs: Finalize ink refreshment", function(...)
-	local org = net.ReadVector()
 	local normal = net.ReadVector()
 	local color = net.ReadColor()
 	local id = net.ReadInt(32)
 	local inkid = net.ReadDouble()
 	local newink = LocalPlayer().ReceivingInkData
 	table.insert(InkQueue, {
-		origin = org,
 		normal = normal,
 		color = color,
 		id = id,
@@ -84,8 +82,8 @@ local function DrawMeshes()
 	for id, ink in pairs(InkGroup) do
 		render.SetMaterial(IMaterial)
 		ink.imesh:Draw()
-		render.SetMaterial(WaterOverlap)
-		ink.imesh:Draw()
+		-- render.SetMaterial(WaterOverlap)
+		-- ink.imesh:Draw()
 	end
 end
 

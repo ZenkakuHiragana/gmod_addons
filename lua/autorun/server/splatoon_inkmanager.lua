@@ -9,61 +9,35 @@ local InkGroup = {}
 util.AddNetworkString("SplatoonSWEPs: Broadcast ink vertices")
 util.AddNetworkString("SplatoonSWEPs: Finalize ink refreshment")
 
-local INK_SURFACE_DELTA_NORMAL = 0.5
-local MAX_SIZE = 300
+local INK_SURFACE_DELTA_NORMAL = 1
 local MAX_COROUTINES_AT_ONCE = 10
 local MAX_PROCESS_QUEUE_AT_ONCE = 5
 local MAX_MESSAGE_SENT = 10
 local MAX_POLYS_OVERWRITE_AT_ONCE = 10
 local MAX_OVERWRITE_AT_ONCE = 20
 local MAX_NET_SEND_SIZE = 64 * 1024 - 3 - 20
-local function GetMeshTriangle(triangles, orgpos, orgnormal, organg, planepos, planenormal, planedot, planecolor)
-	local vertices, result = {}, {}
-	for _, poly in ipairs(triangles) do
-		for _, tri in ipairs(poly) do
-			if #tri < 3 then continue end
-			for i = 1, 3 do
-				vertices[i] = LocalToWorld(tri[i], angle_zero, orgpos, organg)
-				vertices[i] = vertices[i] - (planenormal:Dot(vertices[i] - planepos) / planedot) * orgnormal
-				table.insert(result, {
-					pos = vertices[i],
-					u = (tri[i].y + MAX_SIZE / 2) / MAX_SIZE,
-					v = (tri[i].z + MAX_SIZE / 2) / MAX_SIZE,
-				--	color = Color(planecolor.x, planecolor.y, planecolor.z),
-				})
-			end
-		end
-	end
-	return result
-end
 
-local function QueueCoroutine(pos, normal, ang, radius, color, polys)
+local function QueueCoroutine(pos, normal, radius, color, polys)
 	local wholetime = CurTime()
+	local ang = normal:Angle()
+	local d1 = pos:Dot(normal)
 	local radiusSqr = radius^2
-	local targetsurf = SplatoonSWEPs.Check(pos)
 	local surf = {} --Surfaces that are affected by painting
-	for s in pairs(targetsurf) do --This section searches surfaces in chunk.
-		if not istable(s) then continue end
-		if not (s.normal and s.vertices) then continue end
-		--Surfaces that have almost same normal as the given data.
-		local normal_cos = s.normal:Dot(normal)
+	for s in pairs(SplatoonSWEPs.Check(pos)) do --This section searches surfaces in chunk
+		if not (istable(s) and s.normal and s.vertices) then continue end
+		local normal_cos = s.normal:Dot(normal) --Filter by normal vector
 		if normal_cos > math.cos(math.rad(inkdegrees)) then
-			--Surface.Z is near HitPos
-			local dot1 = s.normal:Dot(pos - s.center)
-			-- debugoverlay.Text(s.center, dot1, 5, true)
-			-- debugoverlay.Text(s.center + s.normal * 10, radius * (1.1 - normal_cos) + 0.5, 5, true)
-			if math.abs(dot1) < radius * (1.1 - normal_cos) then
+			local surface_distance = s.normal:Dot(pos - s.center) --Filter by surface distance
+			if surface_distance^2 < radiusSqr * (1.21 - normal_cos^2) then
 				for k = 1, #s.vertices do
 					--Vertices is within InkRadius
-					local v1 = s.vertices[k]
-					local rel1 = v1 - pos
-					local v2 = s.vertices[k % #s.vertices + 1]
-					local rel2 = v2 - pos
-					local line = v2 - v1 --now v1 and v2 are relative vector
-					v1, v2 = rel1 + normal * normal:Dot(rel1), rel2 + normal * normal:Dot(rel2)
-					if line:GetNormalized():Cross(v1):Dot(normal) < radius then
-						if (v1:Dot(line) < 0 and v2:Dot(line) > 0) or
-							math.min(v2:LengthSqr(), v1:LengthSqr()) < radiusSqr then
+					local v1, v2 = s.vertices[k], s.vertices[k % #s.vertices + 1]
+					local rel1, rel2 = v1 - pos, v2 - pos
+					local line = v2 - v1
+					rel1, rel2 = rel1 + normal * normal:Dot(rel1), rel2 + normal * normal:Dot(rel2)
+					-- if line:GetNormalized():Cross(rel1):Dot(normal) < radius then
+						-- if (rel1:Dot(line) < 0 and rel2:Dot(line) > 0) or
+							-- math.min(rel1:LengthSqr(), rel2:LengthSqr()) < radiusSqr then
 							local surfadd = {
 								normal = s.normal,
 								center = s.center,
@@ -78,36 +52,54 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 							-- end
 							surf[surfadd] = true
 							break
-						end
-					end
-				end --for k = 1, 3
-			end --if dot1 > 0
-		end --if s.normal:Dot
-	end --for #SplatoonSWEPs.Surface
+						-- end
+					-- end
+				end --for k
+			end --if surface_distance^2
+		end --if normal_cos
+	end --for s in pairs
 	
-	local reference_polys = {}
+	local reference_polys, vertexlist = {}, {} --Vertices for polygon that we attempt to draw
 	for i, v in ipairs(polys) do
 		reference_polys[i] = v * radius
 	end
-	
-	local vertexlist = {} --Vertices for polygon that we attempt to draw
-	local planarsurf, intersection = {}, {Poly = {}, Tri = {}, Plane = {}}
-	for drawable in pairs(surf) do
+	for drawable in pairs(surf) do --New ink = surface AND reference
+		local surface_polys, intersection = {}, {Poly = {}, Tri = {}, Plane = {}}
+		local surface_pos = drawable.center + drawable.normal * INK_SURFACE_DELTA_NORMAL
+		local d2 = surface_pos:Dot(drawable.normal)
 		for i = 1, #drawable do
-			planarsurf[i] = WorldToLocal(drawable[i], angle_zero, pos, ang)
-			planarsurf[i].x = 0
+			surface_polys[i] = drawable[i] + drawable.normal * INK_SURFACE_DELTA_NORMAL
+			local normal_dot = drawable.normal:Dot(normal)
+			if normal_dot < math.cos(math.rad(10)) then
+				local shared_direction = (drawable.normal):Cross(normal):GetNormalized()
+				local rot = -math.acos(normal_dot) / 2
+				local shared_vector = ((d1 - d2 * normal_dot) * normal + (d2 - d1 * normal_dot) * drawable.normal) / (1 - normal_dot^2)
+				local qs = {0, surface_polys[i] - shared_vector}
+				local q1 = {math.cos(rot), -math.sin(rot) * shared_direction}
+				local q2 = {math.cos(rot), math.sin(rot) * shared_direction}
+				local q1qs = {
+					q1[1] * qs[1] - q1[2]:Dot(qs[2]),
+					q1[1] * qs[2] + qs[1] * q1[2] + q1[2]:Cross(qs[2])
+				}
+				local q1qsq2 = {
+					q1qs[1] * q2[1] - q1qs[2]:Dot(q2[2]),
+					q1qs[1] * q2[2] + q2[1] * q1qs[2] + q1qs[2]:Cross(q2[2])
+				}
+				surface_polys[i] = q1qsq2[2] + shared_vector
+			end
+			surface_polys[i] = WorldToLocal(surface_polys[i], angle_zero, pos, ang)
+			surface_polys[i].x = 0
 		end
 		
-		intersection.Poly, intersection.Tri = SplatoonSWEPs.BuildOverlap(planarsurf, reference_polys, false)
+		intersection.Poly, intersection.Tri = SplatoonSWEPs.BuildOverlap(surface_polys, reference_polys, false)
 		if table.Count(intersection.Poly) > 0 then
 			intersection.Plane = {
-				pos = drawable.center + drawable.normal * INK_SURFACE_DELTA_NORMAL,
+				pos = surface_pos,
 				normal = drawable.normal,
 				id = drawable.id,
 				color = color,
 			}
 			vertexlist[intersection] = true
-			intersection = {Poly = {}, Tri = {}, Plane = {}}
 		end
 	end
 	
@@ -115,124 +107,104 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 	local polysprocessed = 0
 	--PolygonData.Poly -> Ink buffer, PolygonData.Tri -> MeshVertex structure
 	local meshinfo, existVertices, existTriangles = {}, {}, {}
-	local planepos, planenormal, planecolor, planedot, planeid = vector_origin, vector_origin, color_white, 0, 0
 	for PolygonData in pairs(vertexlist) do --Polygon per plane
-		planepos, planenormal = PolygonData.Plane.pos, PolygonData.Plane.normal
-		planecolor, planeid = PolygonData.Plane.color, PolygonData.Plane.id
-		planedot = planenormal:Dot(normal)
-		local inklist = InkGroup[planeid]
+		local plane = PolygonData.Plane
+		local inklist = InkGroup[plane.id]
 		local inkid = CurTime()
 		table.insert(meshinfo, {
-			pos = pos,
-			normal = planenormal,
-			color = planecolor,
-			id = planeid,
+			normal = plane.normal,
+			color = plane.color,
+			id = plane.id,
 			inkid = inkid,
-			triangles = GetMeshTriangle(PolygonData.Tri, pos, normal, ang, planepos, planenormal, planedot, planecolor),
+			triangles = SplatoonSWEPs.GetMeshTriangle(PolygonData.Tri, pos, ang, plane.pos, plane.normal),
 		})
 		for _, poly2D in ipairs(PolygonData.Poly) do
 			if #poly2D < 3 then continue end
-			
-			--Overwrite existing ink
-			InkGroup[planeid] = {}
-			if inklist then
+			InkGroup[plane.id] = {}
+			if inklist then --Overwrite existing ink
 				local overwrite_at_once = 0
 				for times, exist in ipairs(inklist) do
-					if pos:DistToSqr(exist.origin) > (radius + exist.radius)^2 then
-						table.insert(InkGroup[planeid], exist)
+					if pos:DistToSqr(exist.pos) > (radius + exist.radius)^2 then
+						table.insert(InkGroup[plane.id], exist)
 						continue
 					end
 					
 					-- if not dd then
 						-- for k, v in ipairs(exist.poly3D) do
-							-- debugoverlay.Line(v.pos + exist.normal * 50,
-								-- exist.poly3D[k % #exist.poly3D + 1].pos + exist.normal * 50, 2, Color(0, 255, 0), false)
-							-- debugoverlay.Text(v.pos + exist.normal * 50, "A" .. k, 2)
+							-- debugoverlay.Line(v.pos + exist.plane.normal * 3,
+								-- exist.poly3D[k % #exist.poly3D + 1].pos + exist.plane.normal * 3, 2, Color(0, 255, 0), false)
+							-- debugoverlay.Text(v.pos + exist.plane.normal * 3, "A" .. k, 2)
 						-- end
 					-- end
 					
 					local subtrahend = {}
 					for i, v in ipairs(poly2D) do
 						subtrahend[i] = LocalToWorld(v, angle_zero, pos, ang)
-						subtrahend[i] = WorldToLocal(subtrahend[i], angle_zero, exist.origin, exist.angle)
+						subtrahend[i] = WorldToLocal(subtrahend[i], angle_zero, exist.pos, exist.ang)
 						subtrahend[i].x = 0
 					end
 					
 					existVertices, existTriangles = SplatoonSWEPs.BuildOverlap(exist.poly2D, subtrahend, true) --Existing polygon -= New polygon
 					table.insert(meshinfo, {
-						pos = exist.origin,
-						normal = planenormal,
-						color = exist.color,
-						id = planeid,
+						normal = exist.plane.normal,
+						color = exist.plane.color,
+						id = exist.plane.id,
 						inkid = exist.inkid,
-						triangles = GetMeshTriangle(existTriangles, exist.origin, exist.normal, exist.angle, planepos, planenormal, exist.planedot, exist.color),
+						triangles = SplatoonSWEPs.GetMeshTriangle(existTriangles, exist.pos, exist.ang, exist.plane.pos, exist.plane.normal),
 					})
 					
 					for _, existpoly2D in ipairs(existVertices) do
 						if #existpoly2D > 0 and #existpoly2D < 3 then continue end
 						local existpoly3D = {}
 						for i, v in ipairs(existpoly2D) do
-							existpoly3D[i] = LocalToWorld(v, angle_zero, exist.origin, exist.angle)
-							existpoly3D[i] = {
-								pos = existpoly3D[i] - (planenormal:Dot(existpoly3D[i] - planepos) / planedot) * exist.normal,
-								u = (v.y + MAX_SIZE / 2) / MAX_SIZE,
-								v = (v.z + MAX_SIZE / 2) / MAX_SIZE,
-							}
+							table.insert(existpoly3D, SplatoonSWEPs.BuildMeshVertex(v, exist.pos, exist.ang, exist.plane.pos, exist.plane.normal))
 						end
 						
-						table.insert(InkGroup[planeid], {
+						table.insert(InkGroup[plane.id], {
 							poly2D = existpoly2D,
 							poly3D = existpoly3D,
-							origin = exist.origin,
-							normal = exist.normal,
-							color = exist.color,
-							inkid = exist.inkid,
-							angle = exist.angle,
+							pos = exist.pos,
+							ang = exist.ang,
 							radius = exist.radius,
-							planedot = exist.planedot,
+							inkid = exist.inkid,
+							plane = exist.plane,
 							triangles = existmesh,
 						})
 						
-						-- if not dd then
-							-- for k, v in ipairs(existpoly3D) do
-								-- debugoverlay.Line(v.pos + exist.normal * 100,
-									-- existpoly3D[k % #existpoly3D + 1].pos + exist.normal * 100, 2, Color(exist.color.x, exist.color.y, exist.color.z), false)
-								-- debugoverlay.Text(v.pos + exist.normal * 100, "C" .. k, 2)
-							-- end
-						-- end
+						if not dd then
+							for k, v in ipairs(existpoly3D) do
+								debugoverlay.Line(v.pos + exist.plane.normal * 1,
+									existpoly3D[k % #existpoly3D + 1].pos + exist.plane.normal * 1, 2, color_white, true)
+								debugoverlay.Text(v.pos + exist.plane.normal * 1, "C" .. k, 2)
+							end
+						end
 					end
 					
 					overwrite_at_once = overwrite_at_once + 1
 					if overwrite_at_once % MAX_OVERWRITE_AT_ONCE == 0 then coroutine.yield() end
 				end
 			end
+			
 			local poly3D = {}
 			for i, v in ipairs(poly2D) do
-				poly3D[i] = LocalToWorld(v, angle_zero, pos, ang)
-				poly3D[i] = {
-					pos = poly3D[i] - (planenormal:Dot(poly3D[i] - planepos) / planedot) * normal,
-					u = (v.y + MAX_SIZE / 2) / MAX_SIZE,
-					v = (v.z + MAX_SIZE / 2) / MAX_SIZE,
-				}
+				table.insert(poly3D, SplatoonSWEPs.BuildMeshVertex(v, pos, ang, plane.pos, plane.normal))
 			end
-			-- if not dd then
-				-- for k, v in ipairs(poly3D) do
-					-- debugoverlay.Line(v.pos + normal * 50, poly3D[k % #poly3D + 1].pos + normal * 50, 2, Color(255, 255, 0), false)
-					-- debugoverlay.Text(v.pos + normal * 50, "B" .. k, 2)
-				-- end
-			-- end
+			if not dd then
+				for k, v in ipairs(poly3D) do
+					debugoverlay.Line(v.pos + normal * 2, poly3D[k % #poly3D + 1].pos + normal * 2, 2, Color(255, 255, 0), false)
+					debugoverlay.Text(v.pos + normal * 2, "B" .. k, 2)
+				end
+			end
 			-- dd = true
 			
-			table.insert(InkGroup[planeid], {
+			table.insert(InkGroup[plane.id], {
 				poly2D = poly2D,
 				poly3D = poly3D,
-				origin = pos,
-				normal = normal,
-				color = planecolor,
-				inkid = inkid,
-				angle = ang,
+				pos = pos,
+				ang = ang,
 				radius = radius,
-				planedot = planedot,
+				inkid = inkid,
+				plane = plane,
 				triangles = newtriangles,
 			})
 			
@@ -259,7 +231,6 @@ local function QueueCoroutine(pos, normal, ang, radius, color, polys)
 		net.Broadcast()
 		
 		net.Start("SplatoonSWEPs: Finalize ink refreshment", true)
-		net.WriteVector(v.pos)
 		net.WriteVector(v.normal)
 		net.WriteColor(Color(v.color.x, v.color.y, v.color.z))
 		net.WriteInt(v.id, 32)
@@ -280,7 +251,7 @@ local function ProcessQueue()
 		for i, v in ipairs(PaintQueue) do
 			if coroutine.status(v.co) == "dead" then continue end
 			local ok, message = coroutine.resume(
-				v.co, v.pos, v.normal, v.ang, v.radius, v.color, v.polys)
+				v.co, v.pos, v.normal, v.radius, v.color, v.polys)
 			if ok and message then
 				v.done = true
 				coroutine.yield()
@@ -341,7 +312,7 @@ SplatoonSWEPsInkManager = {
 			end
 		end
 	end,
-	AddQueue = function(pos, normal, ang, radius, color, polys)
+	AddQueue = function(pos, normal, radius, color, polys)
 		-- print(coroutine.status(SplatoonSWEPsInkManager.Threads.ProcessQueue))
 		-- if coroutine.status(SplatoonSWEPsInkManager.Threads.ProcessQueue) == "running" then
 			-- SplatoonSWEPsInkManager.Threads.ProcessQueue = coroutine.create(ProcessQueue)
@@ -349,7 +320,6 @@ SplatoonSWEPsInkManager = {
 		table.insert(PaintQueue, {
 			pos = pos,
 			normal = normal,
-			ang = ang,
 			radius = radius,
 			color = color,
 			polys = polys,

@@ -1,4 +1,10 @@
 
+--The problem is functions between default Angle:Normalize() and SLVBase's one have different behaviour:
+--default one changes the given angle, SLV's one returns normalized angle.
+--So I need to branch the normalize function.  I hate SLVBase.
+local NormalizeAngle = FindMetaTable("Angle").Normalize
+if SLVBase then NormalizeAngle = function(ang) ang:Set(ang:Normalize()) return ang end end
+
 --Some parts of code are from BSP Snap.
 local LUMP_VERTEXES		=  3 + 1
 local LUMP_EDGES		= 12 + 1
@@ -35,7 +41,7 @@ local function ShowTime(str)
 	time = SysTime()
 end
 
-SplatoonSWEPs = {
+SplatoonSWEPs = SplatoonSWEPs or {
 Initialize = function()
 	time, loadtime = SysTime(), 0
 	
@@ -330,7 +336,7 @@ Initialize = function()
 			--I couldn't handle collision detection between AABB and line segment
 			--So I'll just add surfaces to all suggested grids
 			for a in pairs(addlist) do
-				if grid[a.x] and grid[a.x][a.y] and grid[a.x][a.y][a.z] then
+				if grid[a.x] and grid[a.x][a.y] and grid[a.x][a.y][a.z] and not grid[a.x][a.y][a.z][s] then
 					grid[a.x][a.y][a.z][s] = true
 				end
 			end

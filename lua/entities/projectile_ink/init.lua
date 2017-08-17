@@ -13,6 +13,7 @@ for i = 1, circle_polys do
 	table.insert(reference_polys, Vector(reference_vert))
 	reference_vert:Rotate(Angle(0, 0, 360 / circle_polys))
 end
+-- reference_polys[1] = Vector(0, 1.5, 0)
 
 local displacementOverlay = false
 function ENT:Initialize()
@@ -70,8 +71,18 @@ function ENT:PhysicsCollide(coldata, collider)
 		SafeRemoveEntityDelayed(self, 0)
 		return
 	end
-	local ang = (-coldata.HitNormal):Angle()
-	ang:RotateAroundAxis(-coldata.HitNormal, self:GetAngles().yaw)
+	
+	-- local polys = reference_polys
+	-- for i, v in ipairs(polys) do
+		-- polys[i] = v * ((math.random(1000000) / 10000000) + 0.95)
+	-- end
+	SplatoonSWEPsInkManager.AddQueue(
+		tr.HitPos,
+		-coldata.HitNormal,
+		self.InkRadius,
+		self:GetCurrentInkColor(),
+		reference_polys
+	)
 	
 	self:SetIsInk(true)
 	self:SetHitPos(coldata.HitPos)
@@ -86,12 +97,7 @@ function ENT:PhysicsCollide(coldata, collider)
 		self:SetPos(coldata.HitPos)
 	end)
 	
-	-- local polys = reference_polys
-	-- for i, v in ipairs(polys) do
-		-- polys[i] = v * ((math.random(1000000) / 10000000) + 0.95)
-	-- end
-	SplatoonSWEPsInkManager.AddQueue(
-		coldata.HitPos, -coldata.HitNormal, ang, self.InkRadius, self:GetCurrentInkColor(), reference_polys)
+	SafeRemoveEntityDelayed(self, 1)
 end
 
 function ENT:Think()
