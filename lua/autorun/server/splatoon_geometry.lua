@@ -74,21 +74,21 @@ pointA = {
 -- 9	=	0.000000 16.416969 45.105236
 -- 10	=	0.000000 -24.625435 67.657860
 
-pointA = {}
+-- pointA = {}
 pointB = {}
-local circle_polys = 9
-local reference_vert = Vector(0, -60, 0)
-for i = 1, circle_polys + 1 do
-	table.insert(pointA, Vector(reference_vert))-- * ((i % 2 == 0) and 1.2 or 0.8))
-	table.insert(pointB, Vector(reference_vert))-- * ((i % 2 == 1) and 1.2 or 0.8))
-	reference_vert:Rotate(Angle(0, 360 / circle_polys / 2, 0))
-end
-for i, v in ipairs(pointA) do
-	pointA[i] = Vector(0, v.x - 5, v.y)
-end
-for i, v in ipairs(pointB) do
-	pointB[i] = Vector(0, v.x - 5, v.y - 40)
-end
+-- local circle_polys = 9
+-- local reference_vert = Vector(0, -60, 0)
+-- for i = 1, circle_polys + 1 do
+	-- table.insert(pointA, Vector(reference_vert))-- * ((i % 2 == 0) and 1.2 or 0.8))
+	-- table.insert(pointB, Vector(reference_vert))-- * ((i % 2 == 1) and 1.2 or 0.8))
+	-- reference_vert:Rotate(Angle(0, 360 / circle_polys / 2, 0))
+-- end
+-- for i, v in ipairs(pointA) do
+	-- pointA[i] = Vector(0, v.x - 5, v.y)
+-- end
+-- for i, v in ipairs(pointB) do
+	-- pointB[i] = Vector(0, v.x - 5, v.y - 40)
+-- end
 
 local function IsInTriangle(p1, p2, p3, p)
 	return (p2 - p1):Cross(p - p1).x > 0 and
@@ -96,99 +96,83 @@ local function IsInTriangle(p1, p2, p3, p)
 			(p1 - p3):Cross(p - p3).x > 0
 end
 
-local function TriangulatePolygon(source)	
-	if #source == 3 then return {source} end --We won't triangulate triangles.
-	
-	local triangulateflag = {}
-	local sortedbylength = {}
-	local n, concave, concaveflag = #source, {}, {} --We get vertices that make concaves.
-	for i = 1, n do
-		if (source[i % n + 1] - source[i]):Cross(
-			source[(i + 1) % n + 1] - source[i]).x < 0 then
-			table.insert(concave, i % n + 1)
-			concaveflag[i % n + 1] = true
-		end
-		triangulateflag[i] = source[i]:LengthSqr()
-	end
-	if #concave == 0 then concave = {1} end --If no concaves were found, the polygon is convex.
-	
-	local result, lasttriangle = {}, {}
-	local basepos, minus1, plus1, longest, dist, vertexcount = 0, -1, 1, 0, 0, n
-	for __ = 1, n * 2 do
-		basepos, longest = nil, 0
-		for i = 1, n do
-			if triangulateflag[i] then
-				dist = triangulateflag[i]
-				if longest < dist then
-					longest = dist
-					basepos = i
-				end
-			end
-		end
-		
-		if basepos then
-			for _ = 1, n * 2 do
-				minus1 = (basepos + n - 2) % n + 1
-				plus1 = basepos % n + 1
-				for i = 1, n do
-					if not triangulateflag[minus1] then
-						minus1 = (minus1 + n - 2) % n + 1
-					elseif not triangulateflag[plus1] then
-						plus1 = plus1 % n + 1
-					else
-						break
-					end
-				end
-				
-				if (source[plus1] - source[basepos]):Cross(source[minus1] - source[basepos]).x > 0 then
-					for i = 1, n do
-						if IsInTriangle(source[minus1], source[basepos], source[plus1], source[i]) then
-							basepos = plus1
-							break
-						end
-					end
-					if basepos ~= plus1 then
-						vertexcount = vertexcount - 1
-						table.insert(result, {source[minus1], source[basepos], source[plus1]})
-						triangulateflag[basepos] = nil
-					end
-				else
-					basepos = plus1
-				end
-				if basepos ~= plus1 then break end
-				if _ == n * 2 then print("infinite, 2") end
-			end
-		end
-		if vertexcount < 4 then break end
-		if __ == n * 2 then print("infinite, 1") end
-	end
-	
-	if vertexcount == 3 then
-		for i = 1, n do
-			if triangulateflag[i] then
-				table.insert(lasttriangle, source[i])
-			end
-		end
-		table.insert(result, lasttriangle)
-	end
-	return result
+local function IsCounterClockwise(p1, p2, p3)
+	return (p2 - p1):Cross(p3 - p2).x > 0
 end
+
+local function IsAnyPointInTriangle(vertices, p1, p2, p3)
+	for v in pairs(vertices) do
+		if v ~= p1 and v ~= p2 and v ~= p3 and IsInTriangle(p1, p2, p3, v) then
+			return true
+		end
+	end
+	return false
+end
+
+local function IsEar(p1, p2, p3, vertices)
+	return IsCounterClockwise(p1, p2, p3) and not IsAnyPointInTriangle(vertices, p1, p2, p3)
+end
+
+--Polygon triangulation algorithm from HC Library.
+--It seems this function is based on ear-clipping algorithm.
+local function TriangulatePolygon(source)
+	if #source < 3 then return {} end
+	if #source == 3 then return {source} end
+	
+	local n, next_index, prev_index, concave = #source, {}, {}, {}
+	for i = 1, n do
+		next_index[i], prev_index[i] = i + 1, i - 1
+	end
+	next_index[#next_index], prev_index[1] = 1, #prev_index
+
+	for i, v in ipairs(source) do
+		if not IsCounterClockwise(source[prev_index[i]], v, source[next_index[i]]) then
+			concave[v] = true
+		end
+	end
+
+	local triangles = {}
+	local n_vert, current, skipped, inext, iprev = n, 1, 0
+	while n_vert > 3 do
+		inext, iprev = next_index[current], prev_index[current]
+		local p, q, r = source[iprev], source[current], source[inext]
+		if IsEar(p, q, r, concave) then
+			triangles[#triangles + 1] = {p, q, r}
+			next_index[iprev], prev_index[inext] = inext, iprev
+			concave[q] = nil
+			n_vert, skipped = n_vert - 1, 0
+		else
+			skipped = skipped + 1
+			assert(skipped <= n_vert, "Cannot triangulate polygon")
+		end
+		current = inext
+	end
+
+	inext, iprev = next_index[current], prev_index[current]
+	local p, q, r = source[iprev], source[current], source[inext]
+	triangles[#triangles + 1] = {p, q, r}
+	
+	return triangles
+end
+
 local debugtime = 5
 --Boolean operation between polyA and polyB.
 --If getDifference is true, the result will be polyA - polyB.
 --Otherwise, the result will be polyA AND polyB.
-local epsilon = 0.0001
+local epsilon = 1e-4
 function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	-- polyA, polyB, getDifference = pointA, pointB, testbool
+	local basepos = Entity(1):GetPos() + Entity(1):GetForward() * 100
+	
 	local AinB, BinA = 0, {}
 	local A, B, both = {["A"] = true}, {["B"] = true}, {["A"] = true, ["B"] = true}
 	local pA, pB, vA, vB, iA, iB, lines = {}, {}, {}, {}, {}, {}, {}
 	
 	for i, v in ipairs(polyA) do
-		-- if getDifference then
-		-- debugoverlay.Line(v, polyA[i % #polyA + 1], debugtime, Color(0, 255, 0), true)
-		-- debugoverlay.Text(v, "A" .. i, debugtime, Color(0, 255, 0), true)
-		-- end
+		if getDifference then
+		debugoverlay.Line(basepos + v, basepos + polyA[i % #polyA + 1], debugtime, Color(0, 255, 0), true)
+		debugoverlay.Text(basepos + v, "A" .. i, debugtime, Color(0, 255, 0), true)
+		end
 		table.insert(pA, v)
 		table.insert(iA, {})
 	end
@@ -209,10 +193,10 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 		lines[v] = {pos = pA[i % #pA + 1], left = A, right = {}}
 	end
 	for i, v in ipairs(pB) do
-		-- if getDifference then
-		-- debugoverlay.Line(v, pB[i % #pB + 1], debugtime, Color(255, 255, 0), true)
-		-- debugoverlay.Text(v, "B" .. i, debugtime, Color(255, 255, 0), true)
-		-- end
+		if getDifference then
+		debugoverlay.Line(basepos + v, basepos + pB[i % #pB + 1], debugtime, Color(255, 255, 0), true)
+		debugoverlay.Text(basepos + v, "B" .. i, debugtime, Color(255, 255, 0), true)
+		end
 		table.insert(vB, pB[i % #pB + 1] - v)
 		lines[v] = {pos = pB[i % #pB + 1], left = B, right = {}}
 	end
@@ -350,16 +334,16 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	-- print("triangulated: ") PrintTable(triangulated) print()
 	-- for _, tri in ipairs(orderResult) do
 		-- for i, t in ipairs(tri) do
-			-- debugoverlay.Line(t + Vector(1, 0.1, 0.1),
-				-- tri[i % #tri + 1] + Vector(1, 0.1, 0.1), 2, Color(0, 255, 255), true)
-			-- debugoverlay.Text(t + Vector(1, 0, -3), tostring(i), 2)
+			-- debugoverlay.Line(basepos + t + Vector(1, 0.1, 0.1),
+				-- basepos + tri[i % #tri + 1] + Vector(1, 0.1, 0.1), 2, Color(0, 255, 255), true)
+			-- debugoverlay.Text(basepos + t + Vector(1, 0, -3), tostring(i), 2)
 		-- end
 	-- end
 	-- for _, tri in ipairs(triangulated) do
 		-- for i, t in ipairs(tri) do
 			-- for i = 1, 3 do
-				-- debugoverlay.Line(t[i] + Vector(1, 0, 0),
-					-- t[i % 3 + 1] + Vector(1, 0, 0), 2, Color(0, 255, 255), true)
+				-- debugoverlay.Line(basepos + t[i] + Vector(1, 0, 0),
+					-- basepos + t[i % 3 + 1] + Vector(1, 0, 0), 2, Color(0, 255, 255), true)
 			-- end
 		-- end
 	-- end
@@ -393,4 +377,36 @@ function SplatoonSWEPs.GetMeshTriangle(polygons, localorigin, localangle, planep
 		end
 	end
 	return result
+end
+
+--Returns shared line between two planes.
+function SplatoonSWEPs.GetSharedLine(n1, n2, p1, p2)
+	-- local shared_direction = (drawable.normal):Cross(normal):GetNormalized()
+	-- local rotation = -math.acos(normal_dot)
+	-- local shared_vector = ((d1 - d2 * normal_dot) * normal + (d2 - d1 * normal_dot) * drawable.normal) / (1 - normal_dot^2)
+	local normal_dot = n1:Dot(n2)
+	if normal_dot > math.cos(math.rad(10)) then return end
+	local d1, d2 = p1:Dot(n1), p2:Dot(n2)
+	return n1:Cross(n2):GetNormalized(), ((d1 - d2 * normal_dot) * n1 + (d2 - d1 * normal_dot) * n2) / (1 - normal_dot^2), math.acos(normal_dot)
+end
+
+--Rotates the given vector around specified normalized axis.
+function SplatoonSWEPs.RotateAroundAxis(source, axis, rotation)
+	rotation = rotation / 2
+	-- local qs = {0, source}
+	-- local q1 = {math.cos(rotation), -math.sin(rotation) * axis}
+	-- local q2 = {math.cos(rotation), math.sin(rotation) * axis}
+	-- local q1qs = {
+		-- q1[1] * qs[1] - q1[2]:Dot(qs[2]),
+		-- q1[1] * qs[2] + qs[1] * q1[2] + q1[2]:Cross(qs[2])
+	-- }
+	-- local q1qsq2 = {
+		-- q1qs[1] * q2[1] - q1qs[2]:Dot(q2[2]),
+		-- q1qs[1] * q2[2] + q2[1] * q1qs[2] + q1qs[2]:Cross(q2[2])
+	-- }
+	-- return q1qsq2[2]
+	local sin, cos = math.sin(rotation), math.cos(rotation)
+	local sinaxis = sin * axis
+	local cossource_sourcesinaxis = cos * source + source:Cross(sinaxis)
+	return source:Dot(sinaxis) * sinaxis + cos * cossource_sourcesinaxis + cossource_sourcesinaxis:Cross(sinaxis)
 end

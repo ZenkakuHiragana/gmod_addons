@@ -5,7 +5,7 @@ AddCSLuaFile "shared.lua"
 include "shared.lua"
 util.AddNetworkString("SplatoonSWEPs: Receive vertices info")
 
-local circle_polys = 12
+local circle_polys = 4
 local reference_polys = {}
 local reference_vert = Vector(0, 1, 0)
 local reference_vert45 = Vector(0, 1, 0)
@@ -13,7 +13,11 @@ for i = 1, circle_polys do
 	table.insert(reference_polys, Vector(reference_vert))
 	reference_vert:Rotate(Angle(0, 0, 360 / circle_polys))
 end
--- reference_polys[1] = Vector(0, 1.5, 0)
+-- reference_polys = {
+	-- Vector(0, -0.5, 0),
+	-- Vector(0, 0.5, 0),
+	-- Vector(0, 0, 1),
+-- }
 
 local displacementOverlay = false
 function ENT:Initialize()

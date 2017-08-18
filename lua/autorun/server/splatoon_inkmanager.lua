@@ -11,16 +11,16 @@ util.AddNetworkString("SplatoonSWEPs: Finalize ink refreshment")
 
 local INK_SURFACE_DELTA_NORMAL = 1
 local MAX_COROUTINES_AT_ONCE = 10
-local MAX_PROCESS_QUEUE_AT_ONCE = 5
+local MAX_PROCESS_QUEUE_AT_ONCE = 1
 local MAX_MESSAGE_SENT = 10
 local MAX_POLYS_OVERWRITE_AT_ONCE = 10
+local MAX_POLYSURFACE_AT_ONCE = 50
 local MAX_OVERWRITE_AT_ONCE = 20
 local MAX_NET_SEND_SIZE = 64 * 1024 - 3 - 20
 
 local function QueueCoroutine(pos, normal, radius, color, polys)
 	local wholetime = CurTime()
 	local ang = normal:Angle()
-	local d1 = pos:Dot(normal)
 	local radiusSqr = radius^2
 	local surf = {} --Surfaces that are affected by painting
 	for s in pairs(SplatoonSWEPs.Check(pos)) do --This section searches surfaces in chunk
@@ -59,36 +59,21 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 		end --if normal_cos
 	end --for s in pairs
 	
-	local reference_polys, vertexlist = {}, {} --Vertices for polygon that we attempt to draw
+	local reference_polys, vertexlist, polygonregistered = {}, {}, 0 
 	for i, v in ipairs(polys) do
 		reference_polys[i] = v * radius
 	end
 	for drawable in pairs(surf) do --New ink = surface AND reference
 		local surface_polys, intersection = {}, {Poly = {}, Tri = {}, Plane = {}}
 		local surface_pos = drawable.center + drawable.normal * INK_SURFACE_DELTA_NORMAL
-		local d2 = surface_pos:Dot(drawable.normal)
 		for i = 1, #drawable do
 			surface_polys[i] = drawable[i] + drawable.normal * INK_SURFACE_DELTA_NORMAL
-			local normal_dot = drawable.normal:Dot(normal)
-			if normal_dot < math.cos(math.rad(10)) then
-				local shared_direction = (drawable.normal):Cross(normal):GetNormalized()
-				local rot = -math.acos(normal_dot) / 2
-				local shared_vector = ((d1 - d2 * normal_dot) * normal + (d2 - d1 * normal_dot) * drawable.normal) / (1 - normal_dot^2)
-				local qs = {0, surface_polys[i] - shared_vector}
-				local q1 = {math.cos(rot), -math.sin(rot) * shared_direction}
-				local q2 = {math.cos(rot), math.sin(rot) * shared_direction}
-				local q1qs = {
-					q1[1] * qs[1] - q1[2]:Dot(qs[2]),
-					q1[1] * qs[2] + qs[1] * q1[2] + q1[2]:Cross(qs[2])
-				}
-				local q1qsq2 = {
-					q1qs[1] * q2[1] - q1qs[2]:Dot(q2[2]),
-					q1qs[1] * q2[2] + q2[1] * q1qs[2] + q1qs[2]:Cross(q2[2])
-				}
-				surface_polys[i] = q1qsq2[2] + shared_vector
+			local shared_direction, shared_vector, normal_rad = SplatoonSWEPs.GetSharedLine(normal, drawable.normal, pos, surface_pos)
+			if shared_direction then
+				surface_polys[i] = SplatoonSWEPs.RotateAroundAxis(surface_polys[i] - shared_vector, shared_direction, normal_rad) + shared_vector
 			end
 			surface_polys[i] = WorldToLocal(surface_polys[i], angle_zero, pos, ang)
-			surface_polys[i].x = 0
+			-- surface_polys[i].x = 0
 		end
 		
 		intersection.Poly, intersection.Tri = SplatoonSWEPs.BuildOverlap(surface_polys, reference_polys, false)
@@ -101,6 +86,9 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			}
 			vertexlist[intersection] = true
 		end
+		
+		polygonregistered = polygonregistered + 1
+		if polygonregistered % MAX_POLYSURFACE_AT_ONCE == 0 then coroutine.yield() end
 	end
 	
 	local dd = false
@@ -139,9 +127,17 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 					
 					local subtrahend = {}
 					for i, v in ipairs(poly2D) do
+						-- print(pos, exist.pos, ang, exist.ang)
+						-- print("poly2D")PrintTable(poly2D)print()
+						-- print("exist")PrintTable(exist)print()
 						subtrahend[i] = LocalToWorld(v, angle_zero, pos, ang)
+						subtrahend[i] = SplatoonSWEPs.GetPlaneProjection(subtrahend[i], plane.pos, plane.normal)
+						local shared_direction, shared_vector, normal_rad = SplatoonSWEPs.GetSharedLine(plane.normal, exist.ang:Forward(), plane.pos, exist.pos)
+						if shared_direction then
+							subtrahend[i] = SplatoonSWEPs.RotateAroundAxis(subtrahend[i] - shared_vector, shared_direction, -normal_rad) + shared_vector
+						end
 						subtrahend[i] = WorldToLocal(subtrahend[i], angle_zero, exist.pos, exist.ang)
-						subtrahend[i].x = 0
+						-- subtrahend[i].x = 0
 					end
 					
 					existVertices, existTriangles = SplatoonSWEPs.BuildOverlap(exist.poly2D, subtrahend, true) --Existing polygon -= New polygon
