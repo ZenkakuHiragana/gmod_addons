@@ -10,6 +10,7 @@ util.AddNetworkString("SplatoonSWEPs: Broadcast ink vertices")
 util.AddNetworkString("SplatoonSWEPs: Finalize ink refreshment")
 
 local INK_SURFACE_DELTA_NORMAL = 1
+local MAX_SIZE = 300
 local MAX_COROUTINES_AT_ONCE = 10
 local MAX_PROCESS_QUEUE_AT_ONCE = 1
 local MAX_MESSAGE_SENT = 10
@@ -17,6 +18,57 @@ local MAX_POLYS_OVERWRITE_AT_ONCE = 10
 local MAX_POLYSURFACE_AT_ONCE = 50
 local MAX_OVERWRITE_AT_ONCE = 20
 local MAX_NET_SEND_SIZE = 64 * 1024 - 3 - 20
+
+local function GetPlaneProjection(pos, planeorigin, planenormal)
+	return pos - planenormal * planenormal:Dot(pos - planeorigin)
+end
+
+--Returns shared line and the angle between two planes.
+local function GetSharedLine(n1, n2, p1, p2)
+	local normal_dot = n1:Dot(n2)
+	if normal_dot > math.cos(math.rad(10)) then return end
+	local d1, d2 = p1:Dot(n1), p2:Dot(n2)
+	return n1:Cross(n2):GetNormalized(), ((d1 - d2 * normal_dot) * n1 + (d2 - d1 * normal_dot) * n2) / (1 - normal_dot^2), math.acos(normal_dot)
+end
+
+--Rotates the given vector around specified normalized axis.
+local function RotateAroundAxis(source, axis, rotation)
+	local rotation = rotation / 2
+	local sin, cos = math.sin(rotation), math.cos(rotation)
+	local sinaxis = sin * axis
+	local cossource_sourcesinaxis = cos * source + source:Cross(sinaxis)
+	return source:Dot(sinaxis) * sinaxis + cos * cossource_sourcesinaxis + cossource_sourcesinaxis:Cross(sinaxis)
+end
+
+local function ToLocal(worldpos, localorg, localang, rotateorg, rotateaxis, rotateang)
+	return WorldToLocal((rotateang and rotateang > math.rad(10)) and (RotateAroundAxis(worldpos - rotateorg, rotateaxis, rotateang) + rotateorg) or worldpos, angle_zero, localorg, localang)
+end
+
+local function ToWorld(localpos, localorg, localang, rotateorg, rotateaxis, rotateang)
+	local worldpos = LocalToWorld(localpos, angle_zero, localorg, localang)
+	return (rotateang and rotateang > math.rad(10)) and (RotateAroundAxis(worldpos - rotateorg, rotateaxis, -rotateang) + rotateorg) or worldpos
+end
+
+local function BuildMeshVertex(worldpos, localpos)
+	return {
+		pos = worldpos,
+		u = (localpos.y + MAX_SIZE / 2) / MAX_SIZE,
+		v = (localpos.z + MAX_SIZE / 2) / MAX_SIZE,
+	}
+end
+
+local function GetMeshTriangle(polygons, localorg, localang, rotateorg, rotateaxis, rotateang, planenormal)
+	local result, vertex = {}, vector_origin
+	for _, triangles in ipairs(polygons) do
+		for _, tri in ipairs(triangles) do
+			if #tri < 3 then continue end
+			for i = 1, 3 do
+				table.insert(result, BuildMeshVertex(ToWorld(tri[i], localorg, localang, rotateorg, rotateaxis, rotateang) + planenormal * INK_SURFACE_DELTA_NORMAL, tri[i]))
+			end
+		end
+	end
+	return result
+end
 
 local function QueueCoroutine(pos, normal, radius, color, polys)
 	local wholetime = CurTime()
@@ -28,7 +80,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 		local normal_cos = s.normal:Dot(normal) --Filter by normal vector
 		if normal_cos > math.cos(math.rad(inkdegrees)) then
 			local surface_distance = s.normal:Dot(pos - s.center) --Filter by surface distance
-			if surface_distance^2 < radiusSqr * (1.21 - normal_cos^2) then
+			if surface_distance^2 < radiusSqr * (1 - normal_cos^2) + 1 then
 				for k = 1, #s.vertices do
 					--Vertices is within InkRadius
 					local v1, v2 = s.vertices[k], s.vertices[k % #s.vertices + 1]
@@ -46,10 +98,10 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 							for i, v in ipairs(s.vertices) do
 								table.insert(surfadd, v)
 							end
-							-- for i, v in ipairs(s.vertices) do
-								-- debugoverlay.Line(v, s.vertices[i % #s.vertices + 1], 5, Color(255, 255, 0), true)
-								-- debugoverlay.Text(v, i, 5, Color(255, 255, 0), true)
-							-- end
+							for i, v in ipairs(s.vertices) do
+								debugoverlay.Line(v, s.vertices[i % #s.vertices + 1], 5, Color(255, 255, 0), true)
+								debugoverlay.Text(v, i, 5, Color(255, 255, 0), true)
+							end
 							surf[surfadd] = true
 							break
 						-- end
@@ -65,22 +117,20 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	end
 	for drawable in pairs(surf) do --New ink = surface AND reference
 		local surface_polys, intersection = {}, {Poly = {}, Tri = {}, Plane = {}}
-		local surface_pos = drawable.center + drawable.normal * INK_SURFACE_DELTA_NORMAL
+		local shared_direction, shared_vector, normal_rad = GetSharedLine(normal, drawable.normal, pos, drawable.center)
 		for i = 1, #drawable do
-			surface_polys[i] = drawable[i] + drawable.normal * INK_SURFACE_DELTA_NORMAL
-			local shared_direction, shared_vector, normal_rad = SplatoonSWEPs.GetSharedLine(normal, drawable.normal, pos, surface_pos)
-			if shared_direction then
-				surface_polys[i] = SplatoonSWEPs.RotateAroundAxis(surface_polys[i] - shared_vector, shared_direction, normal_rad) + shared_vector
-			end
-			surface_polys[i] = WorldToLocal(surface_polys[i], angle_zero, pos, ang)
+			surface_polys[i] = ToLocal(drawable[i], pos, ang, shared_vector, shared_direction, normal_rad)
 			-- surface_polys[i].x = 0
 		end
 		
 		intersection.Poly, intersection.Tri = SplatoonSWEPs.BuildOverlap(surface_polys, reference_polys, false)
 		if table.Count(intersection.Poly) > 0 then
 			intersection.Plane = {
-				pos = surface_pos,
+				pos = drawable.center,
 				normal = drawable.normal,
+				shared_dir = shared_direction,
+				shared_pos = shared_vector,
+				normal_rad = normal_rad,
 				id = drawable.id,
 				color = color,
 			}
@@ -104,7 +154,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			color = plane.color,
 			id = plane.id,
 			inkid = inkid,
-			triangles = SplatoonSWEPs.GetMeshTriangle(PolygonData.Tri, pos, ang, plane.pos, plane.normal),
+			triangles = GetMeshTriangle(PolygonData.Tri, pos, ang, plane.shared_pos, plane.shared_dir, plane.normal_rad, plane.normal),
 		})
 		for _, poly2D in ipairs(PolygonData.Poly) do
 			if #poly2D < 3 then continue end
@@ -130,13 +180,8 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 						-- print(pos, exist.pos, ang, exist.ang)
 						-- print("poly2D")PrintTable(poly2D)print()
 						-- print("exist")PrintTable(exist)print()
-						subtrahend[i] = LocalToWorld(v, angle_zero, pos, ang)
-						subtrahend[i] = SplatoonSWEPs.GetPlaneProjection(subtrahend[i], plane.pos, plane.normal)
-						local shared_direction, shared_vector, normal_rad = SplatoonSWEPs.GetSharedLine(plane.normal, exist.ang:Forward(), plane.pos, exist.pos)
-						if shared_direction then
-							subtrahend[i] = SplatoonSWEPs.RotateAroundAxis(subtrahend[i] - shared_vector, shared_direction, -normal_rad) + shared_vector
-						end
-						subtrahend[i] = WorldToLocal(subtrahend[i], angle_zero, exist.pos, exist.ang)
+						subtrahend[i] = ToWorld(v, pos, ang, plane.shared_pos, plane.shared_dir, plane.normal_rad)
+						subtrahend[i] = ToLocal(subtrahend[i], exist.pos, exist.ang, exist.plane.shared_pos, exist.plane.shared_dir, exist.plane.normal_rad)
 						-- subtrahend[i].x = 0
 					end
 					
@@ -146,14 +191,14 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 						color = exist.plane.color,
 						id = exist.plane.id,
 						inkid = exist.inkid,
-						triangles = SplatoonSWEPs.GetMeshTriangle(existTriangles, exist.pos, exist.ang, exist.plane.pos, exist.plane.normal),
+						triangles = GetMeshTriangle(existTriangles, exist.pos, exist.ang, exist.plane.shared_pos, exist.plane.shared_dir, exist.plane.normal_rad, exist.plane.normal),
 					})
 					
 					for _, existpoly2D in ipairs(existVertices) do
 						if #existpoly2D > 0 and #existpoly2D < 3 then continue end
 						local existpoly3D = {}
 						for i, v in ipairs(existpoly2D) do
-							table.insert(existpoly3D, SplatoonSWEPs.BuildMeshVertex(v, exist.pos, exist.ang, exist.plane.pos, exist.plane.normal))
+							table.insert(existpoly3D, BuildMeshVertex(ToWorld(v, exist.pos, exist.ang, exist.plane.shared_pos, exist.plane.shared_dir, exist.plane.normal_rad), v))
 						end
 						
 						table.insert(InkGroup[plane.id], {
@@ -183,7 +228,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			
 			local poly3D = {}
 			for i, v in ipairs(poly2D) do
-				table.insert(poly3D, SplatoonSWEPs.BuildMeshVertex(v, pos, ang, plane.pos, plane.normal))
+				table.insert(poly3D, BuildMeshVertex(ToWorld(v, pos, ang, plane.shared_pos, plane.shared_dir, plane.normal_rad), v))
 			end
 			if not dd then
 				for k, v in ipairs(poly3D) do

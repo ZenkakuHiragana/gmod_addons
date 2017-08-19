@@ -6,7 +6,8 @@ ENT.Type = "anim"
 ENT.Base = "base_entity"
 ENT.RenderGroup = RENDERGROUP_OPAQUE
  
-ENT.PrintName		= "Projectile_Ink"
+local classname = "projectile_ink"
+ENT.PrintName		= "Projectile Ink"
 ENT.Author			= "GreatZenkakuMan"
 ENT.Contact			= "GitHub repository here"
 ENT.Purpose			= "Projectile Ink"
@@ -35,9 +36,8 @@ ENT.FlyingModel = "models/blooryevan/ink/inkprojectile.mdl"
 function ENT:SharedInit()
 	self:SetModel(self.FlyingModel)
 	self:PhysicsInit(SOLID_BBOX)
-	self:SetSolid(SOLID_BBOX)
-	self:SetMoveType(MOVETYPE_VPHYSICS)
-	self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
+	self:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+	self:SetCustomCollisionCheck(true)
 end
 
 function ENT:SetupDataTables()
@@ -48,3 +48,24 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Vector", 3, "HitNormal")
 	self:SetCurrentInkColor(vector_origin)
 end
+
+local bound = Vector(1, 1, 1) * 10
+hook.Add("ShouldCollide", "SplatoonSWEPs: Ink go through grates", function(ent1, ent2)
+	local class1, class2 = ent1:GetClass(), ent2:GetClass()	
+	local ink, targetent = ent1, ent2
+	if class2 == classname then
+		if class1 == clasname then return false end
+		ink, targetent, class1, class2 = targetent, ink, class2, class1
+	end
+	if class1 ~= classname then return true end
+	if SERVER and targetent:GetMaterialType() == MAT_GRATE then return false end
+	local dir = ink:GetVelocity()
+	local filter = player.GetAll()
+	table.insert(filter, ink)
+	local tr = util.TraceLine({
+		start = ink:GetPos(),
+		endpos = ink:GetPos() + dir,
+		filter = filter,
+	})
+	return tr.MatType ~= MAT_GRATE
+end)

@@ -22,9 +22,10 @@ local function paint(self)
 	p.Damage = self.Damage
 	p:Spawn()
 	
+	local vel = self.Owner:GetAimVector() * 1000
 	local ph = p:GetPhysicsObject()
 	if not IsValid(ph) then p:Remove() return end
-	ph:ApplyForceCenter(self.Owner:GetAimVector() * 100000)
+	ph:SetVelocityInstantaneous(vel)
 end
 
 function SWEP:CustomDeploy()

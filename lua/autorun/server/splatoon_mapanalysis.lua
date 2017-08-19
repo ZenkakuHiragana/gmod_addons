@@ -21,9 +21,9 @@ local function IsExternalSurface(verts, center, normal)
 	normal = normal * 0.5
 	return
 		bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 or
-		bit.band(util.PointContents(verts[1] + normal), ALL_VISIBLE_CONTENTS) == 0 or
-		bit.band(util.PointContents(verts[2] + normal), ALL_VISIBLE_CONTENTS) == 0 or
-		bit.band(util.PointContents(verts[3] + normal), ALL_VISIBLE_CONTENTS) == 0
+		bit.band(util.PointContents(verts[1] + (center - verts[1]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0 or
+		bit.band(util.PointContents(verts[2] + (center - verts[2]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0 or
+		bit.band(util.PointContents(verts[3] + (center - verts[3]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0
 end
 
 local time = SysTime()
@@ -53,7 +53,7 @@ Initialize = function()
 		local vert = {points[i + 2].pos, points[i + 1].pos, points[i].pos}
 		local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 		local center = (vert[1] + vert[2] + vert[3]) / 3
-		if IsExternalSurface(vert, center, normal) then
+		if bit.band(util.PointContents(center - normal * 0.1), CONTENTS_GRATE) == 0 and IsExternalSurface(vert, center, normal) then
 			table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
 		end
 	end

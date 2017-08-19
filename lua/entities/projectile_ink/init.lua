@@ -5,7 +5,7 @@ AddCSLuaFile "shared.lua"
 include "shared.lua"
 util.AddNetworkString("SplatoonSWEPs: Receive vertices info")
 
-local circle_polys = 4
+local circle_polys = 8
 local reference_polys = {}
 local reference_vert = Vector(0, 1, 0)
 local reference_vert45 = Vector(0, 1, 0)

@@ -9,7 +9,6 @@
 	// "$envmaptint" "[0.2 0.2 0.2]"
 	// "$normalmapalphaenvmapmask" "1"
 	"$vertexcolor" "1"
-	"$model" "1"
 	// "$blendtintbybasealpha" "1"
 
 	// "$phong" "1"

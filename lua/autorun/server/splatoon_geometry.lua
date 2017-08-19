@@ -162,17 +162,17 @@ local debugtime = 5
 local epsilon = 1e-4
 function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	-- polyA, polyB, getDifference = pointA, pointB, testbool
-	local basepos = Entity(1):GetPos() + Entity(1):GetForward() * 100
+	local basepos = Entity(1):GetPos() + Entity(1):GetForward() * 300
 	
 	local AinB, BinA = 0, {}
 	local A, B, both = {["A"] = true}, {["B"] = true}, {["A"] = true, ["B"] = true}
 	local pA, pB, vA, vB, iA, iB, lines = {}, {}, {}, {}, {}, {}, {}
 	
 	for i, v in ipairs(polyA) do
-		if getDifference then
-		debugoverlay.Line(basepos + v, basepos + polyA[i % #polyA + 1], debugtime, Color(0, 255, 0), true)
-		debugoverlay.Text(basepos + v, "A" .. i, debugtime, Color(0, 255, 0), true)
-		end
+		-- if getDifference then
+		-- debugoverlay.Line(basepos + v, basepos + polyA[i % #polyA + 1], debugtime, Color(0, 255, 0), true)
+		-- debugoverlay.Text(basepos + v, "A" .. i, debugtime, Color(0, 255, 0), true)
+		-- end
 		table.insert(pA, v)
 		table.insert(iA, {})
 	end
@@ -193,10 +193,10 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 		lines[v] = {pos = pA[i % #pA + 1], left = A, right = {}}
 	end
 	for i, v in ipairs(pB) do
-		if getDifference then
-		debugoverlay.Line(basepos + v, basepos + pB[i % #pB + 1], debugtime, Color(255, 255, 0), true)
-		debugoverlay.Text(basepos + v, "B" .. i, debugtime, Color(255, 255, 0), true)
-		end
+		-- if getDifference then
+		-- debugoverlay.Line(basepos + v, basepos + pB[i % #pB + 1], debugtime, Color(255, 255, 0), true)
+		-- debugoverlay.Text(basepos + v, "B" .. i, debugtime, Color(255, 255, 0), true)
+		-- end
 		table.insert(vB, pB[i % #pB + 1] - v)
 		lines[v] = {pos = pB[i % #pB + 1], left = B, right = {}}
 	end
@@ -349,64 +349,4 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 	-- end
 	-- debugoverlay.Axis(vector_origin, angle_zero, 50, 2)
 	return orderResult, triangulated
-end
-
-function SplatoonSWEPs.GetPlaneProjection(pos, planeorigin, planenormal)
-	return pos - planenormal * planenormal:Dot(pos - planeorigin)
-end
-
-local MAX_SIZE = 300
-function SplatoonSWEPs.BuildMeshVertex(pos, localorigin, localangle, planepos, planenormal)
-	local vertex = LocalToWorld(pos, angle_zero, localorigin, localangle)
-	vertex = SplatoonSWEPs.GetPlaneProjection(vertex, planepos, planenormal)
-	return {
-		pos = vertex,
-		u = (pos.y + MAX_SIZE / 2) / MAX_SIZE,
-		v = (pos.z + MAX_SIZE / 2) / MAX_SIZE,
-	}
-end
-
-function SplatoonSWEPs.GetMeshTriangle(polygons, localorigin, localangle, planepos, planenormal)
-	local result, vertex = {}, vector_origin
-	for _, triangles in ipairs(polygons) do
-		for _, tri in ipairs(triangles) do
-			if #tri < 3 then continue end
-			for i = 1, 3 do
-				table.insert(result, SplatoonSWEPs.BuildMeshVertex(tri[i], localorigin, localangle, planepos, planenormal))
-			end
-		end
-	end
-	return result
-end
-
---Returns shared line between two planes.
-function SplatoonSWEPs.GetSharedLine(n1, n2, p1, p2)
-	-- local shared_direction = (drawable.normal):Cross(normal):GetNormalized()
-	-- local rotation = -math.acos(normal_dot)
-	-- local shared_vector = ((d1 - d2 * normal_dot) * normal + (d2 - d1 * normal_dot) * drawable.normal) / (1 - normal_dot^2)
-	local normal_dot = n1:Dot(n2)
-	if normal_dot > math.cos(math.rad(10)) then return end
-	local d1, d2 = p1:Dot(n1), p2:Dot(n2)
-	return n1:Cross(n2):GetNormalized(), ((d1 - d2 * normal_dot) * n1 + (d2 - d1 * normal_dot) * n2) / (1 - normal_dot^2), math.acos(normal_dot)
-end
-
---Rotates the given vector around specified normalized axis.
-function SplatoonSWEPs.RotateAroundAxis(source, axis, rotation)
-	rotation = rotation / 2
-	-- local qs = {0, source}
-	-- local q1 = {math.cos(rotation), -math.sin(rotation) * axis}
-	-- local q2 = {math.cos(rotation), math.sin(rotation) * axis}
-	-- local q1qs = {
-		-- q1[1] * qs[1] - q1[2]:Dot(qs[2]),
-		-- q1[1] * qs[2] + qs[1] * q1[2] + q1[2]:Cross(qs[2])
-	-- }
-	-- local q1qsq2 = {
-		-- q1qs[1] * q2[1] - q1qs[2]:Dot(q2[2]),
-		-- q1qs[1] * q2[2] + q2[1] * q1qs[2] + q1qs[2]:Cross(q2[2])
-	-- }
-	-- return q1qsq2[2]
-	local sin, cos = math.sin(rotation), math.cos(rotation)
-	local sinaxis = sin * axis
-	local cossource_sourcesinaxis = cos * source + source:Cross(sinaxis)
-	return source:Dot(sinaxis) * sinaxis + cos * cossource_sourcesinaxis + cossource_sourcesinaxis:Cross(sinaxis)
 end
