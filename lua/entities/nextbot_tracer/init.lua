@@ -158,8 +158,13 @@ end
 local CheersLove_Time = CurTime()
 local AllyTracerSpawn = CurTime()
 function ENT:Initialize()
-	if IsUselessModel(self.Model) then
-		Msg("Can't spawn nextbot: Tracer playermodel is not found!")
+	if not file.Exists(self.Model, "GAME") then
+		local admins = {}
+		print("Can't spawn nextbot: Tracer playermodel is not found!")
+		for i, p in ipairs(player.GetAll()) do
+			if p:IsAdmin() then table.insert(admins, p) end
+		end
+		net.Start("Nextbot Tracer: No playermodel notification") net.Send(admins)
 		self:Remove()
 		return
 	end
@@ -206,13 +211,15 @@ function ENT:Initialize()
 		self:EmitSound("Nextbot_Tracer.OnSpawnAlly")
 		AllyTracerSpawn = CurTime() + math.Rand(15, 30)
 	end
+	
+	self.IsInitialized = true
 end
 ----------------------------------------------}
 
 --Main coroutine of behavior.
 function ENT:RunBehaviour()
 	while true do
-		if not self:GetConVarBool("ai_disabled") then
+		if self.IsInitialized and not self:GetConVarBool("ai_disabled") then
 			--Allies Tracer: Blue muzzle flash, Enemy Tracer: Red muzzle flash
 			self.MuzzleFlashParticleName = "hunter_muzzle_flash" ..
 				(self.Relationship[CLASS_PLAYER] == D_HT and "_red" or "")

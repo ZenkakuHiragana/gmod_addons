@@ -49,7 +49,7 @@ hook.Add("EntityEmitSound", "NextbotHearsSound", function(t)
 	if not IsValid(t.Entity) then return end
 	for k, v in pairs(ents.FindByClass(classname)) do
 		if t.Entity == v then return end
-		if IsValid(v) and v:IsHearingSound(t) then
+		if IsValid(v) and v.IsInitialized and v:IsHearingSound(t) then
 			OnHearSound(v, t)
 		end
 	end
@@ -66,6 +66,7 @@ net.Receive("NextbotHearsSound", function(len, ply)
 end)
 
 util.AddNetworkString("SetAimParameterRecall") --Sets aim position properly for recall.
+util.AddNetworkString("Nextbot Tracer: No playermodel notification") --Error notification.
 
 --Called when the nextbot touches another entity.
 --Applies the physics damage.

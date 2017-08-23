@@ -3,7 +3,7 @@ include("relationship.lua")
 
 --Gets personal enemy entity.
 function ENT.Replacement:GetEnemy()
-	if self:Disposition(self.Memory.Enemy) ~= D_HT then return nil end
+	if not self.IsInitialized or self:Disposition(self.Memory.Enemy) ~= D_HT then return nil end
 	return self.Memory.Enemy
 end
 

@@ -7,11 +7,16 @@ language.Add(classname, ENT.PrintName)
 
 util.PrecacheModel(ENT.Model)
 
---The problem is functions between default Angle:Normalize() and SLVBase's one have different behaviour:
+--The problem is functions between default Angle:Normalize() and SLVBase's one have different behavior:
 --default one changes the given angle, SLV's one returns normalized angle.
 --So I need to branch the normalize function.  I hate SLVBase.
 local NormalizeAngle = FindMetaTable("Angle").Normalize
-if SLVBase then NormalizeAngle = function(ang) ang:Set(ang:Normalize()) end end
+if SLVBase then
+	NormalizeAngle = function(ang)
+		ang = ang:Normalize() --Changes the original angle to save official behavior.
+		return ang --And returns the changed angle to save SLV's behavior.
+	end
+end
 
 -- move_y				-1	1
 -- move_x				-1	1
@@ -31,7 +36,7 @@ hook.Add("EntityEmitSound", "NextbotHearsSound", function(t)
 	if not IsValid(t.Entity) then return end
 	for k, v in pairs(ents.FindByClass(classname)) do
 		if t.Entity == v then return end
-		if v:IsHearingSound(t) then
+		if IsValid(v) and v.IsInitialized and v:IsHearingSound(t) then
 			net.Start("NextbotHearsSound")
 			net.WriteEntity(v)
 			net.WriteTable(t)
@@ -51,8 +56,12 @@ net.Receive("SetAimParameterRecall", function(len, ply)
 	bot:SetPoseParameter("aim_pitch", bot.aim_pitch)
 end)
 
+net.Receive("Nextbot Tracer: No playermodel notification", function(...)
+	notification.AddLegacy("Can't spawn nextbot: Tracer playermodel is not found!", NOTIFY_ERROR, 3.5)
+end)
+
 --Initializes this NPC.
-function ENT:Initialize()	
+function ENT:Initialize()
 	--Shared functions
 	self:SetModel(self.Model)
 	self:SetHealth(self.HP.Init)
@@ -76,6 +85,8 @@ function ENT:Initialize()
 	self.head_yaw = 0
 	self.head_pitch = 0
 	self:MoveEyeTarget(vector_default)
+	
+	self.IsInitialized = true
 end
 
 --This function sets the facing direction of the arms.
