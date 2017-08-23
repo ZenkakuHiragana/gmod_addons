@@ -75,10 +75,15 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	local ang = normal:Angle()
 	local radiusSqr = radius^2
 	local surf = {} --Surfaces that are affected by painting
-	for s in pairs(SplatoonSWEPs.Check(pos)) do --This section searches surfaces in chunk
+	for s in pairs(SplatoonSWEPs:Check(pos)) do --This section searches surfaces in chunk
 		if not (istable(s) and s.normal and s.vertices) then continue end
 		local normal_cos = s.normal:Dot(normal) --Filter by normal vector
 		if normal_cos > math.cos(math.rad(inkdegrees)) then
+							for i, v in ipairs(s.vertices) do
+								debugoverlay.Line(v, s.vertices[i % #s.vertices + 1], 5, Color(255, 255, 0), false)
+								debugoverlay.Line(v, v + s.normal * 50, 5, Color(255, 255, 0), false)
+								-- debugoverlay.Text(v, i, 5, Color(255, 255, 0), true)
+							end
 			local surface_distance = s.normal:Dot(pos - s.center) --Filter by surface distance
 			if surface_distance^2 < radiusSqr * (1 - normal_cos^2) + 1 then
 				for k = 1, #s.vertices do
@@ -97,10 +102,6 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 							}
 							for i, v in ipairs(s.vertices) do
 								table.insert(surfadd, v)
-							end
-							for i, v in ipairs(s.vertices) do
-								debugoverlay.Line(v, s.vertices[i % #s.vertices + 1], 5, Color(255, 255, 0), true)
-								debugoverlay.Text(v, i, 5, Color(255, 255, 0), true)
 							end
 							surf[surfadd] = true
 							break
@@ -259,19 +260,19 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	for i, v in ipairs(meshinfo) do
 		local numvertices = #v.triangles
 		if numvertices > 0 and numvertices < 3 then continue end
-		net.Start("SplatoonSWEPs: Broadcast ink vertices", true)
+		net.Start("SplatoonSWEPs: Broadcast ink vertices", false)
 		for k, vertex in ipairs(v.triangles) do
 			net.WriteVector(vertex.pos)
 			net.WriteFloat(vertex.u)
 			net.WriteFloat(vertex.v)
 			if net.BytesWritten() - 3 >= MAX_NET_SEND_SIZE then
 				net.Broadcast()
-				net.Start("SplatoonSWEPs: Broadcast ink vertices", true)
+				net.Start("SplatoonSWEPs: Broadcast ink vertices", false)
 			end
 		end
 		net.Broadcast()
 		
-		net.Start("SplatoonSWEPs: Finalize ink refreshment", true)
+		net.Start("SplatoonSWEPs: Finalize ink refreshment", false)
 		net.WriteVector(v.normal)
 		net.WriteColor(Color(v.color.x, v.color.y, v.color.z))
 		net.WriteInt(v.id, 32)
