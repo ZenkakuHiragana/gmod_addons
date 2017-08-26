@@ -45,52 +45,6 @@ SplatoonSWEPs = SplatoonSWEPs or {}
 local Initialize = function()
 	time, loadtime = SysTime(), 0
 		
-				--Generate triangles from positions
-				for i = 1, #dispvertices[k] do
-					local row = math.floor((i - 1) / power)
-					local tri_inv = i % 2 ~= 0
-					if (i - 1) % power < power - 1 and row < power - 1 then						
-						x, y, z = i, i + 1, i + power
-						if tri_inv then z = z + 1 end
-					--	4, 13, 5 |\
-					--	3, 13, 4 |/
-					--	2, 11, 3 |\
-					--	1, 11, 2 |/
-						local vert = {dispvertices[k][x], dispvertices[k][y], dispvertices[k][z]}
-						local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
-						local center = (vert[1] + vert[2] + vert[3]) / 3
-						if IsExternalSurface(vert, center, normal) then
-							table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
-							table.insert(points, {pos = vert[1]})
-							table.insert(points, {pos = vert[2]})
-							table.insert(points, {pos = vert[3]})
-							if Debug.DrawMesh and k == 1 then
-								debugoverlay.Text(vert[1], i, 10, true)
-								debugoverlay.Line(vert[1], vert[1] + normal * 50, 10, Color(255,255,0), true)
-								debugoverlay.Line(vert[1], vert[2], 10, Color(0,255,255), true)
-								debugoverlay.Line(vert[2], vert[3], 10, Color(0,255,0), true)
-								debugoverlay.Line(vert[3], vert[1], 10, Color(0,255,0), true)
-							end
-						end
-						
-						x, y, z = i + power + 1, i + power, i
-						if not tri_inv then z = z + 1 end
-						vert = {dispvertices[k][x], dispvertices[k][y], dispvertices[k][z]}
-						normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
-						center = (vert[1] + vert[2] + vert[3]) / 3
-						if IsExternalSurface(vert, center, normal) then
-							table.insert(surf, {id = #surf + 1, vertices = vert, normal = normal, center = center})
-							table.insert(points, {pos = vert[1]})
-							table.insert(points, {pos = vert[2]})
-							table.insert(points, {pos = vert[3]})
-							if Debug.DrawMesh and k == 1 then
-								debugoverlay.Line(vert[1], vert[2], 10, Color(0,255,0), true)
-								debugoverlay.Line(vert[2], vert[3], 10, Color(0,255,0), true)
-								debugoverlay.Line(vert[3], vert[1], 10, Color(0,255,0), true)
-							end
-						end
-					end
-				end
 	
 	ShowTime("Displacement Analyzed")
 	
@@ -187,22 +141,63 @@ SplatoonSWEPs.Initialize = function()
 		local data = face.data[i]
 		if data.TexInfoTable.texdata.name:lower():find("tools/") then continue end
 		if data.DispInfoTable then
+			--Generate triangles from displacement mesh.
 			assert(#data.Vertices + 1 == 4, "SplatoonSWEPs: Displacement with " .. #data.Vertices + 1 .. " vertices.")
-			continue
+			local surf, power = {}, data.power
+			for i = 1, #data.Vertices + 1 do
+				local row = math.floor((i - 1) / power)
+				local tri_inv = i % 2 ~= 0
+				if (i - 1) % power < power - 1 and row < power - 1 then	
+				--	4, 13, 5 |\
+				--	3, 13, 4 |/
+				--	2, 11, 3 |\
+				--	1, 11, 2 |/					
+					local x, y, z = i, i + 1, i + power
+					if tri_inv then z = z + 1 end
+					local vert = {data.Vertices[x], data.Vertices[y], data.Vertices[z]}
+					local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
+					local center = (vert[1] + vert[2] + vert[3]) / 3
+					local contents = util.PointContents(center - normal * 1e-4)
+					if bit.band(contents, CONTENTS_GRATE) == 0 then
+						added = added + 1
+						surfaces[{id = added, vertices = vert, normal = normal, center = center}] = true
+					end
+					
+					x, y, z = i + power + 1, i + power, i
+					if not tri_inv then z = z + 1 end
+					vert = {data.Vertices[x], data.Vertices[y], data.Vertices[z]}
+					normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
+					center = (vert[1] + vert[2] + vert[3]) / 3
+					contents = util.PointContents(center - normal * 1e-4)
+					if bit.band(contents, CONTENTS_GRATE) == 0 then
+						added = added + 1
+						surfaces[{id = added, vertices = vert, normal = normal, center = center}] = true
+					end
+				end
+			end
 		else
-			local surf, center, numverts = {vertices = {}}, vector_origin, #data.Vertices
-			for k = numverts, 0, -1 do
-				local vnext, vprev = data.Vertices[(k + numverts - 2) % numverts + 1], data.Vertices[k % numverts + 1]
-				if (data.Vertices[k] - vprev):Cross(vnext - data.Vertices[k]):LengthSqr() > 1e-6 then
+			local surf, center, normal, numverts = {vertices = {}}, vector_origin, vector_origin, #data.Vertices + 1
+			for k = numverts - 1, 0, -1 do
+				local vnext, vprev = data.Vertices[(k + numverts - 1) % numverts], data.Vertices[(k + 1) % numverts]
+				local n = (data.Vertices[k] - vprev):Cross(vnext - data.Vertices[k])
+				if n:LengthSqr() > 1e-6 then
 					table.insert(surf.vertices, data.Vertices[k])
 					center = center + data.Vertices[k]
+					normal = n
 				end
 			end
 			center = center / #surf.vertices
-			if #surf.vertices > 2 then
+			if data.PlaneTable and data.PlaneTable.normal then
+				normal = data.PlaneTable.normal
+			else
+				normal:Normalize()
+			end
+			
+			local contents = util.PointContents(center - normal * 1e-4)
+			if bit.band(contents, CONTENTS_GRATE) == 0 and #surf.vertices > 2 then
 				added = added + 1
 				surf.center = center
-				surf.normal = data.PlaneTable.normal
+				surf.normal = normal
 				surf.id = added
 				surfaces[surf] = true
 				-- timer.Simple(i * 0.1, function()

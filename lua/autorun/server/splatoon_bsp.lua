@@ -137,8 +137,8 @@ function bsp:Init()
 	self:Parse(LUMP.EDGES)
 	self:Parse(LUMP.SURFEDGES)
 	self:Parse(LUMP.FACES)
-	if self:GetLump(LUMP.FACES_HDR).length > 0 then
-		local lump = self:GetLump(LUMP.FACES_HDR)
+	local lump = self:GetLump(LUMP.FACES_HDR)
+	if lump.length > 0 then
 		self.bsp:Seek(lump.offset)
 		self.ParseFunction[LUMP.FACES](lump)
 		lump.parsed = true
