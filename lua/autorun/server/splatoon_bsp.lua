@@ -544,12 +544,13 @@ function bsp:BuildDisplacements()
 		local dispverts = disp.DispVerts
 		local verts = table.Copy(disp.Face.Vertices)
 		local numverts = table.Count(verts)
-		local indices, startedge = {}, -1
+		local indices, startedge, mindist, dist = {}, -1, math.huge, 0
 		assert(numverts == 4, "SplatoonSWEPs: Displacement with " .. numverts .. "corners!")
 		for k = 0, numverts - 1 do
-			if disp.startPosition:DistToSqr(verts[k]) < 0.02 then
+			dist = disp.startPosition:DistToSqr(verts[k])
+			if dist < mindist then
 				startedge = k
-				break
+				mindist = dist
 			end
 		end
 		
@@ -579,7 +580,7 @@ function bsp:BuildDisplacements()
 			div1, div2 = v1 * y / (power - 1), u1 + v2 * y / (power - 1)
 			div2 = div2 - div1
 			w.origin = div1 + div2 * x / (power - 1)
-			w.actualposition = disp.startPosition + w.origin + w.vec * w.dist
+			w.pos = disp.startPosition + w.origin + w.vec * w.dist
 		end
 	end
 end
@@ -590,8 +591,8 @@ function ShowDisplacement()
 		local disp = bsp:GetLump(LUMP.DISPINFO).data[d]
 		for i = 0, #disp.DispVerts do
 			local v = disp.DispVerts[i]
-			debugoverlay.Line(v.actualposition, v.actualposition + v.vec * 100, 5, Color(0, 255, 0), true)
-			debugoverlay.Text(v.actualposition, i, 5)
+			debugoverlay.Line(v.pos, v.pos + v.vec * 100, 5, Color(0, 255, 0), true)
+			debugoverlay.Text(v.pos, i, 5)
 		end
 	end
 end

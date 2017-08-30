@@ -143,18 +143,18 @@ SplatoonSWEPs.Initialize = function()
 		if data.DispInfoTable then
 			--Generate triangles from displacement mesh.
 			assert(#data.Vertices + 1 == 4, "SplatoonSWEPs: Displacement with " .. #data.Vertices + 1 .. " vertices.")
-			local surf, power = {}, data.power
-			for i = 1, #data.Vertices + 1 do
-				local row = math.floor((i - 1) / power)
-				local tri_inv = i % 2 ~= 0
-				if (i - 1) % power < power - 1 and row < power - 1 then	
-				--	4, 13, 5 |\
-				--	3, 13, 4 |/
-				--	2, 11, 3 |\
-				--	1, 11, 2 |/					
+			local surf, power, dispverts = {}, data.DispInfoTable.power^2, data.DispInfoTable.DispVerts
+			for i = 0, #dispverts do
+				local row = math.floor(i / power)
+				local tri_inv = i % 2 == 0
+				if i % power < power - 1 and row < power - 1 then
+				--	21, 12, 3 |/\/
+				--	20, 11, 2 |\/\
+				--	19, 10, 1 |/\/
+				--	18,  9, 0 |\/\
 					local x, y, z = i, i + 1, i + power
 					if tri_inv then z = z + 1 end
-					local vert = {data.Vertices[x], data.Vertices[y], data.Vertices[z]}
+					local vert = {dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}
 					local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 					local center = (vert[1] + vert[2] + vert[3]) / 3
 					local contents = util.PointContents(center - normal * 1e-4)
@@ -165,7 +165,7 @@ SplatoonSWEPs.Initialize = function()
 					
 					x, y, z = i + power + 1, i + power, i
 					if not tri_inv then z = z + 1 end
-					vert = {data.Vertices[x], data.Vertices[y], data.Vertices[z]}
+					vert = {dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}
 					normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
 					center = (vert[1] + vert[2] + vert[3]) / 3
 					contents = util.PointContents(center - normal * 1e-4)
