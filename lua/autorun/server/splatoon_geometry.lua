@@ -90,14 +90,14 @@ pointB = {}
 	-- pointB[i] = Vector(0, v.x - 5, v.y - 40)
 -- end
 
-local function IsInTriangle(p1, p2, p3, p)
-	return (p2 - p1):Cross(p - p1).x > 0 and
-			(p3 - p2):Cross(p - p2).x > 0 and
-			(p1 - p3):Cross(p - p3).x > 0
+local IsCCW = SplatoonSWEPs.IsCCW
+function SplatoonSWEPs.IsCCW(p1, p2, p3)
+	return (p2 - p1):Cross(p3 - p2).x > 0
 end
 
-local function IsCounterClockwise(p1, p2, p3)
-	return (p2 - p1):Cross(p3 - p2).x > 0
+local IsInTriangle = SplatoonSWEPs.IsInTriangle
+function SplatoonSWEPs.IsInTriangle(p1, p2, p3, p)
+	return IsCCW(p1, p2, p) and IsCCW(p2, p3, p) and IsCCW(p3, p1, p)
 end
 
 local function IsAnyPointInTriangle(vertices, p1, p2, p3)
@@ -110,7 +110,28 @@ local function IsAnyPointInTriangle(vertices, p1, p2, p3)
 end
 
 local function IsEar(p1, p2, p3, vertices)
-	return IsCounterClockwise(p1, p2, p3) and not IsAnyPointInTriangle(vertices, p1, p2, p3)
+	return IsCCW(p1, p2, p3) and not IsAnyPointInTriangle(vertices, p1, p2, p3)
+end
+
+function SplatoonSWEPs.GetPlaneProjection(pos, planeorigin, planenormal)
+	return pos - planenormal * planenormal:Dot(pos - planeorigin)
+end
+
+--Returns the shared point, shared line and the angle between two planes.
+function SplatoonSWEPs.GetSharedLine(n1, n2, p1, p2)
+	local normal_dot = n1:Dot(n2)
+	if normal_dot > math.cos(math.rad(10)) then return end
+	local d1, d2 = p1:Dot(n1), p2:Dot(n2)
+	return n1:Cross(n2):GetNormalized(), ((d1 - d2 * normal_dot) * n1 + (d2 - d1 * normal_dot) * n2) / (1 - normal_dot^2), math.acos(normal_dot)
+end
+
+--Rotates the given vector around specified normalized axis.
+function SplatoonSWEPs.RotateAroundAxis(source, axis, rotation)
+	local rotation = rotation / 2
+	local sin, cos = math.sin(rotation), math.cos(rotation)
+	local sinaxis = sin * axis
+	local cossource_sourcesinaxis = cos * source + source:Cross(sinaxis)
+	return source:Dot(sinaxis) * sinaxis + cos * cossource_sourcesinaxis + cossource_sourcesinaxis:Cross(sinaxis)
 end
 
 --Polygon triangulation algorithm from HC Library.
@@ -126,7 +147,7 @@ local function TriangulatePolygon(source)
 	next_index[#next_index], prev_index[1] = 1, #prev_index
 
 	for i, v in ipairs(source) do
-		if not IsCounterClockwise(source[prev_index[i]], v, source[next_index[i]]) then
+		if not IsCCW(source[prev_index[i]], v, source[next_index[i]]) then
 			concave[v] = true
 		end
 	end

@@ -2,15 +2,16 @@
 --This lua manages whole ink in map.
 if not SplatoonSWEPs then return end
 
-local inkdegrees = 45
 local PaintQueue = {}
 local SendQueue = {}
 local InkGroup = {}
 util.AddNetworkString("SplatoonSWEPs: Broadcast ink vertices")
 util.AddNetworkString("SplatoonSWEPs: Finalize ink refreshment")
 
-local INK_SURFACE_DELTA_NORMAL = 1
+local INK_SURFACE_DELTA_NORMAL = 1 --Performance settings
 local MAX_SIZE = 300
+local MAX_DEGREES_DIFFERENCE = 45
+local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE))
 local MAX_COROUTINES_AT_ONCE = 10
 local MAX_PROCESS_QUEUE_AT_ONCE = 1
 local MAX_MESSAGE_SENT = 10
@@ -19,34 +20,20 @@ local MAX_POLYSURFACE_AT_ONCE = 50
 local MAX_OVERWRITE_AT_ONCE = 20
 local MAX_NET_SEND_SIZE = 64 * 1024 - 3 - 20
 
-local function GetPlaneProjection(pos, planeorigin, planenormal)
-	return pos - planenormal * planenormal:Dot(pos - planeorigin)
-end
-
---Returns shared line and the angle between two planes.
-local function GetSharedLine(n1, n2, p1, p2)
-	local normal_dot = n1:Dot(n2)
-	if normal_dot > math.cos(math.rad(10)) then return end
-	local d1, d2 = p1:Dot(n1), p2:Dot(n2)
-	return n1:Cross(n2):GetNormalized(), ((d1 - d2 * normal_dot) * n1 + (d2 - d1 * normal_dot) * n2) / (1 - normal_dot^2), math.acos(normal_dot)
-end
-
---Rotates the given vector around specified normalized axis.
-local function RotateAroundAxis(source, axis, rotation)
-	local rotation = rotation / 2
-	local sin, cos = math.sin(rotation), math.cos(rotation)
-	local sinaxis = sin * axis
-	local cossource_sourcesinaxis = cos * source + source:Cross(sinaxis)
-	return source:Dot(sinaxis) * sinaxis + cos * cossource_sourcesinaxis + cossource_sourcesinaxis:Cross(sinaxis)
-end
-
+local IsCCW = SplatoonSWEPs.IsCCW
+local GetPlaneProjection = SplatoonSWEPs.GetPlaneProjection
+local GetSharedLine = SplatoonSWEPs.GetSharedLine
+local RotateAroundAxis = SplatoonSWEPs.RotateAroundAxis
 local function ToLocal(worldpos, localorg, localang, rotateorg, rotateaxis, rotateang)
-	return WorldToLocal((rotateang and rotateang > math.rad(10)) and (RotateAroundAxis(worldpos - rotateorg, rotateaxis, rotateang) + rotateorg) or worldpos, angle_zero, localorg, localang)
+	local wpos = not rotateang and worldpos or RotateAroundAxis(worldpos - rotateorg, rotateaxis, rotateang) + rotateorg
+	local tolocalpos, tolocalang = WorldToLocal(wpos, angle_zero, localorg, localang)
+	tolocalpos.x = 0
+	return tolocalpos, tolocalang
 end
 
 local function ToWorld(localpos, localorg, localang, rotateorg, rotateaxis, rotateang)
 	local worldpos = LocalToWorld(localpos, angle_zero, localorg, localang)
-	return (rotateang and rotateang > math.rad(10)) and (RotateAroundAxis(worldpos - rotateorg, rotateaxis, -rotateang) + rotateorg) or worldpos
+	return not rotateang and worldpos or RotateAroundAxis(worldpos - rotateorg, rotateaxis, -rotateang) + rotateorg
 end
 
 local function BuildMeshVertex(worldpos, localpos)
@@ -71,43 +58,32 @@ local function GetMeshTriangle(polygons, localorg, localang, rotateorg, rotateax
 end
 
 local function QueueCoroutine(pos, normal, radius, color, polys)
+	local aa = false
 	local wholetime = CurTime()
-	local ang = normal:Angle()
-	local radiusSqr = radius^2
-	local surf = {} --Surfaces that are affected by painting
+	local surf, ang, radiusSqr = {}, normal:Angle(), radius^2
 	for s in pairs(SplatoonSWEPs:Check(pos)) do --This section searches surfaces in chunk
-		if not (istable(s) and s.normal and s.vertices) then continue end
 		local normal_cos = s.normal:Dot(normal) --Filter by normal vector
-		if normal_cos > math.cos(math.rad(inkdegrees)) then
-							for i, v in ipairs(s.vertices) do
-								debugoverlay.Line(v, s.vertices[i % #s.vertices + 1], 5, Color(255, 255, 0), false)
-								debugoverlay.Line(v, v + s.normal * 50, 5, Color(255, 255, 0), false)
-								-- debugoverlay.Text(v, i, 5, Color(255, 255, 0), true)
-							end
+		if normal_cos > COS_MAX_DEG_DIFF then
 			local surface_distance = s.normal:Dot(pos - s.center) --Filter by surface distance
 			if surface_distance^2 < radiusSqr * (1 - normal_cos^2) + 1 then
-				for k = 1, #s.vertices do
-					--Vertices is within InkRadius
-					local v1, v2 = s.vertices[k], s.vertices[k % #s.vertices + 1]
-					local rel1, rel2 = v1 - pos, v2 - pos
-					local line = v2 - v1
-					rel1, rel2 = rel1 + normal * normal:Dot(rel1), rel2 + normal * normal:Dot(rel2)
-					-- if line:GetNormalized():Cross(rel1):Dot(normal) < radius then
-						-- if (rel1:Dot(line) < 0 and rel2:Dot(line) > 0) or
-							-- math.min(rel1:LengthSqr(), rel2:LengthSqr()) < radiusSqr then
-							local surfadd = {
-								normal = s.normal,
-								center = s.center,
-								id = s.id,
-							}
-							for i, v in ipairs(s.vertices) do
-								table.insert(surfadd, v)
-							end
-							surf[surfadd] = true
-							break
-						-- end
-					-- end
-				end --for k
+				local isin, s_ang = true, s.normal:Angle()
+				local vpos = WorldToLocal(GetPlaneProjection(pos, s.center, s.normal), angle_zero, s.center, s_ang)
+				for i, vert in ipairs(s.vertices) do
+					local v1 = WorldToLocal(vert, angle_zero, s.center, s_ang)
+					local v2 = WorldToLocal(s.vertices[i % #s.vertices + 1], angle_zero, s.center, s_ang)
+					if not IsCCW(v1, v2, vpos) then
+						local relative, line = vpos - v1, v2 - v1
+						isin = isin and math.abs(line:GetNormalized():Cross(relative).x) <= radius
+					end
+				end
+				
+				if isin then
+					local surfadd = {normal = s.normal, center = s.center, id = s.id}
+					for i, v in ipairs(s.vertices) do
+						table.insert(surfadd, v)
+					end
+					surf[surfadd] = true
+				end
 			end --if surface_distance^2
 		end --if normal_cos
 	end --for s in pairs
@@ -116,12 +92,12 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	for i, v in ipairs(polys) do
 		reference_polys[i] = v * radius
 	end
+	
 	for drawable in pairs(surf) do --New ink = surface AND reference
 		local surface_polys, intersection = {}, {Poly = {}, Tri = {}, Plane = {}}
 		local shared_direction, shared_vector, normal_rad = GetSharedLine(normal, drawable.normal, pos, drawable.center)
-		for i = 1, #drawable do
-			surface_polys[i] = ToLocal(drawable[i], pos, ang, shared_vector, shared_direction, normal_rad)
-			-- surface_polys[i].x = 0
+		for i, v in ipairs(drawable) do
+			surface_polys[i] = ToLocal(v, pos, ang, shared_vector, shared_direction, normal_rad)
 		end
 		
 		intersection.Poly, intersection.Tri = SplatoonSWEPs.BuildOverlap(surface_polys, reference_polys, false)
@@ -136,6 +112,14 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 				color = color,
 			}
 			vertexlist[intersection] = true
+		-- elseif not aa then
+			-- for i, v in ipairs(drawable) do
+				-- DebugLine(v, drawable[i % #drawable + 1])
+				-- DebugVector(v, drawable.normal * 50)
+				-- DebugText(v, i)
+			-- end
+			-- print(drawable.id)
+			-- aa = true
 		end
 		
 		polygonregistered = polygonregistered + 1
@@ -215,9 +199,8 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 						
 						if not dd then
 							for k, v in ipairs(existpoly3D) do
-								debugoverlay.Line(v.pos + exist.plane.normal * 1,
-									existpoly3D[k % #existpoly3D + 1].pos + exist.plane.normal * 1, 2, color_white, true)
-								debugoverlay.Text(v.pos + exist.plane.normal * 1, "C" .. k, 2)
+								DebugLine(v.pos + exist.plane.normal * 1, existpoly3D[k % #existpoly3D + 1].pos + exist.plane.normal * 1, true)
+								DebugText(v.pos + exist.plane.normal * 1, "C" .. k)
 							end
 						end
 					end
@@ -233,8 +216,8 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			end
 			if not dd then
 				for k, v in ipairs(poly3D) do
-					debugoverlay.Line(v.pos + normal * 2, poly3D[k % #poly3D + 1].pos + normal * 2, 2, Color(255, 255, 0), false)
-					debugoverlay.Text(v.pos + normal * 2, "B" .. k, 2)
+					DebugLine(v.pos + normal * 2, poly3D[k % #poly3D + 1].pos + normal * 2)
+					DebugText(v.pos + normal * 2, "B" .. k)
 				end
 			end
 			-- dd = true

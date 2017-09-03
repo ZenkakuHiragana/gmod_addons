@@ -48,11 +48,14 @@ function SWEP:CustomPrimaryAttack(canattack)
 	if SERVER and canattack then
 		self:SetModifyWeaponSize(CurTime()) --Expand weapon model
 		self:SetInk(self:GetInk() - self.Primary.TakeAmmo)
-		paint(self)
+		-- paint(self)
+		RequestInkOrder(self) --Debug function in autorun/debug.lua
 	end
 end
 
 function SWEP:CustomSecondaryAttack(canattack)
+	ClearInk()
+	self.Owner:SendLua("ClearInk()")
 end
 
 function SWEP:CustomDataTables()

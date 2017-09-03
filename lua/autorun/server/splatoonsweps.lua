@@ -1,30 +1,20 @@
 
+--SplatoonSWEPs structure
+--The core of new ink system.
+
+--Fix Angle:Normalize() in SLVBase
 --The problem is functions between default Angle:Normalize() and SLVBase's one have different behaviour:
 --default one changes the given angle, SLV's one returns normalized angle.
 --So I need to branch the normalize function.  I hate SLVBase.
 local NormalizeAngle = FindMetaTable("Angle").Normalize
-if SLVBase then NormalizeAngle = function(ang) ang:Set(ang:Normalize()) return ang end end
-
---Some parts of code are from BSP Snap.
-local LUMP_VERTEXES		=  3 + 1
-local LUMP_EDGES		= 12 + 1
-local LUMP_SURFEDGES	= 13 + 1
-local LUMP_FACES		=  7 + 1
-local LUMP_DISPINFO		= 26 + 1
-local LUMP_DISP_VERTS	= 33 + 1
-local LUMP_DISP_TRIS	= 48 + 1
+if SLVBase and not SLVBase.IsFixedNormalizeAngle then
+	NormalizeAngle = function(ang) ang:Set(ang:Normalize()) return ang end
+	SLVBase.IsFixedNormalizeAngle = true
+end
 
 local chunksize = 384
 local chunkrate = chunksize / 2
 local chunkbound = Vector(chunksize, chunksize, chunksize)
-local function IsExternalSurface(verts, center, normal)
-	normal = normal * 0.5
-	return
-		bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 or
-		bit.band(util.PointContents(verts[1] + (center - verts[1]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0 or
-		bit.band(util.PointContents(verts[2] + (center - verts[2]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0 or
-		bit.band(util.PointContents(verts[3] + (center - verts[3]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0
-end
 
 local time = SysTime()
 local loadtime = 0
@@ -43,10 +33,6 @@ end
 
 SplatoonSWEPs = SplatoonSWEPs or {}
 local Initialize = function()
-	time, loadtime = SysTime(), 0
-		
-	
-	ShowTime("Displacement Analyzed")
 	
 	--Tear into pieces from BSP Snap
 	--Map bound
@@ -132,6 +118,8 @@ SplatoonSWEPs.Check = function(self, point)
 end
 
 SplatoonSWEPs.Initialize = function()
+	time, loadtime = SysTime(), 0
+	
 	local self = SplatoonSWEPs
 	self.BSP.bspname = "maps/" .. game.GetMap() .. ".bsp"
 	self.BSP:Init()

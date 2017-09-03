@@ -1,3 +1,5 @@
+
+--This lua parses the bsp file of current map.
 if not SplatoonSWEPs then return end
 SplatoonSWEPs.BSP = SplatoonSWEPs.BSP or {}
 SplatoonSWEPs.LUMP = SplatoonSWEPs.LUMP or {
