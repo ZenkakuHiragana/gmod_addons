@@ -1,39 +1,13 @@
 
--- local reference_polys = {
-	-- {pos = Vector(100, 0, 0)},
-	-- {pos = Vector(1/2^0.5 * 100, 1/2^0.5 * 100, 0)},
-	-- {pos = Vector(0, 100, 0)},
-	-- {pos = Vector(-1/2^0.5 * 100, 1/2^0.5 * 100, 0)},
-	-- {pos = Vector(-100, 0, 0)},
-	-- {pos = Vector(-1/2^0.5 * 100, -1/2^0.5 * 100, 0)},
-	-- {pos = Vector(0, -100, 0)},
-	-- {pos = Vector(1/2^0.5 * 100, -1/2^0.5 * 100, 0)},
--- }
+--Clientside ink manager
+SplatoonSWEPs = SplatoonSWEPs or {}
 
--- local im = Mesh()
--- local dummy = ClientsideModel("models/error.mdl")
--- dummy:SetModelScale(0)
--- local u = {}
--- local v = {}
--- for i = 1, #reference_polys do
-	-- u[i], v[i] = math.random(), math.random()
--- end
--- mesh.Begin(im, MATERIAL_POLYGON, #reference_polys)
--- for i = #reference_polys, 1, -1 do
-	-- mesh.Position(reference_polys[i].pos)
-	-- mesh.Normal(Vector(0.7, 0, 1))
-	-- mesh.Color(math.random(0, 255), 255, 255, 255)
-	-- mesh.TexCoord(0, u[i], v[i])
-	-- mesh.AdvanceVertex()
-	-- debugoverlay.Text(reference_polys[i].pos, i, 4)
--- end
--- mesh.End()
-
+include "../splatoonsweps_const.lua"
+include "splatoonsweps_userinfo.lua"
 local MAX_PROCESS_QUEUE_AT_ONCE = 10
-
 local mat = Material("debug/debugbrushwireframe")
-local IMaterial = Material("splatoon/splatoonink.vmt")
-local WaterOverlap = Material("splatoon/splatoonwater.vmt")
+local IMaterial = Material("splatoonsweps/splatoonink.vmt")
+local WaterOverlap = Material("splatoonsweps/splatoonwater.vmt")
 local InkGroup = InkGroup or {}
 local InkQueue = InkQueue or {}
 
@@ -55,9 +29,9 @@ end)
 
 net.Receive("SplatoonSWEPs: Finalize ink refreshment", function(...)
 	local normal = net.ReadVector()
-	local color = net.ReadColor()
-	local id = net.ReadInt(32)
-	local inkid = net.ReadDouble()
+	local color = net.ReadUInt(SplatoonSWEPs.COLOR_BITS)
+	local id = net.ReadUInt(32)
+	local inkid = net.ReadInt(32)
 	local newink = LocalPlayer().ReceivingInkData
 	table.insert(InkQueue, {
 		normal = normal,
@@ -99,12 +73,13 @@ local function ProcessQueue()
 			InkGroup[q.id][q.inkid] = {}
 			
 			local triangles = {}
+			local color = SplatoonSWEPs.GetColor(q.color + 1)
 			local lightcolor, r, g, b = vector_origin, 0, 0, 0
 			for i, v in ipairs(q.newink) do
 				lightcolor = render.ComputeLighting(v.pos, q.normal) + Vector(0.1, 0.1, 0.1)
-				r = math.Clamp(q.color.r * lightcolor.x, 0, 255)
-				g = math.Clamp(q.color.g * lightcolor.y, 0, 255)
-				b = math.Clamp(q.color.b * lightcolor.z, 0, 255)
+				r = math.Clamp(color.r * math.Clamp(lightcolor.x, 0, 1), 0, 255)
+				g = math.Clamp(color.g * math.Clamp(lightcolor.y, 0, 1), 0, 255)
+				b = math.Clamp(color.b * math.Clamp(lightcolor.z, 0, 1), 0, 255)
 				q.newink[i].color = Color(r, g, b)
 				table.insert(InkGroup[q.id][q.inkid], q.newink[i])
 			end

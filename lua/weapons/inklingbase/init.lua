@@ -3,9 +3,6 @@ AddCSLuaFile "baseinfo.lua"
 AddCSLuaFile "shared.lua"
 include "baseinfo.lua"
 include "shared.lua"
-
-util.PrecacheModel(SWEP.SquidModelName)
-
 function SWEP:Initialize()
 	self:SetHoldType(self.HoldType)
 	self.MaxSpeed = 250

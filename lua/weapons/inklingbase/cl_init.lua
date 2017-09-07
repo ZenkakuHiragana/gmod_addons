@@ -320,8 +320,10 @@ function SWEP:Initialize()
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:SetInk(100)
 	self.JustUsableTime = CurTime() - 1 --For animation of ink tank light
+	self.SquidModelNumber = SplatoonSWEPs:GetPlayermodel() == SplatoonSWEPs.PLAYER.OCTO and
+							SplatoonSWEPs.SQUID.OCTO or SplatoonSWEPs.SQUID.INKLING
 	
-	self.Squid = ClientsideModel(self.SquidModelName, RENDERGROUP_BOTH)
+	self.Squid = ClientsideModel(SplatoonSWEPs.Squidmodel[self.SquidModelNumber], RENDERGROUP_BOTH)
 	self.Squid:SetPos(self:GetPos())
 	self.Squid:SetAngles(self:GetAngles())
 	self.Squid:SetNoDraw(true)
@@ -437,7 +439,7 @@ function SWEP:DrawWorldModel()
 	if self.ShowWorldModel == nil or self.ShowWorldModel then
 		self:DrawModel()
 	end
-	if IsValid(self.Owner) and self.Owner:Crouching() then
+	if SplatoonSWEPs:GetPlayermodel() ~= SplatoonSWEPs.PLAYER.NOSQUID and IsValid(self.Owner) and self.Owner:Crouching() then
 		if not self:GetInInk() then
 			self.Squid:DrawModel()
 			self.Squid:DrawShadow(true)

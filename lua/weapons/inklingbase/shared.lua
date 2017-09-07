@@ -1,22 +1,5 @@
 
-local ColorCodes = {
-	Color(255, 128, 0),
-	Color(255, 0, 255),
-	Color(128, 0, 255),
-	Color(0, 255, 0),
-	Color(0, 255, 255),
-	Color(0, 0, 255)
-}
-
-SWEP.InklingModel = {
-	Girl = "models/drlilrobot/splatoon/ply/inkling_girl.mdl",
-	Boy = "models/drlilrobot/splatoon/ply/inkling_boy.mdl",
-}
 SWEP.IsSplatoonWeapon = true
-
---Model from Enhanced Inklings 
-SWEP.SquidModelName = "models/props_splatoon/squids/squid_beta.mdl"
-
 function SWEP:ChangePlayermodel(data)
 	self.Owner:SetModel(data.Model)
 	self.Owner:SetSkin(data.Skin)
@@ -120,6 +103,7 @@ local function PreventCrouching(ply, data)
 	--Prevent crouching after firing.
 	if CurTime() < weapon:GetNextCrouchTime() then
 		data:RemoveKey(IN_DUCK)
+		ply:RemoveFlags(FL_DUCKING)
 	end
 end
 hook.Add("StartCommand", "Inklings can't crouch for a while after firing their weapon.", PreventCrouching)
@@ -161,6 +145,10 @@ function SWEP:Deploy()
 	
 	self.Owner:SetColor(color_white)
 	
+	self.CanHealStand = GetConVar(SplatoonSWEPs.ConVarName.CanHealStand):GetInt() ~= 0
+	self.CanHealInk = GetConVar(SplatoonSWEPs.ConVarName.CanHealInk):GetInt() ~= 0
+	self.CanReloadStand = GetConVar(SplatoonSWEPs.ConVarName.CanReloadStand):GetInt() ~= 0
+	self.CanReloadInk = GetConVar(SplatoonSWEPs.ConVarName.CanReloadInk):GetInt() ~= 0
 	self.MaxSpeed = 250
 	self.Owner:SetCrouchedWalkSpeed(0.5)
 	self.Owner:SetMaxSpeed(self.MaxSpeed)
@@ -168,18 +156,34 @@ function SWEP:Deploy()
 	self.Owner:SetWalkSpeed(self.MaxSpeed)
 	
 	if SERVER then
-		self.Color = ColorCodes[math.random(1, #ColorCodes)]
+		self.ColorCode = self.Owner:GetInfoNum(SplatoonSWEPs.ConVarName.InkColor, 1)
+		self.Color = SplatoonSWEPs.GetColor(self.ColorCode)
 		self.VectorColor = Vector(self.Color.r / 255, self.Color.g / 255, self.Color.b / 255)
 		self:SetInkColorProxy(self.VectorColor)
 		self:SetCurrentInkColor(Vector(self.Color.r, self.Color.g, self.Color.b))
 		
-		self:ChangePlayermodel({
-			Model = self.InklingModel.Girl,
-			Skin = 0,
-			BodyGroups = {},
-			SetOffsets = true,
-			PlayerColor = self.VectorColor,
-		})
+		local model = SplatoonSWEPs.Playermodel[self.Owner:GetInfoNum(SplatoonSWEPs.ConVarName.Playermodel, 1)]
+		if model and file.Exists(model, "GAME") then
+			self:ChangePlayermodel({
+				Model = model,
+				Skin = 0,
+				BodyGroups = {},
+				SetOffsets = true,
+				PlayerColor = self.VectorColor,
+			})
+		end
+		
+		if self.Owner:GetInfoNum(SplatoonSWEPs.ConVarName.Playermodel, 1) ~= SplatoonSWEPs.PLAYER.NOSQUID then
+			self.Owner:SetMaterial(self.Owner:Crouching() and "color" or "")
+		end
+	elseif self.Squid then
+		if SplatoonSWEPs:GetPlayermodel() == SplatoonSWEPs.PLAYER.OCTO and self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
+			self.Squid:SetModel(SplatoonSWEPs.Squidmodel[SplatoonSWEPs.SQUID.OCTO])
+			self.SquidModelNumber = SplatoonSWEPs.SQUID.OCTO
+		elseif self.SquidModelNumber ~= SplatoonSWEPs.SQUID.INKLING then
+			self.Squid:SetModel(SplatoonSWEPs.Squidmodel[SplatoonSWEPs.SQUID.INKLING])
+			self.SquidModelNumber = SplatoonSWEPs.SQUID.INKLING
+		end
 	end
 	
 	if isfunction(self.CustomDeploy) then self:CustomDeploy() end
@@ -229,33 +233,42 @@ function SWEP:Think()
 	self:CallOnClient("Think")
 	local issquid = self.Owner:Crouching()
 	if IsFirstTimePredicted() then
-		--Gradually heal the owner
+		--Gradually heals the owner
 		if CurTime() > self:GetNextHealTime() then
 			local delay = HealingDelay
-			if self:GetInInk() then
+			local canheal = false
+			if self.CanHealInk and self:GetInInk() then
 				delay = delay / 8
+				canheal = true
 			end
 			
-			self.Owner:SetHealth(math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth()))
+			if self.CanHealStand or canheal then
+				self.Owner:SetHealth(math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth()))
+			end
 			self:SetNextHealTime(CurTime() + delay)
 		end
 		--Recharging ink
 		local reloadamount = CurTime() - self:GetNextReloadTime()
 		if reloadamount > 0 then
 			local mul = ReloadMultiply
-			if self:GetInInk() then
+			local canreload = false
+			if self.CanReloadInk and self:GetInInk() then
 				mul = mul * 4
+				canreload = true
 			end
 			
-			self:SetInk(math.Clamp(self:GetInk() + reloadamount * mul, 0, 100))
+			if self.CanReloadStand or canreload then
+				self:SetInk(math.Clamp(self:GetInk() + reloadamount * mul, 0, 100))
+			end
 			self:SetNextReloadTime(CurTime())
 		end
 		
-		--I don't prevent playermodel from drawing its shadow
-		--because it seems no way to make clientside entity draw its shadow.
-		local material = issquid and "color" or ""
-		self.Owner:SetMaterial(material)
-		self:DrawShadow(not issquid)
+		--Make playermodel invisible while crouching
+		local plymode = SERVER and self.Owner:GetInfoNum(SplatoonSWEPs.ConVarName.Playermodel, 1) or SplatoonSWEPs:GetPlayermodel()
+		if plymode ~= SplatoonSWEPs.PLAYER.NOSQUID then
+			self.Owner:SetMaterial(issquid and "color" or "")
+			self:DrawShadow(not issquid)
+		end
 		
 		--Sending Viewmodel animation.
 		if issquid and self.ViewAnim ~= squidVM then

@@ -44,8 +44,12 @@ end
 function RequestInkOrder(self)
 	local tr = self.Owner:GetEyeTrace()
 	local pos, normal = tr.HitPos, tr.HitNormal
-	SplatoonSWEPsInkManager.AddQueue(pos, normal, 100, Vector(255, 255, 255), reference_polys)
-	DebugSphere(pos, 5, true)
+	local radius = 100
+	SplatoonSWEPsInkManager.AddQueue(pos, normal, radius, self.ColorCode, reference_polys)
+	DebugPoint(pos, 5, true)
 	DebugVector(pos, normal * 50, true)
+	for i, v in ipairs(reference_polys) do
+		DebugLine(LocalToWorld(v, angle_zero, pos, normal:Angle()), LocalToWorld(reference_polys[i % #reference_polys + 1], angle_zero, pos, normal:Angle()))
+	end
 end
 ----------------------

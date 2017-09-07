@@ -90,15 +90,15 @@ pointB = {}
 	-- pointB[i] = Vector(0, v.x - 5, v.y - 40)
 -- end
 
-local IsCCW = SplatoonSWEPs.IsCCW
 function SplatoonSWEPs.IsCCW(p1, p2, p3)
 	return (p2 - p1):Cross(p3 - p2).x > 0
 end
+local IsCCW = SplatoonSWEPs.IsCCW
 
-local IsInTriangle = SplatoonSWEPs.IsInTriangle
 function SplatoonSWEPs.IsInTriangle(p1, p2, p3, p)
 	return IsCCW(p1, p2, p) and IsCCW(p2, p3, p) and IsCCW(p3, p1, p)
 end
+local IsInTriangle = SplatoonSWEPs.IsInTriangle
 
 local function IsAnyPointInTriangle(vertices, p1, p2, p3)
 	for v in pairs(vertices) do

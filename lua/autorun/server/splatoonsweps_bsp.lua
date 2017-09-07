@@ -2,7 +2,7 @@
 --This lua parses the bsp file of current map.
 if not SplatoonSWEPs then return end
 SplatoonSWEPs.BSP = SplatoonSWEPs.BSP or {}
-SplatoonSWEPs.LUMP = SplatoonSWEPs.LUMP or {
+SplatoonSWEPs.LUMP = {
 	ENTITIES						=  0,
 	PLANES							=  1,
 	TEXDATA							=  2,
@@ -201,7 +201,7 @@ bsp.ParseFunction = {
 
 	[LUMP.PLANES] = function(lump)
 		local size = 20
-		lump.num = math.floor(lump.length / size) - 1
+		lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
 		for i = 0, lump.num do
 			lump.data[i] = {}
 			lump.data[i].normal = read("Vector")
@@ -243,7 +243,7 @@ bsp.ParseFunction = {
 
 	[LUMP.VERTEXES] = function(lump)
 		local size = 12
-		lump.num = math.floor(lump.length / size) - 1
+		lump.num = math.max(math.floor(lump.length / size) - 1, 65536 - 1)
 		for i = 0, lump.num do
 			lump.data[i] = read("Vector")
 		end
@@ -288,7 +288,7 @@ bsp.ParseFunction = {
 
 	[LUMP.FACES] = function(lump)
 		local size = 56
-		lump.num = math.floor(lump.length / size) - 1
+		lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
 		for i = 0, lump.num do
 			local f = {}
 			f.PlaneTable = nil
@@ -322,7 +322,7 @@ bsp.ParseFunction = {
 
 	[LUMP.EDGES] = function(lump)
 		local size = 4
-		lump.num = math.floor(lump.length / size) - 1
+		lump.num = math.min(math.floor(lump.length / size) - 1, 256000 - 1)
 		for i = 0, lump.num do
 			lump.data[i] = {}
 			table.insert(lump.data[i], read("UShort"))
@@ -332,7 +332,7 @@ bsp.ParseFunction = {
 
 	[LUMP.SURFEDGES] = function(lump)
 		local size = 4
-		lump.num = math.floor(lump.length / size) - 1
+		lump.num = math.min(math.floor(lump.length / size) - 1, 512000 - 1)
 		for i = 0, lump.num do
 			local n = read("Long")
 			lump.data[i] = {
@@ -485,6 +485,9 @@ function bsp:BuildStructures()
 		local v1, v2 = edge[1], edge[2]
 		if surfedges.data[i].isbackward then v1, v2 = v2, v1 end
 		surfedges.data[i].start, surfedges.data[i].endpos = vertexes.data[v1], vertexes.data[v2]
+		if not (vertexes.data[v1] and vertexes.data[v2]) then
+			surfedges.data[i].disabled = true
+		end
 	end
 	
 	for i = 0, face.num do
@@ -492,6 +495,10 @@ function bsp:BuildStructures()
 		face.data[i].DispInfoTable = dispinfo.data[face.data[i].dispinfo]
 		face.data[i].TexInfoTable = texinfo.data[face.data[i].textureinfo]
 		for k = 0, face.data[i].numedges - 1 do
+			if surfedges.data[face.data[i].firstedge + k].disabled then
+				face.data[i].disabled = true
+				break
+			end
 			face.data[i].Vertices[k] = surfedges.data[face.data[i].firstedge + k].start
 		end
 	end
@@ -502,6 +509,10 @@ function bsp:BuildStructures()
 			facehdr.data[i].DispInfoTable = dispinfo.data[facehdr.data[i].dispinfo]
 			facehdr.data[i].TexInfoTable = texinfo.data[facehdr.data[i].textureinfo]
 			for k = 0, facehdr.data[i].numedges - 1 do
+				if surfedges.data[facehdr.data[i].firstedge + k].disabled then
+					facehdr.data[i].disabled = true
+					break
+				end
 				facehdr.data[i].Vertices[k] = surfedges.data[facehdr.data[i].firstedge + k].start
 			end
 		end
@@ -546,8 +557,10 @@ function bsp:BuildDisplacements()
 		local dispverts = disp.DispVerts
 		local verts = table.Copy(disp.Face.Vertices)
 		local numverts = table.Count(verts)
+		if numverts ~= 4 then continue end
+		
 		local indices, startedge, mindist, dist = {}, -1, math.huge, 0
-		assert(numverts == 4, "SplatoonSWEPs: Displacement with " .. numverts .. "corners!")
+		assert(numverts == 4, "SplatoonSWEPs: Displacement with " .. numverts .. " corners!")
 		for k = 0, numverts - 1 do
 			dist = disp.startPosition:DistToSqr(verts[k])
 			if dist < mindist then
