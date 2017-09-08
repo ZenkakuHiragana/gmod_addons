@@ -3,79 +3,23 @@ if not SplatoonSWEPs then return end
 
 local testbool = true
 local pointA = {
-	Vector(0, 30, 0),
-	Vector(0, 60, -40),
-	Vector(0, 100, 0),
-	Vector(0, 70, 70),
-	Vector(0, 10, 70),
+	Vector(0, -44.494087, -2.535645),
+	Vector(0, 62.956238, -2.535645),
+	Vector(0, 59.805328, 5.071350),
+	Vector(0, -122.761566, -2.535645),
 }
 local pointB = {
-	Vector(0, 110, 30),
-	Vector(0, 50, 50),
-	Vector(0, 30, 20),
-	Vector(0, -50, 10),
-	Vector(0, 0, -50),
+	Vector(0, -34.577694, -2.535645),
+	Vector(0, -42.637573, 0.802857),
+	Vector(0, -84.149612, -0.926819),
+	Vector(0, -88.033676, -2.535645),
 }
-
-pointA = {
-	Vector(0, 0, 0),
-	Vector(0, 20, 10),
-	Vector(0, 50, 10),
-	Vector(0, 90, -10),
-	Vector(0, 100, 0),
-	Vector(0, 100, 100),
-	Vector(0, 90, 110),
-	Vector(0, 50, 90),
-	Vector(0, 20, 90),
-	Vector(0, 0, 100),
-}
-
-pointB = {
-	Vector(0, 10, 50),
-	Vector(0, 50, -20),
-	Vector(0, 120, 30),
-	Vector(0, 60, 30),
-	Vector(0, 80, 40),
-	Vector(0, 80, 60),
-	Vector(0, 60, 70),
-	Vector(0, 120, 70),
-	Vector(0, 50, 120),
-}
-
-pointA = {
-	-Vector(0.000000, 34.034424, 90.628113),
-	-Vector(0.000000, 39.326607, 91.680756),
-	-Vector(0.000000, 38.268238, 92.387955),
-	-Vector(0.000000, -0.000046, 99.999985),
-	-Vector(0.000000,-38.268318, 92.387878),
-	-Vector(0.000000,-70.710701, 70.710678),
-	-Vector(0.000000,-92.388092, 38.268215),
-	-Vector(0.000000,-99.127029,  4.388807),
-	-Vector(0.000000,-99.126938, -4.388760),
-	-Vector(0.000000,-92.387825,-38.268459),
-	-Vector(0.000000,-70.710640,-70.710800),
-	-Vector(0.000000,-38.268242,-92.388023),
-	-Vector(0.000000, -0.000062,-100.000023),
-	-Vector(0.000000, 32.975941,-93.440582),
-	-Vector(0.000000,  1.591969,-72.470604),
-	-Vector(0.000000,-20.085163,-40.028286),
-	-Vector(0.000000,-27.697329, -1.759913),
-	-Vector(0.000000,-20.085226, 36.508305),
-	-Vector(0.000000,  1.592013, 68.950859),
-}
--- 1	=	0.000000 -41.569206 24.000004
--- 2	=	0.000000 -70.906143 -12.502650
--- 3	=	0.000000 -30.853806 -36.770115
--- 4	=	0.000000 -6.695038 -45.563202
--- 5	=	0.000000 -7.270855 -18.335157
--- 6	=	0.000000 -22.353874 26.000053
--- 7	=	0.000000 23.583138 35.105305
--- 8	=	0.000000 35.057571 41.410439
--- 9	=	0.000000 16.416969 45.105236
--- 10	=	0.000000 -24.625435 67.657860
+local oA, oB = {1, 2, 3}, {1, 2, 3}
+pointA[1], pointA[2], pointA[3] = pointA[oA[1]], pointA[oA[2]], pointA[oA[3]]
+pointB[1], pointB[2], pointB[3] = pointB[oB[1]], pointB[oB[2]], pointB[oB[3]]
 
 -- pointA = {}
-pointB = {}
+-- pointB = {}
 -- local circle_polys = 9
 -- local reference_vert = Vector(0, -60, 0)
 -- for i = 1, circle_polys + 1 do
@@ -113,8 +57,8 @@ local function IsEar(p1, p2, p3, vertices)
 	return IsCCW(p1, p2, p3) and not IsAnyPointInTriangle(vertices, p1, p2, p3)
 end
 
-function SplatoonSWEPs.GetPlaneProjection(pos, planeorigin, planenormal)
-	return pos - planenormal * planenormal:Dot(pos - planeorigin)
+function SplatoonSWEPs.GetPlaneProjection(pos, planeorigin, planenormal, direction)
+	return pos + direction * planenormal:Dot(planeorigin - pos) / planenormal:Dot(direction)
 end
 
 --Returns the shared point, shared line and the angle between two planes.
@@ -164,6 +108,7 @@ local function TriangulatePolygon(source)
 			n_vert, skipped = n_vert - 1, 0
 		else
 			skipped = skipped + 1
+			if skipped > n_vert then return end
 			assert(skipped <= n_vert, "Cannot triangulate polygon")
 		end
 		current = inext
@@ -176,24 +121,17 @@ local function TriangulatePolygon(source)
 	return triangles
 end
 
-local debugtime = 5
 --Boolean operation between polyA and polyB.
 --If getDifference is true, the result will be polyA - polyB.
 --Otherwise, the result will be polyA AND polyB.
-local epsilon = 1e-4
+local epsilon = 1e-6
 function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
-	-- polyA, polyB, getDifference = pointA, pointB, testbool
-	local basepos = Entity(1):GetPos() + Entity(1):GetForward() * 300
-	
+	-- local polyA, polyB, getDifference = pointA, pointB, testbool
 	local AinB, BinA = 0, {}
 	local A, B, both = {["A"] = true}, {["B"] = true}, {["A"] = true, ["B"] = true}
 	local pA, pB, vA, vB, iA, iB, lines = {}, {}, {}, {}, {}, {}, {}
 	
 	for i, v in ipairs(polyA) do
-		-- if getDifference then
-		-- debugoverlay.Line(basepos + v, basepos + polyA[i % #polyA + 1], debugtime, Color(0, 255, 0), true)
-		-- debugoverlay.Text(basepos + v, "A" .. i, debugtime, Color(0, 255, 0), true)
-		-- end
 		table.insert(pA, v)
 		table.insert(iA, {})
 	end
@@ -214,10 +152,6 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 		lines[v] = {pos = pA[i % #pA + 1], left = A, right = {}}
 	end
 	for i, v in ipairs(pB) do
-		-- if getDifference then
-		-- debugoverlay.Line(basepos + v, basepos + pB[i % #pB + 1], debugtime, Color(255, 255, 0), true)
-		-- debugoverlay.Text(basepos + v, "B" .. i, debugtime, Color(255, 255, 0), true)
-		-- end
 		table.insert(vB, pB[i % #pB + 1] - v)
 		lines[v] = {pos = pB[i % #pB + 1], left = B, right = {}}
 	end
@@ -332,12 +266,14 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 		end
 		area = 0
 		for i, vertex in ipairs(sortedpolygon) do
-			area = area + vertex:Cross(sortedpolygon[i % #sortedpolygon + 1]).x
-			if vertex:DistToSqr(sortedpolygon[i % #sortedpolygon + 1]) < epsilon * 10 then
+			local vnext, vprev = sortedpolygon[i % #sortedpolygon + 1], sortedpolygon[(i + #sortedpolygon - 2) % #sortedpolygon + 1]
+			area = area + vertex:Cross(vnext).x
+			if vertex:DistToSqr(vnext) < 2e-2 or not IsCCW(vprev, vertex, vnext) then
 				result[k][i] = nil
 			end
 		end
-		if math.abs(area) < 0.02 then
+		
+		if math.abs(area) < 2e-2 then
 			result[k] = nil
 		else
 			table.insert(orderResult, {})
@@ -345,14 +281,51 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 			for newindex, oldindex in ipairs(keys) do --(ex. It can be {1, 2, 4, 5})
 				orderResult[#orderResult][newindex] = result[k][oldindex] --This sorts it and preserves its original order.
 			end
-			table.insert(triangulated, TriangulatePolygon(orderResult[#orderResult]))
+			local trid = TriangulatePolygon(orderResult[#orderResult])
+			table.insert(triangulated, trid)
 			orderResult[#orderResult].area = area / 2
+			
+			if not trid then
+				for i, v in ipairs(orderResult[#orderResult]) do
+					DebugLine(v, orderResult[#orderResult][i % #orderResult[#orderResult] + 1], true)
+				end
+				for i, v in ipairs(pA) do
+					DebugLine(v, pA[i % #pA + 1])
+					DebugText(v, "A" .. i, true)
+					print(v)
+				end
+				print("-------------")
+				for i, v in ipairs(pB) do
+					debugoverlay.Line(v, pB[i % #pB + 1], 10, Color(255, 255, 0), true)
+					DebugText(v, "B" .. i, true)
+					print(v)
+				end
+				DebugText(vector_origin, #orderResult[#orderResult])
+			end
 		end
 	end
+	
+	-- for i, v in ipairs(pA) do
+		-- DebugLine(v, pA[i % #pA + 1])
+		-- DebugText(v, "A" .. i, true)
+	-- end
+	-- for i, v in ipairs(pB) do
+		-- debugoverlay.Line(v, pB[i % #pB + 1], 10, Color(255, 255, 0), true)
+		-- DebugText(v, "B" .. i, true)
+	-- end
+	-- if #orderResult > 0 then
+		-- for i, v in ipairs(polyA) do
+			-- DebugLine(v, polyA[i % #polyA + 1], true)
+		-- end
+		-- for i, v in ipairs(pB) do
+			-- debugoverlay.Line(v, pB[i % #pB + 1], 10, Color(255, 255, 0), true)
+		-- end
+	-- end
 	
 	-- print("result: ") PrintTable(result) print()
 	-- print("orderResult: ") PrintTable(orderResult) print()
 	-- print("triangulated: ") PrintTable(triangulated) print()
+	local basepos = vector_origin
 	-- for _, tri in ipairs(orderResult) do
 		-- for i, t in ipairs(tri) do
 			-- debugoverlay.Line(basepos + t + Vector(1, 0.1, 0.1),
@@ -360,14 +333,14 @@ function SplatoonSWEPs.BuildOverlap(polyA, polyB, getDifference)
 			-- debugoverlay.Text(basepos + t + Vector(1, 0, -3), tostring(i), 2)
 		-- end
 	-- end
-	-- for _, tri in ipairs(triangulated) do
-		-- for i, t in ipairs(tri) do
-			-- for i = 1, 3 do
-				-- debugoverlay.Line(basepos + t[i] + Vector(1, 0, 0),
-					-- basepos + t[i % 3 + 1] + Vector(1, 0, 0), 2, Color(0, 255, 255), true)
-			-- end
-		-- end
-	-- end
+	for _, tri in ipairs(triangulated) do
+		for i, t in ipairs(tri) do
+			for i = 1, 3 do
+				debugoverlay.Line(basepos + t[i] + Vector(1, 0, 0),
+					basepos + t[i % 3 + 1] + Vector(1, 0, 0), 2, Color(0, 255, 255), true)
+			end
+		end
+	end
 	-- debugoverlay.Axis(vector_origin, angle_zero, 50, 2)
 	return orderResult, triangulated
 end

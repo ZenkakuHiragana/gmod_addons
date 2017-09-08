@@ -2,19 +2,51 @@
 --Constant values
 if not SplatoonSWEPs then return end
 
-SplatoonSWEPs.ConVarName = {
-	InkColor = "cl_splatoonsweps_inkcolor",
-	Playermodel = "cl_splatoonsweps_playermodel",
-	CanHealStand = "cl_splatoonsweps_canhealstand",
-	CanHealInk = "cl_splatoonsweps_canhealink",
-	CanReloadStand = "cl_splatoonsweps_canreloadstand",
-	CanReloadInk = "cl_splatoonsweps_canreloadink",
+SplatoonSWEPs.ConVar = {
+	"cl_splatoonsweps_inkcolor",
+	"cl_splatoonsweps_playermodel",
+	"cl_splatoonsweps_canhealstand",
+	"cl_splatoonsweps_canhealink",
+	"cl_splatoonsweps_canreloadstand",
+	"cl_splatoonsweps_canreloadink",
 }
+
+SplatoonSWEPs.ConVarName = {
+	InkColor = 1,
+	Playermodel = 2,
+	CanHealStand = 3,
+	CanHealInk = 4,
+	CanReloadStand = 5,
+	CanReloadInk = 6,
+}
+
+function SplatoonSWEPs:GetConVarName(name)
+	return SplatoonSWEPs.ConVar[SplatoonSWEPs.ConVarName[name]]
+end
+
+function SplatoonSWEPs:GetConVar(name)
+	return GetConVar(SplatoonSWEPs:GetConVarName(name))
+end
+
+function SplatoonSWEPs:GetConVarInt(name)
+	local cvar = SplatoonSWEPs:GetConVar(name)
+	if cvar then
+		return cvar:GetInt()
+	else
+		return CVAR_DEFAULT[SplatoonSWEPs.ConVarName[name]]
+	end
+end
+
+function SplatoonSWEPs:GetConVarBool(name)
+	return SplatoonSWEPs:GetConVarInt(name) ~= 0
+end
 
 SplatoonSWEPs.PlayermodelName = {
 	"Inkling Girl",
 	"Inkling Boy",
 	"Octoling",
+	"Marie",
+	"Callie",
 	"Don't change playermodel",
 	"Don't change playermodel and don't become squid",
 }
@@ -22,13 +54,17 @@ SplatoonSWEPs.PLAYER = {
 	GIRL = 1,
 	BOY = 2,
 	OCTO = 3,
-	NOCHANGE = 4,
-	NOSQUID = 5,
+	MARIE = 4,
+	CALLIE = 5,
+	NOCHANGE = 6,
+	NOSQUID = 7,
 }
 SplatoonSWEPs.Playermodel = {
 	"models/drlilrobot/splatoon/ply/inkling_girl.mdl",
 	"models/drlilrobot/splatoon/ply/inkling_boy.mdl",
 	"models/drlilrobot/splatoon/ply/octoling.mdl",
+	"models/drlilrobot/splatoon/ply/marie.mdl",
+	"models/drlilrobot/splatoon/ply/callie.mdl",
 	nil,
 	nil,
 }
@@ -50,8 +86,10 @@ for i, v in ipairs(SplatoonSWEPs.Squidmodel) do
 	util.PrecacheModel(v)
 end
 
+SplatoonSWEPs.SEND_ERROR_DURATION_BITS = 4
+SplatoonSWEPs.SEND_ERROR_NOTIFY_BITS = 3
+
 --List of available ink colors
-if not SplatoonSWEPs then return end
 local InkColors = {
 	Color(255, 165, 0), --Orange
 	Color(255, 144, 192), --Pink

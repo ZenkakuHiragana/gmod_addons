@@ -42,6 +42,7 @@ end
 
 function ENT:SetupDataTables()
 	self:NetworkVar("Bool", 0, "IsInk")
+	self:NetworkVar("Int", 0, "ColorCode") --Color number
 	self:NetworkVar("Vector", 0, "InkColorProxy") --For material proxy.
 	self:NetworkVar("Vector", 1, "CurrentInkColor") --Hex Color code
 	self:NetworkVar("Vector", 2, "HitPos")

@@ -29,6 +29,15 @@ function SplatoonSWEPs:Check(point)
 	-- return SplatoonSWEPs.GridSurf[x][y][z]
 end
 
+local function IsExternalSurface(verts, center, normal)
+  	normal = normal * 0.5
+  	return
+  		bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 or
+		bit.band(util.PointContents(verts[1] + (center - verts[1]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0 or
+		bit.band(util.PointContents(verts[2] + (center - verts[2]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0 or
+		bit.band(util.PointContents(verts[3] + (center - verts[3]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0
+end
+
 function SplatoonSWEPs:Initialize()
 	time, loadtime = SysTime(), 0
 	
@@ -78,43 +87,59 @@ function SplatoonSWEPs:Initialize()
 					end
 				end
 			end
-		else
-			local surf, center, normal, numverts = {vertices = {}}, vector_origin, vector_origin, #data.Vertices + 1
-			for k = numverts - 1, 0, -1 do
-				local vnext, vprev = data.Vertices[(k + numverts - 1) % numverts], data.Vertices[(k + 1) % numverts]
-				-- if not vprev then PrintTable(data) end
-				local n = (data.Vertices[k] - vprev):Cross(vnext - data.Vertices[k])
-				if n:LengthSqr() > 1e-6 then
-					table.insert(surf.vertices, data.Vertices[k])
-					center = center + data.Vertices[k]
-					normal = n
-				end
-			end
-			center = center / #surf.vertices
-			if data.PlaneTable and data.PlaneTable.normal then
-				normal = data.PlaneTable.normal
-			else
-				normal:Normalize()
-			end
+		-- else
+			-- local surf, center, normal, numverts = {vertices = {}}, vector_origin, vector_origin, #data.Vertices + 1
+			-- for k = numverts - 1, 0, -1 do
+				-- local vnext, vprev = data.Vertices[(k + numverts - 1) % numverts], data.Vertices[(k + 1) % numverts]
+				-- local n = (data.Vertices[k] - vprev):Cross(vnext - data.Vertices[k])
+				-- if n:LengthSqr() > 1e-6 then
+					-- table.insert(surf.vertices, data.Vertices[k])
+					-- center = center + data.Vertices[k]
+					-- normal = n
+				-- end
+			-- end
+			-- center = center / #surf.vertices
+			-- if data.PlaneTable and data.PlaneTable.normal then
+				-- normal = data.PlaneTable.normal
+			-- else
+				-- normal:Normalize()
+			-- end
 			
-			local contents = util.PointContents(center - normal * 1e-4)
-			if bit.band(contents, CONTENTS_GRATE) == 0 and #surf.vertices > 2 then
-				added = added + 1
-				surf.center = center
-				surf.normal = normal
-				surf.id = added
-				surfaces[surf] = true
-				-- timer.Simple(i * 0.1, function()
-					-- for i, v in ipairs(surf.vertices) do
-						-- debugoverlay.Line(v, surf.vertices[i % #surf.vertices + 1], 5, Color(255, 255, 0), true)
-						-- debugoverlay.Line(v, surf.center, 5, Color(255, 255, 0), true)
-						-- debugoverlay.Line(v, v + surf.normal * 50, 5, Color(255, 255, 0), true)
-					-- end
-				-- end)
-			end
+			-- local contents = util.PointContents(center - normal * 1e-4)
+			-- if bit.band(contents, CONTENTS_GRATE) == 0 and #surf.vertices > 2 then
+				-- added = added + 1
+				-- surf.center = center
+				-- surf.normal = normal
+				-- surf.id = added
+				-- surfaces[surf] = true
+			-- end
+		end
+	end
+	
+	local physmesh = game.GetWorld():GetPhysicsObject():GetMesh()
+	for i = 1, #physmesh, 3 do
+		local vert = {physmesh[i + 2].pos, physmesh[i + 1].pos, physmesh[i].pos}
+		local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
+		local center = (vert[1] + vert[2] + vert[3]) / 3
+		if bit.band(util.PointContents(center - normal * 1e-2), CONTENTS_GRATE) == 0 and IsExternalSurface(vert, center, normal) then
+			added = added + 1
+			surfaces[{id = added, vertices = vert, normal = normal, center = center}] = true
 		end
 	end
 	self.Surfaces = surfaces
 end
 
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
+
+util.AddNetworkString("SplatoonSWEPs: Send error message from server")
+function SplatoonSWEPs:SendError(msg, icon, duration, user)
+	net.Start("SplatoonSWEPs: Send error message from server")
+	net.WriteString(msg)
+	net.WriteUInt(icon, SplatoonSWEPs.SEND_ERROR_NOTIFY_BITS)
+	net.WriteUInt(duration, SplatoonSWEPs.SEND_ERROR_DURATION_BITS)
+	if user then
+		net.Send(user)
+	else
+		net.Broadcast()
+	end
+end

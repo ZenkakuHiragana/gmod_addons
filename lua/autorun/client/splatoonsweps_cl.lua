@@ -4,7 +4,7 @@ SplatoonSWEPs = SplatoonSWEPs or {}
 
 include "../splatoonsweps_const.lua"
 include "splatoonsweps_userinfo.lua"
-local MAX_PROCESS_QUEUE_AT_ONCE = 10
+local MAX_PROCESS_QUEUE_AT_ONCE = 100
 local mat = Material("debug/debugbrushwireframe")
 local IMaterial = Material("splatoonsweps/splatoonink.vmt")
 local WaterOverlap = Material("splatoonsweps/splatoonwater.vmt")
@@ -42,6 +42,13 @@ net.Receive("SplatoonSWEPs: Finalize ink refreshment", function(...)
 	})
 	LocalPlayer().IsReceivingInkData = nil
 	LocalPlayer().ReceivingInkData = {}
+end)
+
+net.Receive("SplatoonSWEPs: Send error message from server", function(...)
+	local msg = net.ReadString()
+	local icon = net.ReadUInt(3)
+	local duration = net.ReadUInt(4)
+	notification.AddLegacy(msg, icon, duration)
 end)
 
 function ClearInk()

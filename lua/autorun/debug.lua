@@ -1,7 +1,7 @@
 
 --Debugging code
 
-DebugOverlayTime = 3
+DebugOverlayTime = 10
 DebugOverlayColor = Color(0, 255, 0)
 function DebugAxis(pos, ang, size, ignoreZ)
 	debugoverlay.Axis(pos, ang, size, DebugOverlayTime, ignoreZ)
@@ -44,12 +44,16 @@ end
 function RequestInkOrder(self)
 	local tr = self.Owner:GetEyeTrace()
 	local pos, normal = tr.HitPos, tr.HitNormal
-	local radius = 100
+	local radius = 500
 	SplatoonSWEPsInkManager.AddQueue(pos, normal, radius, self.ColorCode, reference_polys)
 	DebugPoint(pos, 5, true)
 	DebugVector(pos, normal * 50, true)
 	for i, v in ipairs(reference_polys) do
 		DebugLine(LocalToWorld(v, angle_zero, pos, normal:Angle()), LocalToWorld(reference_polys[i % #reference_polys + 1], angle_zero, pos, normal:Angle()))
 	end
+end
+
+function RequestInkOrder(self)
+	SplatoonSWEPs.BuildOverlap()
 end
 ----------------------

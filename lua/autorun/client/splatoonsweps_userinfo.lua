@@ -14,47 +14,35 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 	end,
 })
 
-local inkcolor_desc = [[
-Your ink color.  Available values are:
+local CVAR_DEFAULT = {
+	math.random(SplatoonSWEPs.MAX_COLORS),
+	1,
+	1,
+	1,
+	1,
+	1,
+}
+local CVAR_DESC = {
+	[[Your ink color.  Available values are:
 1: Orange
 2: Pink
 3: Purple
 4: Green
 5: Cyan
-6: Blue]]
-local playermodel_desc = [[
-Your thirdperson model.  Available values are:
+6: Blue]],
+	[[Your thirdperson model.  Available values are:
 1: Inkling girl
 2: Inkling boy
 3: Octoling
 4: Don't change playermodel
-5: Don't change playermodel and don't become squid]]
-CreateClientConVar(SplatoonSWEPs.ConVarName.InkColor, "1", true, true, inkcolor_desc)
-CreateClientConVar(SplatoonSWEPs.ConVarName.Playermodel, "1", true, true, playermodel_desc)
-CreateClientConVar(SplatoonSWEPs.ConVarName.CanHealStand, "1", true, true, "1: You can heal yourself when you are not in ink.  0: You can not.")
-CreateClientConVar(SplatoonSWEPs.ConVarName.CanHealInk, "1", true, true, "1: You can heal yourself when you are in ink.  0: You can not.")
-CreateClientConVar(SplatoonSWEPs.ConVarName.CanReloadStand, "1", true, true, "1: You can reload your ink when you are not in ink.  0: You can not.")
-CreateClientConVar(SplatoonSWEPs.ConVarName.CanReloadInk, "1", true, true, "1: You can reload your ink when you are in ink.  0: You can not.")
-
-local function GetConVarInt(name)
-	if SplatoonSWEPs.ConVarName[name] then
-		local cvar = GetConVar(SplatoonSWEPs.ConVarName[name])
-		if not cvar then return 1 end
-		return cvar:GetInt()
-	end
-	return 1
-end
-
-function SplatoonSWEPs:GetInkColor()
-	local cvar = GetConVar(SplatoonSWEPs.ConVarName.InkColor)
-	if not cvar then return 1 end
-	return cvar:GetInt()
-end
-
-function SplatoonSWEPs:GetPlayermodel()
-	local cvar = GetConVar(SplatoonSWEPs.ConVarName.Playermodel)
-	if not cvar then return 1 end
-	return cvar:GetInt()
+5: Don't change playermodel and don't become squid]],
+	"1: You can heal yourself when you are not in ink.\n0: You can not.",
+	"1: You can heal yourself when you are in ink.\n0: You can not.",
+	"1: You can reload your ink when you are not in ink.\n0: You can not.",
+	"1: You can reload your ink when you are in ink.\n0: You can not.",
+}
+for i, c in ipairs(SplatoonSWEPs.ConVar) do
+	CreateClientConVar(c, tostring(CVAR_DEFAULT[i]), true, true, CVAR_DESC[i])
 end
 
 function SplatoonSWEPs:ConfigMenu()
@@ -72,14 +60,29 @@ function SplatoonSWEPs:ConfigMenu()
 	Window:NoClipping(false)
 	Window:MakePopup()
 	
+	local LabelError = Label("ERROR: Playermodel is not found!\nCheck if you have required addons!", Window)
+	LabelError:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2 + 30)
+	LabelError:SetFont("DermaDefaultBold")
+	LabelError:SetTextColor(Color(255, 128, 128))
+	LabelError:SizeToContents()
+	LabelError:SetVisible(false)
+	
 	local function GetColor() --Get current color for preview model
-		local color = SplatoonSWEPs.GetColor(GetConVarInt("InkColor"))
+		local color = SplatoonSWEPs.GetColor(SplatoonSWEPs:GetConVarInt("InkColor"))
 		return Vector(color.r, color.g, color.b) / 255
 	end
 	
 	local function SetPlayerModel(DModelPanel) --Apply changes to preview model
-		local model = SplatoonSWEPs.Playermodel[GetConVarInt("Playermodel")] or LocalPlayer():GetModel()
-		local bone = GetConVarInt("Playermodel") > 3 and "ValveBiped.Bip01_Pelvis" or "ValveBiped.Bip01_Spine4"
+		local model = SplatoonSWEPs.Playermodel[SplatoonSWEPs:GetConVarInt("Playermodel")] or LocalPlayer():GetModel()
+		local bone = table.HasValue(SplatoonSWEPs.PlayermodelName, model) and "ValveBiped.Bip01_Pelvis" or "ValveBiped.Bip01_Spine4"
+		
+		if not file.Exists(model, "GAME") then
+			model = LocalPlayer():GetModel()
+			LabelError:SetVisible(true)
+		else
+			LabelError:SetVisible(false)
+		end
+		
 		DModelPanel:SetModel(model)
 		local center = DModelPanel.Entity:GetBonePosition(DModelPanel.Entity:LookupBone(bone))
 		DModelPanel:SetLookAt(center)
@@ -121,13 +124,13 @@ function SplatoonSWEPs:ConfigMenu()
 	local ComboColor = vgui.Create("DComboBox", Window) --Ink color selection box
 	ComboColor:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 4)
 	ComboColor:SetSize(Window:GetWide() * 0.31, 24)
-	ComboColor:SetValue(SplatoonSWEPs.ColorName[GetConVarInt("InkColor")])
+	ComboColor:SetValue(SplatoonSWEPs.ColorName[SplatoonSWEPs:GetConVarInt("InkColor")])
 	for i, c in ipairs(SplatoonSWEPs.ColorName) do
 		ComboColor:AddChoice(c)
 	end
 	
 	function ComboColor:OnSelect(index, value, data)
-		local cvar = GetConVar(SplatoonSWEPs.ConVarName.InkColor)
+		local cvar = SplatoonSWEPs:GetConVar("InkColor")
 		if cvar then cvar:SetInt(index) end
 	end
 	
@@ -138,20 +141,20 @@ function SplatoonSWEPs:ConfigMenu()
 	local ComboModel = vgui.Create("DComboBox", Window) --Playermodel selection box
 	ComboModel:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2)
 	ComboModel:SetSize(Window:GetWide() * 0.31, 24)
-	ComboModel:SetValue(SplatoonSWEPs.PlayermodelName[GetConVarInt("Playermodel")])
+	ComboModel:SetValue(SplatoonSWEPs.PlayermodelName[SplatoonSWEPs:GetConVarInt("Playermodel")])
 	for i, c in ipairs(SplatoonSWEPs.PlayermodelName) do
 		ComboModel:AddChoice(c)
 	end
 	
 	function ComboModel:OnSelect(index, value, data)
-		local cvar = GetConVar(SplatoonSWEPs.ConVarName.Playermodel)
+		local cvar = SplatoonSWEPs:GetConVar("Playermodel")
 		if cvar then cvar:SetInt(index) end
 		SetPlayerModel(Playermodel)
 	end
 	
-	local LabelColor = Label("Playermodel:", Window)
-	LabelColor:SizeToContents()
-	LabelColor:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2 - 24)
+	local LabelModel = Label("Playermodel:", Window)
+	LabelModel:SizeToContents()
+	LabelModel:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2 - 24)
 	
 	local Options = vgui.Create("DPanel", Window) --Group of checkboxes
 	Options:SetWide(Window:GetWide() / 4)
@@ -173,8 +176,8 @@ function SplatoonSWEPs:ConfigMenu()
 		local Check = vgui.Create("DCheckBoxLabel", Options)
 		Check:SetPos(4, 4 + 20 * i)
 		Check:SetText(OptionsText[i + 1])
-		Check:SetConVar(SplatoonSWEPs.ConVarName[OptionsConVar[i + 1]])
-		Check:SetValue(GetConVarInt(OptionsConVar[i + 1]))
+		Check:SetConVar(SplatoonSWEPs:GetConVarName(OptionsConVar[i + 1]))
+		Check:SetValue(SplatoonSWEPs:GetConVarInt(OptionsConVar[i + 1]))
 		Check:SetDark(true)
 		Check:SizeToContents()
 	end

@@ -2,16 +2,36 @@
 include "baseinfo.lua"
 include "shared.lua"
 
---The way to draw weapon models is from SWEP Construction Kit.
+--The way to draw weapon models comes from SWEP Construction Kit.
 SWEP.ShowViewModel = true
 SWEP.ShowWorldModel = false
 
 SWEP.ViewModelBoneMods = {
-	["ValveBiped.Bip01_L_Finger0"] = { scale = Vector(1, 1, 1), pos = Vector(0, 0, 0), angle = Angle(7, -27, 0) },
-	["Base"] = { scale = Vector(1, 1, 1), pos = Vector(-30, 30, -30), angle = Angle(0, 0, 0) },
-	["ValveBiped.Bip01_L_Clavicle"] = { scale = Vector(1, 1, 1), pos = Vector(2, -2, 2), angle = Angle(0, 0, 0) },
-	["ValveBiped.Bip01_Spine4"] = { scale = Vector(1, 1, 1), pos = Vector(-30, 27.5, 30), angle = Angle(0, -8, 0) },
-	["ValveBiped.Bip01_L_Hand"] = { scale = Vector(1, 1, 1), pos = Vector(0, 0, 0), angle = Angle(0, 23, -12) }
+	["ValveBiped.Bip01_L_Finger0"] = {
+		scale = Vector(1, 1, 1),
+		pos = Vector(0, 0, 0),
+		angle = Angle(7, -27, 0)
+	},
+	["Base"] = {
+		scale = Vector(1, 1, 1),
+		pos = Vector(-30, 30, -30),
+		angle = Angle(0, 0, 0)
+	},
+	["ValveBiped.Bip01_L_Clavicle"] = {
+		scale = Vector(1, 1, 1),
+		pos = Vector(2, -2, 2),
+		angle = Angle(0, 0, 0)
+	},
+	["ValveBiped.Bip01_Spine4"] = {
+		scale = Vector(1, 1, 1),
+		pos = Vector(-30, 27.5, 30),
+		angle = Angle(0, -8, 0)
+	},
+	["ValveBiped.Bip01_L_Hand"] = {
+		scale = Vector(1, 1, 1),
+		pos = Vector(0, 0, 0),
+		angle = Angle(0, 23, -12)
+	}
 }
 
 SWEP.VElements = {
@@ -76,6 +96,8 @@ SWEP.WElements = {
 		ignorez = false
 	},
 }
+
+local errorduration = 10
 
 --Fully copies the table, meaning all tables inside this table are copied too and so on
 --(normal table.Copy copies only their reference).
@@ -213,52 +235,64 @@ function SWEP:CreateModels(t)
 	if not t then return end
 	
 	// Create the clientside models here because Garry says we can't do it in the render hook
+	local errormodelshown, errormaterialshown = false, false
 	for k, v in pairs(t) do
 		if v.type == "Model" and v.model and v.model ~= "" and
-			(not IsValid(v.modelEnt) or v.createdModel ~= v.model) and 
-			v.model:find(".mdl") and file.Exists(v.model, "GAME") then
+			(not IsValid(v.modelEnt) or v.createdModel ~= v.model) then
 			
-			v.modelEnt = ClientsideModel(v.model, RENDERGROUP_VIEWMODEL)
-			if IsValid(v.modelEnt) then
-				v.modelEnt.GetInkColorProxy = function()
-					if IsValid(self) then
-						return self:GetInkColorProxy()
+			if file.Exists(v.model, "GAME") then
+				v.modelEnt = ClientsideModel(v.model, RENDERGROUP_VIEWMODEL)
+				if IsValid(v.modelEnt) then
+					v.modelEnt.GetInkColorProxy = function()
+						if IsValid(self) then
+							return self:GetInkColorProxy()
+						else
+							return Vector(1, 1, 1)
+						end
+					end
+					v.modelEnt:SetPos(self:GetPos())
+					v.modelEnt:SetAngles(self:GetAngles())
+					v.modelEnt:SetParent(self)
+					v.modelEnt:SetNoDraw(true)
+					v.modelEnt:DrawShadow(true)
+					v.createdModel = v.model
+				else
+					v.modelEnt = nil
+				end
+			else
+				if not errormodelshown then
+					notification.AddLegacy("SplatoonSWEPs: Required models are not found!", NOTIFY_ERROR, errorduration)
+					errormodelshown = true
+				end
+			end
+		elseif v.type == "Sprite" and v.sprite and v.sprite ~= "" and
+			(not v.spriteMaterial or v.createdSprite ~= v.sprite) then
+			
+			if file.Exists("materials/" .. v.sprite .. ".vmt", "GAME") then
+				local name = v.sprite .. "-"
+				local params = { ["$basetexture"] = v.sprite }
+				// make sure we create a unique name based on the selected options
+				local tocheck = { "nocull", "additive", "vertexalpha", "vertexcolor", "ignorez" }
+				for i, j in pairs(tocheck) do
+					if v[j] then
+						params["$" .. j] = 1
+						name = name .. "1"
 					else
-						return Vector(1, 1, 1)
+						name = name .. "0"
 					end
 				end
-				v.modelEnt:SetPos(self:GetPos())
-				v.modelEnt:SetAngles(self:GetAngles())
-				v.modelEnt:SetParent(self)
-				v.modelEnt:SetNoDraw(true)
-				v.modelEnt:DrawShadow(true)
-				v.createdModel = v.model
-			else
-				v.modelEnt = nil
-			end
-			
-		elseif v.type == "Sprite" and v.sprite and v.sprite ~= "" and
-			(not v.spriteMaterial or v.createdSprite ~= v.sprite) 
-			and file.Exists("materials/" .. v.sprite .. ".vmt", "GAME") then
-			
-			local name = v.sprite .. "-"
-			local params = { ["$basetexture"] = v.sprite }
-			// make sure we create a unique name based on the selected options
-			local tocheck = { "nocull", "additive", "vertexalpha", "vertexcolor", "ignorez" }
-			for i, j in pairs(tocheck) do
-				if v[j] then
-					params["$" .. j] = 1
-					name = name .. "1"
-				else
-					name = name .. "0"
+				
+				v.createdSprite = v.sprite
+				v.spriteMaterial = CreateMaterial(name, "UnlitGeneric", params)
+				if v.spriteMaterial:IsError() then
+					v.createdSprite = nil
+					v.spriteMaterial = nil
 				end
-			end
-			
-			v.createdSprite = v.sprite
-			v.spriteMaterial = CreateMaterial(name, "UnlitGeneric", params)
-			if v.spriteMaterial:IsError() then
-				v.createdSprite = nil
-				v.spriteMaterial = nil
+			else
+				if not errormaterialshown then
+					notification.AddLegacy("SplatoonSWEPs: Required sprite materials are not found!", NOTIFY_ERROR, errorduration)
+					errormaterialshown = true
+				end
 			end
 		end
 	end
@@ -320,19 +354,27 @@ function SWEP:Initialize()
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:SetInk(100)
 	self.JustUsableTime = CurTime() - 1 --For animation of ink tank light
-	self.SquidModelNumber = SplatoonSWEPs:GetPlayermodel() == SplatoonSWEPs.PLAYER.OCTO and
+	self.SquidModelNumber = SplatoonSWEPs:GetConVarInt("Playermodel") == SplatoonSWEPs.PLAYER.OCTO and
 							SplatoonSWEPs.SQUID.OCTO or SplatoonSWEPs.SQUID.INKLING
 	
-	self.Squid = ClientsideModel(SplatoonSWEPs.Squidmodel[self.SquidModelNumber], RENDERGROUP_BOTH)
-	self.Squid:SetPos(self:GetPos())
-	self.Squid:SetAngles(self:GetAngles())
-	self.Squid:SetNoDraw(true)
-	self.Squid:DrawShadow(false)
-	self.Squid.GetInkColorProxy = function()
-		if IsValid(self) then
-			return self:GetInkColorProxy()
+	if file.Exists(SplatoonSWEPs.Squidmodel[self.SquidModelNumber], "GAME") then
+		self.Squid = ClientsideModel(SplatoonSWEPs.Squidmodel[self.SquidModelNumber], RENDERGROUP_BOTH)
+		self.Squid:SetPos(self:GetPos())
+		self.Squid:SetAngles(self:GetAngles())
+		self.Squid:SetNoDraw(true)
+		self.Squid:DrawShadow(false)
+		self.Squid.GetInkColorProxy = function()
+			if IsValid(self) then
+				return self:GetInkColorProxy()
+			else
+				return Vector(1, 1, 1)
+			end
+		end
+	else
+		if SplatoonSWEPs:GetConVarInt("Playermodel") == SplatoonSWEPs.PLAYER.NOSQUID then
+			print("Squid model is not found!  Check your subscription!")
 		else
-			return Vector(1, 1, 1)
+			notification.AddLegacy("SplatoonSWEPs: Squid model is not found!  You cannot become squid!", NOTIFY_ERROR, errorduration)
 		end
 	end
 	
@@ -439,7 +481,8 @@ function SWEP:DrawWorldModel()
 	if self.ShowWorldModel == nil or self.ShowWorldModel then
 		self:DrawModel()
 	end
-	if SplatoonSWEPs:GetPlayermodel() ~= SplatoonSWEPs.PLAYER.NOSQUID and IsValid(self.Owner) and self.Owner:Crouching() then
+	if self.Squid and SplatoonSWEPs:GetConVarInt("Playermodel") ~= SplatoonSWEPs.PLAYER.NOSQUID
+		and IsValid(self.Owner) and self.Owner:Crouching() then
 		if not self:GetInInk() then
 			self.Squid:DrawModel()
 			self.Squid:DrawShadow(true)
@@ -464,7 +507,7 @@ function SWEP:DrawWorldModel()
 				self:GetInk() < 100 * self.Secondary.TakeAmmo + 1 then
 				self.JustUsableTime = CurTime()
 			end
-			v.hide = self:GetInk() < 100 * self.Secondary.TakeAmmo
+			v.hide = not self.WElements["inktank"].modelEnt or self:GetInk() < 100 * self.Secondary.TakeAmmo
 			
 			local fraction = math.Clamp(self.JustUsableTime + 0.15 - CurTime(), 0, 0.15)
 			local size = -1600 * (fraction - 0.075)^2 + 20
@@ -472,8 +515,7 @@ function SWEP:DrawWorldModel()
 		end
 		if v.hide then continue end
 		
-		local pos, ang = self:GetBoneOrientation(self.WElements, v, bone_ent, 
-							not v.bone and "ValveBiped.Bip01_R_Hand")
+		local pos, ang = self:GetBoneOrientation(self.WElements, v, bone_ent, not v.bone and "ValveBiped.Bip01_R_Hand")
 		if not pos then continue end
 		
 		local model, sprite = v.modelEnt, v.spriteMaterial
@@ -574,7 +616,7 @@ function SWEP:CustomAmmoDisplay()
 	self.AmmoDisplay.Draw = true
 	
 	if self.Primary.ClipSize > 0 then
-		self.AmmoDisplay.PrimaryClip = 300
+		self.AmmoDisplay.PrimaryClip = self:GetInk()
 		self.AmmoDisplay.PrimaryAmmo = self:Clip1()
 	end
 	

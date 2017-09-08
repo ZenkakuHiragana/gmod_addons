@@ -145,10 +145,10 @@ function SWEP:Deploy()
 	
 	self.Owner:SetColor(color_white)
 	
-	self.CanHealStand = GetConVar(SplatoonSWEPs.ConVarName.CanHealStand):GetInt() ~= 0
-	self.CanHealInk = GetConVar(SplatoonSWEPs.ConVarName.CanHealInk):GetInt() ~= 0
-	self.CanReloadStand = GetConVar(SplatoonSWEPs.ConVarName.CanReloadStand):GetInt() ~= 0
-	self.CanReloadInk = GetConVar(SplatoonSWEPs.ConVarName.CanReloadInk):GetInt() ~= 0
+	self.CanHealStand = SplatoonSWEPs:GetConVarBool("CanHealStand")
+	self.CanHealInk = SplatoonSWEPs:GetConVarBool("CanHealInk")
+	self.CanReloadStand = SplatoonSWEPs:GetConVarBool("CanReloadStand")
+	self.CanReloadInk = SplatoonSWEPs:GetConVarBool("CanReloadInk")
 	self.MaxSpeed = 250
 	self.Owner:SetCrouchedWalkSpeed(0.5)
 	self.Owner:SetMaxSpeed(self.MaxSpeed)
@@ -156,28 +156,40 @@ function SWEP:Deploy()
 	self.Owner:SetWalkSpeed(self.MaxSpeed)
 	
 	if SERVER then
-		self.ColorCode = self.Owner:GetInfoNum(SplatoonSWEPs.ConVarName.InkColor, 1)
+		local squidindex
+		if self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("Playermodel"), 1) == SplatoonSWEPs.PLAYER.OCTO then
+			squidindex = SplatoonSWEPs.SQUID.OCTO
+		else
+			squidindex = SplatoonSWEPs.SQUID.INKLING
+		end
+	
+		self.Squid = file.Exists(SplatoonSWEPs.Squidmodel[squidindex], "GAME")
+		self.ColorCode = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("InkColor"), 1)
 		self.Color = SplatoonSWEPs.GetColor(self.ColorCode)
 		self.VectorColor = Vector(self.Color.r / 255, self.Color.g / 255, self.Color.b / 255)
 		self:SetInkColorProxy(self.VectorColor)
 		self:SetCurrentInkColor(Vector(self.Color.r, self.Color.g, self.Color.b))
 		
-		local model = SplatoonSWEPs.Playermodel[self.Owner:GetInfoNum(SplatoonSWEPs.ConVarName.Playermodel, 1)]
-		if model and file.Exists(model, "GAME") then
-			self:ChangePlayermodel({
-				Model = model,
-				Skin = 0,
-				BodyGroups = {},
-				SetOffsets = true,
-				PlayerColor = self.VectorColor,
-			})
+		local model = SplatoonSWEPs.Playermodel[self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("Playermodel"), 1)]
+		if model then
+			if file.Exists(model, "GAME") then
+				self:ChangePlayermodel({
+					Model = model,
+					Skin = 0,
+					BodyGroups = {},
+					SetOffsets = true,
+					PlayerColor = self.VectorColor,
+				})
+			else
+				SplatoonSWEPs:SendError("SplatoonSWEPs: Required playermodel is not found!", NOTIFY_ERROR, 10, self.Owner)
+			end
 		end
 		
-		if self.Owner:GetInfoNum(SplatoonSWEPs.ConVarName.Playermodel, 1) ~= SplatoonSWEPs.PLAYER.NOSQUID then
+		if self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("Playermodel"), 1) ~= SplatoonSWEPs.PLAYER.NOSQUID then
 			self.Owner:SetMaterial(self.Owner:Crouching() and "color" or "")
 		end
 	elseif self.Squid then
-		if SplatoonSWEPs:GetPlayermodel() == SplatoonSWEPs.PLAYER.OCTO and self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
+		if SplatoonSWEPs:GetConVarInt("Playermodel") == SplatoonSWEPs.PLAYER.OCTO and self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
 			self.Squid:SetModel(SplatoonSWEPs.Squidmodel[SplatoonSWEPs.SQUID.OCTO])
 			self.SquidModelNumber = SplatoonSWEPs.SQUID.OCTO
 		elseif self.SquidModelNumber ~= SplatoonSWEPs.SQUID.INKLING then
@@ -197,7 +209,7 @@ function SWEP:Holster()
 	--Restores owner's information.
 	if SERVER and istable(self.BackupPlayerInfo) then
 		self.Owner:SetColor(self.BackupPlayerInfo.Color)
-	--	self.Owner:RemoveFlags(self.Owner:GetFlags()) --Restires no target flag and something.
+	--	self.Owner:RemoveFlags(self.Owner:GetFlags()) --Restores no target flag and something.
 	--	self.Owner:AddFlags(self.BackupPlayerInfo.Flags)
 		self.Owner:SetJumpPower(self.BackupPlayerInfo.JumpPower)
 		self.Owner:DrawShadow(true)
@@ -264,8 +276,14 @@ function SWEP:Think()
 		end
 		
 		--Make playermodel invisible while crouching
-		local plymode = SERVER and self.Owner:GetInfoNum(SplatoonSWEPs.ConVarName.Playermodel, 1) or SplatoonSWEPs:GetPlayermodel()
-		if plymode ~= SplatoonSWEPs.PLAYER.NOSQUID then
+		local plymodel
+		if SERVER then
+			plymodel = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("Playermodel"), 1)
+		else
+			plymodel = SplatoonSWEPs:GetConVarInt("Playermodel")
+		end
+		
+		if self.Squid and plymodel ~= SplatoonSWEPs.PLAYER.NOSQUID then
 			self.Owner:SetMaterial(issquid and "color" or "")
 			self:DrawShadow(not issquid)
 		end
@@ -283,23 +301,25 @@ function SWEP:Think()
 	end
 	
 	if CLIENT then --Move clientside model to player's position.
-		local v = self.Owner:GetVelocity()
-		local a = (v + self.Owner:GetForward() * 40):Angle()
-		if v:LengthSqr() < 16 then --Speed limit: 
-			a.p = 0
-		elseif a.p > 45 and a.p <= 90 then --Angle limit: up and down
-			a.p = 45
-		elseif a.p >= 270 and a.p < 300 then
-			a.p = 300
-		else
-			a.r = a.p
+		if self.Squid then
+			local v = self.Owner:GetVelocity()
+			local a = (v + self.Owner:GetForward() * 40):Angle()
+			if v:LengthSqr() < 16 then --Speed limit: 
+				a.p = 0
+			elseif a.p > 45 and a.p <= 90 then --Angle limit: up and down
+				a.p = 45
+			elseif a.p >= 270 and a.p < 300 then
+				a.p = 300
+			else
+				a.r = a.p
+			end
+			a.p, a.y, a.r = a.p - 90, self.Owner:GetAngles().y, 180
+			
+			self.Squid:SetAngles(a)
+			self.Squid:SetPos(self.Owner:GetPos())
+			--It seems changing eye position doesn't work.
+			self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
 		end
-		a.p, a.y, a.r = a.p - 90, self.Owner:GetAngles().y, 180
-		
-		self.Squid:SetAngles(a)
-		self.Squid:SetPos(self.Owner:GetPos())
-		--It seems changing eye position doesn't work.
-		self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
 		
 		if isfunction(self.ClientThink) then self:ClientThink(issquid) end
 	end

@@ -84,7 +84,7 @@ function ENT:PhysicsCollide(coldata, collider)
 		tr.HitPos,
 		-coldata.HitNormal,
 		self.InkRadius,
-		self:GetCurrentInkColor(),
+		self:GetColorCode(),
 		reference_polys
 	)
 	

@@ -18,7 +18,7 @@ local function paint(self)
 	p:SetAngles(ang)
 	p:SetPos(self.Owner:GetShootPos() + delta_position)
 	p.InkColor = self:GetInkColorProxy()
-	p:SetCurrentInkColor(self:GetCurrentInkColor())
+	p:SetColorCode(self.ColorCode)
 	p.Damage = self.Damage
 	p:Spawn()
 	
@@ -48,8 +48,8 @@ function SWEP:CustomPrimaryAttack(canattack)
 	if SERVER and canattack then
 		self:SetModifyWeaponSize(CurTime()) --Expand weapon model
 		self:SetInk(self:GetInk() - self.Primary.TakeAmmo)
-		-- paint(self)
-		RequestInkOrder(self) --Debug function in autorun/debug.lua
+		paint(self)
+		-- RequestInkOrder(self) --Debug function in autorun/debug.lua
 	end
 end
 
