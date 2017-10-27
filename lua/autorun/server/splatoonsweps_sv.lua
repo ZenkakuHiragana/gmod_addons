@@ -3,9 +3,9 @@
 --The core of new ink system.
 
 --Fix Angle:Normalize() in SLVBase
---The problem is functions between default Angle:Normalize() and SLVBase's one have different behaviour:
---default one changes the given angle, SLV's one returns normalized angle.
---So I need to branch the normalize function.  I hate SLVBase.
+--The problem is functions between default Angle:Normalize() and SLVBase's have different behaviour:
+--default one changes the given angle, SLV's returns normalized angle.
+--So I need to branch the normalize function.  That's why I hate SLVBase.
 local NormalizeAngle = FindMetaTable("Angle").Normalize
 if SLVBase and not SLVBase.IsFixedNormalizeAngle then
 	NormalizeAngle = function(ang) ang:Set(ang:Normalize()) return ang end
@@ -44,6 +44,7 @@ function SplatoonSWEPs:Initialize()
 	local self = SplatoonSWEPs
 	self.BSP.bspname = "maps/" .. game.GetMap() .. ".bsp"
 	self.BSP:Init()
+	do return end
 	local surfaces, added, LUMP, face = {}, 0, self.LUMP, self.BSP:GetLump(self.LUMP.FACES_HDR)
 	if not face.parsed then face = self.BSP:GetLump(LUMP.FACES) end
 	for i = 0, face.num do
@@ -116,6 +117,7 @@ function SplatoonSWEPs:Initialize()
 		end
 	end
 	
+	-- local Octree = kdTree(3, 16384, 8)
 	local physmesh = game.GetWorld():GetPhysicsObject():GetMesh()
 	for i = 1, #physmesh, 3 do
 		local vert = {physmesh[i + 2].pos, physmesh[i + 1].pos, physmesh[i].pos}
@@ -128,7 +130,6 @@ function SplatoonSWEPs:Initialize()
 	end
 	self.Surfaces = surfaces
 end
-
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
 
 util.AddNetworkString("SplatoonSWEPs: Send error message from server")

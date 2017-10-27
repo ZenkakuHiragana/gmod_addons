@@ -59,12 +59,17 @@ function ClearInk()
 	InkQueue = {}
 end
 
+local imt = {
+	{pos = Vector(0, 0, 0), u = 0, v = 0, color = Color(255, 255, 0)},
+	{pos = Vector(100, 0, 0), u = 1, v = 0},
+	{pos = Vector(0, 100, 0), u = 0, v = 1},
+}
 local function DrawMeshes()
 	for id, ink in pairs(InkGroup) do
 		render.SetMaterial(IMaterial)
 		ink.imesh:Draw()
-		-- render.SetMaterial(WaterOverlap)
-		-- ink.imesh:Draw()
+		render.SetMaterial(WaterOverlap)
+		ink.imesh:Draw()
 	end
 end
 
@@ -84,10 +89,12 @@ local function ProcessQueue()
 			local lightcolor, r, g, b = vector_origin, 0, 0, 0
 			for i, v in ipairs(q.newink) do
 				lightcolor = render.ComputeLighting(v.pos, q.normal) + Vector(0.1, 0.1, 0.1)
-				r = math.Clamp(color.r * math.Clamp(lightcolor.x, 0, 1), 0, 255)
-				g = math.Clamp(color.g * math.Clamp(lightcolor.y, 0, 1), 0, 255)
-				b = math.Clamp(color.b * math.Clamp(lightcolor.z, 0, 1), 0, 255)
-				q.newink[i].color = Color(r, g, b)
+				q.newink[i].color = Color(
+					math.Clamp(color.r * math.Clamp(lightcolor.x, 0, 1), 0, 255),
+					math.Clamp(color.g * math.Clamp(lightcolor.y, 0, 1), 0, 255),
+					math.Clamp(color.b * math.Clamp(lightcolor.z, 0, 1), 0, 255),
+					math.Remap(765 - color.r - color.g - color.b, 0, 765, 160, 254)
+				) --765 = 255 * 3
 				table.insert(InkGroup[q.id][q.inkid], q.newink[i])
 			end
 			

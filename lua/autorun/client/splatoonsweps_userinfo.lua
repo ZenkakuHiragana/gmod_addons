@@ -22,20 +22,22 @@ local CVAR_DEFAULT = {
 	1,
 	1,
 }
-local CVAR_DESC = {
-	[[Your ink color.  Available values are:
+local CVAR_DESC = {	[[
+Your ink color.  Available values are:
 1: Orange
 2: Pink
 3: Purple
 4: Green
 5: Cyan
-6: Blue]],
-	[[Your thirdperson model.  Available values are:
+6: Blue
+	]], [[
+Your thirdperson model.  Available values are:
 1: Inkling girl
 2: Inkling boy
 3: Octoling
 4: Don't change playermodel
-5: Don't change playermodel and don't become squid]],
+5: Don't change playermodel and don't become squid
+	]],
 	"1: You can heal yourself when you are not in ink.\n0: You can not.",
 	"1: You can heal yourself when you are in ink.\n0: You can not.",
 	"1: You can reload your ink when you are not in ink.\n0: You can not.",

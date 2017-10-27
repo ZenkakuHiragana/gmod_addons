@@ -69,6 +69,23 @@ SplatoonSWEPs.LUMP = {
 	DISP_MULTIBLEND					= 63,
 }
 
+local NodeFuncs = {}
+local NodeMeta = {__index = NodeFuncs}
+function NodeFuncs.GetChildren(self, pos)
+	local planenormal = self.Separator.normal
+	local planeorg = self.Separator.Origin
+	local childindex = planenormal:Dot(pos - planeorg) > 0 and 1 or 2
+	-- print(planenormal, planeorg, self.Separator.distance, childindex, pos)
+	return self.ChildNodes[childindex], self.ChildNodes[3 - childindex]
+end
+
+function NodeFuncs.Across(self, mins, maxs, org)
+	if org then mins, maxs = mins + org, maxs + org end
+	local planenormal = self.Separator.normal
+	local planeorg = self.Separator.Origin
+	return planenormal:Dot(mins - planeorg) * planenormal:Dot(maxs - planeorg) < 0
+end
+
 local texture_structure = texture_structure or {}
 local bsp = SplatoonSWEPs.BSP
 local LUMP = SplatoonSWEPs.LUMP
@@ -101,20 +118,14 @@ function texture_structure:GenerateUV(x, y, z)
 		(self.vecs[1][3] + self.vecs[1][2] * z + self.vecs[1][1] * y + self.vecs[1][0] * x) / self.texdata.h
 end
 
-local function unsigned(value, bits)
-	if value < 0 then 
-		return math.abs(value) + 2^(bits - 1)
-	else
-		return value
-	end
-end
-
 local function read(arg)
 	if isstring(arg) then
 		if arg == "UShort" then
-			return unsigned(bsp.bsp:ReadShort(), 16)
+			local n = bsp.bsp:ReadShort()
+			return n + (n < 0 and 65536 or 0)
 		elseif arg == "ULong" then
-			return unsigned(bsp.bsp:ReadLong(), 32)
+			local n = bsp.bsp:ReadLong()
+			return n + (n < 0 and 4294967296 or 0)
 		elseif arg == "Vector" then
 			local x = bsp.bsp:ReadFloat()
 			local y = bsp.bsp:ReadFloat()
@@ -133,26 +144,37 @@ function bsp:Init()
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
 	
 	self:ReadHeader()
-	self:Parse(LUMP.ENTITIES)
+	-- self:Parse(LUMP.ENTITIES)
 	self:Parse(LUMP.PLANES)
 	self:Parse(LUMP.VERTEXES)
 	self:Parse(LUMP.EDGES)
 	self:Parse(LUMP.SURFEDGES)
 	self:Parse(LUMP.FACES)
-	local lump = self:GetLump(LUMP.FACES_HDR)
+	local lump = self:GetLump(LUMP.ORIGINALFACES)
 	if lump.length > 0 then
 		self.bsp:Seek(lump.offset)
 		self.ParseFunction[LUMP.FACES](lump)
 		lump.parsed = true
 	end
-	self:Parse(LUMP.TEXDATA)
-	self:Parse(LUMP.TEXINFO)
+	
+	lump = self:GetLump(LUMP.FACES_HDR)
+	if lump.length > 0 then
+		self.bsp:Seek(lump.offset)
+		self.ParseFunction[LUMP.FACES](lump)
+		lump.parsed = true
+	end
+	-- self:Parse(LUMP.TEXDATA)
+	-- self:Parse(LUMP.TEXINFO)
 	self:Parse(LUMP.MODELS)
-	self:Parse(LUMP.BRUSHES)
-	self:Parse(LUMP.BRUSHSIDES)
+	-- self:Parse(LUMP.BRUSHES)
+	-- self:Parse(LUMP.BRUSHSIDES)
 	self:Parse(LUMP.DISPINFO)
 	self:Parse(LUMP.DISP_VERTS)
 	self:Parse(LUMP.DISP_TRIS)
+	self:Parse(LUMP.NODES)
+	self:Parse(LUMP.LEAFS)
+	self:Parse(LUMP.LEAFFACES)
+	-- self:Parse(LUMP.LEAFBRUSHES)
 	self:BuildStructures()
 	self:BuildDisplacements()
 	
@@ -168,27 +190,27 @@ function bsp:ReadHeader()
 	self.bsp:Seek(0)
 	self.header.identifier = read(4)
 	self.header.version = read("Long")
-	assert(self.header.identifier == "VBSP", "BSP Identifier is incorrect! (" .. tostring(self.bspname) .. ")")
+	assert(self.header.identifier == "VBSP", "BSP Identifier is incorrect! (" .. self.bspname .. ")")
 	
 	for i = 0, 63 do
-		local l = {}
-		l.offset = read("Long")
-		l.length = read("Long")
-		l.version = read("Long")
-		l.fourCC = read(4)
-		l.data = {}
-		l.parsed = false
-		self.header.lumps[i] = l
+		self.header.lumps[i] = {}
+		self.header.lumps[i].data = {}
+		self.header.lumps[i].parsed = false
+		self.header.lumps[i].offset = read("Long")
+		self.header.lumps[i].length = read("Long")
+		self.header.lumps[i].version = read("Long")
+		self.header.lumps[i].fourCC = read(4)
 	end
 	self.header.revision = read("Long")
 end
 
 function bsp:Parse(parse_type)
-	if not (parse_type and self:GetLump(parse_type) and isfunction(self.ParseFunction[parse_type])) then return end
-	local lump = self:GetLump(parse_type)
-	self.bsp:Seek(lump.offset)
-	self.ParseFunction[parse_type](lump)
-	lump.parsed = true
+	local lump = self:GetLump(parse_type or "nil")
+	if parse_type and lump and isfunction(self.ParseFunction[parse_type]) then
+		self.bsp:Seek(lump.offset)
+		self.ParseFunction[parse_type](lump)
+		lump.parsed = true
+	end
 end
 
 bsp.ParseFunction = {
@@ -206,6 +228,7 @@ bsp.ParseFunction = {
 			lump.data[i] = {}
 			lump.data[i].normal = read("Vector")
 			lump.data[i].distance = read("Float")
+			lump.data[i].Origin = lump.data[i].normal * lump.data[i].distance
 			lump.data[i].type = read("Long")
 		end
 	end,
@@ -243,7 +266,7 @@ bsp.ParseFunction = {
 
 	[LUMP.VERTEXES] = function(lump)
 		local size = 12
-		lump.num = math.max(math.floor(lump.length / size) - 1, 65536 - 1)
+		lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
 		for i = 0, lump.num do
 			lump.data[i] = read("Vector")
 		end
@@ -294,10 +317,11 @@ bsp.ParseFunction = {
 			f.PlaneTable = nil
 			f.DispInfoTable = nil
 			f.TexInfoTable = nil
+			f.OriginalFace = nil
 			f.Vertices = {}
 			f.plane = read("UShort")
 			f.side = read("Byte")
-			f.mode = read("Byte")
+			f.onNode = read("Byte") == 1
 			f.firstedge = read("Long")
 			f.numedges = read("Short")
 			f.textureinfo = read("Short")
@@ -307,11 +331,11 @@ bsp.ParseFunction = {
 			f.lightmapid = read("Long")
 			f.area = read("Float")
 			f.LightmapTextureMinsInLuxels = {}
+			f.LightmapTextureMinsInLuxels[1] = read("Long")
+			f.LightmapTextureMinsInLuxels[2] = read("Long")
 			f.LightmapTextureSizeInLuxels = {}
-			table.insert(f.LightmapTextureMinsInLuxels, read("Long"))
-			table.insert(f.LightmapTextureMinsInLuxels, read("Long"))
-			table.insert(f.LightmapTextureSizeInLuxels, read("Long"))
-			table.insert(f.LightmapTextureSizeInLuxels, read("Long"))
+			f.LightmapTextureSizeInLuxels[1] = read("Long")
+			f.LightmapTextureSizeInLuxels[2] = read("Long")
 			f.origFace = read("Long")
 			f.numPrims = read("UShort")
 			f.firstPrimID = read("UShort")
@@ -325,8 +349,8 @@ bsp.ParseFunction = {
 		lump.num = math.min(math.floor(lump.length / size) - 1, 256000 - 1)
 		for i = 0, lump.num do
 			lump.data[i] = {}
-			table.insert(lump.data[i], read("UShort"))
-			table.insert(lump.data[i], read("UShort"))
+			lump.data[i][1] = read("UShort")
+			lump.data[i][2] = read("UShort")
 		end
 	end,
 
@@ -346,15 +370,15 @@ bsp.ParseFunction = {
 		local size = 4 * 12
 		lump.num = math.floor(lump.length / size) - 1
 		for i = 0, lump.num do
-			local r = {}
-			r.FaceTable = {}
-			r.mins = read("Vector")
-			r.maxs = read("Vector")
-			r.origin = read("Vector")
-			r.headnode = read("Long")
-			r.firstface = read("Long")
-			r.numfaces = read("Long")
-			lump.data[i] = r
+			lump.data[i] = {}
+			lump.data[i].RootNode = nil
+			lump.data[i].FaceTable = {}
+			lump.data[i].mins = read("Vector")
+			lump.data[i].maxs = read("Vector")
+			lump.data[i].origin = read("Vector")
+			lump.data[i].headnode = read("Long")
+			lump.data[i].firstface = read("Long")
+			lump.data[i].numfaces = read("Long")
 		end
 	end,
 
@@ -441,15 +465,84 @@ bsp.ParseFunction = {
 			lump.data[i].Tags = read("UShort")
 		end
 	end,
+	
+	[LUMP.NODES] = function(lump)
+		local size = 32
+		lump.num = math.floor(lump.length / size) - 1
+		for i = 0, lump.num do
+			local x, y, z
+			lump.data[i] = setmetatable({}, NodeMeta)
+			lump.data[i].FaceTable = {}
+			lump.data[i].ChildNodes = {}
+			lump.data[i].Separator = nil
+			lump.data[i].IsLeaf = false
+			lump.data[i].planenum = read("Long")
+			lump.data[i].children = {}
+			lump.data[i].children[1] = read("Long")
+			lump.data[i].children[2] = read("Long")
+			x = read("Short")
+			y = read("Short")
+			z = read("Short")
+			lump.data[i].mins = Vector(x, y, z)
+			x = read("Short")
+			y = read("Short")
+			z = read("Short")
+			lump.data[i].maxs = Vector(x, y, z)
+			lump.data[i].firstface = read("UShort")
+			lump.data[i].numfaces = read("UShort")
+			lump.data[i].area = read("Short")
+			lump.data[i].padding = read("Short")
+		end
+	end,
+	
+	[LUMP.LEAFS] = function(lump)
+		local size = 32
+		lump.num = math.floor(lump.length / size) - 1
+		for i = 0, lump.num do
+			local x, y, z
+			lump.data[i] = {}
+			lump.data[i].FaceTable = {}
+			lump.data[i].BrushTable = {}
+			lump.data[i].IsLeaf = true
+			lump.data[i].index = i
+			lump.data[i].contents = read("Long")
+			lump.data[i].cluster = read("Short")
+			local areaflags = read("Short")
+			lump.data[i].area = bit.band(areaflags, 0x01FF)
+			lump.data[i].flags = bit.band(bit.rshift(areaflags, 9), 0x007F)
+			x = read("Short")
+			y = read("Short")
+			z = read("Short")
+			lump.data[i].mins = Vector(x, y, z)
+			x = read("Short")
+			y = read("Short")
+			z = read("Short")
+			lump.data[i].maxs = Vector(x, y, z)
+			lump.data[i].firstleafface = read("UShort")
+			lump.data[i].numleaffaces = read("UShort")
+			lump.data[i].firstleafbrush = read("UShort")
+			lump.data[i].numleafbrushes = read("UShort")
+			lump.data[i].leafWaterDataID = read("Short")
+			lump.data[i].padding = read("Short")
+		end
+	end,
+	
+	[LUMP.LEAFFACES] = function(lump)
+		local size = 2
+		lump.num = math.floor(lump.length / size) - 1
+		for i = 0, lump.num do
+			lump.data[i] = read("UShort")
+		end
+	end,
+	
+	[LUMP.LEAFBRUSHES] = function(lump)
+		local size = 2
+		lump.num = math.floor(lump.length / size) - 1
+		for i = 0, lump.num do
+			lump.data[i] = read("UShort")
+		end
+	end,
 }
-
-function bsp:GetSortedSurfEdge(i)
-	local surfdata = self:GetLump(LUMP.SURFEDGES).data[i]
-	local edgedata = self:GetLump(LUMP.EDGES).data[surfdata[1]]
-	local v1, v2 = edgedata[1], edgedata[2]
-	if not surfdata[2] then v1, v2 = v2, v1 end
-	return v1, v2
-end
 
 function bsp:BuildStructures()
 	local planes = self:GetLump(LUMP.PLANES)
@@ -458,6 +551,7 @@ function bsp:BuildStructures()
 	local surfedges = self:GetLump(LUMP.SURFEDGES)
 	local face = self:GetLump(LUMP.FACES)
 	local facehdr = self:GetLump(LUMP.FACES_HDR)
+	local origface = self:GetLump(LUMP.ORIGINALFACES)
 	local texinfo = self:GetLump(LUMP.TEXINFO)
 	local models = self:GetLump(LUMP.MODELS)
 	local brushes = self:GetLump(LUMP.BRUSHES)
@@ -465,86 +559,120 @@ function bsp:BuildStructures()
 	local dispinfo = self:GetLump(LUMP.DISPINFO)
 	local dispverts = self:GetLump(LUMP.DISP_VERTS)
 	local disptris = self:GetLump(LUMP.DISP_TRIS)
-	if not (planes.parsed and
-			vertexes.parsed and
-			edges.parsed and
-			surfedges.parsed and
-			face.parsed and
-			texinfo.parsed and
-			models.parsed and
-			brushes.parsed and
-			brushsides.parsed and
-			dispinfo.parsed and
-			dispverts.parsed and
-			disptris.parsed) then
-		return
-	end
+	local nodes = self:GetLump(LUMP.NODES)
+	local leafs = self:GetLump(LUMP.LEAFS)
+	local leaffaces = self:GetLump(LUMP.LEAFFACES)
+	local leafbrushes = self:GetLump(LUMP.LEAFBRUSHES)
 	
-	for i = 0, surfedges.num do
-		local edge = edges.data[surfedges.data[i].index]
-		local v1, v2 = edge[1], edge[2]
-		if surfedges.data[i].isbackward then v1, v2 = v2, v1 end
-		surfedges.data[i].start, surfedges.data[i].endpos = vertexes.data[v1], vertexes.data[v2]
-		if not (vertexes.data[v1] and vertexes.data[v2]) then
-			surfedges.data[i].disabled = true
+	if surfedges.parsed then
+		for i = 0, surfedges.num do
+			local edge = edges.data[surfedges.data[i].index]
+			local v1, v2 = edge[1], edge[2]
+			if surfedges.data[i].isbackward then v1, v2 = v2, v1 end
+			surfedges.data[i].start, surfedges.data[i].endpos = vertexes.data[v1], vertexes.data[v2]
+			assert(vertexes.data[v1] and vertexes.data[v2],
+				"SplatoonSWEPs(Parsing current map): vertex not found!")
 		end
 	end
 	
-	for i = 0, face.num do
-		face.data[i].PlaneTable = planes.data[face.data[i].plane]
-		face.data[i].DispInfoTable = dispinfo.data[face.data[i].dispinfo]
-		face.data[i].TexInfoTable = texinfo.data[face.data[i].textureinfo]
-		for k = 0, face.data[i].numedges - 1 do
-			if surfedges.data[face.data[i].firstedge + k].disabled then
-				face.data[i].disabled = true
-				break
-			end
-			face.data[i].Vertices[k] = surfedges.data[face.data[i].firstedge + k].start
-		end
-	end
-	
-	if facehdr.parsed then
-		for i = 0, facehdr.num do
-			facehdr.data[i].PlaneTable = planes.data[facehdr.data[i].plane]
-			facehdr.data[i].DispInfoTable = dispinfo.data[facehdr.data[i].dispinfo]
-			facehdr.data[i].TexInfoTable = texinfo.data[facehdr.data[i].textureinfo]
-			for k = 0, facehdr.data[i].numedges - 1 do
-				if surfedges.data[facehdr.data[i].firstedge + k].disabled then
-					facehdr.data[i].disabled = true
-					break
+	for _, f in ipairs {origface, face, facehdr} do
+		if f.parsed then
+			for i = 0, f.num do
+				f.data[i].PlaneTable = planes.data[f.data[i].plane]
+				f.data[i].DispInfoTable = dispinfo.data[f.data[i].dispinfo]
+				f.data[i].TexInfoTable = texinfo.data[f.data[i].textureinfo]
+				f.data[i].OriginalFace = origface.data[f.data[i].origFace]
+				for k = 0, f.data[i].numedges - 1 do
+					f.data[i].Vertices[k] = surfedges.data[f.data[i].firstedge + k].start
 				end
-				facehdr.data[i].Vertices[k] = surfedges.data[facehdr.data[i].firstedge + k].start
 			end
 		end
 	end
 	
-	for i = 0, dispinfo.num do
-		for k = 0, (2^dispinfo.data[i].power + 1)^2 - 1 do
-			dispinfo.data[i].DispVerts[k] = dispverts.data[dispinfo.data[i].DispVertStart + k]
-		end
-		for k = 0, 2 * (2^dispinfo.data[i].power)^2 - 1 do
-			dispinfo.data[i].DispTris[k] = disptris.data[dispinfo.data[i].DispTriStart + k]
-		end
-		dispinfo.data[i].Face = face.data[dispinfo.data[i].MapFace]
-	end
-	
-	for i = 0, brushsides.num do
-		brushsides.data[i].PlaneTable = planes.data[brushsides.data[i].planenum]
-		brushsides.data[i].TexInfoTable = texinfo.data[brushsides.data[i].textureinfo]
-		brushsides.data[i].DispInfoTable = dispinfo.data[brushsides.data[i].dispinfo]
-	end
-	
-	for i = 0, brushes.num do
-		for k = 0, brushes.data[i].numsides - 1 do
-			brushes.data[i].Brushsides[k] = brushsides.data[brushes.data[i].firstside + k]
+	if dispinfo.parsed then
+		for i = 0, dispinfo.num do
+			for k = 0, (2^dispinfo.data[i].power + 1)^2 - 1 do
+				dispinfo.data[i].DispVerts[k] = dispverts.data[dispinfo.data[i].DispVertStart + k]
+			end
+			-- for k = 0, 2 * (2^dispinfo.data[i].power)^2 - 1 do
+				-- dispinfo.data[i].DispTris[k] = disptris.data[dispinfo.data[i].DispTriStart + k]
+			-- end
+			dispinfo.data[i].Face = face.data[dispinfo.data[i].MapFace]
 		end
 	end
 	
-	for i = 0, models.num do
-		for k = 0, models.data[i].numfaces - 1 do
-			models.data[i].FaceTable[k] = face.data[models.data[i].firstface + k]
+	if brushsides.parsed then
+		for i = 0, brushsides.num do
+			brushsides.data[i].PlaneTable = planes.data[brushsides.data[i].planenum]
+			brushsides.data[i].TexInfoTable = texinfo.data[brushsides.data[i].textureinfo]
+			brushsides.data[i].DispInfoTable = dispinfo.data[brushsides.data[i].dispinfo]
 		end
 	end
+	
+	if brushes.parsed then
+		for i = 0, brushes.num do
+			for k = 0, brushes.data[i].numsides - 1 do
+				brushes.data[i].Brushsides[k] = brushsides.data[brushes.data[i].firstside + k]
+			end
+		end
+	end
+	
+	if nodes.parsed then
+		for i = 0, nodes.num do
+			nodes.data[i].Separator = planes.data[nodes.data[i].planenum]
+			for k = 1, 2 do
+				local child = nodes.data[i].children[k]
+				if child < 0 then
+					nodes.data[i].ChildNodes[k] = leafs.data[-child - 1]
+				else
+					nodes.data[i].ChildNodes[k] = nodes.data[child]
+				end
+			end
+			
+			for k = 0, nodes.data[i].numfaces - 1 do
+				local f = face.data[nodes.data[i].firstface + k]
+				if f then
+					nodes.data[i].FaceTable[k] = f
+				end
+			end
+		end
+	end
+	
+	if leafs.parsed then
+		for i = 0, leafs.num do
+			for k = 0, leafs.data[i].numleaffaces - 1 do
+				local f = face.data[leaffaces.data[leafs.data[i].firstleafface + k]]
+				if f then
+					leafs.data[i].FaceTable[k] = f
+				end
+			end
+			
+			-- for k = 0, leafs.data[i].numleafbrushes - 1 do
+				-- leafs.data[i].BrushTable[k] = brushes.data[leafbrushes.data[leafs.data[i].firstleafbrush + k]]
+			-- end
+		end
+	end
+	
+	if models.parsed then
+		for i = 0, models.num do
+			for k = 0, models.data[i].numfaces - 1 do
+				models.data[i].RootNode = nodes.data[models.data[i].headnode]
+				models.data[i].FaceTable[k] = face.data[models.data[i].firstface + k]
+			end
+		end
+	end
+	
+	-- edges.data = {}
+	-- surfedges.data = {}
+	-- face.data = {}
+	-- facehdr.data = {}
+	-- origface.data = {}
+	-- planes.data = {}
+	-- vertexes.data = {}
+	-- nodes.data = {}
+	-- leaffaces.data = {}
+	-- dispverts.data = {}
+	-- disptris.data = {}
 end
 
 function bsp:BuildDisplacements()
@@ -559,8 +687,7 @@ function bsp:BuildDisplacements()
 		local numverts = table.Count(verts)
 		if numverts ~= 4 then continue end
 		
-		local indices, startedge, mindist, dist = {}, -1, math.huge, 0
-		assert(numverts == 4, "SplatoonSWEPs: Displacement with " .. numverts .. " corners!")
+		local indices, mindist, dist, startedge = {}, math.huge, 0, 0
 		for k = 0, numverts - 1 do
 			dist = disp.startPosition:DistToSqr(verts[k])
 			if dist < mindist then
@@ -569,7 +696,6 @@ function bsp:BuildDisplacements()
 			end
 		end
 		
-		assert(startedge >= 0, "SplatoonSWEPs: Displacement's start position was not found!")
 		for k = 0, numverts - 1 do
 			indices[k] = (k + startedge) % numverts
 		end
@@ -600,7 +726,30 @@ function bsp:BuildDisplacements()
 	end
 end
 
-function ShowDisplacement()
+function bsp:GetWorldRoot()
+	assert(self.Ready, "BSP parsing system is not ready!")
+	local lump = self:GetLump(LUMP.MODELS)
+	return lump.data[0].RootNode
+end
+
+function bsp:GetNodeBound(mins, maxs)
+	local node = self:GetWorldRoot()
+	while not (node.IsLeaf or node:Across(mins, maxs)) do
+		node = node:GetChild(mins)
+	end
+	return node
+end
+
+function bsp:GetOriginalFaces(mins, maxs)
+	local faces = {}
+	local node = self:GetNodeBound(mins, maxs)
+	for i, f in ipairs(node.FaceTable) do
+		faces[f.OriginalFace] = true
+	end
+	return faces
+end
+
+function SplatoonSWEPs.ShowDisplacement()
 	local dd = 101
 	for d = dd, dd do
 		local disp = bsp:GetLump(LUMP.DISPINFO).data[d]
@@ -612,10 +761,11 @@ function ShowDisplacement()
 	end
 end
 
-function ShowFace()
+function SplatoonSWEPs.ShowFace()
 	local dd = 3000
+	local lump = bsp:GetLump(LUMP.FACES).data
 	for d = dd, dd + 3000 do
-		local face = bsp:GetLump(LUMP.FACES).data[d]
+		local face = lump[d]
 		local v, n = face.Vertices, face.PlaneTable.normal
 		for i = 0, face.numedges - 1 do
 			debugoverlay.Line(v[i], v[i] + n * 50, 5, Color(0, 255, 0), false)

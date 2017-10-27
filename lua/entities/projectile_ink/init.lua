@@ -4,15 +4,20 @@
 AddCSLuaFile "shared.lua"
 include "shared.lua"
 util.AddNetworkString("SplatoonSWEPs: Receive vertices info")
+require "SZL"
+SZL.namespace "SZL"
+include "includes/modules/geometry.lua"
+include "includes/modules/polybool.lua"
 
 local circle_polys = 8
 local reference_polys = {}
-local reference_vert = Vector(0, 1, 0)
-local reference_vert45 = Vector(0, 1, 0)
+local reference_vert = Vector2D(1, 0)
+local reference_vert45 = Vector2D(1, 0)
 for i = 1, circle_polys do
-	table.insert(reference_polys, Vector(reference_vert))
-	reference_vert:Rotate(Angle(0, 0, 360 / circle_polys))
+	table.insert(reference_polys, Vector2D(reference_vert))
+	reference_vert:Rotate(360 / circle_polys)
 end
+reference_polys = Polygon("REF", reference_polys)
 -- reference_polys = {
 	-- Vector(0, -0.5, 0),
 	-- Vector(0, 0.5, 0),

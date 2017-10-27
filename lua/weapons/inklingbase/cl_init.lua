@@ -103,7 +103,7 @@ local errorduration = 10
 --(normal table.Copy copies only their reference).
 --Does not copy entities of course, only copies their reference.
 local function FullCopy(t)
-	if not t then return nil end
+	if not t then return t end
 	if not istable(t) then return t end
 	
 	local res = {}

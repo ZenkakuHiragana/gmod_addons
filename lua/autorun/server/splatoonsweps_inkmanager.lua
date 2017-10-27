@@ -7,6 +7,16 @@ util.AddNetworkString("SplatoonSWEPs: Finalize ink refreshment")
 local PaintQueue = {}
 local SendQueue = {}
 local InkGroup = {}
+function ClearInk()
+	PaintQueue = {}
+	InkGroup = {}
+	InkIDCounter = -1
+end
+
+require "SZL"
+SZL.namespace "SZL"
+include "includes/modules/polybool.lua"
+
 local InkIDCounter = InkIDCounter or -1
 local function AddMeshID()
 	InkIDCounter = InkIDCounter + 1
@@ -14,7 +24,7 @@ local function AddMeshID()
 end
 
 local INK_SURFACE_DELTA_NORMAL = 0.5 --Distance between map surface and ink mesh
-local MAX_SIZE = 3000 --Maximum radius of ink.  If radius is greater than this, texture glitches will happen.
+local MAX_SIZE = 200 --Maximum radius of ink.  If radius is greater than this, texture glitches will happen.
 local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surfaces
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
 local SIN_MAX_DEG_DIFF = math.sin(math.rad(MAX_DEGREES_DIFFERENCE))
@@ -32,18 +42,19 @@ local GetSharedLine = SplatoonSWEPs.GetSharedLine
 local RotateAroundAxis = SplatoonSWEPs.RotateAroundAxis
 local BuildOverlap = SplatoonSWEPs.BuildOverlap
 local function ToLocal(pos, localorg, localang, planepos, planenormal, direction)
-	return WorldToLocal(GetPlaneProjection(pos, planepos, planenormal, direction), angle_zero, localorg, localang)
+	return Vector3DTo2D(WorldToLocal(GetPlaneProjection(pos, planepos, planenormal, direction), angle_zero, localorg, localang), nil)
 end
 
 local function ToWorld(pos, localorg, localang, planepos, planenormal)
+	pos = Vector2DTo3D(pos)
 	return GetPlaneProjection(LocalToWorld(pos, angle_zero, localorg, localang), planepos, planenormal, planenormal)
 end
 
 local function BuildMeshVertex(worldpos, localpos)
 	return {
 		pos = worldpos,
-		u = (localpos.y + MAX_SIZE / 2) / MAX_SIZE,
-		v = (localpos.z + MAX_SIZE / 2) / MAX_SIZE,
+		u = (localpos.x + MAX_SIZE / 2) / MAX_SIZE,
+		v = (localpos.y + MAX_SIZE / 2) / MAX_SIZE,
 	}
 end
 
@@ -66,16 +77,17 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	local ang, radiusSqr = normal:Angle(), (radius * delta)^2
 	local surf, reference_polys, vertexlist, meshinfo = {}, {}, {}, {}
 	local polygonregistered, polysprocessed, message_sent = 0, 0, 0
-	for i, v in ipairs(polys) do --Scaling
+	for i, v in ipairs(polys[1]) do --Scaling
 		reference_polys[i] = v * radius
 	end
+	reference_polys = Polygon("REF", reference_polys)
 	
 	for s in pairs(SplatoonSWEPs:Check(pos)) do --Seaching surfaces used by painting
 		local normal_cos = s.normal:Dot(normal)
 		if normal_cos >= COS_MAX_DEG_DIFF then --Filter out perpendicular surfaces
 			if math.abs(s.normal:Dot(pos - s.center)) < radius * SIN_MAX_DEG_DIFF then --Filter out "far" surfaces
 				local isin, touch, s_ang = true, false, s.normal:Angle()
-				local vpos = ToLocal(pos, s.center, s_ang, s.center, s.normal, s.normal) vpos.x = 0
+				local vpos = WorldToLocal(GetPlaneProjection(pos, s.center, s.normal, s.normal), angle_zero, s.center, s_ang)
 				for i, v in ipairs(s.vertices) do --Checking intersection
 					if touch then break end
 					local v1 = WorldToLocal(v, angle_zero, s.center, s_ang) v1.x = 0
@@ -93,31 +105,33 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 					for i, v in ipairs(s.vertices) do
 						table.insert(surfadd, v)
 					end
+					for i, v in ipairs(s.vertices) do
+						DebugLine(v, s.vertices[i % #s.vertices + 1], true)
+					end
 					surf[surfadd] = true
 				end
 			end
 		end --if normal_cos
 	end --for s
 	
-	coroutine.yield()
-	
+	coroutine.yield(true)
+	do return end
 	for drawable in pairs(surf) do --New ink = surface AND reference
 		local surface_polys, intersection = {}, {} --3D coordinate -> Y-Z coordinate
 		for i, v in ipairs(drawable) do
 			surface_polys[i] = ToLocal(v, pos, ang, pos, normal, drawable.normal)
-			surface_polys[i].x = 0
 		end
 		
-		intersection.Poly, intersection.Tri = SplatoonSWEPs.BuildOverlap(surface_polys, reference_polys, false)
-		if table.Count(intersection.Poly) > 0 then
-			intersection.Plane = {
+		surface_polys = Polygon("SURF", surface_polys) * reference_polys
+		if #surface_polys > 0 then
+			surface_polys.Plane = {
 				pos = drawable.center,
 				normal = drawable.normal,
 				ang = drawable.normal:Angle(),
 				id = drawable.id,
 				color = color,
 			}
-			vertexlist[intersection] = true
+			vertexlist[surface_polys] = true
 		end
 		
 		polygonregistered = polygonregistered + 1
@@ -131,12 +145,12 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 		local inklist = InkGroup[plane.id]
 		local inkid = AddMeshID()
 		local tri3D = {}
-		for _, triangles in ipairs(PolygonData.Tri) do
+		InkGroup[plane.id] = {}
+		for _, triangles in ipairs(PolygonData.triangles) do
 			for _, tri in ipairs(triangles) do
 				if #tri < 3 then continue end
-				local c = (tri[1] + tri[2] + tri[3]) / 3 * 0.05
-				for i = 1, 3 do
-					local vertex = BuildMeshVertex(ToWorld(tri[i] * 0.95 + c, pos, ang, plane.pos, plane.normal), tri[i])
+				for _, v in ipairs(tri) do
+					local vertex = BuildMeshVertex(ToWorld(v, pos, ang, plane.pos, plane.normal), v)
 					vertex.pos = vertex.pos + plane.normal * INK_SURFACE_DELTA_NORMAL
 					table.insert(tri3D, vertex)
 				end
@@ -150,71 +164,62 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			triangles = tri3D,
 		})
 		
-		for _, poly2D in ipairs(PolygonData.Poly) do
+--		if inklist then
+--			local overwrite_at_once = 0
+--			for _, exist in ipairs(inklist) do
+--				if pos:DistToSqr(exist.pos) > (radius + exist.radius)^2 then
+--					table.insert(InkGroup[plane.id], exist)
+--					continue
+--				end
+--				--Existing polygon -= New polygon
+--				local minuend, subtrahend = {}, {}
+--				for i, v in ipairs(exist.poly3D) do
+--					minuend[i] = Vector3DTo2D(WorldToLocal(v.pos, angle_zero, pos, ang))
+--				end
+				
+--				exist = exist - PolygonData
+--				local tri3D = {}
+--				for _, triangles in ipairs(PolygonData.triangles) do
+--					for _, tri in ipairs(triangles) do
+--						if #tri < 3 then continue end
+--						for _, v in ipairs(tri) do
+--							local vertex = BuildMeshVertex(ToWorld(v, pos, ang, plane.pos, plane.normal), v)
+--							vertex.pos = vertex.pos + plane.normal * INK_SURFACE_DELTA_NORMAL
+--							table.insert(tri3D, vertex)
+--						end
+--					end
+--				end
+--				table.insert(meshinfo, {
+--					normal = plane.normal,
+--					color = exist.color,
+--					id = plane.id,
+--					inkid = exist.inkid,
+--					triangles = tri3D,
+--				})
+				
+--				for _, exist2D in ipairs(exist) do
+--					if #exist2D < 3 then continue end
+--					local exist3D = {}
+--					for i, v in ipairs(exist2D) do
+--						table.insert(exist3D, BuildMeshVertex(LocalToWorld(v, angle_zero, exist.center, plane.ang), v))
+--					end
+--					AddInkData(exist3D, exist.pos, exist.ang, exist.normal, exist.radius, exist.inkid, plane.id, exist.color, exist.center)
+--				end
+				
+--				overwrite_at_once = overwrite_at_once + 1
+--				if overwrite_at_once % MAX_OVERWRITE_AT_ONCE == 0 then coroutine.yield() end
+--			end
+--		end
+		
+		for _, poly2D in ipairs(PolygonData) do
 			if #poly2D < 3 then continue end
-			local poly3D, center = {}, vector_origin --Y-Z coordinate -> 3D coordinate
+			local poly3D, center = {}, Vector2D() --Y-Z coordinate -> 3D coordinate
 			for i, v in ipairs(poly2D) do
 				table.insert(poly3D, BuildMeshVertex(ToWorld(v, pos, ang, plane.pos, plane.normal), v))
 				center = center + v
 			end
 			center = ToWorld(center / #poly2D, pos, ang, plane.pos, plane.normal)
-			InkGroup[plane.id] = {}
-			
-			if inklist then --Overwrite existing ink
-				local overwrite_at_once = 0
-				for _, exist in ipairs(inklist) do
-					if pos:DistToSqr(exist.pos) > (radius + exist.radius)^2 then
-						table.insert(InkGroup[plane.id], exist)
-						continue
-					end
-					
-					--Existing polygon -= New polygon
-					local minuend, subtrahend = {}, {}
-					for i, v in ipairs(exist.poly3D) do
-						minuend[i] = WorldToLocal(v.pos, angle_zero, exist.center, plane.ang)
-						minuend[i].x = 0
-					end
-					for i, v in ipairs(poly3D) do
-						subtrahend[i] = WorldToLocal(v.pos, angle_zero, exist.center, plane.ang)
-						subtrahend[i].x = 0
-					end
-					
-					local tri3D, existVertices, existTriangles = {}, SplatoonSWEPs.BuildOverlap(minuend, subtrahend, true)
-					for _, triangles in ipairs(existTriangles) do
-						for _, tri in ipairs(triangles) do
-							if #tri < 3 then continue end
-							for i = 1, 3 do
-								local vertex = BuildMeshVertex(LocalToWorld(tri[i], angle_zero, exist.center, plane.ang), tri[i])
-								vertex.pos = vertex.pos + plane.normal * INK_SURFACE_DELTA_NORMAL
-								table.insert(tri3D, vertex)
-							end
-						end
-					end
-					
-					table.insert(meshinfo, {
-						normal = plane.normal,
-						color = exist.color,
-						id = plane.id,
-						inkid = exist.inkid,
-						triangles = tri3D,
-					})
-					for _, exist2D in ipairs(existVertices) do
-						if #exist2D < 3 then continue end
-						local exist3D = {}
-						for i, v in ipairs(exist2D) do
-							exist3D[i] = BuildMeshVertex(LocalToWorld(v, angle_zero, exist.center, plane.ang), v)
-						end
-						AddInkData(exist3D, exist.pos, exist.ang, exist.normal, exist.radius, exist.inkid, plane.id, exist.color, exist.center)
-					end
-					
-					overwrite_at_once = overwrite_at_once + 1
-					if overwrite_at_once % MAX_OVERWRITE_AT_ONCE == 0 then coroutine.yield() end
-				end
-			end
-			
 			AddInkData(poly3D, pos, ang, normal, radius, inkid, plane.id, plane.color, center)
-			polysprocessed = polysprocessed + 1
-			if polysprocessed % MAX_POLYS_OVERWRITE_AT_ONCE == 0 then coroutine.yield() end
 		end
 	end
 	
@@ -341,9 +346,3 @@ SplatoonSWEPsInkManager = {
 	end,
 }
 hook.Add("Tick", "SplatoonSWEPsDoInkCoroutines", SplatoonSWEPsInkManager.Think)
-
-function ClearInk()
-	PaintQueue = {}
-	InkGroup = {}
-	InkIDCounter = -1
-end
