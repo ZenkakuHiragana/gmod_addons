@@ -1,3 +1,5 @@
+require "SZL"
+include "includes/modules/polybool.lua"
 
 --This lua parses the bsp file of current map.
 if not SplatoonSWEPs then return end
@@ -75,15 +77,29 @@ function NodeFuncs.GetChildren(self, pos)
 	local planenormal = self.Separator.normal
 	local planeorg = self.Separator.Origin
 	local childindex = planenormal:Dot(pos - planeorg) > 0 and 1 or 2
-	-- print(planenormal, planeorg, self.Separator.distance, childindex, pos)
 	return self.ChildNodes[childindex], self.ChildNodes[3 - childindex]
 end
 
 function NodeFuncs.Across(self, mins, maxs, org)
-	if org then mins, maxs = mins + org, maxs + org end
+	org = org or vector_origin
 	local planenormal = self.Separator.normal
 	local planeorg = self.Separator.Origin
-	return planenormal:Dot(mins - planeorg) * planenormal:Dot(maxs - planeorg) < 0
+	local mindot, maxdot = math.huge, -math.huge
+	for _, v in ipairs {
+		mins, maxs,
+		Vector(maxs.x, mins.y, mins.z),
+		Vector(mins.x, maxs.y, mins.z),
+		Vector(mins.x, mins.y, maxs.z),
+		Vector(mins.x, maxs.y, maxs.z),
+		Vector(maxs.x, mins.y, maxs.z),
+		Vector(maxs.x, maxs.y, mins.z),
+	} do
+		local dot = planenormal:Dot(v + org - planeorg)
+		mindot = math.min(mindot, dot)
+		maxdot = math.max(maxdot, dot)
+	end
+	
+	return mindot * maxdot < 0
 end
 
 local texture_structure = texture_structure or {}
@@ -313,34 +329,34 @@ bsp.ParseFunction = {
 		local size = 56
 		lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
 		for i = 0, lump.num do
-			local f = {}
-			f.PlaneTable = nil
-			f.DispInfoTable = nil
-			f.TexInfoTable = nil
-			f.OriginalFace = nil
-			f.Vertices = {}
-			f.plane = read("UShort")
-			f.side = read("Byte")
-			f.onNode = read("Byte") == 1
-			f.firstedge = read("Long")
-			f.numedges = read("Short")
-			f.textureinfo = read("Short")
-			f.dispinfo = read("Short")
-			f.surfaceFogVolumeID = read("Short")
-			f.styles = read(4)
-			f.lightmapid = read("Long")
-			f.area = read("Float")
-			f.LightmapTextureMinsInLuxels = {}
-			f.LightmapTextureMinsInLuxels[1] = read("Long")
-			f.LightmapTextureMinsInLuxels[2] = read("Long")
-			f.LightmapTextureSizeInLuxels = {}
-			f.LightmapTextureSizeInLuxels[1] = read("Long")
-			f.LightmapTextureSizeInLuxels[2] = read("Long")
-			f.origFace = read("Long")
-			f.numPrims = read("UShort")
-			f.firstPrimID = read("UShort")
-			f.smoothingGroups = read("ULong")
-			lump.data[i] = f
+			lump.data[i] = {}
+			lump.data[i].index = i
+			lump.data[i].PlaneTable = nil
+			lump.data[i].DispInfoTable = nil
+			lump.data[i].TexInfoTable = nil
+			lump.data[i].OriginalFace = nil
+			lump.data[i].Vertices = {}
+			lump.data[i].plane = read("UShort")
+			lump.data[i].side = read("Byte")
+			lump.data[i].onNode = read("Byte") == 1
+			lump.data[i].firstedge = read("Long")
+			lump.data[i].numedges = read("Short")
+			lump.data[i].textureinfo = read("Short")
+			lump.data[i].dispinfo = read("Short")
+			lump.data[i].surfaceFogVolumeID = read("Short")
+			lump.data[i].styles = read(4)
+			lump.data[i].lightmapid = read("Long")
+			lump.data[i].area = read("Float")
+			lump.data[i].LightmapTextureMinsInLuxels = {}
+			lump.data[i].LightmapTextureMinsInLuxels[1] = read("Long")
+			lump.data[i].LightmapTextureMinsInLuxels[2] = read("Long")
+			lump.data[i].LightmapTextureSizeInLuxels = {}
+			lump.data[i].LightmapTextureSizeInLuxels[1] = read("Long")
+			lump.data[i].LightmapTextureSizeInLuxels[2] = read("Long")
+			lump.data[i].origFace = read("Long")
+			lump.data[i].numPrims = read("UShort")
+			lump.data[i].firstPrimID = read("UShort")
+			lump.data[i].smoothingGroups = read("ULong")
 		end
 	end,
 
@@ -571,20 +587,35 @@ function bsp:BuildStructures()
 			if surfedges.data[i].isbackward then v1, v2 = v2, v1 end
 			surfedges.data[i].start, surfedges.data[i].endpos = vertexes.data[v1], vertexes.data[v2]
 			assert(vertexes.data[v1] and vertexes.data[v2],
-				"SplatoonSWEPs(Parsing current map): vertex not found!")
+				"SplatoonSWEPs(Parsing map): vertex not found!")
 		end
 	end
 	
 	for _, f in ipairs {origface, face, facehdr} do
 		if f.parsed then
 			for i = 0, f.num do
+				f.data[i].index = i
 				f.data[i].PlaneTable = planes.data[f.data[i].plane]
+				f.data[i].normal = f.data[i].PlaneTable.normal
 				f.data[i].DispInfoTable = dispinfo.data[f.data[i].dispinfo]
 				f.data[i].TexInfoTable = texinfo.data[f.data[i].textureinfo]
 				f.data[i].OriginalFace = origface.data[f.data[i].origFace]
+				local v2d = {}
+				local mins, maxs = Vector(math.huge, math.huge, math.huge), -Vector(math.huge, math.huge, math.huge)
 				for k = 0, f.data[i].numedges - 1 do
-					f.data[i].Vertices[k] = surfedges.data[f.data[i].firstedge + k].start
+					local v = surfedges.data[f.data[i].firstedge + k].start
+					maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
+					maxs.y = math.max(maxs.y, v.y)
+					maxs.z = math.max(maxs.z, v.z)
+					mins.x = math.min(mins.x, v.x)
+					mins.y = math.min(mins.y, v.y)
+					mins.z = math.min(mins.z, v.z)
+					f.data[i].Vertices[k] = v
+					table.insert(v2d, SZL.Vector3DTo2D(WorldToLocal(v, angle_zero,
+						f.data[i].Vertices[0], f.data[i].PlaneTable.normal:Angle()), nil))
 				end
+				f.data[i].Polygon = SZL.Polygon("Map", v2d)
+				f.data[i].mins, f.data[i].maxs = mins, maxs
 			end
 		end
 	end
@@ -601,21 +632,21 @@ function bsp:BuildStructures()
 		end
 	end
 	
-	if brushsides.parsed then
-		for i = 0, brushsides.num do
-			brushsides.data[i].PlaneTable = planes.data[brushsides.data[i].planenum]
-			brushsides.data[i].TexInfoTable = texinfo.data[brushsides.data[i].textureinfo]
-			brushsides.data[i].DispInfoTable = dispinfo.data[brushsides.data[i].dispinfo]
-		end
-	end
+	-- if brushsides.parsed then
+		-- for i = 0, brushsides.num do
+			-- brushsides.data[i].PlaneTable = planes.data[brushsides.data[i].planenum]
+			-- brushsides.data[i].TexInfoTable = texinfo.data[brushsides.data[i].textureinfo]
+			-- brushsides.data[i].DispInfoTable = dispinfo.data[brushsides.data[i].dispinfo]
+		-- end
+	-- end
 	
-	if brushes.parsed then
-		for i = 0, brushes.num do
-			for k = 0, brushes.data[i].numsides - 1 do
-				brushes.data[i].Brushsides[k] = brushsides.data[brushes.data[i].firstside + k]
-			end
-		end
-	end
+	-- if brushes.parsed then
+		-- for i = 0, brushes.num do
+			-- for k = 0, brushes.data[i].numsides - 1 do
+				-- brushes.data[i].Brushsides[k] = brushsides.data[brushes.data[i].firstside + k]
+			-- end
+		-- end
+	-- end
 	
 	if nodes.parsed then
 		for i = 0, nodes.num do
@@ -630,10 +661,7 @@ function bsp:BuildStructures()
 			end
 			
 			for k = 0, nodes.data[i].numfaces - 1 do
-				local f = face.data[nodes.data[i].firstface + k]
-				if f then
-					nodes.data[i].FaceTable[k] = f
-				end
+				nodes.data[i].FaceTable[k] = face.data[nodes.data[i].firstface + k]
 			end
 		end
 	end
@@ -641,10 +669,7 @@ function bsp:BuildStructures()
 	if leafs.parsed then
 		for i = 0, leafs.num do
 			for k = 0, leafs.data[i].numleaffaces - 1 do
-				local f = face.data[leaffaces.data[leafs.data[i].firstleafface + k]]
-				if f then
-					leafs.data[i].FaceTable[k] = f
-				end
+				leafs.data[i].FaceTable[k] = face.data[leaffaces.data[leafs.data[i].firstleafface + k]]
 			end
 			
 			-- for k = 0, leafs.data[i].numleafbrushes - 1 do
@@ -662,28 +687,30 @@ function bsp:BuildStructures()
 		end
 	end
 	
-	-- edges.data = {}
-	-- surfedges.data = {}
+	edges.data = {}
+	surfedges.data = {}
 	-- face.data = {}
-	-- facehdr.data = {}
-	-- origface.data = {}
-	-- planes.data = {}
-	-- vertexes.data = {}
-	-- nodes.data = {}
-	-- leaffaces.data = {}
-	-- dispverts.data = {}
-	-- disptris.data = {}
+	facehdr.data = {}
+	origface.data = {}
+	planes.data = {}
+	vertexes.data = {}
+	nodes.data = {}
+	leaffaces.data = {}
+	dispverts.data = {}
+	disptris.data = {}
 end
 
 function bsp:BuildDisplacements()
 	local dispinfo = self:GetLump(LUMP.DISPINFO)
 	if not dispinfo.parsed then return end
 	
-	for i = 0, dispinfo.num do
+	local facenum = self:GetLump(LUMP.FACES).num
+	for d = 0, dispinfo.num do
 		--DispInfo.startPosition isn't always equal to first edge so let's find the correct one
-		local disp = dispinfo.data[i]
+		local disp = dispinfo.data[d]
+		local dispface = disp.Face
 		local dispverts = disp.DispVerts
-		local verts = table.Copy(disp.Face.Vertices)
+		local verts = table.Copy(dispface.Vertices)
 		local numverts = table.Count(verts)
 		if numverts ~= 4 then continue end
 		
@@ -714,7 +741,8 @@ function bsp:BuildDisplacements()
 		local u2 = verts[2] - verts[1]
 		local v1 = verts[1] - verts[0]
 		local v2 = verts[2] - verts[3]
-		local div1, div2 = vector_origin, vector_origin
+		local div1, div2 -- vector_origin, vector_origin
+		disp.mins, disp.maxs = Vector(math.huge, math.huge, math.huge), -Vector(math.huge, math.huge, math.huge)
 		for k, w in pairs(dispverts) do --Get the world positions of the displacements
 			x = k % power --0 <= x <= power
 			y = math.floor(k / power) --0 <= y <= power
@@ -722,12 +750,82 @@ function bsp:BuildDisplacements()
 			div2 = div2 - div1
 			w.origin = div1 + div2 * x / (power - 1)
 			w.pos = disp.startPosition + w.origin + w.vec * w.dist
+			disp.maxs.x = math.max(disp.maxs.x, w.pos.x) --Calculate bounding box
+			disp.maxs.y = math.max(disp.maxs.y, w.pos.y)
+			disp.maxs.z = math.max(disp.maxs.z, w.pos.z)
+			disp.mins.x = math.min(disp.mins.x, w.pos.x)
+			disp.mins.y = math.min(disp.mins.y, w.pos.y)
+			disp.mins.z = math.min(disp.mins.z, w.pos.z)
 		end
+		
+		--Generate triangles from displacement mesh.
+		disp.Triangles = {}
+		local surf = {}
+		for i = 0, #dispverts do
+			local row = math.floor(i / power)
+			local tri_inv = i % 2 == 0
+			if i % power < power - 1 and row < power - 1 then
+				local x, y, z = i, i + 1, i + power
+				if tri_inv then z = z + 1 end
+				local vert = {dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}
+				local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
+				if normal:Dot(dispface.normal) < 0 then
+					normal = -normal
+					vert[2], vert[3] = vert[3], vert[2]
+				end
+				local v2d, mins, maxs = {}, Vector(math.huge, math.huge, math.huge), -Vector(math.huge, math.huge, math.huge)
+				for vi, v in ipairs(vert) do
+					v2d[vi] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, vert[1], normal:Angle()), nil)
+					maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
+					maxs.y = math.max(maxs.y, v.y)
+					maxs.z = math.max(maxs.z, v.z)
+					mins.x = math.min(mins.x, v.x)
+					mins.y = math.min(mins.y, v.y)
+					mins.z = math.min(mins.z, v.z)
+				end
+				table.insert(disp.Triangles, {
+					Vertices = {[0] = vert[1], [1] = vert[2], [2] = vert[3]},
+					normal = normal,
+					Polygon = SZL.Polygon("Map", v2d),
+					mins = mins,
+					maxs = maxs,
+					index = facenum + d,
+				})
+				
+				x, y, z = i + power + 1, i + power, i
+				if not tri_inv then z = z + 1 end
+				vert = {dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}
+				normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
+				if normal:Dot(dispface.normal) < 0 then
+					normal = -normal
+					vert[2], vert[3] = vert[3], vert[2]
+				end
+				mins, maxs = Vector(math.huge, math.huge, math.huge), -Vector(math.huge, math.huge, math.huge)
+				for vi, v in ipairs(vert) do
+					v2d[vi] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, vert[1], normal:Angle()), nil)
+					maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
+					maxs.y = math.max(maxs.y, v.y)
+					maxs.z = math.max(maxs.z, v.z)
+					mins.x = math.min(mins.x, v.x)
+					mins.y = math.min(mins.y, v.y)
+					mins.z = math.min(mins.z, v.z)
+				end
+				table.insert(disp.Triangles, {
+					Vertices = {[0] = vert[1], [1] = vert[2], [2] = vert[3]},
+					normal = normal,
+					Polygon = SZL.Polygon("Map", v2d),
+					mins = mins,
+					maxs = maxs,
+					index = facenum + d,
+				})
+			end
+		end
+		
+		table.insert(self:GetNodeBound(disp.mins, disp.maxs).FaceTable, dispface)
 	end
 end
 
 function bsp:GetWorldRoot()
-	assert(self.Ready, "BSP parsing system is not ready!")
 	local lump = self:GetLump(LUMP.MODELS)
 	return lump.data[0].RootNode
 end
@@ -735,7 +833,7 @@ end
 function bsp:GetNodeBound(mins, maxs)
 	local node = self:GetWorldRoot()
 	while not (node.IsLeaf or node:Across(mins, maxs)) do
-		node = node:GetChild(mins)
+		node = node:GetChildren(mins)
 	end
 	return node
 end

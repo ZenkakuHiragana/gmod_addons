@@ -17,7 +17,6 @@ for i = 1, circle_polys do
 	table.insert(reference_polys, Vector2D(reference_vert))
 	reference_vert:Rotate(360 / circle_polys)
 end
-reference_polys = Polygon("REF", reference_polys)
 -- reference_polys = {
 	-- Vector(0, -0.5, 0),
 	-- Vector(0, 0.5, 0),

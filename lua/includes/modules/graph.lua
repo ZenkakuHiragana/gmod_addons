@@ -61,33 +61,33 @@ function SpacePartitionTree(dimension, rootsize, depth, origin) makeclass()
 	end
 
 	local function getMortonToIndex(morton) return pow / (twopower - 1) + morton + 1 end
-	local function getMortonNumber(...)
-		local components, bitarg = {...}, {}
+	local function getMortonNumber(components)
+		local bitarg = {}
 		for i, x in ipairs(components) do
 			table.insert(bitarg, bit.lshift(bitSeparate(math.floor(x / unitsize)), i - 1))
 		end
-		return bit.bor(unpack(bitarg))
+		return math.min(bit.bor(unpack(bitarg)), twopower^depth - 1)
 	end
 
 	local function getIndex(...) return getMortonToIndex(getMortonNumber(...)) end
 	local function getIndexBound(mins, maxs)
-		if not maxs then maxs = istable(mins) and {unpack(mins)} or mins end
+		if not maxs then maxs = isvector(mins) and mins or mins.x and mins.y and {mins.x, mins.y} or {unpack(mins)} end
 		if isvector(mins) then mins = {mins.x, mins.y, mins.z} end
 		if isvector(maxs) then maxs = {maxs.x, maxs.y, maxs.z} end
 		for i = 1, dimension do
 			mins[i] = mins[i] - origin[i]
 			maxs[i] = maxs[i] - origin[i]
 		end
-		mins, maxs = getMortonNumber(unpack(mins)), getMortonNumber(unpack(maxs))
-		local xor = bit.bxor(mins, maxs)
+		local morton = getMortonNumber(maxs)
+		local xor = bit.bxor(getMortonNumber(mins), morton)
 		local spacelevel, shift = depth, 0
 		for i = 0, depth - 1 do
-			if bit.band(xor, bit.rshift(shiftmask, i * dimension)) ~= 0 then
+			if bit.band(xor, bit.lshift(shiftmask, i * dimension)) ~= 0 then
 				spacelevel = depth - 1 - i
 				shift = (i + 1) * dimension
 			end
 		end
-		return (twopower^spacelevel - 1) / (twopower - 1) + bit.rshift(maxs, shift) + 1
+		return (twopower^spacelevel - 1) / (twopower - 1) + bit.rshift(morton, shift) + 1
 	end
 	
 	function getroot() return nodes[1] end
@@ -127,6 +127,35 @@ function SpacePartitionTree(dimension, rootsize, depth, origin) makeclass()
 	function search(value)
 		local found, node, key = foreach(function(self, node, key) return node.get() == value end)
 		return node, key
+	end
+	
+	function boundpairs(mins, maxs)
+		local indexbound = getIndexBound(mins, maxs)
+		local reserve, q = {nodes[indexbound]}, {}
+		while #reserve > 0 do
+			local node = table.remove(reserve, 1)
+			local data = node and node.get() or {}
+			table.insert(q, #data > 0 and data or nil)
+			for _, child in pairs(node.getChildren()) do
+				table.insert(reserve, child)
+			end
+		end
+		while indexbound > 1 do
+			indexbound = math.floor(((indexbound - 2) / twopower) + 1)
+			local node = nodes[indexbound]
+			table.insert(q, node and node.get() or nil)
+		end
+		
+		local i, itrnode = 0, table.remove(q, 1) or {}
+		return function()
+			i = i + 1
+			if i > #itrnode then
+				i = 1
+				itrnode = table.remove(q, 1)
+				if not itrnode then return end
+			end
+			return itrnode and itrnode[i] and itrnode[i].get
+		end
 	end
 	
 	function show()

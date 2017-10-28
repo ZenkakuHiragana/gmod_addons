@@ -7,7 +7,7 @@ if getfenv() ~= SZL then setfenv(1, SZL) end
 --Segment(pair of Vector2D)
 
 SZL.Geometry = true
-if not GAMEMODE then
+if dofile then
 local VMeta = {
 	__add = function(op1, op2) return Vector(op1.x + op2.x, op1.y + op2.y, op1.z + op2.z) end,
 	__sub = function(op1, op2) return Vector(op1.x - op2.x, op1.y - op2.y, op1.z - op2.z) end,
@@ -125,12 +125,12 @@ return (endclass(V2DMeta)) end
 
 function Vector3DTo2D(_3d, component)
 	if not component then component = {"y", "z"} end
-	return Vector2D(_3d[component[1]], _3d[component[2]])
+	return Vector2D(_3d[component[1]] or 0, _3d[component[2]] or 0)
 end
 
 function Vector2DTo3D(_2d, component)
 	if not component then component = {"", "x", "y"} end
-	return Vector(_2d[component[1]], _2d[component[2]], _2d[component[3]])
+	return Vector(_2d[component[1]] or 0, _2d[component[2]] or 0, _2d[component[3]] or 0)
 end
 
 local SegAttrMeta = {}

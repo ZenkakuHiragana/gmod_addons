@@ -48,12 +48,8 @@ function SWEP:CustomPrimaryAttack(canattack)
 	if SERVER and canattack then
 		self:SetModifyWeaponSize(CurTime()) --Expand weapon model
 		self:SetInk(self:GetInk() - self.Primary.TakeAmmo)
-		-- paint(self)
+		paint(self)
 		-- RequestInkOrder(self) --Debug function in autorun/debug.lua
-		local t = SplatoonSWEPs.BSP:GetOriginalFaces(self.Owner:GetPos(), self.Owner:GetPos())
-		for f in pairs(t) do
-			PrintTable(f.Vertices)
-		end
 	end
 end
 
