@@ -15,7 +15,7 @@ local reference_vert = Vector2D(1, 0)
 local reference_vert45 = Vector2D(1, 0)
 for i = 1, circle_polys do
 	table.insert(reference_polys, Vector2D(reference_vert))
-	reference_vert:Rotate(360 / circle_polys)
+	reference_vert:Rotate(Angle(0, 360 / circle_polys, 0))
 end
 -- reference_polys = {
 	-- Vector(0, -0.5, 0),
@@ -38,7 +38,7 @@ function ENT:Initialize()
 	if not IsValid(ph) then return end
 	ph:SetMaterial("watermelon") --or "flesh"
 	
-	self.InkRadius = 100
+	self.InkRadius = 200
 	self.InkRadiusSqr = self.InkRadius^2
 	
 	if displacementOverlay then

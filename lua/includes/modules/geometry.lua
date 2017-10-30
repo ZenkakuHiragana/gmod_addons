@@ -7,6 +7,7 @@ if getfenv() ~= SZL then setfenv(1, SZL) end
 --Segment(pair of Vector2D)
 
 SZL.Geometry = true
+SZL.epsilon = 1e-10
 if dofile then
 local VMeta = {
 	__add = function(op1, op2) return Vector(op1.x + op2.x, op1.y + op2.y, op1.z + op2.z) end,
@@ -39,7 +40,6 @@ function Vector(_x, _y, _z) makeclass()
 	function Normalize() local l = Length() x, y, z = x / l, y / l, z / l end
 	function GetNormalized() local l = Length() return Vector(x / l, y / l, z / l) end
 return (endclass(VMeta)) end
-end
 
 --local MAX_FRAC, MIN_FRAC, FIX_FRAC = 1007/1024, 441/1024, 5/128
 --local function Length()
@@ -75,7 +75,6 @@ end
 --	return a
 --end
 
-SZL.epsilon = 1e-10
 local V2DMeta = {
 	__add = function(op1, op2) return Vector2D(op1.x + op2.x, op1.y + op2.y) end,
 	__sub = function(op1, op2) return Vector2D(op1.x - op2.x, op1.y - op2.y) end,
@@ -122,6 +121,16 @@ function Vector2D(_x, _y) makeclass()
 	function eqx(op) return math.abs(x - op.x) < epsilon end
 	function eqy(op) return math.abs(y - op.y) < epsilon end
 return (endclass(V2DMeta)) end
+else
+	function Vector2D(x, y)
+		return Vector(x, y, y and 0 or nil)
+	end
+end
+
+function VectorHash(v) return string.format("%a %a", v.x, v.y) end
+function eqx(v1, v2) return math.abs(v1.x - v2.x) < SZL.epsilon end
+function eqy(v1, v2) return math.abs(v1.y - v2.y) < SZL.epsilon end
+function eq(v1, v2) return eqx(v1, v2) and eqy(v1, v2) end
 
 function Vector3DTo2D(_3d, component)
 	if not component then component = {"y", "z"} end
@@ -147,8 +156,8 @@ end
 local SegMeta = {
 	__unm = function(op) return Segment(op.endpos(), op.start(), op.left, op.right, op.getattr(true), op.other) end,
 	__eq = function(op1, op2)
-		return op1.start() == op2.start()
-		and op1.endpos == op2.endpos()
+		return eq(op1.start(), op2.start())
+		and eq(op1.endpos(), op2.endpos())
 		and op1.left == op2.left
 		and op1.right == op2.right
 		and op1.other.left == op2.other.left
@@ -179,11 +188,11 @@ function Segment(begins, ends, _left, _right, _attr, _other) makeclass()
 	function endpos() return ends end
 	function setstart(v) begins = v end
 	function setend(v) ends = v end
-	function cross(v) return (v - begins).Cross(ends - begins) end
+	function cross(v) return (v - begins):Cross(ends - begins).z end
 	function isleft(v) return cross(v) < -epsilon end
 	function isright(v) return cross(v) > epsilon end
 	function online(v) return math.abs(cross(v)) < epsilon end
-	function equalpos(op) return begins == op.start() and ends == op.endpos() end
+	function equalpos(op) return eq(begins, op.start()) and eq(ends, op.endpos()) end
 	function negatepos()
 		begins, ends, left, right, other.left, other.right
 		= ends, begins, right, left, other.right, other.left
@@ -191,7 +200,7 @@ function Segment(begins, ends, _left, _right, _attr, _other) makeclass()
 	function getdirection(isnorm)
 		if isnorm then
 			local dir = ends - begins
-			local len = dir.Length()
+			local len = dir:Length()
 			return dir / len, len
 		else
 			return ends - begins
@@ -201,17 +210,17 @@ function Segment(begins, ends, _left, _right, _attr, _other) makeclass()
 	function intersect(other)
 		local v1, v2 = getdirection(), other.getdirection()
 		local dstart = other.start() - begins
-		local cdivisor = v2.Cross(v1)
+		local cdivisor = v2:Cross(v1).z
 		if math.abs(cdivisor) > epsilon then
-			local c1 = v2.Cross(dstart) / cdivisor
-			local c2 = v1.Cross(dstart) / cdivisor
+			local c1 = v2:Cross(dstart).z / cdivisor
+			local c2 = v1:Cross(dstart).z / cdivisor
 			if c1 >= 0 and c1 <= 1 and c2 >= 0 and c2 <= 1 then
 				return begins + c1 * v1
 			end
 		elseif online(other.start()) then --segments are collinear
-			local l = v1.LengthSqr()
-			local fr1 = v1.Dot(other.start() - begins)
-			local fr2 = v1.Dot(other.endpos() - begins)
+			local l = v1:LengthSqr()
+			local fr1 = v1:Dot(other.start() - begins)
+			local fr2 = v1:Dot(other.endpos() - begins)
 			fr1, fr2 = fr1 / l, fr2 / l
 			if fr1 > fr2 then
 				fr1, fr2 = fr2, fr1

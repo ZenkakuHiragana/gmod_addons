@@ -12,8 +12,8 @@ SZL.PolyBool = true
 
 local epsilon = SZL.epsilon or 1e-10
 local function LessThanPoint(op1, op2, orequal)
-	if orequal and op1 == op2 then return true end
-	if op1.eqx(op2) then
+	if orequal and eq(op1, op2) then return true end
+	if eqx(op1, op2) then
 		return op1.y - op2.y < -epsilon
 	else
 		return op1.x - op2.x < -epsilon
@@ -22,7 +22,7 @@ end
 
 local function LessThanEvent(op1, op2, orequal)
 	if orequal and op1 == op2 then return true end
-	if op1.point() ~= op2.point() then
+	if not eq(op1.point(), op2.point()) then
 		return LessThanPoint(op1.point(), op2.point(), orequal)
 	elseif op1.isStart ~= op2.isStart then
 		return op2.isStart
@@ -41,7 +41,7 @@ local function LessThanStatus(op1, op2, orequal)
 	
 	local s2isright = s2.isright(o11)
 	if s2isright == s2.isright(o12) then return s2isright end
-	if o11 == o21 then return s2.isright(o12) end
+	if eq(o11, o21) then return s2.isright(o12) end
 	
 	local fraction = (o21.x - o11.x) / (o12.x - o11.x)
 	local sweep = fraction * (o12 - o11) + o11
@@ -157,16 +157,16 @@ end
 
 local function segmentChain(seg, chains, regions)
 	local pt1, pt2 = seg.start(), seg.endpos()
-	if pt1 == pt2 then return end
+	if eq(pt1, pt2) then return end
 	-- search for two chains that this segment matches
 	first_match, second_match = Match(), Match()
 	next_match = first_match
 	for i, chain in ipairs(chains) do
 		local head, tail = chain[1], chain[#chain]
-		if head == pt1 then if setMatch(i, true, true) then break end
-		elseif head == pt2 then if setMatch(i, true, false) then break end
-		elseif tail == pt1 then if setMatch(i, false, true) then break end
-		elseif tail == pt2 then if setMatch(i, false, false) then break end end
+		if eq(head, pt1) then if setMatch(i, true, true) then break end
+		elseif eq(head, pt2) then if setMatch(i, true, false) then break end
+		elseif eq(tail, pt1) then if setMatch(i, false, true) then break end
+		elseif eq(tail, pt2) then if setMatch(i, false, false) then break end end
 	end
 	
 	if next_match == first_match then
@@ -187,7 +187,7 @@ local function segmentChain(seg, chains, regions)
 			grow = grow2
 		end
 		
-		if oppo == pt then
+		if eq(oppo, pt) then
 			table.remove(chains, index)
 			if Segment(oppo, grow).online(oppo2) then
 				table.remove(chain, addToHead and #chain or 1)
@@ -242,7 +242,7 @@ local function sweepline(input, merge, _index, _inverted, out)
 	local returning = out or merge and Polygon(_index, input.inverted[1] and true) or {}
 	local event, status = BinaryHeap(), AVLTree()
 	for _, seg in ipairs(input) do --Setting up event list
-		if seg.start() ~= seg.endpos() then --Avoid zero-length segments
+		if not eq(seg.start(), seg.endpos()) then --Avoid zero-length segments
 			local e1, e2 = EventPair(seg)
 			event.add(e1) --Add pair of events
 			event.add(e2) --(beginning of the segments, end of the segments)
@@ -252,7 +252,7 @@ local function sweepline(input, merge, _index, _inverted, out)
 	--subdivide segment by an intersection point
 	local function subdivide(dividend, intersection)
 		local start, endpos = dividend.point(), dividend.otherpoint()
-		if intersection == start or intersection == endpos then return dividend end
+		if eq(intersection, start) or eq(intersection, endpos) then return dividend end
 		local seg = dividend.segment
 		local newstart, newend = EventPair(Segment(intersection, endpos, seg.left, seg.right, seg.getattr(true)))
 		status.remove(dividend.status) --In order to refresh AVL Tree
@@ -271,11 +271,11 @@ local function sweepline(input, merge, _index, _inverted, out)
 		local throwing = subdivide(current, i1)
 		local surviving = subdivide(other, i2 or i1)
 		local start, endpos = current.point(), throwing.otherpoint()
-		if i1 ~= start and i1 ~= endpos then
+		if not (eq(i1, start) or eq(i1, endpos)) then
 			intersections = intersections + 1
 		else
 			start, endpos = other.point(), surviving.otherpoint()
-			if i1 ~= start and i1 ~= endpos then
+			if not (eq(i1, start) or eq(i1, endpos)) then
 				intersections = intersections + 1
 			end
 		end
@@ -378,48 +378,58 @@ local PolyMeta = {
 	__pow = function(op1, op2) return polyoperate(filter.NOT, op1, op2) end,
 	__unm = function(op) op.inverted = not op.inverted return op end,
 	__call = function(op, ...)
-		if op.segments then return op.segments end
-		local segments = {}
-		for _, region in ipairs(op) do
-			for i, v in ipairs(region) do --Convert polygon into a set of line segments
-				segments[#segments + 1] = Segment(v, region[i % #region + 1], op.tag)--, false, op.tag)
+		if not op.segments then
+			local segments = {}
+			for _, region in ipairs(op) do
+				for i, v in ipairs(region) do --Convert polygon into a set of line segments
+					segments[#segments + 1] = Segment(v, region[i % #region + 1], op.tag)--, false, op.tag)
+				end
 			end
+			if #segments > 2 then op.segments = sweepline(segments, nil, nil, op.inverted and op.tag) end
 		end
-		return segments
+		return op.segments or {}
 	end,
 }
 PolyMeta.__concat = PolyMeta.__add
 PolyMeta.__div = PolyMeta.__pow
 function Region(...) return {...} end --List of vertices
 function Polygon(_tag, ...) --List of Regions
-	return setmetatable({
+	local poly = setmetatable({
 		tag = _tag,
 		inverted = (...) == true,
 		select(isbool(...) and 2 or 1, ...)
 	}, PolyMeta)
+	
+	function poly:triangulate()
+		if not self.triangles then
+			self.triangles = Triangulate(self())
+		end
+		return self.triangles
+	end
+	
+	poly()
+	return poly
 end
 
 function polyoperate(op, input1, input2) --16x bool table, Polygon(), Polygon()
 	if not input1.tag then input1.tag = "A" end --Annotation fail-safe
 	if not input2.tag then input2.tag = "B" end
 	
+	--First sweep-line; convert Input1 into annotated line segments
 	--Second sweep-line; convert Input2 into annotated line segments
-	local sweep = sweepline(input2(), nil, -1, input2.inverted and input2.tag,
-		--First sweep-line; convert Input1 into annotated line segments
-		sweepline(input1(), nil, 1, input1.inverted and input1.tag, {
-		tag = {[input1.tag] = 1, [input2.tag] = -1}, --Preparation for the third sweep-line
-		inverted = {input1.inverted and input1.tag, [-1] = input2.inverted and input2.tag}
-	}))
-
-	--Third sweep-line; merge Input1 and Input2 and generate a new polygon
-	local polydata, combined = sweepline(sweep, op, input1.tag)
+	local sweep = input1()
+	for _, s in ipairs(input2()) do sweep[#sweep + 1] = s end
+	sweep.tag = { --Preparation for the third sweep-line
+		[input1.tag] =  1,
+		[input2.tag] = -1,
+	}
+	sweep.inverted = {
+		[ 1] = input1.inverted and input1.tag,
+		[-1] = input2.inverted and input2.tag,
+	}
 	
-	--Fourth sweep-line; convert generated polygon into annotated line segments
-	polydata.segments = sweepline(polydata(), nil, 1, polydata.inverted and polydata.tag)
-	polydata.sweep = combined
-	--Fifth sweep-line; make a voronoi diagram and perform a Delaunay Triangulation
-	polydata.triangles = Triangulate(polydata.segments)
-	return polydata
+	--Third sweep-line; merge Input1 and Input2 and generate a new polygon
+	return sweepline(sweep, op, input1.tag)
 end
 --math.randomseed(os.clock())
 --for i = 1, 10 do

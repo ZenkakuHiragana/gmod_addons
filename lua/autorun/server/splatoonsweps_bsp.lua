@@ -156,6 +156,7 @@ local function read(arg)
 end
 
 function bsp:Init()
+	self.bspname = "maps/" .. game.GetMap() .. ".bsp"
 	assert(file.Exists(self.bspname, "GAME"), "SplatoonSWEPs: " .. tostring(self.bspname) .. " was not found!")
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
 	
@@ -179,8 +180,8 @@ function bsp:Init()
 		self.ParseFunction[LUMP.FACES](lump)
 		lump.parsed = true
 	end
-	-- self:Parse(LUMP.TEXDATA)
-	-- self:Parse(LUMP.TEXINFO)
+	self:Parse(LUMP.TEXDATA)
+	self:Parse(LUMP.TEXINFO)
 	self:Parse(LUMP.MODELS)
 	-- self:Parse(LUMP.BRUSHES)
 	-- self:Parse(LUMP.BRUSHSIDES)
@@ -596,12 +597,15 @@ function bsp:BuildStructures()
 			for i = 0, f.num do
 				f.data[i].index = i
 				f.data[i].PlaneTable = planes.data[f.data[i].plane]
+				f.data[i].PlaneOrigin = f.data[i].PlaneTable.Origin
 				f.data[i].normal = f.data[i].PlaneTable.normal
+				f.data[i].angle = f.data[i].normal:Angle()
 				f.data[i].DispInfoTable = dispinfo.data[f.data[i].dispinfo]
 				f.data[i].TexInfoTable = texinfo.data[f.data[i].textureinfo]
 				f.data[i].OriginalFace = origface.data[f.data[i].origFace]
 				local v2d = {}
-				local mins, maxs = Vector(math.huge, math.huge, math.huge), -Vector(math.huge, math.huge, math.huge)
+				local mins = Vector(math.huge, math.huge, math.huge)
+				local maxs = -mins
 				for k = 0, f.data[i].numedges - 1 do
 					local v = surfedges.data[f.data[i].firstedge + k].start
 					maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
@@ -612,7 +616,7 @@ function bsp:BuildStructures()
 					mins.z = math.min(mins.z, v.z)
 					f.data[i].Vertices[k] = v
 					table.insert(v2d, SZL.Vector3DTo2D(WorldToLocal(v, angle_zero,
-						f.data[i].Vertices[0], f.data[i].PlaneTable.normal:Angle()), nil))
+						f.data[i].PlaneOrigin, f.data[i].angle), nil))
 				end
 				f.data[i].Polygon = SZL.Polygon("Map", v2d)
 				f.data[i].mins, f.data[i].maxs = mins, maxs
@@ -687,19 +691,20 @@ function bsp:BuildStructures()
 		end
 	end
 	
-	edges.data = {}
-	surfedges.data = {}
+	-- edges.data = {}
+	-- surfedges.data = {}
 	-- face.data = {}
-	facehdr.data = {}
-	origface.data = {}
-	planes.data = {}
-	vertexes.data = {}
-	nodes.data = {}
-	leaffaces.data = {}
-	dispverts.data = {}
-	disptris.data = {}
+	-- facehdr.data = {}
+	-- origface.data = {}
+	-- planes.data = {}
+	-- vertexes.data = {}
+	-- nodes.data = {}
+	-- leaffaces.data = {}
+	-- dispverts.data = {}
+	-- disptris.data = {}
 end
 
+local DISP_MIN_BOUND = 10
 function bsp:BuildDisplacements()
 	local dispinfo = self:GetLump(LUMP.DISPINFO)
 	if not dispinfo.parsed then return end
@@ -742,7 +747,8 @@ function bsp:BuildDisplacements()
 		local v1 = verts[1] - verts[0]
 		local v2 = verts[2] - verts[3]
 		local div1, div2 -- vector_origin, vector_origin
-		disp.mins, disp.maxs = Vector(math.huge, math.huge, math.huge), -Vector(math.huge, math.huge, math.huge)
+		disp.mins = Vector(math.huge, math.huge, math.huge)
+		disp.maxs = -disp.mins
 		for k, w in pairs(dispverts) do --Get the world positions of the displacements
 			x = k % power --0 <= x <= power
 			y = math.floor(k / power) --0 <= y <= power
@@ -773,23 +779,25 @@ function bsp:BuildDisplacements()
 					normal = -normal
 					vert[2], vert[3] = vert[3], vert[2]
 				end
-				local v2d, mins, maxs = {}, Vector(math.huge, math.huge, math.huge), -Vector(math.huge, math.huge, math.huge)
+				local v2d, mins = {}, Vector(math.huge, math.huge, math.huge)
+				local maxs = -mins
 				for vi, v in ipairs(vert) do
 					v2d[vi] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, vert[1], normal:Angle()), nil)
-					maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
-					maxs.y = math.max(maxs.y, v.y)
-					maxs.z = math.max(maxs.z, v.z)
-					mins.x = math.min(mins.x, v.x)
-					mins.y = math.min(mins.y, v.y)
-					mins.z = math.min(mins.z, v.z)
+					maxs.x = math.max(maxs.x, v.x - DISP_MIN_BOUND) --Calculate bounding box
+					maxs.y = math.max(maxs.y, v.y - DISP_MIN_BOUND)
+					maxs.z = math.max(maxs.z, v.z - DISP_MIN_BOUND)
+					mins.x = math.min(mins.x, v.x + DISP_MIN_BOUND)
+					mins.y = math.min(mins.y, v.y + DISP_MIN_BOUND)
+					mins.z = math.min(mins.z, v.z + DISP_MIN_BOUND)
 				end
 				table.insert(disp.Triangles, {
 					Vertices = {[0] = vert[1], [1] = vert[2], [2] = vert[3]},
 					normal = normal,
+					angle = normal:Angle(),
 					Polygon = SZL.Polygon("Map", v2d),
 					mins = mins,
 					maxs = maxs,
-					index = facenum + d,
+					index = facenum,
 				})
 				
 				x, y, z = i + power + 1, i + power, i
@@ -800,24 +808,28 @@ function bsp:BuildDisplacements()
 					normal = -normal
 					vert[2], vert[3] = vert[3], vert[2]
 				end
-				mins, maxs = Vector(math.huge, math.huge, math.huge), -Vector(math.huge, math.huge, math.huge)
+				mins = Vector(math.huge, math.huge, math.huge)
+				maxs = -mins
 				for vi, v in ipairs(vert) do
 					v2d[vi] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, vert[1], normal:Angle()), nil)
-					maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
-					maxs.y = math.max(maxs.y, v.y)
-					maxs.z = math.max(maxs.z, v.z)
-					mins.x = math.min(mins.x, v.x)
-					mins.y = math.min(mins.y, v.y)
-					mins.z = math.min(mins.z, v.z)
+					maxs.x = math.max(maxs.x, v.x - DISP_MIN_BOUND) --Calculate bounding box
+					maxs.y = math.max(maxs.y, v.y - DISP_MIN_BOUND)
+					maxs.z = math.max(maxs.z, v.z - DISP_MIN_BOUND)
+					mins.x = math.min(mins.x, v.x + DISP_MIN_BOUND)
+					mins.y = math.min(mins.y, v.y + DISP_MIN_BOUND)
+					mins.z = math.min(mins.z, v.z + DISP_MIN_BOUND)
 				end
 				table.insert(disp.Triangles, {
 					Vertices = {[0] = vert[1], [1] = vert[2], [2] = vert[3]},
 					normal = normal,
+					angle = normal:Angle(),
 					Polygon = SZL.Polygon("Map", v2d),
 					mins = mins,
 					maxs = maxs,
-					index = facenum + d,
+					index = facenum + 1,
 				})
+				
+				facenum = facenum + 2
 			end
 		end
 		

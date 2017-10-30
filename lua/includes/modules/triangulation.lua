@@ -34,7 +34,7 @@ if not SZL.PolyBool then include "polybool.lua" end
 --(py1 - py2) * (A2(px1^2 + py1^2 - l^2) - A1(px2^2 + py2^2 - l^2)))
 
 local epsilon = SZL.epsilon or 50
-local function EqualEvent(op1, op2) return op1.pos.DistToSqr(op2.pos) < epsilon end
+local function EqualEvent(op1, op2) return op1.pos:DistToSqr(op2.pos) < epsilon end
 local function LessThanEvent(op1, op2, orequal) --Comparator function
 	if orequal and EqualEvent(op1, op2) then return true end
 	if math.abs(op1.radius - op2.radius) < epsilon then
@@ -65,7 +65,7 @@ local EventMeta = {
 function EventMeta.__index(tbl, key) --Get angular coordinate from some values
 	local ax, ay = tbl.pos.x - tbl.angularorg.x, tbl.pos.y - tbl.angularorg.y
 	local angle = (1 - (ax / (math.abs(ax) + math.abs(ay)))) * (ay > 0 and 1 or ay < 0 and -1 or 1)
-	if tbl.angularorg ~= tbl.radialorg then tbl.angle = angle end
+	if not eq(tbl.angularorg, tbl.radialorg) then tbl.angle = angle end
 	return angle --If it's not temporary angular origin, store the result
 end
 
@@ -74,7 +74,7 @@ local function Event(site, radorg, angorg) --site: Vector2D()
 		pos = site,
 		radialorg = radorg,
 		angularorg = angorg,
-		radius = site.DistToSqr(radorg)
+		radius = site:DistToSqr(radorg)
 	}, EventMeta)
 end
 
@@ -100,15 +100,15 @@ end
 local function CCW(p1, p2, p3) return Segment(p1, p2).isleft(p3) end
 local function IsInTriCircle(tri, p) --Returns if point p is in circle made from triangle tri.
 	local p1, p2, p3 = tri[1], tri[2], tri[3]
-	local a, b, c = p1.DistToSqr(p2), p2.DistToSqr(p3), p3.DistToSqr(p1)
+	local a, b, c = p1:DistToSqr(p2), p2:DistToSqr(p3), p3:DistToSqr(p1)
 	local c1, c2, c3 = a * (b + c - a), b * (c + a - b), c * (a + b - c)
 	local circleOrigin = (c1 * p3 + c2 * p1 + c3 * p2) / (c1 + c2 + c3)
-	local radiusSqr = a * b * c / ((p2 - p1).Cross(p3 - p2)^2 * 4)
-	return circleOrigin.DistToSqr(p) - radiusSqr < -epsilon
+	local radiusSqr = a * b * c / ((p2 - p1):Cross(p3 - p2).z^2 * 4)
+	return circleOrigin:DistToSqr(p) - radiusSqr < -epsilon
 end
 
 local function CanMakeTriangle(p1, p2, p3, constrains)
-	local h1, h2, h3 = p1.Hash(), p2.Hash(), p3.Hash()
+	local h1, h2, h3 = VectorHash(p1), VectorHash(p2), VectorHash(p3)
 	local seg1, seg2, seg3 = constrains[h1 .. h2], constrains[h2 .. h3], constrains[h3 .. h1]
 	if not (seg1 or seg2 or seg3) then
 		local center = (p1 + p2 + p3) / 3 * 0.05
@@ -117,7 +117,7 @@ local function CanMakeTriangle(p1, p2, p3, constrains)
 		local checked = {}
 		for _, s in pairs(constrains) do
 			if s.start then
-				local sh, eh = s.start().Hash(), s.endpos().Hash()
+				local sh, eh = VectorHash(s.start()), VectorHash(s.endpos())
 				if not checked[sh .. eh] and s.start then
 					checked[sh ..eh], checked[eh ..sh] = true, true
 					for n, o in ipairs(org) do
@@ -149,7 +149,7 @@ local function fliptris(tri, constrains)
 	local stack, checked = {tri}, {}
 	while #stack > 0 do
 		local pop = table.remove(stack, 1)
-		local h1, h2, h3 = pop[1].Hash(), pop[2].Hash(), pop[3].Hash()
+		local h1, h2, h3 = VectorHash(pop[1]), VectorHash(pop[2]), VectorHash(pop[3])
 		local p1, p2, p3 = pop[h1], pop[h2], pop[h3]
 		local flip, brkflag = {}, false
 		for _, p in ipairs {p1.triangles, p2.triangles, p3.triangles} do
@@ -158,7 +158,7 @@ local function fliptris(tri, constrains)
 					local v = {} --four vertices. 1: found | 2, 3: shared | 4: pop
 					local filter = {p1, p2, p3, [h1] = 1, [h2] = 2, [h3] = 3}
 					for _, vert in ipairs(found) do --Finding shared vertices and others
-						local vh = vert.Hash()
+						local vh = VectorHash(vert)
 						if vh ~= h1 and vh ~= h2 and vh ~= h3 then
 							v[1] = found[vh]
 						else
@@ -167,14 +167,15 @@ local function fliptris(tri, constrains)
 						end
 					end
 					
-					if not constrains[v[2].pos.Hash() .. v[3].pos.Hash()]
+					if v[1] and v[2] and v[3] and
+						not constrains[VectorHash(v[2].pos) .. VectorHash(v[3].pos)]
 						and IsInTriCircle(pop, v[1].pos) then --Start flipping
 						brkflag = true
 						checked[pop], checked[found] = (checked[pop] or 0) + 1, (checked[found] or 0) + 1
 						if checked[pop] < 4 then stack[#stack + 1] = pop end
 						if checked[found] < 4 then stack[#stack + 1] = found end
 						v[4] = filter[table.maxn(filter)]
-						for i = 1, 4 do v[v[i]] = v[i].pos.Hash() end
+						for i = 1, 4 do v[v[i]] = VectorHash(v[i].pos) end
 						
 						pop[1], pop[2], pop[3], --Two triangles are already in returning table
 						pop[v[v[1]]], pop[v[v[2]]], pop[v[v[3]]], pop[v[v[4]]], --Just 'change' their data
@@ -216,7 +217,7 @@ local function sweepline(segments) --Returns a list of triangles, {p1, p2, p3}, 
 		local p1, p2, p3 = s1.pos, s2.pos, s3.pos
 		if not CCW(p1, p2, p3) then s2, s3, p2, p3 = s3, s2, p3, p2 end
 		local tri = {
-			p1, p2, p3, [p1.Hash()] = s1, [p2.Hash()] = s2, [p3.Hash()] = s3,
+			p1, p2, p3, [VectorHash(p1)] = s1, [VectorHash(p2)] = s2, [VectorHash(p3)] = s3,
 			deprecated = not CanMakeTriangle(p1, p2, p3, constrains)
 		}
 		s1.triangles[tri] = true
@@ -239,7 +240,7 @@ local function sweepline(segments) --Returns a list of triangles, {p1, p2, p3}, 
 	
 	for _, s in ipairs(segments) do --Get the center of vertices
 		local begin, endpos = s.start(), s.endpos()
-		local bh, eh = begin.Hash(), endpos.Hash()
+		local bh, eh = VectorHash(begin), VectorHash(endpos)
 		if not constrains[bh] then
 			sum = sum + begin
 			constrains[bh] = {}

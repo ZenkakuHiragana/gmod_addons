@@ -4,7 +4,7 @@ SplatoonSWEPs = SplatoonSWEPs or {}
 
 include "../splatoonsweps_const.lua"
 include "splatoonsweps_userinfo.lua"
-local MAX_PROCESS_QUEUE_AT_ONCE = 100
+local MAX_PROCESS_QUEUE_AT_ONCE = 10000
 local mat = Material("debug/debugbrushwireframe")
 local IMaterial = Material("splatoonsweps/splatoonink.vmt")
 local WaterOverlap = Material("splatoonsweps/splatoonwater.vmt")
@@ -68,8 +68,8 @@ local function DrawMeshes()
 	for id, ink in pairs(InkGroup) do
 		render.SetMaterial(IMaterial)
 		ink.imesh:Draw()
-		render.SetMaterial(WaterOverlap)
-		ink.imesh:Draw()
+		-- render.SetMaterial(WaterOverlap)
+		-- ink.imesh:Draw()
 	end
 end
 

@@ -24,24 +24,22 @@ local function AddMeshID()
 end
 
 local INK_SURFACE_DELTA_NORMAL = 0.5 --Distance between map surface and ink mesh
-local MAX_SIZE = 200 --Maximum radius of ink.  If radius is greater than this, texture glitches will happen.
+local MAX_SIZE = 300 --Maximum radius of ink.  If radius is greater than this, texture glitches will happen.
 local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surfaces
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
-local SIN_MAX_DEG_DIFF = math.sin(math.rad(MAX_DEGREES_DIFFERENCE))
 local MAX_PROCESS_QUEUE_AT_ONCE = 1 --Running QueueCoroutine() at once
-local MAX_MESSAGE_SENT = 100
-local MAX_ADD_INK_AT_ONCE = 10
-local MAX_OVERWRITE_AT_ONCE = 20
-local MAX_POLYS_OVERWRITE_AT_ONCE = 10
+local MAX_MESSAGE_SENT = 10000
+local MAX_OVERPAINT_AT_ONCE = 500
+local MAX_PROCESS_FACE_AT_ONCE = 800
 local MAX_NET_SEND_SIZE = 64 * 1024 - 3 - 20 --Maximum size of sending data in net library
-local MAX_COROUTINES_AT_ONCE = 10 --Maximum amount of coroutines that run at once
+local MAX_COROUTINES_AT_ONCE = 1 --Maximum amount of coroutines running at once
+local MIN_BOUND = 10 --Ink minimum bounding box scale
 
 local IsCCW = SplatoonSWEPs.IsCCW
 local GetPlaneProjection = SplatoonSWEPs.GetPlaneProjection
 local GetSharedLine = SplatoonSWEPs.GetSharedLine
 local RotateAroundAxis = SplatoonSWEPs.RotateAroundAxis
 local BuildOverlap = SplatoonSWEPs.BuildOverlap
-local Faces
 local function ToLocal(pos, localorg, localang, planepos, planenormal, direction)
 	return Vector3DTo2D(WorldToLocal(GetPlaneProjection(pos, planepos, planenormal, direction), angle_zero, localorg, localang), nil)
 end
@@ -52,130 +50,127 @@ local function ToWorld(pos, localorg, localang, planepos, planenormal)
 end
 
 local function BuildMeshVertex(worldpos, localpos)
-	localpos = Vector2DTo3D(localpos)
 	return {
 		pos = worldpos,
-		u = (localpos.x + MAX_SIZE / 2) / MAX_SIZE,
-		v = (localpos.y + MAX_SIZE / 2) / MAX_SIZE,
+		u = (localpos.y + MAX_SIZE / 2) / MAX_SIZE,
+		v = (localpos.z + MAX_SIZE / 2) / MAX_SIZE,
 	}
 end
 
-local function AddInkData(poly3D, pos, ang, normal, radius, inkid, planeid, color, center)
-	table.insert(InkGroup[planeid], {
-		poly3D = poly3D,
-		pos = pos,
-		ang = ang,
-		normal = normal,
-		radius = radius,
-		inkid = inkid,
-		color = color,
-		center = center,
-	})
+local function PolyBoundingBox(poly, org, ang)
+	local vert = {}
+	for _, r in ipairs(poly) do
+		for i, v in ipairs(r) do
+			v = Vector2DTo3D(v)
+			vert[#vert + 1] = LocalToWorld(v, angle_zero, org, ang)
+		end
+	end
+	poly.mins, poly.maxs = SplatoonSWEPs:GetBoundingBox(0, vert)
+end
+
+local function MakeTriangles(triangles, org, ang, normal)
+	local tri3D = {}
+	for _, t in ipairs(triangles) do
+		for _, v in ipairs(t) do
+			local vertex = BuildMeshVertex(LocalToWorld(Vector2DTo3D(v), angle_zero, org, ang),
+				Vector2DTo3D(v - (t[1] + t[2] + t[3]) / 3))
+			vertex.pos = vertex.pos + normal * INK_SURFACE_DELTA_NORMAL
+			table.insert(tri3D, vertex)
+		end
+	end
+	
+	return tri3D
 end
 
 local function QueueCoroutine(pos, normal, radius, color, polys)
-	local wholetime = CurTime()
-	local delta = 1
-	local ang, radiusSqr = normal:Angle(), (radius * delta)^2
-	local surf, reference_polys, vertexlist, meshinfo = {}, {}, {}, {}
-	local polygonregistered, polysprocessed, message_sent = 0, 0, 0
-	local refmin, refmax = Vector(math.huge, math.huge, math.huge), -Vector(math.huge, math.huge, math.huge)
-	Faces = Faces or SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.FACES)
+	local ang = normal:Angle()
+	local polyprocess, reference_polys, meshinfo = 0, {}, {}
 	for i, v in ipairs(polys) do --Scaling
-		reference_polys[i] = ToWorld(v * radius, pos, ang, pos, normal)
+		reference_polys[i] = LocalToWorld(Vector2DTo3D(v * radius), angle_zero, pos, ang)
 	end
 	
-	local loop = 0
-	local mins, maxs = pos - Vector(radius, radius, radius), pos + Vector(radius, radius, radius)
-	local function process(f)
-		local fmin, fmax = f.mins, f.maxs
-		if f.DispInfoTable then fmin, fmax = f.DispInfoTable.mins, f.DispInfoTable.maxs end
-		if  mins.x > fmax.x or maxs.x < fmin.x or
-			mins.y > fmax.y or maxs.y < fmin.y or
-			mins.z > fmax.z or maxs.z < fmin.z then
-			return
+	local mins, maxs = SplatoonSWEPs:GetBoundingBox(MIN_BOUND, reference_polys)
+	for k, f in pairs(SplatoonSWEPs.Surfaces) do
+		if f.normal:Dot(normal) < COS_MAX_DEG_DIFF or
+			mins.x > f.maxs.x or maxs.x < f.mins.x or
+			mins.y > f.maxs.y or maxs.y < f.mins.y or
+			mins.z > f.maxs.z or maxs.z < f.mins.z then
+			continue
 		end
 		
-		f.InkBuffer = f.InkBuffer or {}
-		-- DebugLine(f.Vertices[0], pos)
-		local reference_region = {}
-		for i, v in ipairs(reference_polys) do --Change origin
-			reference_region[i] = ToLocal(v, f.Vertices[0], f.normal:Angle(), f.Vertices[0], f.normal, normal)
-		end
-		
-		local tri3D = {}
 		local inkid = AddMeshID()
-		local AND = f.Polygon * Polygon("REF", reference_region)
-		for k, t in ipairs(AND.triangles) do
-			for _, v in ipairs(t) do
-				local vertex = BuildMeshVertex(ToWorld(v, f.Vertices[0], f.normal:Angle(), f.Vertices[0], f.normal), v)
-				vertex.pos = vertex.pos + f.normal * INK_SURFACE_DELTA_NORMAL
-				table.insert(tri3D, vertex)
+		local reference = {}
+		for i, v in ipairs(reference_polys) do --Change origin
+			reference[i] = Vector3DTo2D(WorldToLocal(GetPlaneProjection(
+				v, f.origin, f.normal, f.normal), angle_zero, f.origin, f.angle), nil)
+		end
+		DebugPoly(f.Polygon[1], true)
+		DebugPoly(reference, true)
+		
+		local AND = Polygon(inkid, reference_region) * f.Polygon
+		if not AND[1] or #AND[1] < 3 then continue end
+		if not InkGroup[k] then InkGroup[k] = {} end
+		PolyBoundingBox(AND, f.origin, f.angle) --AND.mins, AND.maxs
+		
+		local overpaint = 0
+		for othercolor, poly in ipairs(InkGroup[k]) do
+			if AND.mins.x > poly.maxs.x or AND.maxs.x < poly.mins.x or
+				AND.mins.y > poly.maxs.y or AND.maxs.y < poly.mins.y or
+				AND.mins.z > poly.maxs.z or AND.maxs.z < poly.mins.z then
+				continue
 			end
+			
+			local overpoly = poly - AND
+			local overpolyTriangles = MakeTriangles(overpoly:triangulate(), f.origin, f.angle, f.normal)
+			if #overpolyTriangles > 2 then
+				overpoly.color = poly.color
+				overpoly.inkid = poly.inkid
+				PolyBoundingBox(overpoly, f.origin, f.angle)
+			end
+			
+			table.insert(meshinfo, {
+				normal = f.normal,
+				color = poly.color,
+				faceid = k,
+				inkid = poly.inkid,
+				triangles = overpolyTriangles,
+			})
+			
+			overpaint = overpaint + 1
+			if overpaint % MAX_OVERPAINT_AT_ONCE == 0 then coroutine.yield() end
 		end
 		
-		if loop == 1 then
-		-- DebugLine(f.Vertices[0], f.Vertices[0] + f.normal * 100)
-		-- for i = 0, 2 do
-			-- DebugLine(f.Vertices[i], f.Vertices[(i + 1) % (#f.Vertices + 1)], true)
-		-- end
-		-- for i, v in ipairs(reference_region) do
-			-- DebugLine(Vector2DTo3D(v), Vector2DTo3D(reference_region[i % #reference_region + 1]), true)
-		-- end
-		-- for i, v in ipairs(f.Polygon[1]) do
-			-- DebugLine(Vector2DTo3D(v), Vector2DTo3D(f.Polygon[1][i % #f.Polygon[1] + 1]), true)
-		-- end
-		-- for i, v in ipairs(AND[1] or {}) do
-			-- DebugLine(Vector2DTo3D(v), Vector2DTo3D(AND[1][i % #AND[1] + 1]), true)
-		-- end
-		-- for i, v in ipairs(tri3D) do
-			-- DebugLine(v.pos, tri3D[i % #tri3D + 1].pos, true)
-		-- end
-		end
-		table.insert(meshinfo, {
-			normal = f.normal,
-			color = color,
-			id = f.index,
-			inkid = inkid,
-			triangles = tri3D,
-		})
-		
-		for id, poly in ipairs(f.InkBuffer) do
-			f.InkBuffer[id] = poly - AND
-			tri3D = {}
-			for k, t in ipairs(f.InkBuffer[id].triangles) do
-				for _, v in ipairs(t) do
-					local vertex = BuildMeshVertex(ToWorld(v, pos, ang, f.Vertices[0], f.normal), v)
-					vertex.pos = vertex.pos + f.normal * INK_SURFACE_DELTA_NORMAL
-					table.insert(tri3D, vertex)
-				end
-			end
+		if InkGroup[k][color] then
+			local union = InkGroup[k][color]
+			union.Polygon = union.Polygon + AND
+			union.Polygon.color = color
+			union.Polygon.inkid = InkGroup[k][color].inkid
+			InkGroup[k][color].Polygon = union
 			table.insert(meshinfo, {
 				normal = f.normal,
 				color = color,
-				id = f.index,
+				faceid = k,
+				inkid = union.Polygon.inkid,
+				triangles = MakeTriangles(union:triangulate(), f.origin, f.angle, f.normal),
+			})
+		else
+			AND.color, AND.inkid = color, inkid
+			table.insert(meshinfo, {
+				normal = f.normal,
+				color = color,
+				faceid = k,
 				inkid = inkid,
-				triangles = tri3D,
+				triangles = MakeTriangles(AND:triangulate(), f.origin, f.angle, f.normal),
 			})
 		end
 		
-		-- table.insert(f.InkBuffer, AND)
-		loop = loop + 1
-		assert(loop < 10000)
+		polyprocess = polyprocess + 1
+		if polyprocess % MAX_PROCESS_FACE_AT_ONCE == 0 then coroutine.yield() end
 	end
 	
-	for i, f in ipairs(Faces.data) do
-		if f.normal:Dot(normal) > COS_MAX_DEG_DIFF then
-			if f.DispInfoTable then
-				for i, t in ipairs(f.DispInfoTable.Triangles) do
-					process(t)
-				end
-			else
-				process(f)
-			end
-		end
-	end
+	coroutine.yield()
 	
+	local message_sent = 0
 	for i, v in ipairs(meshinfo) do
 		local numvertices = #v.triangles
 		if numvertices > 0 and numvertices < 3 then continue end
@@ -194,7 +189,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 		net.Start("SplatoonSWEPs: Finalize ink refreshment", false)
 		net.WriteVector(v.normal)
 		net.WriteUInt(v.color - 1, SplatoonSWEPs.COLOR_BITS)
-		net.WriteUInt(v.id, 32)
+		net.WriteUInt(v.faceid, 32)
 		net.WriteInt(v.inkid, 32)
 		net.Broadcast()
 		
@@ -202,7 +197,6 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 		if message_sent % MAX_MESSAGE_SENT == 0 then coroutine.yield() end
 	end
 	
-	-- print("wholetime: ", CurTime() - wholetime)
 	coroutine.yield(true)
 end
 
