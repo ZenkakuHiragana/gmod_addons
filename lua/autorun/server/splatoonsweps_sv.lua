@@ -54,63 +54,9 @@ function SplatoonSWEPs:GetBoundingBox(minbound, vectors)
 end
 
 function SplatoonSWEPs:Initialize()
+	SplatoonSWEPs.Surfaces = {}
 	SplatoonSWEPs.BSP:Init()
-	
-	local mapsurfaces = {}
-	local self = SplatoonSWEPs
-	local faces = self.BSP:GetLump(self.LUMP.FACES)
-	for _, f in ipairs(faces.data) do
-		local texturename = f.TexInfoTable.texdata.name:lower()
-		if texturename:find("tool") or texturename:find("water") then continue end
-		if f.DispInfoTable then
-			for i, t in ipairs(f.DispInfoTable.Triangles) do
-				local existing
-				for k, m in pairs(mapsurfaces) do
-					if not isnumber(k) and m.normal:IsEqualTol(t.normal, 0.1) and
-						math.abs(m.normal:Dot(t.Vertices[0] - m.origin)) < 1e-10 then	
-						existing = m
-						break
-					end
-				end
-				
-				if existing then
-					local newverts = {}
-					for k, v in ipairs(t.Vertices) do
-						newverts[k] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, existing.origin, existing.angle), nil)
-					end
-					existing.Polygon = existing.Polygon + SZL.Polygon(t.Polygon.tag, newverts)
-					existing.mins, existing.maxs = self:GetBoundingBox(0, {existing.mins, existing.maxs, t.mins, t.maxs})
-				else
-					mapsurfaces[tostring(t.normal)] = {
-						mins = t.mins,
-						maxs = t.maxs,
-						normal = t.normal,
-						angle = t.angle,
-						origin = t.Vertices[0],
-						Vertices = t.Vertices,
-						Polygon = t.Polygon,
-					}
-				end
-			end
-		elseif mapsurfaces[f.plane] then
-			local m = mapsurfaces[f.plane]
-			m.Polygon = m.Polygon + f.Polygon
-			m.mins, m.maxs = self:GetBoundingBox(0, {m.mins, m.maxs, f.mins, f.maxs})
-		else
-			mapsurfaces[f.plane] = {
-				mins = f.mins,
-				maxs = f.maxs,
-				normal = f.normal,
-				angle = f.angle,
-				origin = f.Vertices[0],
-				Vertices = f.Vertices,
-				Polygon = f.Polygon,
-			}
-		end
-	end
-	
 	self.BSP = nil
-	self.Surfaces = mapsurfaces
 end
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
 
