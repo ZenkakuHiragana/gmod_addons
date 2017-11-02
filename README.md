@@ -1,5 +1,5 @@
 # gmod_addons
-My Garry's Mod addon.  
+My Garry's Mod addons.  
 Commit messages are all Japanese.
 ***  
 ## Branches  
@@ -8,6 +8,8 @@ Commit messages are all Japanese.
 Currently working on.
 * gm_flounder_heights  
 Compiled map, Flounder Heights in Splatoon.  
+* MadVehicle  
+Adds an NPC slot that makes your vehicles MAD.  
 * nextbot_bastion  
 Bastion from Overwatch. Abandoned.  
 * nextbot_tracer  
