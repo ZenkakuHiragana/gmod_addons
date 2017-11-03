@@ -107,41 +107,30 @@ local function IsInTriCircle(tri, p) --Returns if point p is in circle made from
 	return circleOrigin:DistToSqr(p) - radiusSqr < -epsilon
 end
 
+local orgfrac = 0.9
 local function CanMakeTriangle(p1, p2, p3, constrains)
 	local h1, h2, h3 = VectorHash(p1), VectorHash(p2), VectorHash(p3)
-	local seg1, seg2, seg3 = constrains[h1 .. h2], constrains[h2 .. h3], constrains[h3 .. h1]
-	if not (seg1 or seg2 or seg3) then
-		local center = (p1 + p2 + p3) / 3 * 0.05
-		local org = {p1 * 0.95 + center, p2 * 0.95 + center, p3 * 0.95 + center}
-		local i = {0, 0, 0}
-		local checked = {}
-		for _, s in pairs(constrains) do
-			if s.start then
-				local sh, eh = VectorHash(s.start()), VectorHash(s.endpos())
-				if not checked[sh .. eh] and s.start then
-					checked[sh ..eh], checked[eh ..sh] = true, true
-					for n, o in ipairs(org) do
-						if (o.x - s.start().x) * (o.x - s.endpos().x) < 0 then
-							if s.start().y + (s.endpos().y - s.start().y) * (o.x - s.start().x) / (s.endpos().x - s.start().x) > o.y then
-								i[n] = i[n] + 1
-							end
+	local center = (p1 + p2 + p3) / 3 * (1 - orgfrac)
+	local org = {p1 * orgfrac + center, p2 * orgfrac + center, p3 * orgfrac + center}
+	local i = {0, 0, 0}
+	local checked = {}
+	for _, s in pairs(constrains) do
+		if s.start then
+			local sh, eh = VectorHash(s.start()), VectorHash(s.endpos())
+			if not checked[sh .. eh] and s.start then
+				checked[sh .. eh], checked[eh .. sh] = true, true
+				for n, o in ipairs(org) do
+					if (o.x - s.start().x) * (o.x - s.endpos().x) < 0 then
+						if s.start().y + (s.endpos().y - s.start().y) * (o.x - s.start().x) / (s.endpos().x - s.start().x) > o.y then
+							i[n] = i[n] + 1
 						end
 					end
 				end
 			end
 		end
-		if i[1] % 2 == 0 or i[2] == 0 or i[3] == 0 then return false end
-	elseif not
-		((seg1 and (seg1.left and seg1.isleft(p3)
-				 or seg1.right and seg1.isright(p3)))
-		or (seg2 and (seg2.left and seg2.isleft(p1)
-				   or seg2.right and seg2.isright(p1)))
-		or (seg3 and (seg3.left and seg3.isleft(p2)
-				   or seg3.right and seg3.isright(p2)))) then
-		return false
 	end
 	
-	return true
+	return not (i[1] % 2 == 0 or i[2] % 2 == 0 or i[3] % 2 == 0)
 end
 
 local function fliptris(tri, constrains)
@@ -206,7 +195,7 @@ local function fliptris(tri, constrains)
 	end --while #stack
 end
 
-local function sweepline(segments) --Returns a list of triangles, {p1, p2, p3}, ccw
+function Triangulate(segments) --Returns a list of triangles, {p1, p2, p3}, ccw
 	if #segments < 3 then return {} end
 	local event, status = BinaryHeap(), AVLTree()
 	local radialorg, angularorg
@@ -302,96 +291,3 @@ local function sweepline(segments) --Returns a list of triangles, {p1, p2, p3}, 
 	
 	return result
 end
-
-local function p(...) return Polygon("Active", Region(...)) end
-local function q(...) return Polygon("Lazy", Region(...)) end
-local function v(v1, v2) return Vector2D(v1, v2) end
-local function vr() return v(math.random() * 40 - 20, math.random() * 60 - 30) end
-local function s(v1, v2, v3, v4) return Segment(v(v1, v2), v(v3, v4)) end
-
---p1 = p(v(0, 0), v(15, -10), v(22, 0), v(10, 10))
---p1 = p(v(0, 0), v(15, -10), v(22, -2), v(10, 10))
---p1 = p(v(0, 0), v(15, -10), v(22, 2), v(10, 10))
---p1 = p(v(0, 0), v(15, -10), v(20, 0), v(10, 10))
---p1 = p(v(0, 0), v(15, -10), v(20, -2), v(10, 10))
---p1 = p(v(0, 0), v(15, -10), v(20, 2), v(10, 10))
---p1 = p(v(0, 0), v(15, -10), v(20, 4), v(10, 10))
---p1 = p(v(0, 0), v(15, -10), v(20, 5), v(10, 10))
-
---p1 = p(v(0, 0), v(15, -15), v(5, -25), v(-15, -10))
---p1 = p(v(0, 0), v(20, -5), v(10, 10), v(15, 12), v(10, 14), v(10, 16), v(8, 18)) --*
---p1 = p(v(0, 0), v(10, -10), v(5, 0), v(5, 5), v(10, 20)) --*
-
---p1 = p(v(0, -1), v(11, -10), v(20, 1), v(9, 10)) --◇R
---p1 = p(v(0, 1), v(9, -10), v(20, -1), v(11, 10)) --◇L
---p1 = p(v(0, 0), v(10, -10), v(20, 0), v(10, 10)) --◇
---p1 = p(v(1, 0), v(0, -9), v(9, -10), v(10, -1)) --口R
---p1 = p(v(-1, 0), v(0, -11), v(11, -10), v(10, 1)) --口L
---p1 = p(v(0, 0), v(0, -10), v(10, -10), v(10, 0)) --口
---p1 = Polygon(nil, {v(0, 0), v(0, -10), v(10, 0)}, {v(0, -20), v(10, -20), v(0, -10)}) --...
---p1 = p(v(0, 0), v(6, -10), v(17, -15), v(28, -10), v(34, 0), v(28, 10), v(17, 15), v(6, 10))
---p1 = p(v(0, 0), v(5, -10), v(15, -15), v(25, -10), v(30, 0), v(25, 10), v(15, 15), v(5, 10))--)
---p1 = p(v(10, 0), v(0, -15), v(-20, 0), v(0, 25))
---p1 = p(v(0, 0), v(10, -10), v(10, 10), v(4, 6)) --◇
---p1 = p(v(14, -2), v(17, 0), v(19, 4), v(20, 8), v(24, 4), v(20, -20), v(-20, -20), v(-18, 6), v(8, 8), v(9, 4), v(11, 0), v(0, -5), v(-5, -3), v(5, -4))
-
-math.randomseed(os.clock())
-local n = 16
-local rx, ry = 15, 15
-local d = 0
---local d = 90
---local d = 180
-local e = 180 / n
---local e = 90 / n
-local vec = {}
-for i = 1, n do
-	local x, y = rx * math.cos(math.rad(360 / n * i)), ry * math.sin(math.rad(360 / n * i))
-	x, y = x * math.cos(math.rad(d)) + y * math.sin(math.rad(d)), -x * math.sin(math.rad(d)) + y * math.cos(math.rad(d))
-	if math.abs(x) < epsilon then x = 0 end
-	if math.abs(y) < epsilon then y = 0 end
-	vec[#vec + 1] = v(x, y) * (math.random() + 0.4)
---	vec[#vec + 1] = v(x, y) * (i % 2 == 0 and 1 or 0.4)
---	vec[#vec + 1] = v(x, y) * (math.sin(math.pi * 0.094 * i) / 5 + 0.8)
---	vec[#vec + 1] = vr()
-end
---rx, ry = rx * 0.7, ry * 0.7
---rx, ry = rx * 0.5, ry * 0.5
---rx, ry = rx * 0.4, ry * 0.4
-local vec2 = {}
-for i = n, 1, -1 do
-	local x, y = rx * math.cos(math.rad(360 / n * i + e)), ry * math.sin(math.rad(360 / n * i + e))
-	x, y = x * math.cos(math.rad(d)) + y * math.sin(math.rad(d)), -x * math.sin(math.rad(d)) + y * math.cos(math.rad(d))
-	if math.abs(x) < epsilon then x = 0 end
-	if math.abs(y) < epsilon then y = 0 end
-	vec2[#vec2 + 1] = v(x, y) * (math.random() + 0.5)
---	vec[#vec + 1] = vr()
-end
-p1 = p(unpack(vec))
---p1 = Polygon("Test", vec, vec2)
---p1 = p(v(0, 0), v(2.5, 0), v(5, -5), v(6.5, 0), v(10, 0), v(10, 10), v(0, 10))
---p1 = p(v(0, 0), v(10, 0), v(10, 10), v(6.7, 10), v(6.7, 2), v(3.3, 2), v(3.3, 10), v(0, 10))
-
---p1 = p(v(0, 0), v(10, 0), v(10, 10), v(0, 10))
---p2 = q(v(5, -5), v(2.5, 5), v(7.5, 5))
---p2 = q()
-p2 = q(unpack(vec2))
-function Triangulate(segments)
---	print "Triangulation"
-	return sweepline(segments)
-end
-
-if love then return end
---PrintTable(p1 + Polygon())
-
---local p1, p2 = v(0, 0), v(5, -10)
---local e1, e2 = Event(p1), Event(p2)
---local s1, s2 = Status({left = e1, right = e2}), Status({left = e2, right = e1})
---sweeplinex = 5
---sweepxsqr = sweeplinex^2
---print(s1, s2, s1 < s2)
-
---local a = AVLTree()
---for _, n in ipairs {1, 2, 3, 3, 3, 5, 8} do
---	a.add(n)
---end
---print(a.getadjacent(3))

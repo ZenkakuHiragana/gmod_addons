@@ -457,12 +457,12 @@ function AVLTree() makeclass(BinarySearchTree())
 		local node = AVLNode(value)
 		BaseClass.add(node, __eq, __lt)
 		balance(true, node.getParentKey() == DIR.LEFT, node.getParent())
+		return node
 	end
 	
-	function remove(value, __eq, __lt)
-		local node, parent = get(value, __eq, __lt)
-		-- assert(node, tostring(value))
+	function removenode(node, parent, __eq)
 		if not node then return end
+		parent = parent or node.getParent()
 		local child = node.getright()
 		local balancenode, key = child, DIR.RIGHT
 		if not balancenode then
@@ -491,6 +491,12 @@ function AVLTree() makeclass(BinarySearchTree())
 			setroot(child)
 		end
 		balance(false, key == DIR.LEFT, balancenode)
+	end
+	
+	function remove(value, __eq, __lt)
+		local node, parent = get(value, __eq, __lt)
+		assert(node, tostring(value))
+		return removenode(node, parent, __eq)
 	end
 	
 	function checkbalanced()

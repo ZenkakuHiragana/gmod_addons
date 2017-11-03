@@ -34,6 +34,10 @@ end
 local function LessThanStatus(op1, op2, orequal)
 	if orequal and op1 == op2 then return true end
 	local s1, s2 = op1.event.segment, op2.event.segment
+	if s1.equalpos(s2) then
+		return tostring(s1.getattr(true)) < tostring(s2.getattr(true))
+	end
+	
 	local o11, o12, o21, o22 = s1.start(), s1.endpos(), s2.start(), s2.endpos()
 	
 	local s1isleft = s1.isleft(o21)
@@ -59,7 +63,6 @@ local EventMeta = {
 	__tostring = function(op)
 		return tostring(op.isStart)
 		.. ", " .. tostring(op.segment)
-		.. (op.disabled and "\t*disabled*" or "")
 	end,
 }
 
@@ -255,15 +258,15 @@ local function sweepline(input, merge, _index, _inverted, out)
 		if eq(intersection, start) or eq(intersection, endpos) then return dividend end
 		local seg = dividend.segment
 		local newstart, newend = EventPair(Segment(intersection, endpos, seg.left, seg.right, seg.getattr(true)))
-		status.remove(dividend.status) --In order to refresh AVL Tree
+		status.removenode(dividend.status.node) --In order to refresh AVL Tree
 		seg.setend(Vector2D(intersection)) --New endpoint
-		status.add(dividend.status) --Refresh AVL Tree's order
+		dividend.status.node = status.add(dividend.status) --Refresh AVL Tree's order
 		event.refresh(dividend.other) --Refresh Event Queue
 		event.add(newstart) --Add new events
 		event.add(newend)
 		return newstart
 	end
-	local intersections = 0
+	
 	--subdivide and handle coincident segments
 	--Segment(), Segment(), intersection point, coincident point
 	local function dividesegments(current, other, i1, i2)
@@ -271,29 +274,22 @@ local function sweepline(input, merge, _index, _inverted, out)
 		local throwing = subdivide(current, i1)
 		local surviving = subdivide(other, i2 or i1)
 		local start, endpos = current.point(), throwing.otherpoint()
-		if not (eq(i1, start) or eq(i1, endpos)) then
-			intersections = intersections + 1
-		else
-			start, endpos = other.point(), surviving.otherpoint()
-			if not (eq(i1, start) or eq(i1, endpos)) then
-				intersections = intersections + 1
-			end
-		end
 		if i2 then --(current or throwing) == (other or surviving)
 			if not throwing.segment.equalpos(surviving.segment) then
-				surviving = not current.segment.equalpos(surviving.segment) and other or surviving
-				throwing = not throwing.segment.equalpos(other.segment) and current or throwing
+				surviving = current.segment.equalpos(surviving.segment) and surviving or other
+				throwing = throwing.segment.equalpos(other.segment) and throwing or current
 			end
 			
-			--throwing == surviving
-			event.removeif(throwing) --Throwing away one of the coincident edges
-			event.removeif(throwing.other)
-			status.remove(throwing.status)
-			local tseg, seg = throwing.segment, surviving.segment
-			if merge then
-				seg.other = tseg --{left = tseg.left, right = tseg.right}
-			elseif tseg.right == nil or tseg.left ~= tseg.right then
-				seg.left = seg.getattr(not seg.left) --Fix annotation
+			if throwing.segment.equalpos(surviving.segment) then
+				event.removeif(throwing) --Throwing away one of the coincident edges
+				event.removeif(throwing.other)
+				status.removenode(throwing.status.node)
+				local tseg, seg = throwing.segment, surviving.segment
+				if merge then
+					seg.other = tseg --{left = tseg.left, right = tseg.right}
+				elseif tseg.right == nil or tseg.left ~= tseg.right then
+					seg.left = seg.getattr(not seg.left) --Fix annotation
+				end
 			end
 		end
 	end
@@ -334,12 +330,12 @@ local function sweepline(input, merge, _index, _inverted, out)
 				end
 			end
 			
-			status.add(curstat)
+			curstat.node = status.add(curstat)
 			for _, stat in pairs {above, below} do --get intersection points and subdivide the segment
 				dividesegments(current, stat, curseg.intersect(stat.segment))
 			end
 		else --current is end of the segment
-			status.remove(current.status)
+			status.removenode(current.status.node)
 			current.status.event = current --point to the end of event correctly
 			local above, below = status.getadjacent(current.status)
 			if above and below then --calc. between above and below
@@ -366,7 +362,8 @@ local function sweepline(input, merge, _index, _inverted, out)
 			end
 		end
 	end
---	print("Intersection points: ", intersections)
+	
+	-- if merge then returning.segments = segments end
 	return returning, segments
 end
 
@@ -382,7 +379,7 @@ local PolyMeta = {
 			local segments = {}
 			for _, region in ipairs(op) do
 				for i, v in ipairs(region) do --Convert polygon into a set of line segments
-					segments[#segments + 1] = Segment(v, region[i % #region + 1], op.tag)--, false, op.tag)
+					segments[#segments + 1] = Segment(v, region[i % #region + 1], op.tag)
 				end
 			end
 			if #segments > 2 then op.segments = sweepline(segments, nil, nil, op.inverted and op.tag) end
@@ -402,7 +399,12 @@ function Polygon(_tag, ...) --List of Regions
 	
 	function poly:triangulate()
 		if not self.triangles then
-			self.triangles = Triangulate(self())
+			self.triangles = {}
+			for _, p in ipairs(self) do
+				for _, t in ipairs(Triangulate(Polygon(self.tag, p)())) do
+					self.triangles[#self.triangles + 1] = t
+				end
+			end
 		end
 		return self.triangles
 	end

@@ -53,10 +53,16 @@ function SplatoonSWEPs:GetBoundingBox(minbound, vectors)
 	return mins, maxs
 end
 
+function SplatoonSWEPs:CollisionAABB(mins1, maxs1, mins2, maxs2)
+	return mins1.x < maxs2.x and maxs1.x > mins2.x and
+			mins1.y < maxs2.y and maxs1.y > mins2.y and
+			mins1.z < maxs2.z and maxs1.z > mins2.z
+end
+
 function SplatoonSWEPs:Initialize()
 	SplatoonSWEPs.Surfaces = {}
 	SplatoonSWEPs.BSP:Init()
-	self.BSP = nil
+	SplatoonSWEPs.BSP = nil
 end
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
 

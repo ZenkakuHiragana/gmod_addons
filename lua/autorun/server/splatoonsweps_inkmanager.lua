@@ -33,7 +33,7 @@ local MAX_OVERPAINT_AT_ONCE = 500
 local MAX_PROCESS_FACE_AT_ONCE = 800
 local MAX_NET_SEND_SIZE = 64 * 1024 - 3 - 20 --Maximum size of sending data in net library
 local MAX_COROUTINES_AT_ONCE = 1 --Maximum amount of coroutines running at once
-local MIN_BOUND = 10 --Ink minimum bounding box scale
+local MIN_BOUND = 1 --Ink minimum bounding box scale
 
 local IsCCW = SplatoonSWEPs.IsCCW
 local GetPlaneProjection = SplatoonSWEPs.GetPlaneProjection
@@ -92,9 +92,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	local mins, maxs = SplatoonSWEPs:GetBoundingBox(MIN_BOUND, reference_polys)
 	for k, f in pairs(SplatoonSWEPs.Surfaces) do
 		if f.normal:Dot(normal) < COS_MAX_DEG_DIFF or
-			mins.x > f.maxs.x or maxs.x < f.mins.x or
-			mins.y > f.maxs.y or maxs.y < f.mins.y or
-			mins.z > f.maxs.z or maxs.z < f.mins.z then
+			not SplatoonSWEPs:CollisionAABB(mins, maxs, f.mins, f.maxs) then
 			continue
 		end
 		
@@ -104,57 +102,76 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			reference[i] = Vector3DTo2D(WorldToLocal(GetPlaneProjection(
 				v, f.origin, f.normal, f.normal), angle_zero, f.origin, f.angle), nil)
 		end
-		DebugPoly(f.Polygon[1], true)
-		DebugPoly(reference, true)
 		
-		local AND = Polygon(inkid, reference_region) * f.Polygon
+		for _, p in ipairs(f.Polygon) do
+			local f3d = {}
+			for i, v in ipairs(p) do
+				-- DebugLine(v, p[i % #p + 1], true)
+				f3d[i] = LocalToWorld(SZL.Vector2DTo3D(v), angle_zero, f.origin, f.angle)
+			end
+			
+			-- for i, v in ipairs(f3d) do
+				-- DebugLine(v, f3d[i % #f3d + 1], true)
+			-- end
+		end
+		-- for i, v in ipairs(f.Polygon()) do
+			-- print(i, "=", LocalToWorld(SZL.Vector2DTo3D(v.start()), angle_zero, f.origin, f.angle), LocalToWorld(SZL.Vector2DTo3D(v.endpos()), angle_zero, f.origin, f.angle), v.left, v.right)
+		-- end
+		-- debugoverlay.Box(vector_origin, mins, maxs, 5, Color(0, 255, 0, 64))
+		-- DebugPoly(reference, true)
+		
+		local AND = Polygon(inkid, reference) * f.Polygon
+		-- for _, p in ipairs(AND) do
+			-- for i, v in ipairs(p) do
+				-- DebugLine(v, p[i % #p + 1], true)
+			-- end
+		-- end
 		if not AND[1] or #AND[1] < 3 then continue end
 		if not InkGroup[k] then InkGroup[k] = {} end
 		PolyBoundingBox(AND, f.origin, f.angle) --AND.mins, AND.maxs
 		
 		local overpaint = 0
-		for othercolor, poly in ipairs(InkGroup[k]) do
-			if AND.mins.x > poly.maxs.x or AND.maxs.x < poly.mins.x or
-				AND.mins.y > poly.maxs.y or AND.maxs.y < poly.mins.y or
-				AND.mins.z > poly.maxs.z or AND.maxs.z < poly.mins.z then
-				continue
+		for othercolor, polygroup in pairs(InkGroup[k]) do
+			for i, poly in ipairs(polygroup) do
+				if not SplatoonSWEPs:CollisionAABB(AND.mins, AND.maxs, poly.mins, poly.maxs) then
+					continue
+				elseif othercolor == color then
+					local union = poly
+					polygroup[i] = union + AND
+					polygroup[i].color = color
+					polygroup[i].inkid = union.inkid
+					PolyBoundingBox(polygroup[i], f.origin, f.angle)
+					table.insert(meshinfo, {
+						normal = f.normal,
+						color = color,
+						faceid = k,
+						inkid = union.inkid,
+						triangles = MakeTriangles(union:triangulate(), f.origin, f.angle, f.normal),
+					})
+				else
+					local overpoly = poly - AND
+					local overpolyTriangles = MakeTriangles(overpoly:triangulate(), f.origin, f.angle, f.normal)
+					overpoly.color = poly.color
+					overpoly.inkid = poly.inkid
+					PolyBoundingBox(overpoly, f.origin, f.angle)
+					
+					table.insert(meshinfo, {
+						normal = f.normal,
+						color = poly.color,
+						faceid = k,
+						inkid = poly.inkid,
+						triangles = overpolyTriangles,
+					})
+					
+					overpaint = overpaint + 1
+					if overpaint % MAX_OVERPAINT_AT_ONCE == 0 then coroutine.yield() end
+				end
 			end
-			
-			local overpoly = poly - AND
-			local overpolyTriangles = MakeTriangles(overpoly:triangulate(), f.origin, f.angle, f.normal)
-			if #overpolyTriangles > 2 then
-				overpoly.color = poly.color
-				overpoly.inkid = poly.inkid
-				PolyBoundingBox(overpoly, f.origin, f.angle)
-			end
-			
-			table.insert(meshinfo, {
-				normal = f.normal,
-				color = poly.color,
-				faceid = k,
-				inkid = poly.inkid,
-				triangles = overpolyTriangles,
-			})
-			
-			overpaint = overpaint + 1
-			if overpaint % MAX_OVERPAINT_AT_ONCE == 0 then coroutine.yield() end
 		end
 		
-		if InkGroup[k][color] then
-			local union = InkGroup[k][color]
-			union.Polygon = union.Polygon + AND
-			union.Polygon.color = color
-			union.Polygon.inkid = InkGroup[k][color].inkid
-			InkGroup[k][color].Polygon = union
-			table.insert(meshinfo, {
-				normal = f.normal,
-				color = color,
-				faceid = k,
-				inkid = union.Polygon.inkid,
-				triangles = MakeTriangles(union:triangulate(), f.origin, f.angle, f.normal),
-			})
-		else
+		if not InkGroup[k][color] then
 			AND.color, AND.inkid = color, inkid
+			-- InkGroup[k][color] = {AND}
 			table.insert(meshinfo, {
 				normal = f.normal,
 				color = color,

@@ -172,7 +172,6 @@ function bsp:Init()
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
 	
 	self:ReadHeader()
-	-- self:Parse(LUMP.ENTITIES)
 	self:Parse(LUMP.PLANES)
 	self:Parse(LUMP.VERTEXES)
 	self:Parse(LUMP.EDGES)
@@ -186,11 +185,6 @@ function bsp:Init()
 	
 	self:Parse(LUMP.DISP_VERTS)
 	self:Parse(LUMP.DISPINFO)
-	
-	self:Parse(LUMP.LEAFS)
-	self:Parse(LUMP.NODES)
-	self:Parse(LUMP.MODELS)
-	self:BuildDisplacements()
 	
 	self.Ready = true
 	self.bsp = nil
@@ -226,6 +220,49 @@ function bsp:Parse(parse_type)
 		self.ParseFunction[parse_type](lump)
 		lump.parsed = true
 	end
+end
+
+local function MakeSurface(key, mins, maxs, normal, angle, origin, v2d)
+	if SplatoonSWEPs.Surfaces[key] then
+		local m = SplatoonSWEPs.Surfaces[key]
+		m.Polygon = m.Polygon + SZL.Polygon("add", v2d)
+		m.mins, m.maxs = SplatoonSWEPs:GetBoundingBox(0, {m.mins, m.maxs, mins, maxs})
+	else
+		SplatoonSWEPs.Surfaces[key] = {
+			mins = mins,
+			maxs = maxs,
+			normal = normal,
+			angle = angle,
+			origin = origin,
+			Polygon = SZL.Polygon(key, v2d),
+		}
+	end
+end
+
+local DISP_MIN_BOUND = 10
+local TextureFilterBits = bit.bor(SURF_SKY, SURF_WARP, SURF_NOPORTAL, SURF_TRIGGER, SURF_NODRAW, SURF_HINT, SURF_SKIP)
+local function MakeDispTriangle(vert, planenormal)
+	do return end
+	local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
+	local angle = normal:Angle()
+	local surfkey = tostring(normal)
+	local origin = SplatoonSWEPs.Surfaces[surfkey] and SplatoonSWEPs.Surfaces[surfkey].origin or vert[1]
+	if normal:Dot(planenormal) < 0 then
+		normal = -normal
+		vert[2], vert[3] = vert[3], vert[2]
+	end
+	local v2d, mins = {}, Vector(math.huge, math.huge, math.huge)
+	local maxs = -mins
+	for vi, v in ipairs(vert) do
+		v2d[vi] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, origin, angle), nil)
+		maxs.x = math.max(maxs.x, v.x - DISP_MIN_BOUND) --Calculate bounding box
+		maxs.y = math.max(maxs.y, v.y - DISP_MIN_BOUND)
+		maxs.z = math.max(maxs.z, v.z - DISP_MIN_BOUND)
+		mins.x = math.min(mins.x, v.x + DISP_MIN_BOUND)
+		mins.y = math.min(mins.y, v.y + DISP_MIN_BOUND)
+		mins.z = math.min(mins.z, v.z + DISP_MIN_BOUND)
+	end
+	MakeSurface(tostring(normal), mins, maxs, normal, angle, origin, v2d)
 end
 
 bsp.ParseFunction = {
@@ -343,7 +380,7 @@ bsp.ParseFunction = {
 				lump.data[i].lightmapVecs[t][3] = read("Float")
 			
 				lump.data[i].flags = read("Long")
-				lump.data[i].TexData = TexData.data[t.texdataID]
+				lump.data[i].TexData = TexData.data[lump.data[i].texdataID]
 				bsp.bsp:Skip(4) --texdataID
 			end
 		end
@@ -357,7 +394,6 @@ bsp.ParseFunction = {
 		lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
 		for i = 0, lump.num do
 			lump.data[i] = {}
-			lump.data[i].OriginalFace = nil
 			lump.data[i].plane = read("UShort")
 			lump.data[i].side = read("Byte")
 			lump.data[i].onNode = read("Byte") == 1
@@ -380,70 +416,46 @@ bsp.ParseFunction = {
 			lump.data[i].firstPrimID = read("UShort")
 			lump.data[i].smoothingGroups = read("ULong")
 			
+			local PlaneTable = planes.data[lump.data[i].plane]
 			lump.data[i].index = i
-			lump.data[i].TexInfoTable = texinfo.data[lump.data[i].textureinfo]
-			lump.data[i].PlaneTable = planes.data[lump.data[i].plane]
-			lump.data[i].PlaneOrigin = lump.data[i].PlaneTable.Origin
-			lump.data[i].normal = lump.data[i].PlaneTable.normal
+			lump.data[i].Vertices = {}
+			lump.data[i].PlaneOrigin = PlaneTable.Origin
+			lump.data[i].normal = PlaneTable.normal
 			lump.data[i].angle = lump.data[i].normal:Angle()
+			lump.data[i].TexInfoTable = texinfo.data[lump.data[i].textureinfo]
 			
 			local v2d = {}
-			lump.data[i].mins = Vector(math.huge, math.huge, math.huge)
-			lump.data[i].maxs = -mins
-			lump.data[i].Vertices = {}
+			local mins = Vector(math.huge, math.huge, math.huge)
+			local maxs = -mins
 			for k = 0, lump.data[i].numedges - 1 do
 				local v = surfedges.data[lump.data[i].firstedge + k].start
-				lump.data[i].maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
-				lump.data[i].maxs.y = math.max(maxs.y, v.y)
-				lump.data[i].maxs.z = math.max(maxs.z, v.z)
-				lump.data[i].mins.x = math.min(mins.x, v.x)
-				lump.data[i].mins.y = math.min(mins.y, v.y)
-				lump.data[i].mins.z = math.min(mins.z, v.z)
+				maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
+				maxs.y = math.max(maxs.y, v.y)
+				maxs.z = math.max(maxs.z, v.z)
+				mins.x = math.min(mins.x, v.x)
+				mins.y = math.min(mins.y, v.y)
+				mins.z = math.min(mins.z, v.z)
 				
 				lump.data[i].Vertices[k] = v
 				table.insert(v2d, SZL.Vector3DTo2D(WorldToLocal(v, angle_zero,
 					lump.data[i].PlaneOrigin, lump.data[i].angle), nil))
 			end
 			
-			lump.data[i].Polygon = SZL.Polygon(i, v2d)
-			if lump.data[i].TexInfoTable.flags and bit.band(lump.data[i].TexInfoTable.flags,
-				bit.bor(SURF_SKY, SURF_WARP, SURF_NOPORTAL, SURF_TRIGGER, SURF_NODRAW, SURF_HINT, SURF_SKIP)) == 0 then
+			lump.data[i].mins, lump.data[i].maxs = mins, maxs
+			local texname = lump.data[i].TexInfoTable.TexData.name:lower()
+			if not (texname:find("tools/") or texname:find("water")) or
+				bit.band(lump.data[i].TexInfoTable.flags, TextureFilterBits) == 0 then
 				if lump.data[i].dispinfo < 0 then
-					if SplatoonSWEPs.Surfaces[lump.data[i].plane] then
-						local m = SplatoonSWEPs.Surfaces[lump.data[i].plane]
-						m.Polygon = m.Polygon + lump.data[i].Polygon
-						m.mins, m.maxs = SplatoonSWEPs:GetBoundingBox(0, {m.mins, m.maxs, lump.data[i].mins, lump.data[i].maxs})
-					else
-						SplatoonSWEPs.Surfaces[lump.data[i].plane] = {
-							mins = lump.data[i].mins,
-							maxs = lump.data[i].maxs,
-							normal = lump.data[i].normal,
-							angle = lump.data[i].angle,
-							origin = lump.data[i].Vertices[0],
-							Vertices = lump.data[i].Vertices,
-							Polygon = lump.data[i].Polygon,
-						}
-					end
+					MakeSurface(lump.data[i].plane, mins, maxs, lump.data[i].normal, lump.data[i].angle, lump.data[i].PlaneOrigin, v2d)
 				end
 			end
-		end
-	end,
-
-	[LUMP.DISP_VERTS] = function(lump)
-		local size = 4 * 5
-		lump.num = math.floor(lump.length / size) - 1
-		for i = 0, lump.num do
-			lump.data[i] = {}
-			lump.data[i].vec = read("Vector")
-			lump.data[i].dist = read("Float")
-			lump.data[i].alpha = read("Float")
 		end
 	end,
 
 	[LUMP.DISPINFO] = function(lump)
 		local size = 176
 		local faces = bsp:GetLump(LUMP.FACES)
-		local dispverts = bsp:GetLump(LUMP.DISP_VERTS)
+		local dispvertsoffset = bsp:GetLump(LUMP.DISP_VERTS).offset
 		lump.num = math.floor(lump.length / size) - 1
 		for i = 0, lump.num do
 			bsp.bsp:Seek(lump.offset + i * size)
@@ -457,15 +469,17 @@ bsp.ParseFunction = {
 			lump.data[i].contents = read("Long")
 			lump.data[i].MapFace = read("UShort")
 			
-			lump.data[i].Face = faces.data[disp.MapFace]
+			lump.data[i].Face = faces.data[lump.data[i].MapFace]
 			lump.data[i].Face.DispInfoTable = lump.data[i]
 			lump.data[i].DispVerts = {}
 			for k = 0, (2^lump.data[i].power + 1)^2 - 1 do
-				lump.data[i].DispVerts[k] = dispverts.data[lump.data[i].DispVertStart + k]
+				bsp.bsp:Seek(dispvertsoffset + 20 * (lump.data[i].DispVertStart + k))
+				lump.data[i].DispVerts[k] = {}
+				lump.data[i].DispVerts[k].vec = read("Vector")
+				lump.data[i].DispVerts[k].dist = read("Float")
 			end
 			
 			--Listing up each displacement's vertex
-			local DISP_MIN_BOUND = 10
 			local disp = lump.data[i]
 			local dispface = disp.Face
 			local dispverts = disp.DispVerts
@@ -520,261 +534,20 @@ bsp.ParseFunction = {
 			end
 			
 			--Generate triangles from displacement mesh.
-			disp.Triangles = {}
-			local surf = {}
 			for k = 0, #dispverts do
 				local row = math.floor(k / power)
 				local tri_inv = k % 2 == 0
 				if k % power < power - 1 and row < power - 1 then
 					local x, y, z = k, k + 1, k + power
 					if tri_inv then z = z + 1 end
-					local vert = {dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}
-					local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
-					if normal:Dot(dispface.normal) < 0 then
-						normal = -normal
-						vert[2], vert[3] = vert[3], vert[2]
-					end
-					local v2d, mins = {}, Vector(math.huge, math.huge, math.huge)
-					local maxs = -mins
-					for vi, v in ipairs(vert) do
-						v2d[vi] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, vert[1], normal:Angle()), nil)
-						maxs.x = math.max(maxs.x, v.x - DISP_MIN_BOUND) --Calculate bounding box
-						maxs.y = math.max(maxs.y, v.y - DISP_MIN_BOUND)
-						maxs.z = math.max(maxs.z, v.z - DISP_MIN_BOUND)
-						mins.x = math.min(mins.x, v.x + DISP_MIN_BOUND)
-						mins.y = math.min(mins.y, v.y + DISP_MIN_BOUND)
-						mins.z = math.min(mins.z, v.z + DISP_MIN_BOUND)
-					end
-					table.insert(disp.Triangles, {
-						Vertices = {[0] = vert[1], [1] = vert[2], [2] = vert[3]},
-						normal = normal,
-						angle = normal:Angle(),
-						Polygon = SZL.Polygon(facenum, v2d),
-						mins = mins,
-						maxs = maxs,
-						index = facenum,
-					})
+					MakeDispTriangle({dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}, dispface.normal)
 					
 					x, y, z = k + power + 1, k + power, k
 					if not tri_inv then z = z + 1 end
-					vert = {dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}
-					normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
-					if normal:Dot(dispface.normal) < 0 then
-						normal = -normal
-						vert[2], vert[3] = vert[3], vert[2]
-					end
-					mins = Vector(math.huge, math.huge, math.huge)
-					maxs = -mins
-					for vi, v in ipairs(vert) do
-						v2d[vi] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, vert[1], normal:Angle()), nil)
-						maxs.x = math.max(maxs.x, v.x - DISP_MIN_BOUND) --Calculate bounding box
-						maxs.y = math.max(maxs.y, v.y - DISP_MIN_BOUND)
-						maxs.z = math.max(maxs.z, v.z - DISP_MIN_BOUND)
-						mins.x = math.min(mins.x, v.x + DISP_MIN_BOUND)
-						mins.y = math.min(mins.y, v.y + DISP_MIN_BOUND)
-						mins.z = math.min(mins.z, v.z + DISP_MIN_BOUND)
-					end
-					table.insert(disp.Triangles, {
-						Vertices = {[0] = vert[1], [1] = vert[2], [2] = vert[3]},
-						normal = normal,
-						angle = normal:Angle(),
-						Polygon = SZL.Polygon(facenum + 1, v2d),
-						mins = mins,
-						maxs = maxs,
-						index = facenum + 1,
-					})
-					
-					facenum = facenum + 2
+					MakeDispTriangle({dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}, dispface.normal)
 				end
-			end
-			
-			for _, t in ipairs(disp.Triangles) do
-				local existing
-				for k, m in pairs(SplatoonSWEPs.Surfaces) do
-					if not isnumber(k) and m.normal:IsEqualTol(t.normal, 0.1) and
-						math.abs(m.normal:Dot(t.Vertices[0] - m.origin)) < 1e-10 then	
-						existing = m
-						break
-					end
-				end
-				
-				if existing then
-					local newverts = {}
-					for k, v in ipairs(t.Vertices) do
-						newverts[k] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, existing.origin, existing.angle), nil)
-					end
-					existing.Polygon = existing.Polygon + SZL.Polygon(t.Polygon.tag, newverts)
-					existing.mins, existing.maxs = SplatoonSWEPs:GetBoundingBox(0, {existing.mins, existing.maxs, t.mins, t.maxs})
-				else
-					SplatoonSWEPs.Surfaces[tostring(t.normal)] = {
-						mins = t.mins,
-						maxs = t.maxs,
-						normal = t.normal,
-						angle = t.angle,
-						origin = t.Vertices[0],
-						Vertices = t.Vertices,
-						Polygon = t.Polygon,
-					}
-				end
-			end
-		end
-	end,
-	
-	[LUMP.NODES] = function(lump)
-		local size = 32
-		local faces = bsp:GetLump(LUMP.FACES)
-		local leafs = bsp:GetLump(LUMP.LEAFS)
-		lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
-		for i = 0, lump.num do
-			local x, y, z
-			lump.data[i] = setmetatable({}, NodeMeta)
-			lump.data[i].FaceTable = {}
-			lump.data[i].ChildNodes = {}
-			lump.data[i].IsLeaf = false
-			lump.data[i].planenum = read("Long")
-			lump.data[i].children = {}
-			lump.data[i].children[1] = read("Long")
-			lump.data[i].children[2] = read("Long")
-			x = read("Short")
-			y = read("Short")
-			z = read("Short")
-			lump.data[i].mins = Vector(x, y, z)
-			x = read("Short")
-			y = read("Short")
-			z = read("Short")
-			lump.data[i].maxs = Vector(x, y, z)
-			lump.data[i].firstface = read("UShort")
-			lump.data[i].numfaces = read("UShort")
-			lump.data[i].area = read("Short")
-			lump.data[i].padding = read("Short")
-			
-			lump.data[i].Separator = planes.data[lump.data[i].planenum]
-			for k = 0, lump.data[i].numfaces - 1 do
-				lump.data[i].FaceTable[k] = faces.data[lump.data[i].firstface + k]
-			end
-		end
-		
-		for i = 0, lump.num do
-			for k = 1, 2 do
-				local child = lump.data[i].children[k]
-				if child < 0 then
-					lump.data[i].ChildNodes[k] = leafs.data[-child - 1]
-				else
-					lump.data[i].ChildNodes[k] = lump.data[child]
-				end
-			end
-		end
-	end,
-	
-	[LUMP.LEAFS] = function(lump)
-		local size = 32
-		local faces = bsp:GetLump(LUMP.FACES)
-		local leaffaces = bsp:GetLump(LUMP.LEAFFACES)
-		lump.num = math.floor(lump.length / size) - 1
-		for i = 0, lump.num do
-			local x, y, z
-			lump.data[i] = {}
-			lump.data[i].FaceTable = {}
-			lump.data[i].BrushTable = {}
-			lump.data[i].IsLeaf = true
-			lump.data[i].index = i
-			lump.data[i].contents = read("Long")
-			lump.data[i].cluster = read("Short")
-			local areaflags = read("Short")
-			lump.data[i].area = bit.band(areaflags, 0x01FF)
-			lump.data[i].flags = bit.band(bit.rshift(areaflags, 9), 0x007F)
-			x = read("Short")
-			y = read("Short")
-			z = read("Short")
-			lump.data[i].mins = Vector(x, y, z)
-			x = read("Short")
-			y = read("Short")
-			z = read("Short")
-			lump.data[i].maxs = Vector(x, y, z)
-			lump.data[i].firstleafface = read("UShort")
-			lump.data[i].numleaffaces = read("UShort")
-			lump.data[i].firstleafbrush = read("UShort")
-			lump.data[i].numleafbrushes = read("UShort")
-			lump.data[i].leafWaterDataID = read("Short")
-			lump.data[i].padding = read("Short")
-			
-			local here = bsp.bsp:Tell()
-			for k = 0, lump.data[i].numleaffaces - 1 do
-				bsp.bsp:Seek(leaffaces.offset + 2 * (lump.data[i].firstleafface + k]))
-				lump.data[i].FaceTable[k] = faces.data[read("UShort")]
-			end
-			bsp.bsp:Seek(here)
-		end
-	end,
-
-	[LUMP.MODELS] = function(lump)
-		local size = 4 * 12
-		local nodes = bsp:GetLump(LUMP.NODES)
-		local faces = bsp:GetLump(LUMP.FACES)
-		lump.num = math.min(math.floor(lump.length / size) - 1, 1024 - 1)
-		for i = 0, lump.num do
-			lump.data[i] = {}
-			lump.data[i].mins = read("Vector")
-			lump.data[i].maxs = read("Vector")
-			lump.data[i].origin = read("Vector")
-			lump.data[i].headnode = read("Long")
-			lump.data[i].firstface = read("Long")
-			lump.data[i].numfaces = read("Long")
-			
-			lump.data[i].FaceTable = {}
-			lump.data[i].RootNode = nodes.data[lump.data[i].headnode]
-			for k = 0, lump.data[i].numfaces - 1 do
-				lump.data[i].FaceTable[k] = faces.data[lump.data[i].firstface + k]
 			end
 		end
 	end,
 }
-bsp.ParseFunction[LUMP.FACES_HDR] = bsp.ParseFunction[LUMP.FACES]
-
-function bsp:GetWorldRoot()
-	local lump = self:GetLump(LUMP.MODELS)
-	return lump.data[0].RootNode
-end
-
-function bsp:GetNodeBound(mins, maxs)
-	local node = self:GetWorldRoot()
-	while not (node.IsLeaf or node:Across(mins, maxs)) do
-		node = node:GetChildren(mins)
-	end
-	return node
-end
-
-function bsp:GetOriginalFaces(mins, maxs)
-	local faces = {}
-	local node = self:GetNodeBound(mins, maxs)
-	for i, f in ipairs(node.FaceTable) do
-		faces[f.OriginalFace] = true
-	end
-	return faces
-end
-
-function SplatoonSWEPs.ShowDisplacement()
-	local dd = 101
-	for d = dd, dd do
-		local disp = bsp:GetLump(LUMP.DISPINFO).data[d]
-		for i = 0, #disp.DispVerts do
-			local v = disp.DispVerts[i]
-			debugoverlay.Line(v.pos, v.pos + v.vec * 100, 5, Color(0, 255, 0), true)
-			debugoverlay.Text(v.pos, i, 5)
-		end
-	end
-end
-
-function SplatoonSWEPs.ShowFace()
-	local dd = 3000
-	local lump = bsp:GetLump(LUMP.FACES).data
-	for d = dd, dd + 3000 do
-		local face = lump[d]
-		local v, n = face.Vertices, face.PlaneTable.normal
-		for i = 0, face.numedges - 1 do
-			debugoverlay.Line(v[i], v[i] + n * 50, 5, Color(0, 255, 0), false)
-			debugoverlay.Line(v[i] + n, v[i % (face.numedges - 1) + 1] + n, 5, Color(0, 255, 0), false)
-			-- debugoverlay.Text(v[i], i, 5)
-		end
-	end
-end
+-- bsp.ParseFunction[LUMP.FACES_HDR] = bsp.ParseFunction[LUMP.FACES]
