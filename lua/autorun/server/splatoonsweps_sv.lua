@@ -61,8 +61,18 @@ end
 
 function SplatoonSWEPs:Initialize()
 	SplatoonSWEPs.Surfaces = {}
+	SplatoonSWEPs.SurfaceArea = 0
 	SplatoonSWEPs.BSP:Init()
+	print("NumFacesBSP: ", SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.FACES).num)
+	print("NumPlanesBSP: ", SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.PLANES).num)
 	SplatoonSWEPs.BSP = nil
+	print("NumSurfaces: ", table.Count(SplatoonSWEPs.Surfaces))
+	print("SurfaceArea: ", SplatoonSWEPs.SurfaceArea)
+	-- for _, face_array in pairs(SplatoonSWEPs.Surfaces) do
+		-- for _, f in ipairs(face_array) do
+			-- f.Polygon = f.Polygon + SZL.Polygon(nil, {})
+		-- end
+	-- end
 end
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
 

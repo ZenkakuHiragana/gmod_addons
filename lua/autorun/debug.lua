@@ -20,7 +20,7 @@ function DebugPlane(p, n, ignoreZ)
 	DebugVector(p, n * 50, true)
 end
 function DebugPoint(pos, size, ignoreZ)
-	debugoverlay.Cross(pos, size, DebugOverlayTime, DebugOverlayColor, ignoreZ)
+	debugoverlay.Cross(pos, size or 5, DebugOverlayTime, DebugOverlayColor, ignoreZ)
 end
 function DebugScreenText(x, y, text)
 	debugoverlay.ScreenText(x, y, text, DebugOverlayTime, DebugOverlayColor)

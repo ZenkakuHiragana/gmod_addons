@@ -241,15 +241,39 @@ local filter = {
 }
 
 --List of Segment(), true -> merge two groups, operation index(i.e. first + second)
-local function sweepline(input, merge, _index, _inverted, out)
-	local returning = out or merge and Polygon(_index, input.inverted[1] and true) or {}
+local function sweepline(source, merge, _index, _inverted, out)
+	local returning = out or merge and Polygon(_index, source.inverted[1] and true) or {}
 	local event, status = BinaryHeap(), AVLTree()
-	for _, seg in ipairs(input) do --Setting up event list
+	local chainlist, segments = {}, {}
+	local mins1 = Vector2D(math.huge, math.huge)
+	local maxs1, maxs2, mins2 = -mins1, -mins1, Vector2D(mins1)
+	for _, seg in ipairs(source) do --Setting up event list
 		if not eq(seg.start(), seg.endpos()) then --Avoid zero-length segments
 			local e1, e2 = EventPair(seg)
 			event.add(e1) --Add pair of events
 			event.add(e2) --(beginning of the segments, end of the segments)
+			if merge then
+				if source.tag[seg.getattr(true)] == 1 then
+					maxs1.x = math.max(maxs1.x, seg.start().x, seg.endpos().x)
+					maxs1.y = math.max(maxs1.y, seg.start().y, seg.endpos().x)
+					mins1.x = math.min(mins1.x, seg.start().x, seg.endpos().x)
+					mins1.y = math.min(mins1.y, seg.start().y, seg.endpos().x)
+				else
+					maxs2.x = math.max(maxs2.x, seg.start().x, seg.endpos().x)
+					maxs2.y = math.max(maxs2.y, seg.start().y, seg.endpos().x)
+					mins2.x = math.min(mins2.x, seg.start().x, seg.endpos().x)
+					mins2.y = math.min(mins2.y, seg.start().y, seg.endpos().x)
+				end
+			end
 		end
+	end
+	
+	if mins1.x < maxs2.x and maxs1.x > mins2.x and
+		mins1.y < maxs2.y and maxs1.y > mins2.y then
+		for _, s in ipairs(source) do
+			segmentChain(s, chainlist, returning)
+		end
+		return returning
 	end
 	
 	--subdivide segment by an intersection point
@@ -294,18 +318,17 @@ local function sweepline(input, merge, _index, _inverted, out)
 		end
 	end
 	
-	local chainlist, segments = {}, {}
 	while not event.isempty() do --Event Loop
 		local current = event.remove() --Fetch the left-most(smallest X coord.) event
-		local curseg = assert(current).segment
-		local curindex = merge and input.tag[curseg.getattr(true)] or _index
+		local curseg = current.segment
+		local curindex = merge and source.tag[curseg.getattr(true)] or _index
 		if current.isStart then --current is beginning of the segment
 			local curstat = Status(current) --Status bound to current event
 			local above, below = status.getadjacent(curstat) --get a segment above current and a segment below
 			above, below = above and above.event, below and below.event
 			if merge then --is this the third sweep?
 				if curseg.other.left == nil and curseg.other.right == nil then --set other annotations
-					local inside = below or input.inverted[-curindex]
+					local inside = below or source.inverted[-curindex]
 					if below then
 						if curseg.getattr(true) == below.segment.getattr(true) then
 							inside = below.segment.other.left
@@ -399,17 +422,17 @@ function Polygon(_tag, ...) --List of Regions
 	
 	function poly:triangulate()
 		if not self.triangles then
-			self.triangles = {}
-			for _, p in ipairs(self) do
-				for _, t in ipairs(Triangulate(Polygon(self.tag, p)())) do
-					self.triangles[#self.triangles + 1] = t
-				end
-			end
+			self.triangles = Triangulate(self())
+			-- self.triangles = {}
+			-- for _, p in ipairs(self) do
+				-- for _, t in ipairs(Triangulate(Polygon(self.tag, p)())) do
+					-- self.triangles[#self.triangles + 1] = t
+				-- end
+			-- end
 		end
 		return self.triangles
 	end
 	
-	poly()
 	return poly
 end
 
@@ -419,7 +442,8 @@ function polyoperate(op, input1, input2) --16x bool table, Polygon(), Polygon()
 	
 	--First sweep-line; convert Input1 into annotated line segments
 	--Second sweep-line; convert Input2 into annotated line segments
-	local sweep = input1()
+	local sweep = {}
+	for _, s in ipairs(input1()) do sweep[#sweep + 1] = s end
 	for _, s in ipairs(input2()) do sweep[#sweep + 1] = s end
 	sweep.tag = { --Preparation for the third sweep-line
 		[input1.tag] =  1,

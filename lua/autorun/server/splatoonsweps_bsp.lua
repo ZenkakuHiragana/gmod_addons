@@ -99,7 +99,7 @@ function NodeFuncs.Across(self, mins, maxs, org)
 		mindot = math.min(mindot, dot)
 		maxdot = math.max(maxdot, dot)
 	end
-	
+
 	return mindot * maxdot < 0
 end
 
@@ -170,22 +170,22 @@ function bsp:Init()
 	self.bspname = "maps/" .. game.GetMap() .. ".bsp"
 	assert(file.Exists(self.bspname, "GAME"), "SplatoonSWEPs: " .. tostring(self.bspname) .. " was not found!")
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
-	
+
 	self:ReadHeader()
 	self:Parse(LUMP.PLANES)
 	self:Parse(LUMP.VERTEXES)
 	self:Parse(LUMP.EDGES)
 	self:Parse(LUMP.SURFEDGES)
-	
+
 	self:Parse(LUMP.TEXDATA)
 	self:Parse(LUMP.TEXINFO)
-	
+
 	self:Parse(LUMP.FACES)
 	self:Parse(LUMP.FACES_HDR)
-	
+
 	self:Parse(LUMP.DISP_VERTS)
 	self:Parse(LUMP.DISPINFO)
-	
+
 	self.Ready = true
 	self.bsp = nil
 end
@@ -200,7 +200,7 @@ function bsp:ReadHeader()
 	self.header.identifier = read(4)
 	self.header.version = read("Long")
 	assert(self.header.identifier == "VBSP", "SplatoonSWEPs(Parsing map): BSP Identifier is incorrect! (" .. self.bspname .. ")")
-	
+
 	for i = 0, 63 do
 		self.header.lumps[i] = {}
 		self.header.lumps[i].data = {}
@@ -222,45 +222,64 @@ function bsp:Parse(parse_type)
 	end
 end
 
+local MAX_BOUND = 100 * 100 * 10
 local function MakeSurface(key, mins, maxs, normal, angle, origin, v2d)
+	-- if SplatoonSWEPs.Surfaces[key] then
+		-- for _, m in ipairs(SplatoonSWEPs.Surfaces[key]) do
+			-- local bound = m.maxs - m.mins
+			-- if bound.x * bound.y * bound.z < MAX_BOUND then
+				-- table.insert(m.Polygon, v2d)
+				-- m.Polygon = m.Polygon + SZL.Polygon("add", v2d)
+				-- m.mins, m.maxs = SplatoonSWEPs:GetBoundingBox(0, {m.mins, m.maxs, mins, maxs})
+				-- return
+			-- end
+		-- end
+	-- end
+	
+	local area = 0
+	for i, v in ipairs(v2d) do
+		area = area + v:Cross(v2d[i % #v2d + 1]).z
+	end
+	SplatoonSWEPs.SurfaceArea = SplatoonSWEPs.SurfaceArea + math.abs(area) / 2
+	
+	local newdata = {
+		mins = mins,
+		maxs = maxs,
+		normal = normal,
+		angle = angle,
+		origin = origin,
+		Polygon = v2d,
+	}
 	if SplatoonSWEPs.Surfaces[key] then
-		local m = SplatoonSWEPs.Surfaces[key]
-		m.Polygon = m.Polygon + SZL.Polygon("add", v2d)
-		m.mins, m.maxs = SplatoonSWEPs:GetBoundingBox(0, {m.mins, m.maxs, mins, maxs})
+		table.insert(SplatoonSWEPs.Surfaces[key], newdata)
 	else
-		SplatoonSWEPs.Surfaces[key] = {
-			mins = mins,
-			maxs = maxs,
-			normal = normal,
-			angle = angle,
-			origin = origin,
-			Polygon = SZL.Polygon(key, v2d),
-		}
+		SplatoonSWEPs.Surfaces[key] = {newdata}
 	end
 end
 
 local DISP_MIN_BOUND = 10
 local TextureFilterBits = bit.bor(SURF_SKY, SURF_WARP, SURF_NOPORTAL, SURF_TRIGGER, SURF_NODRAW, SURF_HINT, SURF_SKIP)
 local function MakeDispTriangle(vert, planenormal)
-	do return end
-	local normal = (vert[2] - vert[1]):Cross(vert[3] - vert[2]):GetNormalized()
+	local normal = (vert[1] - vert[0]):Cross(vert[2] - vert[1]):GetNormalized()
 	local angle = normal:Angle()
 	local surfkey = tostring(normal)
-	local origin = SplatoonSWEPs.Surfaces[surfkey] and SplatoonSWEPs.Surfaces[surfkey].origin or vert[1]
+	local origin = SplatoonSWEPs.Surfaces[surfkey] and
+		SplatoonSWEPs.Surfaces[surfkey].origin or
+		(vert[0] + vert[1] + vert[2]) / 3
 	if normal:Dot(planenormal) < 0 then
 		normal = -normal
-		vert[2], vert[3] = vert[3], vert[2]
+		vert[1], vert[2] = vert[2], vert[1]
 	end
 	local v2d, mins = {}, Vector(math.huge, math.huge, math.huge)
 	local maxs = -mins
-	for vi, v in ipairs(vert) do
-		v2d[vi] = SZL.Vector3DTo2D(WorldToLocal(v, angle_zero, origin, angle), nil)
-		maxs.x = math.max(maxs.x, v.x - DISP_MIN_BOUND) --Calculate bounding box
-		maxs.y = math.max(maxs.y, v.y - DISP_MIN_BOUND)
-		maxs.z = math.max(maxs.z, v.z - DISP_MIN_BOUND)
-		mins.x = math.min(mins.x, v.x + DISP_MIN_BOUND)
-		mins.y = math.min(mins.y, v.y + DISP_MIN_BOUND)
-		mins.z = math.min(mins.z, v.z + DISP_MIN_BOUND)
+	for i = 0, 2 do
+		v2d[i + 1] = SZL.Vector3DTo2D(WorldToLocal(vert[i], angle_zero, origin, angle), nil)
+		maxs.x = math.max(maxs.x, vert[i].x + DISP_MIN_BOUND) --Calculate bounding box
+		maxs.y = math.max(maxs.y, vert[i].y + DISP_MIN_BOUND)
+		maxs.z = math.max(maxs.z, vert[i].z + DISP_MIN_BOUND)
+		mins.x = math.min(mins.x, vert[i].x - DISP_MIN_BOUND)
+		mins.y = math.min(mins.y, vert[i].y - DISP_MIN_BOUND)
+		mins.z = math.min(mins.z, vert[i].z - DISP_MIN_BOUND)
 	end
 	MakeSurface(tostring(normal), mins, maxs, normal, angle, origin, v2d)
 end
@@ -332,7 +351,7 @@ bsp.ParseFunction = {
 			lump.data[i].view_width = read("Long")
 			lump.data[i].view_height = read("Long")
 			lump.data[i].name = ""
-			
+
 			local here = bsp.bsp:Tell()
 			bsp.bsp:Seek(strtable.offset + strID)
 			local stroffset = read("Long")
@@ -342,7 +361,7 @@ bsp.ParseFunction = {
 				if chr == '\x00' then break end
 				lump.data[i].name = lump.data[i].name .. chr
 			end
-			
+
 			bsp.bsp:Seek(here)
 		end
 	end,
@@ -369,7 +388,7 @@ bsp.ParseFunction = {
 				lump.data[i].textureVecs[t][1] = read("Float")
 				lump.data[i].textureVecs[t][2] = read("Float")
 				lump.data[i].textureVecs[t][3] = read("Float")
-				
+
 				lump.data[i].lightmapVecs[s][0] = read("Float")
 				lump.data[i].lightmapVecs[s][1] = read("Float")
 				lump.data[i].lightmapVecs[s][2] = read("Float")
@@ -378,7 +397,7 @@ bsp.ParseFunction = {
 				lump.data[i].lightmapVecs[t][1] = read("Float")
 				lump.data[i].lightmapVecs[t][2] = read("Float")
 				lump.data[i].lightmapVecs[t][3] = read("Float")
-			
+
 				lump.data[i].flags = read("Long")
 				lump.data[i].TexData = TexData.data[lump.data[i].texdataID]
 				bsp.bsp:Skip(4) --texdataID
@@ -415,7 +434,7 @@ bsp.ParseFunction = {
 			lump.data[i].numPrims = read("UShort")
 			lump.data[i].firstPrimID = read("UShort")
 			lump.data[i].smoothingGroups = read("ULong")
-			
+
 			local PlaneTable = planes.data[lump.data[i].plane]
 			lump.data[i].index = i
 			lump.data[i].Vertices = {}
@@ -423,30 +442,71 @@ bsp.ParseFunction = {
 			lump.data[i].normal = PlaneTable.normal
 			lump.data[i].angle = lump.data[i].normal:Angle()
 			lump.data[i].TexInfoTable = texinfo.data[lump.data[i].textureinfo]
-			
+
 			local v2d = {}
+			local fullverts = {}
+			local full2d = {}
 			local mins = Vector(math.huge, math.huge, math.huge)
 			local maxs = -mins
 			for k = 0, lump.data[i].numedges - 1 do
-				local v = surfedges.data[lump.data[i].firstedge + k].start
-				maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
-				maxs.y = math.max(maxs.y, v.y)
-				maxs.z = math.max(maxs.z, v.z)
-				mins.x = math.min(mins.x, v.x)
-				mins.y = math.min(mins.y, v.y)
-				mins.z = math.min(mins.z, v.z)
-				
-				lump.data[i].Vertices[k] = v
-				table.insert(v2d, SZL.Vector3DTo2D(WorldToLocal(v, angle_zero,
-					lump.data[i].PlaneOrigin, lump.data[i].angle), nil))
+				fullverts[k] = surfedges.data[lump.data[i].firstedge + k].start
+				full2d[k] = SZL.Vector3DTo2D(WorldToLocal(fullverts[k], angle_zero,
+					lump.data[i].PlaneOrigin, lump.data[i].angle), nil)
 			end
 			
+			local nf = #full2d + 1
+			for k = 0, nf - 1 do
+				local v = full2d[k]
+				local succ, pred = full2d[(k + 1) % nf], full2d[(k + nf - 1) % nf]
+				local dist = v:DistToSqr(succ)
+				if dist > 2 and -(v - pred):GetNormalized():Cross((succ - v):GetNormalized()).z > 2e-3 then
+					maxs.x = math.max(maxs.x, fullverts[k].x) --Calculate bounding box
+					maxs.y = math.max(maxs.y, fullverts[k].y)
+					maxs.z = math.max(maxs.z, fullverts[k].z)
+					mins.x = math.min(mins.x, fullverts[k].x)
+					mins.y = math.min(mins.y, fullverts[k].y)
+					mins.z = math.min(mins.z, fullverts[k].z)
+					
+					table.insert(v2d, v)
+					if not lump.data[i].Vertices[0] then
+						lump.data[i].Vertices[0] = fullverts[k]
+					else
+						table.insert(lump.data[i].Vertices, fullverts[k])
+					end
+				end
+			end
+	
+	if #v2d > 3 then
+		local dir
+		for i, v in ipairs(v2d) do
+			local succ, pred = v2d[i % #v2d + 1], v2d[(i + #v2d - 2) % #v2d + 1]
+			local dist = v:DistToSqr(succ)
+			local sign = (v - pred):GetNormalized():Cross((succ - v):GetNormalized()).z
+			-- if i == 2 then print(sign) end
+			if dist > 2 and sign > 2e-3 then
+				print "concave"
+				dir = nil
+				print(dist, sign)
+				break
+			else
+				dir = sign
+			end
+		end
+		
+		if not dir then
+			if not SplatoonSWEPs.Surfaces.Concave then SplatoonSWEPs.Surfaces.Concave = {} end
+			table.insert(SplatoonSWEPs.Surfaces.Concave, lump.data[i])
+		else
+			SplatoonSWEPs.Surfaces.Convex = (SplatoonSWEPs.Surfaces.Convex or 0) + 1
+		end
+	end
+
 			lump.data[i].mins, lump.data[i].maxs = mins, maxs
-			local texname = lump.data[i].TexInfoTable.TexData.name:lower()
-			if not (texname:find("tools/") or texname:find("water")) or
-				bit.band(lump.data[i].TexInfoTable.flags, TextureFilterBits) == 0 then
-				if lump.data[i].dispinfo < 0 then
-					MakeSurface(lump.data[i].plane, mins, maxs, lump.data[i].normal, lump.data[i].angle, lump.data[i].PlaneOrigin, v2d)
+			if lump.data[i].dispinfo < 0 then
+				local texname = lump.data[i].TexInfoTable.TexData.name:lower()
+				if not (texname:find("tools/") or texname:find("water")) or
+					bit.band(lump.data[i].TexInfoTable.flags, TextureFilterBits) == 0 then
+						MakeSurface(lump.data[i].plane, mins, maxs, lump.data[i].normal, lump.data[i].angle, lump.data[i].PlaneOrigin, v2d)
 				end
 			end
 		end
@@ -468,7 +528,7 @@ bsp.ParseFunction = {
 			lump.data[i].smoothingAngle = read("Float")
 			lump.data[i].contents = read("Long")
 			lump.data[i].MapFace = read("UShort")
-			
+
 			lump.data[i].Face = faces.data[lump.data[i].MapFace]
 			lump.data[i].Face.DispInfoTable = lump.data[i]
 			lump.data[i].DispVerts = {}
@@ -478,7 +538,7 @@ bsp.ParseFunction = {
 				lump.data[i].DispVerts[k].vec = read("Vector")
 				lump.data[i].DispVerts[k].dist = read("Float")
 			end
-			
+
 			--Listing up each displacement's vertex
 			local disp = lump.data[i]
 			local dispface = disp.Face
@@ -486,7 +546,7 @@ bsp.ParseFunction = {
 			local verts = table.Copy(dispface.Vertices)
 			local numverts = table.Count(verts)
 			if numverts ~= 4 then continue end
-			
+
 			--DispInfo.startPosition isn't always equal to the first edge so let's find correct one
 			local indices, mindist, dist, startedge = {}, math.huge, 0, 0
 			for k = 0, numverts - 1 do
@@ -496,11 +556,11 @@ bsp.ParseFunction = {
 					mindist = dist
 				end
 			end
-			
+
 			for k = 0, numverts - 1 do
 				indices[k] = (k + startedge) % numverts
 			end
-			
+
 			verts[0],
 			verts[1],
 			verts[2],
@@ -509,7 +569,7 @@ bsp.ParseFunction = {
 				verts[indices[1]],
 				verts[indices[2]],
 				verts[indices[3]]
-			
+
 			local power = 2^disp.power + 1
 			local u1 = verts[3] - verts[0]
 			local u2 = verts[2] - verts[1]
@@ -532,7 +592,7 @@ bsp.ParseFunction = {
 				disp.mins.y = math.min(disp.mins.y, w.pos.y)
 				disp.mins.z = math.min(disp.mins.z, w.pos.z)
 			end
-			
+			local a = true
 			--Generate triangles from displacement mesh.
 			for k = 0, #dispverts do
 				local row = math.floor(k / power)
@@ -540,11 +600,11 @@ bsp.ParseFunction = {
 				if k % power < power - 1 and row < power - 1 then
 					local x, y, z = k, k + 1, k + power
 					if tri_inv then z = z + 1 end
-					MakeDispTriangle({dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}, dispface.normal)
-					
+					MakeDispTriangle({[0] = dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}, dispface.normal)
+
 					x, y, z = k + power + 1, k + power, k
 					if not tri_inv then z = z + 1 end
-					MakeDispTriangle({dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}, dispface.normal)
+					MakeDispTriangle({[0] = dispverts[x].pos, dispverts[y].pos, dispverts[z].pos}, dispface.normal)
 				end
 			end
 		end

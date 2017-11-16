@@ -10,7 +10,7 @@
 	// "$normalmapalphaenvmapmask" "1"
 	"$vertexcolor" "1"
 	"$vertexalpha" "1"
-	"$receiveflashlight" "0"
+	"$receiveflashlight" "1"
 	"$singlepassflashlight" "1"
 	// "$blendtintbybasealpha" "1"
 

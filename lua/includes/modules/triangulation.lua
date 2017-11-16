@@ -110,27 +110,42 @@ end
 local orgfrac = 0.9
 local function CanMakeTriangle(p1, p2, p3, constrains)
 	local h1, h2, h3 = VectorHash(p1), VectorHash(p2), VectorHash(p3)
-	local center = (p1 + p2 + p3) / 3 * (1 - orgfrac)
-	local org = {p1 * orgfrac + center, p2 * orgfrac + center, p3 * orgfrac + center}
-	local i = {0, 0, 0}
-	local checked = {}
-	for _, s in pairs(constrains) do
-		if s.start then
-			local sh, eh = VectorHash(s.start()), VectorHash(s.endpos())
-			if not checked[sh .. eh] and s.start then
-				checked[sh .. eh], checked[eh .. sh] = true, true
-				for n, o in ipairs(org) do
-					if (o.x - s.start().x) * (o.x - s.endpos().x) < 0 then
-						if s.start().y + (s.endpos().y - s.start().y) * (o.x - s.start().x) / (s.endpos().x - s.start().x) > o.y then
-							i[n] = i[n] + 1
+	local seg1, seg2, seg3 = constrains[h1 .. h2], constrains[h2 .. h3], constrains[h3 .. h1]
+	if not (seg1 or seg2 or seg3) then
+		local center = (p1 + p2 + p3) / 3 * (1 - orgfrac)
+		local org = {p1 * orgfrac + center, p2 * orgfrac + center, p3 * orgfrac + center}
+		local i = {0, 0, 0}
+		local checked = {}
+		for _, s in pairs(constrains) do
+			if s.start then
+				local sh, eh = VectorHash(s.start()), VectorHash(s.endpos())
+				if not checked[sh .. eh] and s.start then
+					checked[sh .. eh], checked[eh .. sh] = true, true
+					for n, o in ipairs(org) do
+						if (o.x - s.start().x) * (o.x - s.endpos().x) < 0 then
+							if s.start().y + (s.endpos().y - s.start().y) * (o.x - s.start().x) / (s.endpos().x - s.start().x) > o.y then
+								i[n] = i[n] + 1
+							end
 						end
 					end
 				end
 			end
 		end
+		
+		return not (i[1] % 2 == 0 or i[2] % 2 == 0 or i[3] % 2 == 0)
+	elseif not ((seg1 and
+		(seg1.left and seg1.isleft(p3) or
+		seg1.right and seg1.isright(p3))) or
+		(seg2 and
+		(seg2.left and seg2.isleft(p1) or
+		seg2.right and seg2.isright(p1))) or
+		(seg3 and
+		(seg3.left and seg3.isleft(p2) or
+		seg3.right and seg3.isright(p2)))) then
+		return false
 	end
 	
-	return not (i[1] % 2 == 0 or i[2] % 2 == 0 or i[3] % 2 == 0)
+	return true
 end
 
 local function fliptris(tri, constrains)
