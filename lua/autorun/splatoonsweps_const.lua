@@ -146,6 +146,6 @@ SplatoonSWEPs.ColorName = {
 }
 SplatoonSWEPs.MAX_COLORS = #InkColors
 SplatoonSWEPs.COLOR_BITS = 5
-SplatoonSWEPs.GetColor = function(colorid)
+function SplatoonSWEPs.GetColor(colorid)
 	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)]
 end

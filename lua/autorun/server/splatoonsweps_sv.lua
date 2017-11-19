@@ -12,7 +12,6 @@ if SLVBase and not SLVBase.IsFixedNormalizeAngle then
 	SLVBase.IsFixedNormalizeAngle = true
 end
 
-require "SZL"
 SplatoonSWEPs = SplatoonSWEPs or {}
 AddCSLuaFile "../splatoonsweps_const.lua"
 include "../splatoonsweps_const.lua"
@@ -20,24 +19,13 @@ include "splatoonsweps_geometry.lua"
 include "splatoonsweps_inkmanager.lua"
 include "splatoonsweps_bsp.lua"
 
-function SplatoonSWEPs:Check(point)
-	return self.Surfaces
-	-- local x = point.x - point.x % chunkrate
-	-- local y = point.y - point.y % chunkrate
-	-- local z = point.z - point.z % chunkrate
-	-- debugoverlay.Box(Vector(x, y, z), vector_origin,
-	-- Vector(chunksize, chunksize, chunksize), 5, Color(0,255,0))
-	-- return SplatoonSWEPs.GridSurf[x][y][z]
-end
-
-local function IsExternalSurface(verts, center, normal)
-  	normal = normal * 0.5
-  	return
-  		bit.band(util.PointContents(center + normal), ALL_VISIBLE_CONTENTS) == 0 or
-		bit.band(util.PointContents(verts[1] + (center - verts[1]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0 or
-		bit.band(util.PointContents(verts[2] + (center - verts[2]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0 or
-		bit.band(util.PointContents(verts[3] + (center - verts[3]) * 0.05 + normal), ALL_VISIBLE_CONTENTS) == 0
-end
+local rtpow = 13
+local rtsize = 2^rtpow --8192
+SplatoonSWEPs.RenderTarget = {
+	Side = rtsize,
+	Area = rtsize^2,
+	Efficiency = 0.5,
+}
 
 function SplatoonSWEPs:GetBoundingBox(minbound, vectors)
 	local mins = Vector(math.huge, math.huge, math.huge)
@@ -60,25 +48,68 @@ function SplatoonSWEPs:CollisionAABB(mins1, maxs1, mins2, maxs2)
 end
 
 function SplatoonSWEPs:Initialize()
-	SplatoonSWEPs.Surfaces = {}
-	SplatoonSWEPs.SurfaceArea = 0
-	SplatoonSWEPs.BSP:Init()
-	print("NumFacesBSP: ", SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.FACES).num)
-	print("NumPlanesBSP: ", SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.PLANES).num)
-	SplatoonSWEPs.BSP = nil
-	print("NumSurfaces: ", table.Count(SplatoonSWEPs.Surfaces))
-	print("SurfaceArea: ", SplatoonSWEPs.SurfaceArea)
-	-- for _, face_array in pairs(SplatoonSWEPs.Surfaces) do
-		-- for _, f in ipairs(face_array) do
-			-- f.Polygon = f.Polygon + SZL.Polygon(nil, {})
-		-- end
-	-- end
+	local self = SplatoonSWEPs
+	self.Surfaces = {Area = 0}
+	self.BSP:Init()
+	print("NumFacesBSP: ", self.BSP:GetLump(self.LUMP.FACES).num)
+	print("NumPlanesBSP: ", self.BSP:GetLump(self.LUMP.PLANES).num)
+	print("NumSurfaces: ", table.Count(self.Surfaces))
+	print("SurfaceArea: ", self.SurfaceArea)
+	
+	--1unit -> pixels
+	self.RenderTarget.Ratio = math.sqrt((self.RenderTarget.Area * self.RenderTarget.Efficiency) / self.Surfaces.Area)
+	
+	local convertunit = self.RenderTarget.Ratio / self.RenderTarget.Side
+	local UVcursor = vector_origin
+	local nextV = 0
+	for _, face_array in pairs(self.Surfaces) do
+		for _, f in ipairs(face_array) do
+			f.MeshVertex = {}
+			f.MeshTriangle = {}
+			local longestsegment, longestdistance = nil, 0
+			for i, v in ipairs(f.Vertices2D) do
+				local d = v:DistToSqr(f.Vertices2D[i % #f.Vertices2D + 1])
+				if d > longestdistance then
+					d = longestdistance
+					longestsegment = i
+				end
+			end
+			longestsegment = f.Vertices2D[longestsegment % #f.Vertices2D + 1] - f.Vertices2D[longestsegment]
+			
+			local rotated = {}
+			local angle = Angle(0, -math.deg(math.atan2(longestsegment.y, longestsegment.x)), 0)
+			local mins = Vector(math.huge, math.huge, 0)
+			local maxs = -mins
+			for i, v in ipairs(f.Vertices2D) do
+				local vr = Vector(v)
+				vr:Rotate(angle)
+				table.insert(rotated, vr)
+				mins.x = math.min(mins.x, vr.x)
+				mins.y = math.min(mins.y, vr.y)
+				maxs.x = math.max(maxs.x, vr.x)
+				maxs.y = math.max(maxs.y, vr.y)
+			end
+			
+			for i, v in ipairs(rotated) do --UV coordinates
+				local UV = (v - mins) * convertunit + UVcursor
+				f.MeshVertex[i] = {
+					pos = f.Vertices[i],
+					u = UV.x,
+					v = UV.y,
+				}
+			end
+			maxs, mins = maxs - mins, vector_origin
+			
+		end
+	end
+	
+	self.BSP = nil
 end
-hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
 
-util.AddNetworkString("SplatoonSWEPs: Send error message from server")
+hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)
+util.AddNetworkString("SplatoonSWEPs: Send an error message")
 function SplatoonSWEPs:SendError(msg, icon, duration, user)
-	net.Start("SplatoonSWEPs: Send error message from server")
+	net.Start("SplatoonSWEPs: Send an error message")
 	net.WriteString(msg)
 	net.WriteUInt(icon, SplatoonSWEPs.SEND_ERROR_NOTIFY_BITS)
 	net.WriteUInt(duration, SplatoonSWEPs.SEND_ERROR_DURATION_BITS)
