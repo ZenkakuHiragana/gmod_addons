@@ -12,7 +12,11 @@ if SLVBase and not SLVBase.IsFixedNormalizeAngle then
 	SLVBase.IsFixedNormalizeAngle = true
 end
 
-SplatoonSWEPs = SplatoonSWEPs or {}
+SplatoonSWEPs = {
+	RenderTarget = {},
+	SortedSurfaces = {},
+	Surfaces = {Area = 0, AreaBound = 0, LongestEdge = 0},
+}
 AddCSLuaFile "../splatoonsweps_const.lua"
 include "../splatoonsweps_const.lua"
 include "splatoonsweps_geometry.lua"
@@ -21,12 +25,9 @@ include "splatoonsweps_bsp.lua"
 
 local rtpow = 13
 local rtsize = 2^rtpow --8192
-SplatoonSWEPs.RenderTarget = {
-	Side = rtsize,
-	Area = rtsize^2,
-	Efficiency = 0.5,
-}
-
+local rtarea = rtsize^2
+local rtmergin = 2 / rtsize
+local rtmerginSqr = rtmergin^2
 function SplatoonSWEPs:GetBoundingBox(minbound, vectors)
 	local mins = Vector(math.huge, math.huge, math.huge)
 	local maxs = -mins
@@ -47,63 +48,49 @@ function SplatoonSWEPs:CollisionAABB(mins1, maxs1, mins2, maxs2)
 			mins1.z < maxs2.z and maxs1.z > mins2.z
 end
 
-function SplatoonSWEPs:Initialize()
-	local self = SplatoonSWEPs
-	self.Surfaces = {Area = 0}
-	self.BSP:Init()
-	print("NumFacesBSP: ", self.BSP:GetLump(self.LUMP.FACES).num)
-	print("NumPlanesBSP: ", self.BSP:GetLump(self.LUMP.PLANES).num)
-	print("NumSurfaces: ", table.Count(self.Surfaces))
-	print("SurfaceArea: ", self.SurfaceArea)
-	
-	--1unit -> pixels
-	self.RenderTarget.Ratio = math.sqrt((self.RenderTarget.Area * self.RenderTarget.Efficiency) / self.Surfaces.Area)
-	
-	local convertunit = self.RenderTarget.Ratio / self.RenderTarget.Side
-	local UVcursor = vector_origin
-	local nextV = 0
-	for _, face_array in pairs(self.Surfaces) do
-		for _, f in ipairs(face_array) do
-			f.MeshVertex = {}
-			f.MeshTriangle = {}
-			local longestsegment, longestdistance = nil, 0
-			for i, v in ipairs(f.Vertices2D) do
-				local d = v:DistToSqr(f.Vertices2D[i % #f.Vertices2D + 1])
-				if d > longestdistance then
-					d = longestdistance
-					longestsegment = i
-				end
-			end
-			longestsegment = f.Vertices2D[longestsegment % #f.Vertices2D + 1] - f.Vertices2D[longestsegment]
-			
-			local rotated = {}
-			local angle = Angle(0, -math.deg(math.atan2(longestsegment.y, longestsegment.x)), 0)
-			local mins = Vector(math.huge, math.huge, 0)
-			local maxs = -mins
-			for i, v in ipairs(f.Vertices2D) do
-				local vr = Vector(v)
-				vr:Rotate(angle)
-				table.insert(rotated, vr)
-				mins.x = math.min(mins.x, vr.x)
-				mins.y = math.min(mins.y, vr.y)
-				maxs.x = math.max(maxs.x, vr.x)
-				maxs.y = math.max(maxs.y, vr.y)
-			end
-			
-			for i, v in ipairs(rotated) do --UV coordinates
-				local UV = (v - mins) * convertunit + UVcursor
-				f.MeshVertex[i] = {
-					pos = f.Vertices[i],
-					u = UV.x,
-					v = UV.y,
-				}
-			end
-			maxs, mins = maxs - mins, vector_origin
-			
+local function GetUV(convertunit)
+	local u, v, nextV = 0, 0, 0
+	local convSqr = convertunit^2
+	for _, face in ipairs(SplatoonSWEPs.SortedSurfaces) do --Using next-fit approach
+		if face.Vertices2D.Area / convSqr < rtmerginSqr then continue end
+		local bound = face.Vertices2D.bound / convertunit
+		nextV = math.max(nextV, bound.y)
+		if 1 - u < bound.x then 
+			u, v, nextV = 0, v + nextV + rtmergin, bound.y
 		end
+		
+		face.MeshVertex = {}
+		for i, vert in ipairs(face.Vertices2D) do
+			local UV = vert / convertunit --Get UV coordinates
+			table.insert(face.MeshVertex, {
+				pos = face.Vertices[i],
+				u = UV.x + u,
+				v = UV.y + v,
+			})
+		end
+		
+		u = u + bound.x + rtmergin --Advance U-coordinate
 	end
 	
+	return v + nextV
+end
+
+function SplatoonSWEPs:Initialize()
+	local self = SplatoonSWEPs
+	self.BSP:Init()
 	self.BSP = nil
+	
+	--Ratio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	self.RenderTarget.Ratio = math.max(math.sqrt(self.Surfaces.AreaBound / rtarea), self.Surfaces.LongestEdge / rtsize)
+	table.sort(self.SortedSurfaces, function(a, b) return a.Vertices2D.Area > b.Vertices2D.Area end)
+	
+	--convertunit[pixel * units/pixel -> units]
+	local convertunit = rtsize * self.RenderTarget.Ratio
+	local maxY = GetUV(convertunit)
+	while maxY > 1 do
+		convertunit = convertunit * ((maxY - 1) * 0.475 + 1.0005)
+		maxY = GetUV(convertunit)
+	end
 end
 
 hook.Add("InitPostEntity", "SetupSplatoonGeometry", SplatoonSWEPs.Initialize)

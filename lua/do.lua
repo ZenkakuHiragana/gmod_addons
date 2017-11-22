@@ -95,7 +95,27 @@ local function doit()
 	end
 end
 
-drawface(SplatoonSWEPs.Surfaces.Concave)
+include "autorun/debug.lua"
+local c = 1000
+debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 1) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(1, 0, 0) * c, Vector(1, 1, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(1, 1, 0) * c, Vector(0, 1, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0), true)
+
+for i, f in ipairs(SplatoonSWEPs.SortedSurfaces) do
+	-- f = SplatoonSWEPs.SortedSurfaces[3]
+	local t = f.Vertices2D
+	local t = f.MeshVertex or {}
+	for k, v in ipairs(t) do
+		local w = t[k % #t + 1]
+		-- print(v.u, v.v)
+		DebugLine(Vector(v.u, v.v, 0) * c, Vector(w.u, w.v, 0) * c, true)
+		if i == 3 then DebugLine(v.pos, w.pos, true) end
+		-- if i == 3 then DebugLine(v, w, true) DebugText(v, k) end
+	end
+	-- if i > 3 then break end
+end
 
 if SERVER then return end
 

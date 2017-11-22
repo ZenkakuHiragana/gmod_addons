@@ -93,7 +93,9 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	for _, face_array in pairs(SplatoonSWEPs.Surfaces) do
 		if not istable(face_array) then continue end
 		for k, f in ipairs(face_array) do
-			if f.normal:Dot(normal) < COS_MAX_DEG_DIFF or
+			local fnormal = face_array.normal
+			local fangle = face_array.angle
+			if fnormal:Dot(normal) < COS_MAX_DEG_DIFF or
 				not SplatoonSWEPs:CollisionAABB(mins, maxs, f.mins, f.maxs) then
 				continue
 			end
@@ -102,23 +104,15 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			local reference = {}
 			for i, v in ipairs(reference_polys) do --Change origin
 				reference[i] = Vector3DTo2D(WorldToLocal(GetPlaneProjection(
-					v, f.origin, f.normal, f.normal), angle_zero, f.origin, f.angle), nil)
+					v, f.origin, fnormal, fnormal), angle_zero, f.origin, fangle), nil)
 			end
 
-			for _, p in ipairs(f.Polygon) do
-				local f3d = {}
-				for i, v in ipairs(p) do
-					-- DebugLine(v, p[i % #p + 1], true)
-					f3d[i] = LocalToWorld(SZL.Vector2DTo3D(v), angle_zero, f.origin, f.angle)
-				end
-
-				for i, v in ipairs(f3d) do
-					DebugLine(v, f3d[i % #f3d + 1], true)
-					DebugVector(v, f.normal * 50, true)
-				end
+			for i, v in ipairs(f.Vertices) do
+				DebugLine(v, f.Vertices[i % #f.Vertices + 1], true)
+				DebugVector(v, fnormal * 50, true)
 			end
 			-- for i, v in ipairs(f.Polygon()) do
-				-- print(i, "=", LocalToWorld(SZL.Vector2DTo3D(v.start()), angle_zero, f.origin, f.angle), LocalToWorld(SZL.Vector2DTo3D(v.endpos()), angle_zero, f.origin, f.angle), v.left, v.right)
+				-- print(i, "=", LocalToWorld(SZL.Vector2DTo3D(v.start()), angle_zero, f.origin, fangle), LocalToWorld(SZL.Vector2DTo3D(v.endpos()), angle_zero, f.origin, fangle), v.left, v.right)
 			-- end
 			-- debugoverlay.Box(vector_origin, mins, maxs, 5, Color(0, 255, 0, 64))
 			-- debugoverlay.Box(vector_origin, f.mins, f.maxs, 5, Color(0, 255, 0, 10))
@@ -134,7 +128,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			-- end
 			if not AND[1] or #AND[1] < 3 then continue end
 			if not InkGroup[k] then InkGroup[k] = {} end
-			PolyBoundingBox(AND, f.origin, f.angle) --AND.mins, AND.maxs
+			PolyBoundingBox(AND, f.origin, fangle) --AND.mins, AND.maxs
 
 			local overpaint = 0
 			for othercolor, polygroup in pairs(InkGroup[k]) do
@@ -146,23 +140,23 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 						polygroup[i] = union + AND
 						polygroup[i].color = color
 						polygroup[i].inkid = union.inkid
-						PolyBoundingBox(polygroup[i], f.origin, f.angle)
+						PolyBoundingBox(polygroup[i], f.origin, fangle)
 						table.insert(meshinfo, {
-							normal = f.normal,
+							normal = fnormal,
 							color = color,
 							faceid = k,
 							inkid = union.inkid,
-							triangles = MakeTriangles(union:triangulate(), f.origin, f.angle, f.normal),
+							triangles = MakeTriangles(union:triangulate(), f.origin, fangle, fnormal),
 						})
 					else
 						local overpoly = poly - AND
-						local overpolyTriangles = MakeTriangles(overpoly:triangulate(), f.origin, f.angle, f.normal)
+						local overpolyTriangles = MakeTriangles(overpoly:triangulate(), f.origin, fangle, fnormal)
 						overpoly.color = poly.color
 						overpoly.inkid = poly.inkid
-						PolyBoundingBox(overpoly, f.origin, f.angle)
+						PolyBoundingBox(overpoly, f.origin, fangle)
 
 						table.insert(meshinfo, {
-							normal = f.normal,
+							normal = fnormal,
 							color = poly.color,
 							faceid = k,
 							inkid = poly.inkid,
@@ -179,11 +173,11 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 				AND.color, AND.inkid = color, inkid
 				-- InkGroup[k][color] = {AND}
 				table.insert(meshinfo, {
-					normal = f.normal,
+					normal = fnormal,
 					color = color,
 					faceid = k,
 					inkid = inkid,
-					triangles = MakeTriangles(AND:triangulate(), f.origin, f.angle, f.normal),
+					triangles = MakeTriangles(AND:triangulate(), f.origin, fangle, fnormal),
 				})
 			end
 
