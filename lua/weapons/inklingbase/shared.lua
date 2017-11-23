@@ -165,7 +165,7 @@ function SWEP:Deploy()
 	
 		self.Squid = file.Exists(SplatoonSWEPs.Squidmodel[squidindex], "GAME")
 		self.ColorCode = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("InkColor"), 1)
-		self.Color = SplatoonSWEPs.GetColor(self.ColorCode)
+		self.Color = SplatoonSWEPs:GetColor(self.ColorCode)
 		self.VectorColor = Vector(self.Color.r / 255, self.Color.g / 255, self.Color.b / 255)
 		self:SetInkColorProxy(self.VectorColor)
 		self:SetCurrentInkColor(Vector(self.Color.r, self.Color.g, self.Color.b))

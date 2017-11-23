@@ -54,8 +54,7 @@ function SWEP:CustomPrimaryAttack(canattack)
 end
 
 function SWEP:CustomSecondaryAttack(canattack)
-	ClearInk()
-	self.Owner:SendLua("ClearInk()")
+	SplatoonSWEPs:ClearAllInk()
 end
 
 function SWEP:CustomDataTables()

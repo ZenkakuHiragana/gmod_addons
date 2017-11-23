@@ -21,6 +21,7 @@ local CVAR_DEFAULT = {
 	1,
 	1,
 	1,
+	SplatoonSWEPs.RTResID.MEDIUM,
 }
 local CVAR_DESC = {	[[
 Your ink color.  Available values are:
@@ -42,6 +43,23 @@ Your thirdperson model.  Available values are:
 	"1: You can heal yourself when you are in ink.\n0: You can not.",
 	"1: You can reload your ink when you are not in ink.\n0: You can not.",
 	"1: You can reload your ink when you are in ink.\n0: You can not.",
+	[[
+RenderTarget resolution used in ink system.
+Restart is required to apply the change.
+Higher option needs more VRAM.
+Make sure your graphics card has enough space of video memory.
+1: RT has 4096x4096 resolution.
+    This option uses 64MB of your VRAM.
+2: RT has 2x4096x4096 resolution.
+    The resolution is twice as large as option 1.
+    This option uses 128MB of your VRAM.
+3: 8192x8192, using 256MB.
+4: 2x8192x8192, using 512MB.
+5: 16384x16384, using 1GB.
+6: 2x16384x16384, using 2GB.
+7: 32768x32768, using 4GB.
+8: 2x32768x32768, using 8GB.
+]],
 }
 for i, c in ipairs(SplatoonSWEPs.ConVar) do
 	CreateClientConVar(c, tostring(CVAR_DEFAULT[i]), true, true, CVAR_DESC[i])
@@ -70,7 +88,7 @@ function SplatoonSWEPs:ConfigMenu()
 	LabelError:SetVisible(false)
 	
 	local function GetColor() --Get current color for preview model
-		local color = SplatoonSWEPs.GetColor(SplatoonSWEPs:GetConVarInt("InkColor"))
+		local color = SplatoonSWEPs:GetColor(SplatoonSWEPs:GetConVarInt("InkColor"))
 		return Vector(color.r, color.g, color.b) / 255
 	end
 	

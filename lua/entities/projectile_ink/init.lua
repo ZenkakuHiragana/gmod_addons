@@ -9,7 +9,7 @@ SZL.namespace "SZL"
 include "includes/modules/geometry.lua"
 include "includes/modules/polybool.lua"
 
-local circle_polys = 8
+local circle_polys = 12
 local reference_polys = {}
 local reference_vert = Vector2D(1, 0)
 local reference_vert45 = Vector2D(1, 0)
@@ -38,7 +38,7 @@ function ENT:Initialize()
 	if not IsValid(ph) then return end
 	ph:SetMaterial("watermelon") --or "flesh"
 	
-	self.InkRadius = 200
+	self.InkRadius = 100
 	self.InkRadiusSqr = self.InkRadius^2
 	
 	if displacementOverlay then

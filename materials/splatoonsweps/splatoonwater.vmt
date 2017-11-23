@@ -1,10 +1,8 @@
 "Refract"
 {
- 	"$model" "1"
 	"$bluramount" "1"
- 	"$refractamount" ".35"
-	"$refracttint" "[1.2 1.2 1.2]"
+ 	"$refractamount" "5"
+	"$refracttint" "[.8 .8 .8]"
 	"$dudvmap" "splatoonsweps/splatoonwater_normal"
 	"$normalmap" "splatoonsweps/splatoonwater_normal"
-	"$surfaceprop" "water"
 }

@@ -1,133 +1,142 @@
 
 --Clientside ink manager
-SplatoonSWEPs = SplatoonSWEPs or {}
-
+local InkAlpha = 160
+local MeshColor = ColorAlpha(color_white, InkAlpha)
+SplatoonSWEPs = SplatoonSWEPs or {
+	IMesh = {Mesh()},
+	MeshTriangles = {{}},
+	RenderTarget = {
+		Name = "splatoonsweps_rendertarget",
+	},
+	SortedSurfaces = {},
+	Surfaces = {Area = 0, AreaBound = 0, LongestEdge = 0},
+}
+include "../splatoonsweps_shared.lua"
+include "../splatoonsweps_bsp.lua"
 include "../splatoonsweps_const.lua"
 include "splatoonsweps_userinfo.lua"
-local MAX_PROCESS_QUEUE_AT_ONCE = 10000
-local mat = Material("debug/debugbrushwireframe")
-local IMaterial = Material("splatoonsweps/splatoonink.vmt")
-local WaterOverlap = Material("splatoonsweps/splatoonwater.vmt")
-local InkGroup = InkGroup or {}
-local InkQueue = InkQueue or {}
+include "splatoonsweps_inkmanager_cl.lua"
+include "splatoonsweps_network_cl.lua"
 
-net.Receive("SplatoonSWEPs: Broadcast ink vertices", function(len, ply)
-	if not LocalPlayer().IsReceivingInkData then
-		LocalPlayer().IsReceivingInkData = true
-		LocalPlayer().ReceivingInkData = {}
+function SplatoonSWEPs:GetRTSize()
+	return SplatoonSWEPs.RTSize[SplatoonSWEPs:GetConVarInt "RTResolution"]
+end
+
+function SplatoonSWEPs:ClearAllInk()
+	render.PushRenderTarget(SplatoonSWEPs.RenderTarget.Texture)
+	render.OverrideAlphaWriteEnable(true, true)
+	render.ClearDepth()
+	render.ClearStencil()
+	render.Clear(0, 0, 0, 0)
+	render.OverrideAlphaWriteEnable(false)
+	render.PopRenderTarget()
+	game.GetWorld():RemoveAllDecals()
+end
+
+local INK_SURFACE_DELTA_NORMAL = 0.8 --Distance between map surface and ink mesh
+local function Initialize()
+	local self = SplatoonSWEPs
+	self.BSP:Init() --Parsing BSP file
+	self.BSP = nil
+	
+	local rtsize = SplatoonSWEPs:GetRTSize()
+	local rtarea = rtsize^2
+	local rtmergin = 2 / rtsize
+	local rtmerginSqr = rtmergin^2
+	local function GetUV(convertunit)
+		local u, v, nextV = 0, 0, 0
+		local convSqr = convertunit^2
+		for _, face in ipairs(SplatoonSWEPs.SortedSurfaces) do --Using next-fit approach
+			-- if face.Vertices2D.Area / convSqr < rtmerginSqr then continue end
+			local bound = face.Vertices2D.bound / convertunit
+			nextV = math.max(nextV, bound.y)
+			if 1 - u < bound.x then 
+				u, v, nextV = 0, v + nextV + rtmergin, bound.y
+			end
+			
+			for i, vertex in ipairs(face.Vertices2D) do
+				local UV = vertex / convertunit --Get UV coordinates
+				face.MeshVertex[i] = {
+					color = MeshColor,
+					pos = face.Vertices[i] + face.Parent.normal * INK_SURFACE_DELTA_NORMAL,
+					u = UV.x + u,
+					v = UV.y + v,
+				}
+			end
+			
+			face.MeshVertex.origin = Vector(u, v, 0)
+			u = u + bound.x + rtmergin --Advance U-coordinate
+		end
+		
+		return v + nextV
 	end
 	
-	local pos, u, v = vector_origin, 0, 0
-	for i = 1, len / 8 do
-		pos = net.ReadVector()
-		if pos == vector_origin then break end
-		u = net.ReadFloat()
-		v = net.ReadFloat()
-		table.insert(LocalPlayer().ReceivingInkData, {pos = pos, u = u, v = v})
+	--Ratio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	self.RenderTarget.Ratio = math.max(math.sqrt(self.Surfaces.AreaBound / rtarea), self.Surfaces.LongestEdge / rtsize)
+	table.sort(self.SortedSurfaces, function(a, b) return a.Vertices2D.Area > b.Vertices2D.Area end)
+	
+	--convertunit[pixel * units/pixel -> units]
+	local convertunit = rtsize * self.RenderTarget.Ratio
+	local maxY = GetUV(convertunit) --UV mapping to map geometry
+	while maxY > 1 do
+		convertunit = convertunit * ((maxY - 1) * 0.475 + 1.0005)
+		maxY = GetUV(convertunit)
 	end
-end)
-
-net.Receive("SplatoonSWEPs: Finalize ink refreshment", function(...)
-	local normal = net.ReadVector()
-	local color = net.ReadUInt(SplatoonSWEPs.COLOR_BITS)
-	local id = net.ReadUInt(32)
-	local inkid = net.ReadInt(32)
-	local newink = LocalPlayer().ReceivingInkData
-	table.insert(InkQueue, {
-		normal = normal,
-		color = color,
-		id = id,
-		inkid = inkid,
-		newink = newink,
-	})
-	LocalPlayer().IsReceivingInkData = nil
-	LocalPlayer().ReceivingInkData = {}
-end)
-
-net.Receive("SplatoonSWEPs: Send error message from server", function(...)
-	local msg = net.ReadString()
-	local icon = net.ReadUInt(3)
-	local duration = net.ReadUInt(4)
-	notification.AddLegacy(msg, icon, duration)
-end)
-
-function ClearInk()
-	for k, v in pairs(InkGroup) do
-		if v.imesh then v.imesh:Destroy() end
-	end
-	InkGroup = {}
-	InkQueue = {}
-end
-
-local imt = {
-	{pos = Vector(0, 0, 0), u = 0, v = 0, color = Color(255, 255, 0)},
-	{pos = Vector(100, 0, 0), u = 1, v = 0},
-	{pos = Vector(0, 100, 0), u = 0, v = 1},
-}
-local function DrawMeshes()
-	for id, ink in pairs(InkGroup) do
-		render.SetMaterial(IMaterial)
-		ink.imesh:Draw()
-		-- render.SetMaterial(WaterOverlap)
-		-- ink.imesh:Draw()
-	end
-end
-
-local function ProcessQueue()
-	while true do
-		local done = 0
-		for i, q in ipairs(InkQueue) do
-			if not InkGroup[q.id] then InkGroup[q.id] = {} end
-			if InkGroup[q.id].imesh then
-				InkGroup[q.id].imesh:Destroy()
-			end
-			InkGroup[q.id].imesh = Mesh()
-			InkGroup[q.id][q.inkid] = {}
-			
-			local triangles = {}
-			local color = SplatoonSWEPs.GetColor(q.color + 1)
-			local lightcolor, r, g, b = vector_origin, 0, 0, 0
-			for i, v in ipairs(q.newink) do
-				lightcolor = render.ComputeLighting(v.pos, q.normal) + Vector(0.1, 0.1, 0.1)
-				q.newink[i].color = Color(
-					math.Clamp(color.r * math.Clamp(lightcolor.x, 0, 1), 0, 255),
-					math.Clamp(color.g * math.Clamp(lightcolor.y, 0, 1), 0, 255),
-					math.Clamp(color.b * math.Clamp(lightcolor.z, 0, 1), 0, 255),
-					math.Remap(765 - color.r - color.g - color.b, 0, 765, 160, 254)
-				) --765 = 255 * 3
-				table.insert(InkGroup[q.id][q.inkid], q.newink[i])
-			end
-			
-			for i, ink in pairs(InkGroup[q.id]) do
-				if not isnumber(i) then continue end
-				for k, v in ipairs(ink) do
-					table.insert(triangles, v)
-				end
-			end
-			triangles = table.Reverse(triangles)
-			InkGroup[q.id].imesh:BuildFromTriangles(triangles)
-			
-			q.done = true
-			done = done + 1
-			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
+	
+	--Building MeshVertex
+	local build = 1
+	for _, face in ipairs(self.SortedSurfaces) do
+		for i = 3, #face.MeshVertex do
+			table.insert(self.MeshTriangles[build], face.MeshVertex[i - 1])
+			table.insert(self.MeshTriangles[build], face.MeshVertex[i])
+			table.insert(self.MeshTriangles[build], face.MeshVertex[1])
 		end
-		local newqueue = {}
-		for i, v in ipairs(InkQueue) do
-			if not v.done then table.insert(newqueue. v) end
-		end
-		InkQueue = newqueue
-		coroutine.yield()
-	end
-end
-local DoCoroutine = coroutine.create(ProcessQueue)
-local function GMTick()
-	if coroutine.status(DoCoroutine) ~= "dead" then
-		local ok, message = coroutine.resume(DoCoroutine)
-		if not ok then
-			ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n")
+		
+		if #self.MeshTriangles[build] >= 65535 then
+			build = build + 1
+			self.MeshTriangles[build] = {}
+			self.IMesh[build] = Mesh()
 		end
 	end
+	
+	for i, t in ipairs(self.MeshTriangles) do
+		self.IMesh[i]:BuildFromTriangles(t)
+	end
+	
+	--Creating a RenderTarget
+	self.RenderTarget.Texture = GetRenderTargetEx(
+		self.RenderTarget.Name,
+		rtsize, rtsize,
+		RT_SIZE_NO_CHANGE,
+		MATERIAL_RT_DEPTH_NONE,
+		2048 + 8192 + 32768 + 8388608,
+		CREATERENDERTARGETFLAGS_HDR,
+		IMAGE_FORMAT_RGBA8888
+	)
+	self.RenderTarget.Material = CreateMaterial(
+		self.RenderTarget.Name,
+		"UnlitGeneric",
+		{
+			["$basetexture"] = self.RenderTarget.Texture:GetName(),
+			["$envmap"] = "env_cubemap",
+			["$envmaptint"] = "[.2 .2 .2]",
+			["$translucent"] = "1",
+			["$smooth"] = "1",
+			["$vertexalpha"] = "1",
+			["$vertexcolor"] = "1",
+		}
+	)
+	
+	self:ClearAllInk()
+	function SplatoonSWEPs:PixelsToUnits(pixels) return pixels * self.RenderTarget.Ratio end
+	function SplatoonSWEPs:PixelsToUV(pixels) return pixels / rtsize end
+	function SplatoonSWEPs:UnitsToPixels(units) return units / self.RenderTarget.Ratio end
+	function SplatoonSWEPs:UnitsToUV(units) return units / convertunit end
+	function SplatoonSWEPs:UVToPixels(uv) return uv * rtsize end
+	function SplatoonSWEPs:UVToUnits(uv) return uv * convertunit end
+	self.RenderTarget.Ratio = convertunit / rtsize
+	self.RenderTarget.Ready = true
+	print(#self.IMesh)
 end
 
-hook.Add("PostDrawOpaqueRenderables", "SplatoonSWEPsDrawInk", DrawMeshes)
-hook.Add("Tick", "SplatoonSWEPsRegisterInk_cl", GMTick)
+hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", Initialize)

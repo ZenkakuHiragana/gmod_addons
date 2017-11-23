@@ -9,6 +9,7 @@ SplatoonSWEPs.ConVar = {
 	"cl_splatoonsweps_canhealink",
 	"cl_splatoonsweps_canreloadstand",
 	"cl_splatoonsweps_canreloadink",
+	"cl_splatoonsweps_rtresolution",
 }
 
 SplatoonSWEPs.ConVarName = {
@@ -18,6 +19,29 @@ SplatoonSWEPs.ConVarName = {
 	CanHealInk = 4,
 	CanReloadStand = 5,
 	CanReloadInk = 6,
+	RTResolution = 7,
+}
+
+SplatoonSWEPs.RTResID = {
+	SMALL	= 1, --	4096x4096,		64MB
+	DSMALL	= 2, --	2x4096x4096,	128MB
+	MEDIUM	= 3, --	8192x8192,		256MB
+	DMEDIUM	= 4, --	2x8192x8192,	512MB 
+	LARGE	= 5, --	16384x16384,	1GB
+	DLARGE	= 6, --	2x16384x16384,	2GB
+	ULTRA	= 7, --	32768x32768,	4GB
+	DULTRA	= 8, --	2x32768x32768,	8GB
+}
+
+SplatoonSWEPs.RTSize = {
+	[SplatoonSWEPs.RTResID.SMALL	] = 4096,
+	[SplatoonSWEPs.RTResID.DSMALL	] = 4096,
+	[SplatoonSWEPs.RTResID.MEDIUM	] = 8192,
+	[SplatoonSWEPs.RTResID.DMEDIUM	] = 8192,
+	[SplatoonSWEPs.RTResID.LARGE	] = 16384,
+	[SplatoonSWEPs.RTResID.DLARGE	] = 16384,
+	[SplatoonSWEPs.RTResID.ULTRA	] = 32768,
+	[SplatoonSWEPs.RTResID.DULTRA	] = 32768,
 }
 
 function SplatoonSWEPs:GetConVarName(name)
@@ -146,6 +170,6 @@ SplatoonSWEPs.ColorName = {
 }
 SplatoonSWEPs.MAX_COLORS = #InkColors
 SplatoonSWEPs.COLOR_BITS = 5
-function SplatoonSWEPs.GetColor(colorid)
+function SplatoonSWEPs:GetColor(colorid)
 	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)]
 end

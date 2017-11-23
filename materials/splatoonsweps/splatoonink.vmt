@@ -1,20 +1,5 @@
 "UnlitGeneric"
 {
 	"$basetexture" "splatoonsweps/splatoonink"
-	"$bumpmap" "splatoonsweps/splatoonink_normal"
-	"$color" "[1 1 1]"
-	"$surfaceprop" "flesh"
-	// "$envmap" "env_cubemap"
-	// "$envmapmask" "splatoonsweps/splatoonink"
-	// "$envmaptint" "[0.2 0.2 0.2]"
-	// "$normalmapalphaenvmapmask" "1"
-	"$vertexcolor" "1"
-	"$vertexalpha" "1"
-	"$receiveflashlight" "1"
-	"$singlepassflashlight" "1"
-	// "$blendtintbybasealpha" "1"
-
-	// "$phong" "1"
-	// "$basemapalphaphongmask" "1"
-	// "$rimlight" "1"
+	"$translucent" "1"
 }
