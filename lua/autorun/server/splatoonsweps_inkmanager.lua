@@ -28,11 +28,12 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	local inkqueue = 0
 	local mins, maxs = SplatoonSWEPs:GetBoundingBox(MIN_BOUND, reference_polys)
 	for i, face_array in pairs(SplatoonSWEPs.Surfaces) do
+		-- DebugVector(vector_origin, face_array.normal * 50, true)
 		if not istable(face_array) or face_array.normal:Dot(normal) < COS_MAX_DEG_DIFF then continue end
-		if inkqueue > radius / 4 then break end
+		if inkqueue > radius * 2 then break end
 		for k, f in ipairs(face_array) do
 			if not SplatoonSWEPs:CollisionAABB(mins, maxs, f.mins, f.maxs) then continue end
-			if inkqueue > radius / 4 then break end
+			if inkqueue > radius * 2 then break end
 			inkqueue = inkqueue + 1
 			net.Start "SplatoonSWEPs: DrawInk"
 			net.WriteString(tostring(i))

@@ -24,12 +24,6 @@ function ENT:OnRemove()
 	if self.IMesh then self.IMesh:Destroy() end
 end
 
-function ENT:Think()
-	if LocalPlayer():KeyDown(IN_USE) then
-		ClearInk()
-	end
-end
-
 function ENT:Draw()
 	if self:GetIsInk() then
 	--	if not self.IMesh then

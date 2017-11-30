@@ -1,8 +1,0 @@
-"Refract"
-{
-	"$bluramount" "1"
- 	"$refractamount" "5"
-	"$refracttint" "[.8 .8 .8]"
-	"$dudvmap" "splatoonsweps/splatoonwater_normal"
-	"$normalmap" "splatoonsweps/splatoonwater_normal"
-}

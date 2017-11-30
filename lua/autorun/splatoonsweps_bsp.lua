@@ -148,6 +148,9 @@ local function read(arg)
 		elseif arg == "ULong" then
 			local n = bsp.bsp:ReadLong()
 			return n + (n < 0 and 4294967296 or 0)
+		elseif arg == "SignedByte" then
+			local n = bsp.bsp:ReadByte()
+			return n - (n > 127 and 256 or 0)
 		elseif arg == "Vector" then
 			local x = bsp.bsp:ReadFloat()
 			local y = bsp.bsp:ReadFloat()
@@ -175,6 +178,7 @@ function bsp:Init()
 	self:Parse(LUMP.EDGES)
 	self:Parse(LUMP.SURFEDGES)
 
+	self:Parse(LUMP.LIGHTING)
 	self:Parse(LUMP.TEXDATA)
 	self:Parse(LUMP.TEXINFO)
 
@@ -197,7 +201,7 @@ function bsp:ReadHeader()
 end
 
 local function GetRotatedAABB(v2d, angle)
-	local mins = Vector(math.huge, math.huge, 0)
+	local mins = Vector(math.huge, math.huge)
 	local maxs = -mins
 	for k, v in ipairs(v2d) do
 		v = Vector(v)
@@ -230,7 +234,7 @@ local function MakeSurface(key, mins, maxs, normal, angle, origin, v2d, v3d)
 	local area, minangle, minmins = 0, nil, nil
 	for i, v in ipairs(v2d) do --Get minimum AABB with O(n^2)
 		local seg = v2d[i % #v2d + 1] - v
-		local ang = Angle(0, 90 - math.deg(math.atan2(seg.y, seg.x)), 0)
+		local ang = Angle(0, 90 - math.deg(math.atan2(seg.y, seg.x)))
 		local mins, maxs = GetRotatedAABB(v2d, ang)
 		local bound = maxs - mins
 		local area = bound.x * bound.y
@@ -262,8 +266,11 @@ local function MakeSurface(key, mins, maxs, normal, angle, origin, v2d, v3d)
 	s.Area = s.Area + math.abs(area) / 2
 	s.AreaBound = s.AreaBound + v2d.Area
 	s.LongestEdge = math.max(s.LongestEdge, v2d.bound.x, v2d.bound.y)
+	
+	return facetable
 end
 
+local ddd = 0
 local function MakeDispTriangle(vert, planenormal)
 	local normal = (vert[1] - vert[2]):Cross(vert[3] - vert[2]):GetNormalized()
 	local angle = normal:Angle()
@@ -288,7 +295,7 @@ local function MakeDispTriangle(vert, planenormal)
 		v2d[i] = SplatoonSWEPs:To2D(v, origin, angle)
 	end
 	
-	MakeSurface(surfkey, mins, maxs, normal, angle, origin, v2d, vert)
+	local ft = MakeSurface(surfkey, mins, maxs, normal, angle, origin, v2d, vert)
 end
 
 local ParseFunction = {
@@ -375,8 +382,8 @@ end,
 
 [LUMP.TEXINFO] = function(lump)
 	local size = 72
-	local TexData = bsp:GetLump(LUMP.TEXDATA)
 	local s, t = 0, 1
+	local TexData = bsp:GetLump(LUMP.TEXDATA)
 	lump.num = math.min(math.floor(lump.length / size) - 1, 12288 - 1)
 	for i = 0, lump.num do
 		local here = bsp.bsp:Tell()
@@ -412,59 +419,81 @@ end,
 	end
 end,
 
+-- [LUMP.LIGHTING] = function(lump)
+	-- local size = 4
+	-- lump.num = math.min(math.floor(lump.length / size) - 1, 0x3FFFFF)
+	-- for i = 0, lump.num do
+		-- lump.data[i] = {}
+		-- lump.data[i].r = read "Byte"
+		-- lump.data[i].g = read "Byte"
+		-- lump.data[i].b = read "Byte"
+		-- lump.data[i].exponent = read "SignedByte"
+		
+		-- if SplatoonSWEPs.HDR then
+			-- local mul = 2^lump.data[i].exponent
+			-- lump.data[i].r = lump.data[i].r * mul
+			-- lump.data[i].g = lump.data[i].g * mul
+			-- lump.data[i].b = lump.data[i].b * mul
+		-- end
+		
+		-- lump.data[i].Color = Color(lump.data[i].r, lump.data[i].g, lump.data[i].b)
+	-- end
+-- end,
+
 [LUMP.FACES] = function(lump)
 	local size = 56
 	local planes = bsp:GetLump(LUMP.PLANES)
 	local surfedges = bsp:GetLump(LUMP.SURFEDGES)
 	local texinfo = bsp:GetLump(LUMP.TEXINFO)
+	local lighting = bsp:GetLump(LUMP.LIGHTING)
 	lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
 	for i = 0, lump.num do
-		lump.data[i] = {}
-		lump.data[i].plane = read "UShort"
-		lump.data[i].side = read "Byte"
-		lump.data[i].onNode = read "Byte" == 1
-		lump.data[i].firstedge = read "Long"
-		lump.data[i].numedges = read "Short"
-		lump.data[i].textureinfo = read "Short"
-		lump.data[i].dispinfo = read "Short"
-		lump.data[i].surfaceFogVolumeID = read "Short"
-		lump.data[i].styles = read(4)
-		lump.data[i].lightmapid = read "Long"
-		lump.data[i].area = read "Float"
-		lump.data[i].LightmapTextureMinsInLuxels = {}
-		lump.data[i].LightmapTextureMinsInLuxels[1] = read "Long"
-		lump.data[i].LightmapTextureMinsInLuxels[2] = read "Long"
-		lump.data[i].LightmapTextureSizeInLuxels = {}
-		lump.data[i].LightmapTextureSizeInLuxels[1] = read "Long"
-		lump.data[i].LightmapTextureSizeInLuxels[2] = read "Long"
-		lump.data[i].origFace = read "Long"
-		lump.data[i].numPrims = read "UShort"
-		lump.data[i].firstPrimID = read "UShort"
-		lump.data[i].smoothingGroups = read "ULong"
+		local f = {}
+		f.plane = read "UShort"
+		f.side = read "Byte"
+		f.onNode = read "Byte" == 1
+		f.firstedge = read "Long"
+		f.numedges = read "Short"
+		f.textureinfo = read "Short"
+		f.dispinfo = read "Short"
+		f.surfaceFogVolumeID = read "Short"
+		f.styles = read(4)
+		f.lightofs = read "Long"
+		f.area = read "Float"
+		f.LightmapTextureMinsInLuxels = Vector()
+		f.LightmapTextureMinsInLuxels.x = read "Long"
+		f.LightmapTextureMinsInLuxels.y = read "Long"
+		f.LightmapTextureSizeInLuxels = Vector()
+		f.LightmapTextureSizeInLuxels.x = read "Long"
+		f.LightmapTextureSizeInLuxels.y = read "Long"
+		f.origFace = read "Long"
+		f.numPrims = read "UShort"
+		f.firstPrimID = read "UShort"
+		f.smoothingGroups = read "ULong"
 
-		local PlaneTable = planes.data[lump.data[i].plane]
-		lump.data[i].index = i
-		lump.data[i].Vertices = {}
-		lump.data[i].PlaneOrigin = PlaneTable.Origin
-		lump.data[i].normal = PlaneTable.normal
-		lump.data[i].angle = lump.data[i].normal:Angle()
-		lump.data[i].TexInfoTable = texinfo.data[lump.data[i].textureinfo]
+		local PlaneTable = planes.data[f.plane]
+		f.index = i
+		f.Vertices = {}
+		f.PlaneOrigin = PlaneTable.Origin
+		f.normal = PlaneTable.normal
+		f.angle = f.normal:Angle()
+		f.TexInfoTable = texinfo.data[f.textureinfo]
 		
-		local texname = lump.data[i].TexInfoTable.TexData.name:lower()
+		local texname = f.TexInfoTable.TexData.name:lower()
 		if texname:find "tools/" or texname:find "water" or texname:find "color" or
-			bit.band(lump.data[i].TexInfoTable.flags, TextureFilterBits) ~= 0 then
+			bit.band(f.TexInfoTable.flags, TextureFilterBits) ~= 0 then
 			continue
 		end
 
 		local fullverts, full2d, center = {}, {}, vector_origin
-		for k = 0, lump.data[i].numedges - 1 do --Fetch all vertices
-			fullverts[k] = surfedges.data[lump.data[i].firstedge + k].start
+		for k = 0, f.numedges - 1 do --Fetch all vertices
+			fullverts[k] = surfedges.data[f.firstedge + k].start
 			center = center + fullverts[k]
 		end
 		center = center / (#fullverts + 1)
 		
 		for k, v in pairs(fullverts) do
-			full2d[k] = SplatoonSWEPs:To2D(v, center, lump.data[i].angle)
+			full2d[k] = SplatoonSWEPs:To2D(v, center, f.angle)
 		end
 		
 		local v2d = {Area = math.huge} --Vector2D
@@ -484,13 +513,32 @@ end,
 				mins.z = math.min(mins.z, v3d.z)
 				
 				table.insert(v2d, v)
-				table.insert(lump.data[i].Vertices, v3d)
+				table.insert(f.Vertices, v3d)
 			end
 		end
 		
-		lump.data[i].mins, lump.data[i].maxs = mins, maxs
-		if lump.data[i].dispinfo >= 0 then continue end
-		MakeSurface(lump.data[i].plane, mins, maxs, lump.data[i].normal, lump.data[i].angle, center, v2d, lump.data[i].Vertices)
+		f.mins, f.maxs = mins, maxs
+		lump.data[i] = f
+		if f.dispinfo >= 0 then continue end
+		local ft = MakeSurface(f.plane, mins, maxs, f.normal, f.angle, center, v2d, f.Vertices)
+		-- if not ft then continue end
+		-- local lv = f.TexInfoTable.lightmapVecs
+		-- local td = f.TexInfoTable.TexData
+		-- ft.Lightmap = {}
+		-- ft.Lightmap.TextureMinsInLuxels = f.LightmapTextureMinsInLuxels
+		-- ft.Lightmap.TextureSizeInLuxels = f.LightmapTextureSizeInLuxels
+		-- ft.Lightmap.s = Vector(lv[0][0], lv[0][1], lv[0][2])
+		-- ft.Lightmap.t = Vector(lv[1][0], lv[1][1], lv[1][2])
+		-- ft.Lightmap.Shift = Vector(lv[0][3], lv[1][3])
+		-- ft.Lightmap.width = td.width
+		-- ft.Lightmap.height = td.height
+		-- ft.Lightmap.view_width = td.view_width
+		-- ft.Lightmap.view_height = td.view_height
+		-- for i, v in ipairs(f.Vertices) do
+			-- ft.Lightmap[i] = Vector(v:Dot(ft.Lightmap.s), v:Dot(ft.Lightmap.t)) + ft.Lightmap.Shift - ft.Lightmap.TextureMinsInLuxels
+			-- ft.Lightmap[i].x = ft.Lightmap[i].x / 512
+			-- ft.Lightmap[i].y = ft.Lightmap[i].y / 256
+		-- end
 	end
 end,
 
@@ -512,6 +560,8 @@ end,
 		lump.data[i].MapFace = read "UShort"
 
 		lump.data[i].Face = faces.data[lump.data[i].MapFace]
+		if not lump.data[i].Face then continue end
+		
 		lump.data[i].Face.DispInfoTable = lump.data[i]
 		lump.data[i].DispVerts = {}
 		for k = 0, (2^lump.data[i].power + 1)^2 - 1 do
@@ -584,7 +634,8 @@ end,
 			end
 		end
 	end
-end,}
+end,
+}
 
 function bsp:Parse(parse_type)
 	local lump = self:GetLump(parse_type or "nil")

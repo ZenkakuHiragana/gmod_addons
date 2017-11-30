@@ -3,88 +3,152 @@
 if not SplatoonSWEPs then return end
 SplatoonSWEPs.InkQueue = {}
 
+util.PrecacheModel "models/hunter/blocks/cube025x025x025.mdl"
+-- local dummy
+
 local MAX_PROCESS_QUEUE_AT_ONCE = 10000
-local mat = Material "splatoonsweps/splatoonink"
-local lightmat = Material "splatoonsweps/splatooninklight"
+local inkmaterial = Material "splatoonsweps/splatoonink"
+local normalmaterial = Material "splatoonsweps/splatoonink_normal"
+local inklightmaterial = Material "splatoonsweps/splatooninklight"
+local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
 local test = Material "gm_construct/water"
 local WaterOverlap = Material "splatoonsweps/splatoonwater"
 local function DrawMeshes()
+	-- if not IsValid(dummy) then
+		-- dummy = ents.CreateClientProp "models/hunter/blocks/cube025x025x025.mdl"
+		-- dummy:SetPos(vector_origin)
+		-- dummy:Spawn()
+	-- end
+		
 	if SplatoonSWEPs.RenderTarget.Ready then
+		-- dummy:DrawModel()
+		local lighton = LocalPlayer():FlashlightIsOn() or #ents.FindByClass("*projectedtexture*") > 0
 		render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
+		render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
+		for i, m in ipairs(SplatoonSWEPs.IMesh) do
+			m:Draw()
+		end
+		
+		if lighton then
+			render.PushFlashlightMode(true)
+			for i, m in ipairs(SplatoonSWEPs.IMesh) do
+				m:Draw()
+			end
+			render.PopFlashlightMode()
+		end
+		
+		render.SetMaterial(SplatoonSWEPs.RenderTarget.WaterMaterial)
 		for i, m in ipairs(SplatoonSWEPs.IMesh) do
 			m:Draw()
 		end
 	end
 end
 
-local hsv = Material "vgui/hsv"
-local function DrawCircle(x, y, r, seg, uv)
-	uv = uv or 0
-	
-	-- surface.SetMaterial(hsv)
-	-- surface.DrawTexturedRect(x - r, y - r, 2 * r, 2 * r)
+local CircleFraction = -360 / 32
+local function CirclePoly(x, y, r, uv, deg)
+	uv, deg = uv or 0.5, deg or 0
+	local c = {{x = x, y = y, u = uv, v = uv}, {x = x, y = y + r, u = uv, v = uv * 2}}
+	for i = 0, 32 do
+		local a = math.rad(i * CircleFraction)
+		local sin, cos = math.sin(a + deg), math.cos(a + deg)
+		table.insert(c, i + 2, {
+			x = x + sin * r, y = y + cos * r,
+			u = sin * uv + uv, v = cos * uv + uv,
+		})
+	end
+	return c
+end
+
+local function GetLight(p, n)
+	local amb = render.GetAmbientLightColor()
+	local lightcolor = render.GetLightColor(p)
+	local light = render.ComputeLighting(p + n * 100, n)
+	local avg = (light + lightcolor + amb / 5) / 2.2
+	avg.x = math.Remap(avg.x, 0, 1, 0, 0.3)
+	avg.y = math.Remap(avg.y, 0, 1, 0, 0.3)
+	avg.z = math.Remap(avg.z, 0, 1, 0, 0.3)
+	return avg
 end
 
 local function ProcessQueue()
+	local self = SplatoonSWEPs
+	local vector_one = Vector(1, 1, 1)
 	while true do
 		local done = 0
-		for i, q in ipairs(SplatoonSWEPs.InkQueue) do
-			local c = SplatoonSWEPs:GetColor(q.c)
+		for i, q in ipairs(self.InkQueue) do
+			local c = self:GetColor(q.c)
 			local facearray = tonumber(q.facearray) or q.facearray
-			local f = SplatoonSWEPs.Surfaces[facearray][q.facenumber]
-			local org = f.MeshVertex.origin * SplatoonSWEPs:GetRTSize()
-			local p = org + SplatoonSWEPs:UnitsToPixels(SplatoonSWEPs:To2D(q.pos, f.origin, f.Vertices2D.angle))
-			local bound = SplatoonSWEPs:UnitsToPixels(f.Vertices2D.bound)
-			local radius = SplatoonSWEPs:UnitsToPixels(q.r)
+			local f = self.Surfaces[facearray][q.facenumber]
+			local org = f.MeshVertex.origin * self:GetRTSize()
+			local p = org + self:UnitsToPixels(self:To2D(q.pos, f.origin, f.Vertices2D.angle))
+			local bound = self:UnitsToPixels(f.Vertices2D.bound)
+			local radius = self:UnitsToPixels(q.r)
+			local sx, sy = math.floor(org.x) - 1, math.floor(org.y) - 1
+			local bx, by = math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1
+			local circle = CirclePoly(p.x, p.y, radius)
+			local circle_white = CirclePoly(p.x, p.y, radius, math.Rand(0.2, 1), math.Rand(-90, 90))
+			local circle_normal = CirclePoly(p.x, p.y, radius, math.Rand(0.08, 0.16), math.Rand(-30, 30))
+			facearray = self.Surfaces[facearray]
 			
-			local amb = render.GetAmbientLightColor()
-			local light = render.ComputeLighting(q.pos + vector_up, vector_up)
-			local clamp = (amb + light) * 6
-			local r = c.r * math.Clamp(clamp.x, 0, 1) / 255
-			local g = c.g * math.Clamp(clamp.y, 0, 1) / 255
-			local b = c.b * math.Clamp(clamp.z, 0, 1) / 255
-			
-			render.PushRenderTarget(SplatoonSWEPs.RenderTarget.Texture)
-			render.SetScissorRect(math.floor(org.x) - 1, math.floor(org.y) - 1,
-				math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1, true)
+			render.PushRenderTarget(self.RenderTarget.BaseTexture)
+			render.SetScissorRect(sx, sy, bx, by, true)
 			cam.Start2D()
-			surface.SetDrawColor(255, 255, 255, 255)
-			surface.SetMaterial(mat)
-			mat:SetVector("$color", Vector(r, g, b))
-			local circle = {{x = p.x, y = p.y, u = 0.5, v = 0.5}}
-			for i = 0, 32 do
-				local a = math.rad((i / 32) * -360)
-				table.insert(circle, {
-					x = p.x + math.sin(a) * radius,
-					y = p.y + math.cos(a) * radius,
-					u = math.sin(a) / 2 + 0.5,
-					v = math.cos(a) / 2 + 0.5,
-				})
-			end
-			table.insert(circle, {x = p.x, y = p.y + r, u = 0.5, v = 1})
+			surface.SetDrawColor(color_white)
+			surface.SetMaterial(inkmaterial)
+			inkmaterial:SetVector("$color", Vector(c.r, c.g, c.b) / 255)
 			surface.DrawPoly(circle)
-			mat:SetVector("$color", Vector(1, 1, 1))
+			inkmaterial:SetVector("$color", vector_one)
 			
-			surface.SetMaterial(lightmat)
-			lightmat:SetFloat("$alpha", math.Rand(0, (r + g + b) / 3 + 0.05))
-			local uv = math.Rand(0.2, 1)
-			local deg = math.Rand(-90, 90)
-			circle = {{x = p.x, y = p.y, u = uv, v = uv}}
-			for i = 0, 32 do
-				local a = math.rad((i / 32) * -360)
-				table.insert(circle, {
-					x = p.x + math.sin(a) * radius,
-					y = p.y + math.cos(a) * radius,
-					u = math.sin(a + deg) * uv + uv,
-					v = math.cos(a + deg) * uv + uv,
-				})
-			end
-			table.insert(circle, {x = p.x, y = p.y + r, u = uv, v = 2 * uv})
-			surface.DrawPoly(circle)
-			lightmat:SetFloat("$alpha", 1.0)
-			
+			surface.SetMaterial(inklightmaterial)
+			inklightmaterial:SetFloat("$alpha", math.Rand(0.05, .4))
+			surface.DrawPoly(circle_white)
+			inklightmaterial:SetFloat("$alpha", 1.0)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
+			render.PopRenderTarget()
+			
+			--Draw on normal map
+			render.PushRenderTarget(self.RenderTarget.Normalmap)
+			render.OverrideBlendFunc(true, BLEND_ONE, BLEND_ZERO, BLEND_ONE, BLEND_ZERO)
+			render.SetScissorRect(sx, sy, bx, by, true)
+			cam.Start2D()
+			surface.SetMaterial(normalmaterial)
+			surface.SetDrawColor(255, 255, 255, 255)
+			surface.DrawPoly(circle_normal)
+			cam.End2D()
+			render.SetScissorRect(0, 0, 0, 0, false)
+			render.OverrideBlendFunc(false)
+			render.PopRenderTarget()
+			
+			--Draw on lightmap
+			local light = GetLight(q.pos, facearray.normal)
+			local lp = (p - org) / 2
+			org, bound = org / 2, bound / 2
+			sx, sy = math.floor(org.x) - 1, math.floor(org.y) - 1
+			bx, by = math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1
+			render.PushRenderTarget(self.RenderTarget.Lightmap)
+			render.SetScissorRect(sx, sy, bx, by, true)
+			cam.Start2D()
+			draw.NoTexture()
+			surface.SetDrawColor(light:ToColor())
+			surface.DrawPoly(CirclePoly(p.x / 2, p.y / 2, radius / 6))
+			surface.SetMaterial(lightmapmaterial)
+			lightmapmaterial:SetVector("$color", light)
+			radius = radius / 8
+			for n, rad in pairs {[8] = radius * 1.6, [14] = radius * 2.6, [18] = radius * 3.6} do
+				for i = 1, n do
+					local rx = rad * math.cos(math.rad(360 / n) * i) + lp.x
+					local ry = rad * math.sin(math.rad(360 / n) * i) + lp.y
+					local vec = self:To3D(self:PixelsToUnits(Vector(rx, ry) * 2), f.origin, f.Vertices2D.angle)
+					light = GetLight(vec, facearray.normal)
+					lightmapmaterial:SetVector("$color", light)
+					surface.DrawPoly(CirclePoly(rx + org.x, ry + org.y, radius))
+				end
+			end
+			lightmapmaterial:SetVector("$color", vector_one)
+			cam.End2D()
+			render.SetScissorRect(0, 0, 0, 0, false)
+			render.OverrideAlphaWriteEnable(false)
 			render.PopRenderTarget()
 			
 			q.done = true
@@ -113,14 +177,3 @@ end
 
 hook.Add("PostDrawOpaqueRenderables", "SplatoonSWEPsDrawInk", DrawMeshes)
 hook.Add("Tick", "SplatoonSWEPsRegisterInk_cl", GMTick)
-
--- hook.Remove("HUDPaint", "test")
--- hook.Add("HUDPaint", "test", function()
-	-- render.PushRenderTarget(SplatoonSWEPs.RenderTarget.Texture)
-	-- surface.SetAlphaMultiplier(0.5)
-	-- render.SetBlend(0.5)
-	-- surface.SetDrawColor(255, 255, 255, 255)
-	-- surface.SetMaterial(mat)
-	-- surface.DrawTexturedRect(0, 0, 512, 512)
-	-- render.PopRenderTarget()
--- end)

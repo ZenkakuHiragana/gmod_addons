@@ -97,11 +97,11 @@ end
 
 include "autorun/debug.lua"
 local c = 1000
-debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 1) * c, 5, Color(255, 255, 0), true)
-debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 0) * c, 5, Color(255, 255, 0), true)
-debugoverlay.Line(Vector(1, 0, 0) * c, Vector(1, 1, 0) * c, 5, Color(255, 255, 0), true)
-debugoverlay.Line(Vector(1, 1, 0) * c, Vector(0, 1, 0) * c, 5, Color(255, 255, 0), true)
-debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0), true)
+-- debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 1) * c, 5, Color(255, 255, 0), true)
+-- debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 0) * c, 5, Color(255, 255, 0), true)
+-- debugoverlay.Line(Vector(1, 0, 0) * c, Vector(1, 1, 0) * c, 5, Color(255, 255, 0), true)
+-- debugoverlay.Line(Vector(1, 1, 0) * c, Vector(0, 1, 0) * c, 5, Color(255, 255, 0), true)
+-- debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0), true)
 
 for i, f in ipairs(SplatoonSWEPs.SortedSurfaces) do
 	-- f = SplatoonSWEPs.SortedSurfaces[3]
@@ -117,10 +117,86 @@ for i, f in ipairs(SplatoonSWEPs.SortedSurfaces) do
 	-- if i > 3 then break end
 end
 
-if SERVER then return end
+-- if SERVER then return end
 
--- SplatoonSWEPs.RenderTarget.Material:SetVector("$envmaptint", Vector(0.4, 0.4, 0.4))
+-- SplatoonSWEPs.RenderTarget.Material:SetVector("$envmaptint", Vector(1, 1, 1))
+-- SplatoonSWEPs.RenderTarget.Material:SetVector("$reflectivity", Vector(0.5, 0.5, 0.5))
+-- SplatoonSWEPs.RenderTarget.WaterMaterial:SetInt("$masked", 0)
+SplatoonSWEPs.RenderTarget.WaterMaterial:SetFloat("$refractamount", 3.5)
+SplatoonSWEPs.RenderTarget.WaterMaterial:SetVector("$refracttint", Vector(.9, .9, .9))
+-- SplatoonSWEPs.RenderTarget.WaterMaterial:SetInt("$translucent", 1)
+-- SplatoonSWEPs.RenderTarget.WaterMaterial:SetFloat("$alpha", .1)
+-- SplatoonSWEPs.RenderTarget.WaterMaterial:SetInt("$bluramount", 2)
 -- debugoverlay.Box(org, -Vector(size/2, size/2, 0), Vector(size/2, size/2, 0), 5, Color(0, 255, 0, 128))
 -- surface.SetMaterial(Material "splatoonsweps/splatoonink")
 -- surface.DrawTexturedRect(0, 0, 512, 512)
+
+-- local p = LocalPlayer():GetEyeTrace()
+-- local n = p.HitNormal
+-- p = p.HitPos
+-- p = p - n
+-- DebugPoint(p, 1, true)
+-- local color = render.ComputeLighting(p, n):ToColor()
+-- print(color)
+
+-- hook.Remove("HUDPaint", "test")
+-- hook.Add("HUDPaint", "test", function()
+	-- surface.SetDrawColor(color)
+	-- surface.DrawRect(0, 32, 64, 64)
+-- end)
+
+-- local lightmapsize = SplatoonSWEPs:GetRTSize() * SplatoonSWEPs.RenderTarget.LightmapScale
+-- for _, face in ipairs(SplatoonSWEPs.SortedSurfaces) do
+	-- if _ == 1 then continue end
+	-- local start = face.MeshVertex.origin
+	-- local endpos = start + SplatoonSWEPs:UnitsToUV(face.Vertices2D.bound)
+	-- local spx, epx = start * lightmapsize, endpos * lightmapsize
+	-- for u = spx.x, epx.x do
+		-- for v = spx.y, epx.y do
+			-- local pos2d = SplatoonSWEPs:UVToUnits(Vector(u, v, 0) / lightmapsize - face.MeshVertex.origin)
+			-- local pos = SplatoonSWEPs:To3D(pos2d, face.origin, face.Vertices2D.angle)
+			-- DebugPoint(pos + face.Parent.normal * 2, 5, true)
+			-- DebugPoint(Vector(u, v, 0) / lightmapsize * c, 5, true)
+			-- print(render.GetLightColor(pos + face.Parent.normal * 0.00002):ToColor())
+		-- end
+	-- end
+	
+	-- for i, v in ipairs(face.Vertices2D) do
+		-- DebugPoint(SplatoonSWEPs:To3D(v, face.origin, face.Vertices2D.angle), 5, true)
+	-- end
+	-- break
+-- end
+
+local function lighttest()
+	draw.NoTexture()
+	surface.SetFont "ChatFont"
+	surface.SetTextColor(128, 128, 128, 255)
+	local t = LocalPlayer():GetEyeTrace()
+	local p, n = t.HitPos, t.HitNormal
+	local amb = render.GetAmbientLightColor()
+	local light = render.ComputeLighting(p, n)
+	local color = render.GetLightColor(p)
+	local x, y = 0, 1
+	for x = 0, 1 do
+		local y = 1
+		for text, vec in pairs {
+			["CpLight"] = light,
+			["GetColor"] = color,
+			["Avg."] = (light + color + amb / 5) / 2.2,
+			["Amb."] = amb,
+		} do
+			surface.SetDrawColor(vec:ToColor())
+			surface.DrawRect(10 + x * 140, y * 80, 128, 64)
+			surface.SetTextPos(10 + x * 140, y * 80)
+			surface.DrawText(text)
+			y = y + 1
+		end
+		p = p + n * 100
+		light = render.ComputeLighting(p, n)
+		color = render.GetLightColor(p)
+	end
+end
+hook.Remove("HUDPaint", "test")
+-- hook.Add("HUDPaint", "test", lighttest)
+
 

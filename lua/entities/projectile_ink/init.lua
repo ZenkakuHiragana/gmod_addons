@@ -38,7 +38,7 @@ function ENT:Initialize()
 	if not IsValid(ph) then return end
 	ph:SetMaterial("watermelon") --or "flesh"
 	
-	self.InkRadius = 100
+	self.InkRadius = 50
 	self.InkRadiusSqr = self.InkRadius^2
 	
 	if displacementOverlay then
@@ -111,8 +111,5 @@ end
 function ENT:Think()
 	if Entity(1):KeyDown(IN_ATTACK2) then
 		self:Remove()
-	end
-	if Entity(1):KeyDown(IN_USE) then
-		ClearInk()
 	end
 end
