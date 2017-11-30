@@ -15,7 +15,7 @@ local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surface
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
 local MAX_PROCESS_QUEUE_AT_ONCE = 1 --Running QueueCoroutine() at once
 local MAX_COROUTINES_AT_ONCE = 1 --Maximum amount of coroutines running at once
-local MAX_INK_QUEUE_AT_ONCE = 18000
+local MAX_INK_QUEUE_AT_ONCE = 10000
 local MIN_BOUND = 10 --Ink minimum bounding box scale
 
 local function QueueCoroutine(pos, normal, radius, color, polys)
@@ -29,12 +29,11 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	local mins, maxs = SplatoonSWEPs:GetBoundingBox(MIN_BOUND, reference_polys)
 	for i, face_array in pairs(SplatoonSWEPs.Surfaces) do
 		-- DebugVector(vector_origin, face_array.normal * 50, true)
+		inkqueue = inkqueue + 1
+		if inkqueue % MAX_INK_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		if not istable(face_array) or face_array.normal:Dot(normal) < COS_MAX_DEG_DIFF then continue end
-		if inkqueue > radius * 2 then break end
 		for k, f in ipairs(face_array) do
 			if not SplatoonSWEPs:CollisionAABB(mins, maxs, f.mins, f.maxs) then continue end
-			if inkqueue > radius * 2 then break end
-			inkqueue = inkqueue + 1
 			net.Start "SplatoonSWEPs: DrawInk"
 			net.WriteString(tostring(i))
 			net.WriteUInt(k, 16)
@@ -44,6 +43,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			net.Broadcast()
 		end
 	end
+	-- print(" print", inkqueue)
 	
 	coroutine.yield(true)
 end

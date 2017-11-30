@@ -1,13 +1,6 @@
 
 include "shared.lua"
 
-net.Receive("SplatoonSWEPs: Receive vertices info", function(len, ply)
-	local self = net.ReadEntity()
-	if not IsValid(self) or self.IMesh then return end
-	local vert = net.ReadTable()
-	self.Vertices = vert
-end)
-
 function ENT:Initialize()
 	if not util.IsValidModel(self.FlyingModel) then
 		chat.AddText("Splatoon SWEPs: Can't spawn ink!  Required model is not found!")
@@ -15,9 +8,6 @@ function ENT:Initialize()
 	end
 	
 	self:SharedInit()
---	self:SetInkColorProxy(VectorRand())
---	self.IMaterial = Material("sprites/splatoonink.vmt")
---	self.IMaterial:SetVector("$color", self:GetInkColorProxy())
 end
 
 function ENT:OnRemove()

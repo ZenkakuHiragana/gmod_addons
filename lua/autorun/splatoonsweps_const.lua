@@ -23,25 +23,25 @@ SplatoonSWEPs.ConVarName = {
 }
 
 SplatoonSWEPs.RTResID = {
-	SMALL	= 1, --	4096x4096,		64MB
-	DSMALL	= 2, --	2x4096x4096,	128MB
-	MEDIUM	= 3, --	8192x8192,		256MB
-	DMEDIUM	= 4, --	2x8192x8192,	512MB 
-	LARGE	= 5, --	16384x16384,	1GB
-	DLARGE	= 6, --	2x16384x16384,	2GB
-	ULTRA	= 7, --	32768x32768,	4GB
-	DULTRA	= 8, --	2x32768x32768,	8GB
+	SMALL	= 1, --	4096x4096,		128MB
+	DSMALL	= 2, --	2x4096x4096,	256MB
+	MEDIUM	= 3, --	8192x8192,		512MB
+	DMEDIUM	= 4, --	2x8192x8192,	1GB 
+	LARGE	= 5, --	16384x16384,	2GB
+	DLARGE	= 6, --	2x16384x16384,	4GB
+	ULTRA	= 7, --	32768x32768,	8GB
+	DULTRA	= 8, --	2x32768x32768,	16GB
 }
 
 SplatoonSWEPs.RTSize = {
 	[SplatoonSWEPs.RTResID.SMALL	] = 4096,
-	[SplatoonSWEPs.RTResID.DSMALL	] = 4096,
+	[SplatoonSWEPs.RTResID.DSMALL	] = 5792,
 	[SplatoonSWEPs.RTResID.MEDIUM	] = 8192,
-	[SplatoonSWEPs.RTResID.DMEDIUM	] = 8192,
+	[SplatoonSWEPs.RTResID.DMEDIUM	] = 11585,
 	[SplatoonSWEPs.RTResID.LARGE	] = 16384,
-	[SplatoonSWEPs.RTResID.DLARGE	] = 16384,
+	[SplatoonSWEPs.RTResID.DLARGE	] = 23170,
 	[SplatoonSWEPs.RTResID.ULTRA	] = 32768,
-	[SplatoonSWEPs.RTResID.DULTRA	] = 32768,
+	[SplatoonSWEPs.RTResID.DULTRA	] = 40132,
 }
 
 function SplatoonSWEPs:GetConVarName(name)

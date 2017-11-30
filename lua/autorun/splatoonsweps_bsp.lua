@@ -419,26 +419,111 @@ end,
 	end
 end,
 
--- [LUMP.LIGHTING] = function(lump)
-	-- local size = 4
-	-- lump.num = math.min(math.floor(lump.length / size) - 1, 0x3FFFFF)
-	-- for i = 0, lump.num do
-		-- lump.data[i] = {}
-		-- lump.data[i].r = read "Byte"
-		-- lump.data[i].g = read "Byte"
-		-- lump.data[i].b = read "Byte"
-		-- lump.data[i].exponent = read "SignedByte"
+[LUMP.MODELS] = function(lump)
+	local size = 4 * 12
+	lump.num = math.floor(lump.length / size) - 1
+	for i = 0, lump.num do
+		lump.data[i] = {}
+		lump.data[i].RootNode = nil
+		lump.data[i].FaceTable = {}
+		lump.data[i].mins = read("Vector")
+		lump.data[i].maxs = read("Vector")
+		lump.data[i].origin = read("Vector")
+		lump.data[i].headnode = read("Long")
+		lump.data[i].firstface = read("Long")
+		lump.data[i].numfaces = read("Long")
+	end
+end,
+
+[LUMP.NODES] = function(lump)
+	local size = 32
+	lump.num = math.floor(lump.length / size) - 1
+	local faces = bsp:GetLump(LUMP.FACES)
+	local leafs = bsp:GetLump(LUMP.LEAFS)
+	lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
+	for i = 0, lump.num do
+		local x, y, z
+		lump.data[i] = setmetatable({}, NodeMeta)
+		lump.data[i].FaceTable = {}
+		lump.data[i].ChildNodes = {}
+		lump.data[i].Separator = nil
+		lump.data[i].IsLeaf = false
+		lump.data[i].planenum = read("Long")
+		lump.data[i].children = {}
+		lump.data[i].children[1] = read("Long")
+		lump.data[i].children[2] = read("Long")
+		x = read("Short")
+		y = read("Short")
+		z = read("Short")
+		lump.data[i].mins = Vector(x, y, z)
+		x = read("Short")
+		y = read("Short")
+		z = read("Short")
+		lump.data[i].maxs = Vector(x, y, z)
+		lump.data[i].firstface = read("UShort")
+		lump.data[i].numfaces = read("UShort")
+		lump.data[i].area = read("Short")
+		lump.data[i].padding = read("Short")
 		
-		-- if SplatoonSWEPs.HDR then
-			-- local mul = 2^lump.data[i].exponent
-			-- lump.data[i].r = lump.data[i].r * mul
-			-- lump.data[i].g = lump.data[i].g * mul
-			-- lump.data[i].b = lump.data[i].b * mul
-		-- end
-		
-		-- lump.data[i].Color = Color(lump.data[i].r, lump.data[i].g, lump.data[i].b)
-	-- end
--- end,
+		lump.data[i].Separator = planes.data[lump.data[i].planenum]
+		for k = 0, lump.data[i].numfaces - 1 do
+			lump.data[i].FaceTable[k] = faces.data[lump.data[i].firstface + k]
+		end
+	end
+	
+	for i = 0, lump.num do
+		for k = 1, 2 do
+			local child = lump.data[i].children[k]
+			if child < 0 then
+				lump.data[i].ChildNodes[k] = leafs.data[-child - 1]
+			else
+				lump.data[i].ChildNodes[k] = lump.data[child]
+			end
+		end
+	end
+end,
+
+[LUMP.LEAFS] = function(lump)
+	local size = 32
+	local faces = bsp:GetLump(LUMP.FACES)
+	local leaffaces = bsp:GetLump(LUMP.LEAFFACES)
+	lump.num = math.floor(lump.length / size) - 1
+	for i = 0, lump.num do
+		local x, y, z
+		lump.data[i] = {}
+		lump.data[i].FaceTable = {}
+		lump.data[i].BrushTable = {}
+		lump.data[i].IsLeaf = true
+		lump.data[i].index = i
+		lump.data[i].contents = read("Long")
+		lump.data[i].cluster = read("Short")
+		local areaflags = read("Short")
+		lump.data[i].area = bit.band(areaflags, 0x01FF)
+		lump.data[i].flags = bit.band(bit.rshift(areaflags, 9), 0x007F)
+		x = read("Short")
+		y = read("Short")
+		z = read("Short")
+		lump.data[i].mins = Vector(x, y, z)
+		x = read("Short")
+		y = read("Short")
+		z = read("Short")
+		lump.data[i].maxs = Vector(x, y, z)
+		lump.data[i].firstleafface = read("UShort")
+		lump.data[i].numleaffaces = read("UShort")
+		lump.data[i].firstleafbrush = read("UShort")
+		lump.data[i].numleafbrushes = read("UShort")
+		lump.data[i].leafWaterDataID = read("Short")
+		lump.data[i].padding = read("Short")
+	end
+end,
+
+[LUMP.LEAFFACES] = function(lump)
+	local size = 2
+	lump.num = math.floor(lump.length / size) - 1
+	for i = 0, lump.num do
+		lump.data[i] = read("UShort")
+	end
+end,
 
 [LUMP.FACES] = function(lump)
 	local size = 56

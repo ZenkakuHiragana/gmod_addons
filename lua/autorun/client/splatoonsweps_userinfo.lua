@@ -45,20 +45,20 @@ Your thirdperson model.  Available values are:
 	"1: You can reload your ink when you are in ink.\n0: You can not.",
 	[[
 RenderTarget resolution used in ink system.
-Restart is required to apply the change.
+To apply the change, restart your GMOD client.
 Higher option needs more VRAM.
 Make sure your graphics card has enough space of video memory.
 1: RT has 4096x4096 resolution.
-    This option uses 64MB of your VRAM.
+    This option uses 128MB of your VRAM.
 2: RT has 2x4096x4096 resolution.
     The resolution is twice as large as option 1.
-    This option uses 128MB of your VRAM.
-3: 8192x8192, using 256MB.
-4: 2x8192x8192, using 512MB.
-5: 16384x16384, using 1GB.
-6: 2x16384x16384, using 2GB.
-7: 32768x32768, using 4GB.
-8: 2x32768x32768, using 8GB.
+    This option uses 256MB of your VRAM.
+3: 8192x8192, using 512MB.
+4: 2x8192x8192, 1GB.
+5: 16384x16384, 2GB.
+6: 2x16384x16384, 4GB.
+7: 32768x32768, 8GB.
+8: 2x32768x32768, 16GB.
 ]],
 }
 for i, c in ipairs(SplatoonSWEPs.ConVar) do

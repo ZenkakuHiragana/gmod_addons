@@ -143,7 +143,7 @@ local function Initialize()
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.BaseTextureFlags,
 		CREATERENDERTARGETFLAGS_HDR,
-		21 --8192x8192, 256MB
+		21 --BGRA5551, 8192x8192, 128MB
 	)
 	self.RenderTarget.Normalmap = GetRenderTargetEx(
 		self.RenderTarget.NormalmapName,
@@ -152,7 +152,7 @@ local function Initialize()
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.NormalmapFlags,
 		CREATERENDERTARGETFLAGS_HDR,
-		IMAGE_FORMAT_BGRA8888 -- BGRA5551, 8192x8192, 128MB
+		IMAGE_FORMAT_BGRA8888 --8192x8192, 256MB
 	)
 	self.RenderTarget.Lightmap = GetRenderTargetEx(
 		self.RenderTarget.LightmapName,
@@ -161,7 +161,7 @@ local function Initialize()
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.LightmapFlags,
 		CREATERENDERTARGETFLAGS_HDR,
-		self.HDR and IMAGE_FORMAT_RGBA16161616 or IMAGE_FORMAT_BGRA8888 -- I8, 8192x8192, 256MB
+		IMAGE_FORMAT_RGBA16161616 -- 4096x4096, 128MB
 	)
 	self.RenderTarget.Material = CreateMaterial(
 		self.RenderTarget.BaseTextureName,

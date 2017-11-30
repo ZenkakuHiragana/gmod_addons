@@ -3,25 +3,14 @@
 if not SplatoonSWEPs then return end
 SplatoonSWEPs.InkQueue = {}
 
-util.PrecacheModel "models/hunter/blocks/cube025x025x025.mdl"
--- local dummy
-
 local MAX_PROCESS_QUEUE_AT_ONCE = 10000
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 local inklightmaterial = Material "splatoonsweps/splatooninklight"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
-local test = Material "gm_construct/water"
 local WaterOverlap = Material "splatoonsweps/splatoonwater"
 local function DrawMeshes()
-	-- if not IsValid(dummy) then
-		-- dummy = ents.CreateClientProp "models/hunter/blocks/cube025x025x025.mdl"
-		-- dummy:SetPos(vector_origin)
-		-- dummy:Spawn()
-	-- end
-		
 	if SplatoonSWEPs.RenderTarget.Ready then
-		-- dummy:DrawModel()
 		local lighton = LocalPlayer():FlashlightIsOn() or #ents.FindByClass("*projectedtexture*") > 0
 		render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
 		render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
@@ -64,9 +53,9 @@ local function GetLight(p, n)
 	local lightcolor = render.GetLightColor(p)
 	local light = render.ComputeLighting(p + n * 100, n)
 	local avg = (light + lightcolor + amb / 5) / 2.2
-	avg.x = math.Remap(avg.x, 0, 1, 0, 0.3)
-	avg.y = math.Remap(avg.y, 0, 1, 0, 0.3)
-	avg.z = math.Remap(avg.z, 0, 1, 0, 0.3)
+	avg.x = math.Remap(avg.x, 0, 1, 0, 0.6)
+	avg.y = math.Remap(avg.y, 0, 1, 0, 0.6)
+	avg.z = math.Remap(avg.z, 0, 1, 0, 0.6)
 	return avg
 end
 
@@ -131,9 +120,9 @@ local function ProcessQueue()
 			cam.Start2D()
 			draw.NoTexture()
 			surface.SetDrawColor(light:ToColor())
-			surface.DrawPoly(CirclePoly(p.x / 2, p.y / 2, radius / 6))
 			surface.SetMaterial(lightmapmaterial)
 			lightmapmaterial:SetVector("$color", light)
+			surface.DrawPoly(CirclePoly(p.x / 2, p.y / 2, radius / 6))
 			radius = radius / 8
 			for n, rad in pairs {[8] = radius * 1.6, [14] = radius * 2.6, [18] = radius * 3.6} do
 				for i = 1, n do

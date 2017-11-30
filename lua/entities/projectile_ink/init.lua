@@ -3,27 +3,16 @@
 ]]
 AddCSLuaFile "shared.lua"
 include "shared.lua"
-util.AddNetworkString("SplatoonSWEPs: Receive vertices info")
-require "SZL"
-SZL.namespace "SZL"
-include "includes/modules/geometry.lua"
-include "includes/modules/polybool.lua"
 
 local circle_polys = 12
 local reference_polys = {}
-local reference_vert = Vector2D(1, 0)
-local reference_vert45 = Vector2D(1, 0)
+local reference_vert = Vector(1, 0)
+local reference_vert45 = Vector(1, 0)
 for i = 1, circle_polys do
-	table.insert(reference_polys, Vector2D(reference_vert))
+	table.insert(reference_polys, Vector(reference_vert))
 	reference_vert:Rotate(Angle(0, 360 / circle_polys, 0))
 end
--- reference_polys = {
-	-- Vector(0, -0.5, 0),
-	-- Vector(0, 0.5, 0),
-	-- Vector(0, 0, 1),
--- }
 
-local displacementOverlay = false
 function ENT:Initialize()
 	if not util.IsValidModel(self.FlyingModel) then
 		self:Remove()
@@ -40,37 +29,6 @@ function ENT:Initialize()
 	
 	self.InkRadius = 50
 	self.InkRadiusSqr = self.InkRadius^2
-	
-	if displacementOverlay then
-		local index = 1
-	--	for index = 1, 110 do
-			local info = SplatoonSWEPs.DispInfo[index]
-			local vert = SplatoonSWEPs.DispVertices[index]
-			local prev, prev10 = vector_origin, vector_origin
-			for k, v in pairs(vert) do
-				if not prev:IsZero() then
-					debugoverlay.Line(prev, v.pos, 10, Color(0,255,0), false)
-				end
-				if not prev10:IsZero() then
-					debugoverlay.Line(prev10, v.pos, 10, Color(0,255,0), false)
-				end
-				prev = v.pos
-				if k > 2^v.power and vert[k - (2^v.power)] then
-					prev10 = vert[k - (2^v.power)].pos
-				end
-			end
-			
-			local st = SplatoonSWEPs.DispInfo[index].startPosition
-			debugoverlay.Line(st, st + vector_up * 50, 10, Color(255,255,255), true)
-			debugoverlay.Line(info.vertices[1], info.vertices[1] + vector_up * 50, 10, Color(255,0,0), true)
-			debugoverlay.Line(info.vertices[2], info.vertices[2] + vector_up * 50, 10, Color(0,255,0), true)
-			debugoverlay.Line(info.vertices[3], info.vertices[3] + vector_up * 50, 10, Color(0,0,255), true)
-			debugoverlay.Line(info.vertices[4], info.vertices[4] + vector_up * 50, 10, Color(255,255,0), true)
-	--	end
-	end
-	
-	-- self:Remove()
-	-- SplatoonSWEPs.BuildOverlap()
 end
 
 function ENT:PhysicsCollide(coldata, collider)
@@ -80,10 +38,6 @@ function ENT:PhysicsCollide(coldata, collider)
 		return
 	end
 	
-	-- local polys = reference_polys
-	-- for i, v in ipairs(polys) do
-		-- polys[i] = v * ((math.random(1000000) / 10000000) + 0.95)
-	-- end
 	SplatoonSWEPsInkManager.AddQueue(
 		tr.HitPos,
 		-coldata.HitNormal,
