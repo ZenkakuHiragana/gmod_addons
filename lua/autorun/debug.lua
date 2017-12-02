@@ -36,6 +36,9 @@ function DebugPoly(t, ignoreZ)
 		DebugLine(v, t[i % #t + 1], ignoreZ)
 	end
 end
+function DebugBox(mins, maxs)
+	debugoverlay.Box(vector_origin, mins, maxs, DebugOverlayTime, ColorAlpha(DebugOverlayColor, 64))
+end
 
 local circle_polys = 8
 local reference_polys = {}

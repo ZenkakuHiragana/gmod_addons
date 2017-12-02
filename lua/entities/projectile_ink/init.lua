@@ -27,7 +27,7 @@ function ENT:Initialize()
 	if not IsValid(ph) then return end
 	ph:SetMaterial("watermelon") --or "flesh"
 	
-	self.InkRadius = 50
+	self.InkRadius = 160
 	self.InkRadiusSqr = self.InkRadius^2
 end
 
@@ -40,7 +40,7 @@ function ENT:PhysicsCollide(coldata, collider)
 	
 	SplatoonSWEPsInkManager.AddQueue(
 		tr.HitPos,
-		-coldata.HitNormal,
+		tr.HitNormal,
 		self.InkRadius,
 		self:GetColorCode(),
 		reference_polys

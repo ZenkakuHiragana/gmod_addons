@@ -3,13 +3,12 @@
 if not SplatoonSWEPs then return end
 
 net.Receive("SplatoonSWEPs: DrawInk", function(len, ply)
-	local facearray = net.ReadString()
-	local facenumber = net.ReadUInt(16)
+	local facenumber = net.ReadUInt(20)
 	local color = net.ReadUInt(SplatoonSWEPs.COLOR_BITS)
 	local pos = net.ReadVector()
 	local radius = net.ReadFloat()
 	table.insert(SplatoonSWEPs.InkQueue, {
-		facearray = facearray, facenumber = facenumber, c = color, pos = pos, r = radius,
+		facenumber = facenumber, c = color, pos = pos, r = radius,
 	})
 end)
 

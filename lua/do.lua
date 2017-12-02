@@ -121,12 +121,9 @@ end
 
 -- SplatoonSWEPs.RenderTarget.Material:SetVector("$envmaptint", Vector(1, 1, 1))
 -- SplatoonSWEPs.RenderTarget.Material:SetVector("$reflectivity", Vector(0.5, 0.5, 0.5))
--- SplatoonSWEPs.RenderTarget.WaterMaterial:SetInt("$masked", 0)
-SplatoonSWEPs.RenderTarget.WaterMaterial:SetFloat("$refractamount", 3.5)
-SplatoonSWEPs.RenderTarget.WaterMaterial:SetVector("$refracttint", Vector(.9, .9, .9))
 -- SplatoonSWEPs.RenderTarget.WaterMaterial:SetInt("$translucent", 1)
--- SplatoonSWEPs.RenderTarget.WaterMaterial:SetFloat("$alpha", .1)
--- SplatoonSWEPs.RenderTarget.WaterMaterial:SetInt("$bluramount", 2)
+-- SplatoonSWEPs.RenderTarget.WaterMaterial:SetFloat("$refractamount", 3.5)
+-- SplatoonSWEPs.RenderTarget.WaterMaterial:SetVector("$refracttint", Vector(.9, .9, .9))
 -- debugoverlay.Box(org, -Vector(size/2, size/2, 0), Vector(size/2, size/2, 0), 5, Color(0, 255, 0, 128))
 -- surface.SetMaterial(Material "splatoonsweps/splatoonink")
 -- surface.DrawTexturedRect(0, 0, 512, 512)
@@ -196,7 +193,14 @@ local function lighttest()
 		color = render.GetLightColor(p)
 	end
 end
-hook.Remove("HUDPaint", "test")
+-- hook.Remove("HUDPaint", "test")
 -- hook.Add("HUDPaint", "test", lighttest)
 
+-- local l = SplatoonSWEPs:FindLeaf({Vertices = {LocalPlayer():GetPos(), LocalPlayer():GetPos() + vector_up * 50}})
+-- print(l, l and l.id, l and l.IsLeaf)
+-- for i, v in ipairs(l.Surfaces) do DebugPoly(v.Vertices, true) end
+-- PrintTable(l, 0, {[l.ParentNode] = true, [l.Surfaces] = true})
+-- for k, v in pairs(SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.LEAFS).data) do
+	-- print(k, v, v.id)
+-- end
 

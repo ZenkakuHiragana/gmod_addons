@@ -3,7 +3,7 @@
 if not SplatoonSWEPs then return end
 SplatoonSWEPs.InkQueue = {}
 
-local MAX_PROCESS_QUEUE_AT_ONCE = 10000
+local MAX_PROCESS_QUEUE_AT_ONCE = 1000
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 local inklightmaterial = Material "splatoonsweps/splatooninklight"
@@ -11,14 +11,13 @@ local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
 local WaterOverlap = Material "splatoonsweps/splatoonwater"
 local function DrawMeshes()
 	if SplatoonSWEPs.RenderTarget.Ready then
-		local lighton = LocalPlayer():FlashlightIsOn() or #ents.FindByClass("*projectedtexture*") > 0
 		render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
 		render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
 		for i, m in ipairs(SplatoonSWEPs.IMesh) do
 			m:Draw()
 		end
 		
-		if lighton then
+		if LocalPlayer():FlashlightIsOn() or #ents.FindByClass("*projectedtexture*") > 0 then
 			render.PushFlashlightMode(true)
 			for i, m in ipairs(SplatoonSWEPs.IMesh) do
 				m:Draw()
@@ -33,30 +32,33 @@ local function DrawMeshes()
 	end
 end
 
-local CircleFraction = -360 / 32
-local function CirclePoly(x, y, r, uv, deg)
-	uv, deg = uv or 0.5, deg or 0
-	local c = {{x = x, y = y, u = uv, v = uv}, {x = x, y = y + r, u = uv, v = uv * 2}}
-	for i = 0, 32 do
-		local a = math.rad(i * CircleFraction)
-		local sin, cos = math.sin(a + deg), math.cos(a + deg)
-		table.insert(c, i + 2, {
-			x = x + sin * r, y = y + cos * r,
-			u = sin * uv + uv, v = cos * uv + uv,
-		})
-	end
-	return c
-end
-
 local function GetLight(p, n)
 	local amb = render.GetAmbientLightColor()
 	local lightcolor = render.GetLightColor(p)
-	local light = render.ComputeLighting(p + n * 100, n)
+	local light = render.ComputeLighting(p + n, n)
 	local avg = (light + lightcolor + amb / 5) / 2.2
-	avg.x = math.Remap(avg.x, 0, 1, 0, 0.6)
-	avg.y = math.Remap(avg.y, 0, 1, 0, 0.6)
-	avg.z = math.Remap(avg.z, 0, 1, 0, 0.6)
+	avg.x = math.Remap(avg.x, 0, 1, 0, SplatoonSWEPs.InkLightLevel)
+	avg.y = math.Remap(avg.y, 0, 1, 0, SplatoonSWEPs.InkLightLevel)
+	avg.z = math.Remap(avg.z, 0, 1, 0, SplatoonSWEPs.InkLightLevel)
 	return avg
+end
+
+local NumPoly = 16
+local Polysin, Polycos = {}, {}
+for i = 0, NumPoly do
+	local a = math.rad(i * -360 / NumPoly)
+	Polysin[i], Polycos[i] = math.sin(a), math.cos(a)
+end
+
+local LightPoly = {[7] = true, [14] = true, [18] = true}
+local Lightsin, Lightcos = {}, {}
+for n in pairs(LightPoly) do
+	Lightsin[n], Lightcos[n] = {}, {}
+	local frac = math.rad(360 / n)
+	for k = 1, n do
+		Lightsin[n][k] = math.sin(frac * k)
+		Lightcos[n][k] = math.cos(frac * k)
+	end
 end
 
 local function ProcessQueue()
@@ -65,82 +67,93 @@ local function ProcessQueue()
 	while true do
 		local done = 0
 		for i, q in ipairs(self.InkQueue) do
+			q.done = true
 			local c = self:GetColor(q.c)
-			local facearray = tonumber(q.facearray) or q.facearray
-			local f = self.Surfaces[facearray][q.facenumber]
-			local org = f.MeshVertex.origin * self:GetRTSize()
-			local p = org + self:UnitsToPixels(self:To2D(q.pos, f.origin, f.Vertices2D.angle))
-			local bound = self:UnitsToPixels(f.Vertices2D.bound)
 			local radius = self:UnitsToPixels(q.r)
-			local sx, sy = math.floor(org.x) - 1, math.floor(org.y) - 1
-			local bx, by = math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1
-			local circle = CirclePoly(p.x, p.y, radius)
-			local circle_white = CirclePoly(p.x, p.y, radius, math.Rand(0.2, 1), math.Rand(-90, 90))
-			local circle_normal = CirclePoly(p.x, p.y, radius, math.Rand(0.08, 0.16), math.Rand(-30, 30))
-			facearray = self.Surfaces[facearray]
+			local size = radius * 2
+			local f = self.SortedSurfaces[q.facenumber]
+			local facearray = f.Parent
+			local org = self:UVToPixels(f.MeshVertex.origin)
+			local bound = self:UnitsToPixels(f.Vertices2D.bound)
+			local center = org + self:UnitsToPixels(self:To2D(q.pos, f.origin, f.Vertices2D.angle))
+			local s = Vector(math.floor(org.x) - 1, math.floor(org.y) - 1)
+			local b = Vector(math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1)
+			local light = GetLight(q.pos, facearray.normal)
+			local corner = center - Vector(radius, radius)
+			if not self:CollisionAABB2D(s, b, corner, corner + Vector(size, size)) then continue end
 			
+			inkmaterial:SetVector("$color", Vector(c.r, c.g, c.b) / 255)
+			inklightmaterial:SetFloat("$alpha", math.Rand(0.05, .4))
+			lightmapmaterial:SetVector("$color", light)
 			render.PushRenderTarget(self.RenderTarget.BaseTexture)
-			render.SetScissorRect(sx, sy, bx, by, true)
+			-- render.OverrideAlphaWriteEnable(true, false)
+			render.OverrideBlendFunc(true, BLEND_ONE, BLEND_ZERO, BLEND_ONE, BLEND_ONE)
+			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
 			surface.SetDrawColor(color_white)
 			surface.SetMaterial(inkmaterial)
-			inkmaterial:SetVector("$color", Vector(c.r, c.g, c.b) / 255)
-			surface.DrawPoly(circle)
-			inkmaterial:SetVector("$color", vector_one)
-			
-			surface.SetMaterial(inklightmaterial)
-			inklightmaterial:SetFloat("$alpha", math.Rand(0.05, .4))
-			surface.DrawPoly(circle_white)
-			inklightmaterial:SetFloat("$alpha", 1.0)
+			surface.DrawTexturedRect(corner.x, corner.y, size, size)
+			-- surface.SetMaterial(inklightmaterial)
+			-- surface.DrawTexturedRectRotated(center.x, center.y, size, size, math.Rand(-90, 90))
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
+			render.OverrideBlendFunc(false)
+			-- render.OverrideAlphaWriteEnable(false)
 			render.PopRenderTarget()
 			
 			--Draw on normal map
 			render.PushRenderTarget(self.RenderTarget.Normalmap)
 			render.OverrideBlendFunc(true, BLEND_ONE, BLEND_ZERO, BLEND_ONE, BLEND_ZERO)
-			render.SetScissorRect(sx, sy, bx, by, true)
+			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
 			surface.SetMaterial(normalmaterial)
-			surface.SetDrawColor(255, 255, 255, 255)
-			surface.DrawPoly(circle_normal)
+			-- surface.DrawTexturedRect(corner.x, corner.y, size, size)
+			local cr = radius * 1.01
+			local circle = {
+				{x = center.x, y = center.y, u = .5, v = .5},
+				{x = center.x, y = center.y + cr, u = .5, v = 1},
+			}
+			for i = 0, NumPoly do
+				table.insert(circle, 2, {
+					x = center.x + cr * Polycos[i],
+					y = center.y + cr * Polysin[i],
+					u = Polycos[i] / 2 + .5,
+					v = Polysin[i] / 2 + .5,
+				})
+			end
+			surface.DrawPoly(circle)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
 			render.OverrideBlendFunc(false)
 			render.PopRenderTarget()
 			
 			--Draw on lightmap
-			local light = GetLight(q.pos, facearray.normal)
-			local lp = (p - org) / 2
-			org, bound = org / 2, bound / 2
-			sx, sy = math.floor(org.x) - 1, math.floor(org.y) - 1
-			bx, by = math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1
+			radius, size, bound = math.ceil(radius / 8), math.ceil(size / 8), bound / 2
+			center, org = center / 2, org / 2
+			-- s, b = s / 2, b / 2
+			s = Vector(math.floor(s.x / 2), math.floor(s.y / 2))
+			b = Vector(math.ceil(b.x / 2), math.ceil(b.y / 2))
 			render.PushRenderTarget(self.RenderTarget.Lightmap)
-			render.SetScissorRect(sx, sy, bx, by, true)
+			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
-			draw.NoTexture()
 			surface.SetDrawColor(light:ToColor())
 			surface.SetMaterial(lightmapmaterial)
-			lightmapmaterial:SetVector("$color", light)
-			surface.DrawPoly(CirclePoly(p.x / 2, p.y / 2, radius / 6))
-			radius = radius / 8
-			for n, rad in pairs {[8] = radius * 1.6, [14] = radius * 2.6, [18] = radius * 3.6} do
+			surface.DrawTexturedRect(math.floor(center.x - radius), math.floor(center.y - radius), size, size)
+			-- radius, size = radius / 2, size / 2
+			for n, rad in pairs {[7] = radius * 1.3, [14] = radius * 2.4, [18] = radius * 3.6} do
 				for i = 1, n do
-					local rx = rad * math.cos(math.rad(360 / n) * i) + lp.x
-					local ry = rad * math.sin(math.rad(360 / n) * i) + lp.y
-					local vec = self:To3D(self:PixelsToUnits(Vector(rx, ry) * 2), f.origin, f.Vertices2D.angle)
-					light = GetLight(vec, facearray.normal)
-					lightmapmaterial:SetVector("$color", light)
-					surface.DrawPoly(CirclePoly(rx + org.x, ry + org.y, radius))
+					local r = Vector(Lightcos[n][i], Lightsin[n][i]) * rad + center
+					lightmapmaterial:SetVector("$color", GetLight(self:To3D(
+						self:PixelsToUnits((r - org) * 2),
+						f.origin, f.Vertices2D.angle), facearray.normal))
+					surface.DrawTexturedRect(math.floor(r.x - radius), math.floor(r.y - radius), size, size)
 				end
 			end
-			lightmapmaterial:SetVector("$color", vector_one)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
 			render.OverrideAlphaWriteEnable(false)
 			render.PopRenderTarget()
 			
-			q.done = true
 			done = done + 1
 			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end

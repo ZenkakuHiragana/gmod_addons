@@ -151,6 +151,11 @@ local function read(arg)
 		elseif arg == "SignedByte" then
 			local n = bsp.bsp:ReadByte()
 			return n - (n > 127 and 256 or 0)
+		elseif arg == "ShortVector" then
+			local x = bsp.bsp:ReadShort()
+			local y = bsp.bsp:ReadShort()
+			local z = bsp.bsp:ReadShort()
+			return Vector(x, y, z)
 		elseif arg == "Vector" then
 			local x = bsp.bsp:ReadFloat()
 			local y = bsp.bsp:ReadFloat()
@@ -171,17 +176,21 @@ end
 function bsp:Init()
 	self.bspname = "maps/" .. game.GetMap() .. ".bsp"
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
-
+	
 	self:ReadHeader()
 	self:Parse(LUMP.PLANES)
 	self:Parse(LUMP.VERTEXES)
 	self:Parse(LUMP.EDGES)
 	self:Parse(LUMP.SURFEDGES)
-
+	
 	self:Parse(LUMP.LIGHTING)
 	self:Parse(LUMP.TEXDATA)
 	self:Parse(LUMP.TEXINFO)
-
+	
+	self:Parse(LUMP.LEAFS)
+	self:Parse(LUMP.NODES)
+	self:Parse(LUMP.MODELS)
+	
 	self:Parse(LUMP.FACES)
 	self:Parse(LUMP.DISPINFO)
 	self.bsp = nil
@@ -267,6 +276,7 @@ local function MakeSurface(key, mins, maxs, normal, angle, origin, v2d, v3d)
 	s.AreaBound = s.AreaBound + v2d.Area
 	s.LongestEdge = math.max(s.LongestEdge, v2d.bound.x, v2d.bound.y)
 	
+	table.insert(SplatoonSWEPs:FindLeaf(facetable).Surfaces, facetable)
 	return facetable
 end
 
@@ -276,12 +286,6 @@ local function MakeDispTriangle(vert, planenormal)
 	local angle = normal:Angle()
 	local surfkey = tostring(normal)
 	local origin = (vert[1] + vert[2] + vert[3]) / 3
-	-- if normal:Dot(planenormal) < 0 then
-		-- print ""
-		-- normal = -normal
-		-- vert[2], vert[3] = vert[3], vert[2]
-	-- end
-	
 	local mins = Vector(math.huge, math.huge, math.huge)
 	local maxs = -mins
 	local v2d = {Area = math.huge}
@@ -313,8 +317,9 @@ end,
 		lump.data[i] = {}
 		lump.data[i].normal = read "Vector"
 		lump.data[i].distance = read "Float"
-		lump.data[i].Origin = lump.data[i].normal * lump.data[i].distance
-		lump.data[i].type = read "Long"
+		-- lump.data[i].Origin = lump.data[i].normal * lump.data[i].distance
+		-- lump.data[i].type = 
+		read "Long"
 	end
 end,
 
@@ -419,109 +424,85 @@ end,
 	end
 end,
 
-[LUMP.MODELS] = function(lump)
-	local size = 4 * 12
+[LUMP.LEAFS] = function(lump)
+	local size = 32
 	lump.num = math.floor(lump.length / size) - 1
 	for i = 0, lump.num do
 		lump.data[i] = {}
-		lump.data[i].RootNode = nil
-		lump.data[i].FaceTable = {}
-		lump.data[i].mins = read("Vector")
-		lump.data[i].maxs = read("Vector")
-		lump.data[i].origin = read("Vector")
-		lump.data[i].headnode = read("Long")
-		lump.data[i].firstface = read("Long")
-		lump.data[i].numfaces = read("Long")
+		lump.data[i].Surfaces = {}
+		lump.data[i].IsLeaf = true
+		lump.data[i].id = i
+		local contents = read "Long"
+		local cluster = read "Short"
+		local areaflags = read "Short"
+		-- lump.data[i].area = bit.band(areaflags, 0x01FF)
+		-- lump.data[i].flags = bit.band(bit.rshift(areaflags, 9), 0x007F)
+		lump.data[i].mins = read "Vector"
+		lump.data[i].maxs = read "Vector"
+		local firstleafface = read "UShort"
+		local numleaffaces = read "UShort"
+		local firstleafbrush = read "UShort"
+		local numleafbrushes = read "UShort"
+		local leafWaterDataID = read "Short"
+		local padding = read "Short"
 	end
 end,
 
 [LUMP.NODES] = function(lump)
 	local size = 32
-	lump.num = math.floor(lump.length / size) - 1
-	local faces = bsp:GetLump(LUMP.FACES)
+	local planes = bsp:GetLump(LUMP.PLANES)
 	local leafs = bsp:GetLump(LUMP.LEAFS)
 	lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
 	for i = 0, lump.num do
-		local x, y, z
-		lump.data[i] = setmetatable({}, NodeMeta)
-		lump.data[i].FaceTable = {}
-		lump.data[i].ChildNodes = {}
-		lump.data[i].Separator = nil
+		lump.data[i] = {}
 		lump.data[i].IsLeaf = false
-		lump.data[i].planenum = read("Long")
+		lump.data[i].ChildNodes = {}
+		lump.data[i].Surfaces = {}
+		lump.data[i].Separator = planes.data[read "Long"]
 		lump.data[i].children = {}
-		lump.data[i].children[1] = read("Long")
-		lump.data[i].children[2] = read("Long")
-		x = read("Short")
-		y = read("Short")
-		z = read("Short")
-		lump.data[i].mins = Vector(x, y, z)
-		x = read("Short")
-		y = read("Short")
-		z = read("Short")
-		lump.data[i].maxs = Vector(x, y, z)
-		lump.data[i].firstface = read("UShort")
-		lump.data[i].numfaces = read("UShort")
-		lump.data[i].area = read("Short")
-		lump.data[i].padding = read("Short")
-		
-		lump.data[i].Separator = planes.data[lump.data[i].planenum]
-		for k = 0, lump.data[i].numfaces - 1 do
-			lump.data[i].FaceTable[k] = faces.data[lump.data[i].firstface + k]
-		end
+		lump.data[i].children[1] = read "Long"
+		lump.data[i].children[2] = read "Long"
+		lump.data[i].mins = read "ShortVector"
+		lump.data[i].maxs = read "ShortVector"
+		local firstface = read "UShort"
+		local numfaces = read "UShort"
+		local area = read "Short"
+		local padding = read "Short"
 	end
 	
 	for i = 0, lump.num do
 		for k = 1, 2 do
 			local child = lump.data[i].children[k]
 			if child < 0 then
-				lump.data[i].ChildNodes[k] = leafs.data[-child - 1]
+				child = leafs.data[-child - 1]
 			else
-				lump.data[i].ChildNodes[k] = lump.data[child]
+				child = lump.data[child]
 			end
+			lump.data[i].ChildNodes[k] = child
+			child.ParentNode = lump.data[i]
 		end
+		lump.data[i].children = nil
 	end
 end,
 
-[LUMP.LEAFS] = function(lump)
-	local size = 32
-	local faces = bsp:GetLump(LUMP.FACES)
-	local leaffaces = bsp:GetLump(LUMP.LEAFFACES)
+[LUMP.MODELS] = function(lump)
+	local size = 4 * 12
+	local nodes = bsp:GetLump(LUMP.NODES)
 	lump.num = math.floor(lump.length / size) - 1
 	for i = 0, lump.num do
-		local x, y, z
 		lump.data[i] = {}
-		lump.data[i].FaceTable = {}
-		lump.data[i].BrushTable = {}
-		lump.data[i].IsLeaf = true
-		lump.data[i].index = i
-		lump.data[i].contents = read("Long")
-		lump.data[i].cluster = read("Short")
-		local areaflags = read("Short")
-		lump.data[i].area = bit.band(areaflags, 0x01FF)
-		lump.data[i].flags = bit.band(bit.rshift(areaflags, 9), 0x007F)
-		x = read("Short")
-		y = read("Short")
-		z = read("Short")
-		lump.data[i].mins = Vector(x, y, z)
-		x = read("Short")
-		y = read("Short")
-		z = read("Short")
-		lump.data[i].maxs = Vector(x, y, z)
-		lump.data[i].firstleafface = read("UShort")
-		lump.data[i].numleaffaces = read("UShort")
-		lump.data[i].firstleafbrush = read("UShort")
-		lump.data[i].numleafbrushes = read("UShort")
-		lump.data[i].leafWaterDataID = read("Short")
-		lump.data[i].padding = read("Short")
-	end
-end,
-
-[LUMP.LEAFFACES] = function(lump)
-	local size = 2
-	lump.num = math.floor(lump.length / size) - 1
-	for i = 0, lump.num do
-		lump.data[i] = read("UShort")
+		lump.data[i].mins = read("Vector")
+		lump.data[i].maxs = read("Vector")
+		lump.data[i].origin = read("Vector")
+		lump.data[i].headnode = read("Long")
+		lump.data[i].firstface = read("Long")
+		lump.data[i].numfaces = read("Long")
+		table.insert(SplatoonSWEPs.Models, {
+			RootNode = nodes.data[lump.data[i].headnode],
+			mins = lump.data[i].mins,
+			maxs = lump.data[i].maxs,
+			origin = lump.data[i].origin,
+		})
 	end
 end,
 
@@ -564,11 +545,12 @@ end,
 		f.angle = f.normal:Angle()
 		f.TexInfoTable = texinfo.data[f.textureinfo]
 		
-		local texname = f.TexInfoTable.TexData.name:lower()
-		if texname:find "tools/" or texname:find "water" or texname:find "color" or
-			bit.band(f.TexInfoTable.flags, TextureFilterBits) ~= 0 then
-			continue
-		end
+		-- local texname = f.TexInfoTable.TexData.name:lower()
+		-- if texname:find "tools/" or texname:find "water" or texname:find "color" or
+			-- bit.band(f.TexInfoTable.flags, TextureFilterBits) ~= 0 then
+			-- print(i, bit.band(f.TexInfoTable.flags, TextureFilterBits))
+			-- continue
+		-- end
 
 		local fullverts, full2d, center = {}, {}, vector_origin
 		for k = 0, f.numedges - 1 do --Fetch all vertices
@@ -580,6 +562,8 @@ end,
 		for k, v in pairs(fullverts) do
 			full2d[k] = SplatoonSWEPs:To2D(v, center, f.angle)
 		end
+		f.OrigVerts = fullverts
+		f.OrigVerts2D = full2d
 		
 		local v2d = {Area = math.huge} --Vector2D
 		local nf = #full2d + 1
@@ -625,6 +609,7 @@ end,
 			-- ft.Lightmap[i].y = ft.Lightmap[i].y / 256
 		-- end
 	end
+	SplatoonSWEPs.OriginalFaces = lump.data
 end,
 
 [LUMP.DISPINFO] = function(lump)
@@ -721,6 +706,7 @@ end,
 	end
 end,
 }
+ParseFunction[LUMP.FACES_HDR] = ParseFunction[FACES]
 
 function bsp:Parse(parse_type)
 	local lump = self:GetLump(parse_type or "nil")

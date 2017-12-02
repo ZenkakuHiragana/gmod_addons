@@ -3,9 +3,8 @@
 --The core of new ink system.
 
 SplatoonSWEPs = SplatoonSWEPs or {
-	RenderTarget = {},
+	Models = {},
 	SortedSurfaces = {},
-	MeshTriangles = {},
 	Surfaces = {Area = 0, AreaBound = 0, LongestEdge = 0},
 }
 AddCSLuaFile "../splatoonsweps_shared.lua"
@@ -25,6 +24,7 @@ local function Initialize()
 	local self = SplatoonSWEPs
 	self.BSP:Init()
 	self.BSP = nil
+	self:InitSortSurfaces()
 end
 
 hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", Initialize)

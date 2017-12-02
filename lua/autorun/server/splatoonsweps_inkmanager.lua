@@ -13,10 +13,9 @@ end
 
 local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surfaces
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
-local MAX_PROCESS_QUEUE_AT_ONCE = 1 --Running QueueCoroutine() at once
-local MAX_COROUTINES_AT_ONCE = 1 --Maximum amount of coroutines running at once
-local MAX_INK_QUEUE_AT_ONCE = 10000
-local MIN_BOUND = 10 --Ink minimum bounding box scale
+-- local MAX_PROCESS_QUEUE_AT_ONCE = 8 --Running QueueCoroutine() at once
+-- local MAX_COROUTINES_AT_ONCE = 1 --Maximum amount of coroutines running at once
+local MIN_BOUND = 20 --Ink minimum bounding box scale
 
 local function QueueCoroutine(pos, normal, radius, color, polys)
 	local ang = normal:Angle()
@@ -25,25 +24,47 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 		reference_polys[i] = SplatoonSWEPs:To3D(v * radius, pos, ang)
 	end
 	
-	local inkqueue = 0
 	local mins, maxs = SplatoonSWEPs:GetBoundingBox(MIN_BOUND, reference_polys)
-	for i, face_array in pairs(SplatoonSWEPs.Surfaces) do
-		-- DebugVector(vector_origin, face_array.normal * 50, true)
-		inkqueue = inkqueue + 1
-		if inkqueue % MAX_INK_QUEUE_AT_ONCE == 0 then coroutine.yield() end
-		if not istable(face_array) or face_array.normal:Dot(normal) < COS_MAX_DEG_DIFF then continue end
-		for k, f in ipairs(face_array) do
+	for node in SplatoonSWEPs:BSPPairs {Vertices = reference_polys} do
+		for k, f in ipairs(node.Surfaces) do
+			-- print(f.Parent.normal, normal)
+			-- DebugBox(f.mins, f.maxs)
+			if f.Parent.normal:Dot(normal) <= COS_MAX_DEG_DIFF then continue end
 			if not SplatoonSWEPs:CollisionAABB(mins, maxs, f.mins, f.maxs) then continue end
 			net.Start "SplatoonSWEPs: DrawInk"
-			net.WriteString(tostring(i))
-			net.WriteUInt(k, 16)
+			net.WriteUInt(f.id, 20)
 			net.WriteUInt(color, SplatoonSWEPs.COLOR_BITS)
 			net.WriteVector(pos)
 			net.WriteFloat(radius)
 			net.Broadcast()
 		end
 	end
-	-- print(" print", inkqueue)
+	
+	-- local faces = {}
+	-- for i, f in pairs(SplatoonSWEPs.OriginalFaces) do
+		-- if f.normal:Dot(normal) <= COS_MAX_DEG_DIFF then continue end
+		
+		-- local a = false
+		-- for k, v in ipairs(f.OrigVerts) do
+			-- if v:Distance(pos) < radius then
+				-- table.insert(faces, f)
+				-- a = true
+				-- break
+			-- end
+		-- end
+		-- if a then break end
+	-- end
+	-- for i, f in pairs(faces) do
+		-- DebugPoly(f.OrigVerts)
+		-- local center = vector_origin
+		-- for k, v in ipairs(f.OrigVerts) do
+			-- center = center + v
+		-- end
+		-- center = center / #f.OrigVerts
+		-- for k, v in ipairs(f.OrigVerts) do
+			-- debugoverlay.Line(center, v, 5, Color(255, 255, 0))
+		-- end
+	-- end
 	
 	coroutine.yield(true)
 end
@@ -60,11 +81,11 @@ local function ProcessQueue()
 				coroutine.yield()
 			elseif not ok then
 				print("coroutine end: ", message)
-				print(debug.traceback(v.co))
+				ErrorNoHalt(debug.traceback(v.co))
 			end
 
-			done = done + 1
-			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
+			-- done = done + 1
+			-- if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 		
 		local newqueue = {}
@@ -95,8 +116,8 @@ local function DoCoroutines()
 				ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n")
 			end
 
-			done = done + 1
-			if done % MAX_COROUTINES_AT_ONCE == 0 then coroutine.yield() end
+			-- done = done + 1
+			-- if done % MAX_COROUTINES_AT_ONCE == 0 then coroutine.yield() end
 		end
 		coroutine.yield()
 	end

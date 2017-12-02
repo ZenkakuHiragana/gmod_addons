@@ -4,7 +4,7 @@ local InkAlpha = 255
 local MeshColor = ColorAlpha(color_white, InkAlpha)
 SplatoonSWEPs = SplatoonSWEPs or {
 	IMesh = {},
-	MeshTriangles = {{}},
+	Models = {},
 	RenderTarget = {
 		BaseTextureName = "splatoonsweps_rendertarget",
 		NormalmapName = "splatoonsweps_normalmap",
@@ -60,11 +60,11 @@ function SplatoonSWEPs:ClearAllInk()
 	render.OverrideAlphaWriteEnable(false)
 	render.PopRenderTarget()
 	
-	-- render.PushRenderTarget(SplatoonSWEPs.RenderTarget.Lightmap)
-	-- render.ClearDepth()
-	-- render.ClearStencil()
-	-- render.Clear(0, 0, 0, 255)
-	-- render.PopRenderTarget()
+	render.PushRenderTarget(SplatoonSWEPs.RenderTarget.Lightmap)
+	render.ClearDepth()
+	render.ClearStencil()
+	render.Clear(0, 0, 0, 255)
+	render.PopRenderTarget()
 	game.GetWorld():RemoveAllDecals()
 end
 
@@ -75,14 +75,11 @@ local MAX_TRIANGLES = math.floor(32768 / 3)
 local INK_SURFACE_DELTA_NORMAL = 0.8 --Distance between map surface and ink mesh
 local function Initialize()
 	local self = SplatoonSWEPs
-	for i, m in ipairs(self.IMesh) do
-		print("Mesh destroy", i)
-		m:Destroy()
-	end
-	
 	self.HDR = GetConVar("mat_hdr_level"):GetInt() == 2
+	self.InkLightLevel = self.HDR and 0.4 or 0.6
 	self.BSP:Init() --Parsing BSP file
-	self.BSP = nil
+	-- self.BSP = nil
+	self:InitSortSurfaces()
 	
 	local rtsize = math.min(self:GetRTSize(), render.MaxTextureWidth())
 	local rtheight = math.min(self:GetRTSize(), render.MaxTextureHeight())
@@ -93,7 +90,6 @@ local function Initialize()
 		local u, v, nextV = 0, 0, 0
 		local convSqr = convertunit^2
 		for _, face in ipairs(self.SortedSurfaces) do --Using next-fit approach
-			-- if face.Vertices2D.Area / convSqr < rtmerginSqr then continue end
 			local bound = face.Vertices2D.bound / convertunit
 			nextV = math.max(nextV, bound.y)
 			if 1 - u < bound.x then 
@@ -116,9 +112,8 @@ local function Initialize()
 		return v + nextV
 	end
 	
-	--Ratio[(units^2 / pixel^2)^1/2 -> units/pixel]
-	self.RenderTarget.Ratio = math.max(math.sqrt(self.Surfaces.AreaBound / rtarea), self.Surfaces.LongestEdge / rtsize)
-	table.sort(self.SortedSurfaces, function(a, b) return a.Vertices2D.Area > b.Vertices2D.Area end)
+	--Ratio[(units^2 / pixel^2)^1/2 -> units/pixel] --, self.Surfaces.LongestEdge / rtsize)
+	self.RenderTarget.Ratio = math.max(math.sqrt(self.Surfaces.AreaBound / rtarea))
 	
 	--convertunit[pixel * units/pixel -> units]
 	local convertunit = rtsize * self.RenderTarget.Ratio
@@ -135,6 +130,7 @@ local function Initialize()
 	function self:UVToPixels(uv) return uv * rtsize end
 	function self:UVToUnits(uv) return uv * convertunit end
 	
+	--21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
 	self.RenderTarget.Ratio = convertunit / rtsize
 	self.RenderTarget.BaseTexture = GetRenderTargetEx(
 		self.RenderTarget.BaseTextureName,
@@ -143,7 +139,7 @@ local function Initialize()
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.BaseTextureFlags,
 		CREATERENDERTARGETFLAGS_HDR,
-		21 --BGRA5551, 8192x8192, 128MB
+		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
 	)
 	self.RenderTarget.Normalmap = GetRenderTargetEx(
 		self.RenderTarget.NormalmapName,
@@ -170,10 +166,7 @@ local function Initialize()
 			["$basetexture"] = self.RenderTarget.BaseTexture:GetName(),
 			["$bumpmap"] = self.RenderTarget.Normalmap:GetName(),
 			["$ssbump"] = "1",
-			["$envmap"] = "env_cubemap",
 			["$translucent"] = "1",
-			["$vertexalpha"] = "1",
-			["$vertexcolor"] = "1",
 		}
 	)
 	self.RenderTarget.WaterMaterial = CreateMaterial(
@@ -188,39 +181,23 @@ local function Initialize()
 	)
 	
 	--Building MeshVertex
-	local numtriangles = 0
-	for _, face in ipairs(self.SortedSurfaces) do
-		numtriangles = numtriangles + #face.MeshVertex - 2
+	self.NumMeshTriangles = 0
+	for i, face in ipairs(self.SortedSurfaces) do
+		self.NumMeshTriangles = self.NumMeshTriangles + #face.MeshVertex - 2
 	end
 	
-	local build = 1
+	local build, numtriangles = 1, self.NumMeshTriangles
 	self.IMesh[build] = Mesh(self.RenderTarget.Material)
 	mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
 	for _, face in ipairs(self.SortedSurfaces) do
 		for t = 3, #face.MeshVertex do
-			for j, i in ipairs {t - 1, t, 1} do
-				local f = face.MeshVertex[i]
-				mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
+			for _, i in ipairs {t - 1, t, 1} do
 				mesh.Normal(face.Parent.normal)
-				mesh.Position(f.pos)
-				mesh.TexCoord(0, f.u, f.v)
-				-- if face.Lightmap then
-					-- mesh.TexCoord(1, face.Lightmap[i].x, face.Lightmap[i].y)
-					-- mesh.TexCoord(2, face.Lightmap[i].x, face.Lightmap[i].y)
-					-- if face.Lightmap[i].x < 0 or face.Lightmap[i].y < 0 or
-						-- face.Lightmap[i].x > 1 or face.Lightmap[i].y > 1 then
-						-- ErrorNoHalt("Light UV coordinates is wrong!")
-						-- print(face.Lightmap[i].x, face.Lightmap[i].y)
-					-- end
-				-- else
-					-- mesh.TexCoord(2, f.u, f.v)
-				-- end
-				mesh.TexCoord(1, f.u, f.v)
+				mesh.Color(255, 255, 255, 255)
+				mesh.Position(face.MeshVertex[i].pos)
+				mesh.TexCoord(0, face.MeshVertex[i].u, face.MeshVertex[i].v)
+				mesh.TexCoord(1, face.MeshVertex[i].u, face.MeshVertex[i].v)
 				mesh.AdvanceVertex()
-				if f.u < 0 or f.u > 1 or f.v < 0 or f.v > 1 then
-					ErrorNoHalt("UV coordinates is wrong!")
-					print(f.u, f.v)
-				end
 			end
 		
 			if mesh.VertexCount() >= MAX_TRIANGLES * 3 then
@@ -234,49 +211,49 @@ local function Initialize()
 	end
 	mesh.End()
 	
-	self.IMesh[build + 1] = Mesh(self.RenderTarget.Material)
-	mesh.Begin(self.IMesh[build + 1], MATERIAL_TRIANGLES, 2)
-	mesh.Position(Vector(0, 0, 80))
-	mesh.Normal(vector_up)
-	mesh.TexCoord(0, 0, 0)
-	mesh.TexCoord(1, 0, 0)
-	mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	mesh.AdvanceVertex()
-	mesh.Position(Vector(0, 100, 80))
-	mesh.Normal(vector_up)
-	mesh.TexCoord(0, 1, 0)
-	mesh.TexCoord(1, 1, 0)
-	mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	mesh.AdvanceVertex()
-	mesh.Position(Vector(100, 0, 80))
-	mesh.Normal(vector_up)
-	mesh.TexCoord(0, 0, 1)
-	mesh.TexCoord(1, 0, 1)
-	mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	mesh.AdvanceVertex()
+	-- self.IMesh[build + 1] = Mesh(self.RenderTarget.Material)
+	-- mesh.Begin(self.IMesh[build + 1], MATERIAL_TRIANGLES, 2)
+	-- mesh.Position(Vector(0, 0, 80))
+	-- mesh.Normal(vector_up)
+	-- mesh.TexCoord(0, 0, 0)
+	-- mesh.TexCoord(1, 0, 0)
+	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
+	-- mesh.AdvanceVertex()
+	-- mesh.Position(Vector(0, 100, 80))
+	-- mesh.Normal(vector_up)
+	-- mesh.TexCoord(0, 1, 0)
+	-- mesh.TexCoord(1, 1, 0)
+	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
+	-- mesh.AdvanceVertex()
+	-- mesh.Position(Vector(100, 0, 80))
+	-- mesh.Normal(vector_up)
+	-- mesh.TexCoord(0, 0, 1)
+	-- mesh.TexCoord(1, 0, 1)
+	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
+	-- mesh.AdvanceVertex()
 	
-	mesh.Position(Vector(100, 0, 80))
-	mesh.Normal(vector_up)
-	mesh.TexCoord(0, 0, 1)
-	mesh.TexCoord(1, 0, 1)
-	mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	mesh.AdvanceVertex()
-	mesh.Position(Vector(0, 100, 80))
-	mesh.Normal(vector_up)
-	mesh.TexCoord(0, 1, 0)
-	mesh.TexCoord(1, 1, 0)
-	mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	mesh.AdvanceVertex()
-	mesh.Position(Vector(100, 100, 80))
-	mesh.Normal(vector_up)
-	mesh.TexCoord(0, 1, 1)
-	mesh.TexCoord(1, 1, 1)
-	mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	mesh.AdvanceVertex()
-	mesh.End()
-	print(#self.IMesh)
+	-- mesh.Position(Vector(100, 0, 80))
+	-- mesh.Normal(vector_up)
+	-- mesh.TexCoord(0, 0, 1)
+	-- mesh.TexCoord(1, 0, 1)
+	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
+	-- mesh.AdvanceVertex()
+	-- mesh.Position(Vector(0, 100, 80))
+	-- mesh.Normal(vector_up)
+	-- mesh.TexCoord(0, 1, 0)
+	-- mesh.TexCoord(1, 1, 0)
+	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
+	-- mesh.AdvanceVertex()
+	-- mesh.Position(Vector(100, 100, 80))
+	-- mesh.Normal(vector_up)
+	-- mesh.TexCoord(0, 1, 1)
+	-- mesh.TexCoord(1, 1, 1)
+	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
+	-- mesh.AdvanceVertex()
+	-- mesh.End()
+	-- print("number of IMesh", #self.IMesh)
 	
-	SplatoonSWEPs.RenderTarget.Ready = true
+	self.RenderTarget.Ready = true
 	self:ClearAllInk()
 end
 
