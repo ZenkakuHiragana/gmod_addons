@@ -68,11 +68,11 @@ end
 function SplatoonSWEPs:ConfigMenu()
 	local previewmodel = "models/props_splatoon/weapons/primaries/splattershot/splattershot.mdl"
 	local division = 3
-	local Window = vgui.Create("DFrame") --Main window
+	local Window = vgui.Create "DFrame" --Main window
 	Window:SetSize(ScrW() / division, ScrH() / division)
 	Window:SetMinWidth(ScrW() / 3)
 	Window:SetMinHeight(ScrH() / 3)
-	Window:SetTitle("SplatoonSWEPs Configuration")
+	Window:SetTitle "SplatoonSWEPs Configuration"
 	Window:Center()
 	Window:SetDraggable(true)
 	Window:ShowCloseButton(true)
@@ -82,18 +82,18 @@ function SplatoonSWEPs:ConfigMenu()
 	
 	local LabelError = Label("ERROR: Playermodel is not found!\nCheck if you have required addons!", Window)
 	LabelError:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2 + 30)
-	LabelError:SetFont("DermaDefaultBold")
+	LabelError:SetFont "DermaDefaultBold"
 	LabelError:SetTextColor(Color(255, 128, 128))
 	LabelError:SizeToContents()
 	LabelError:SetVisible(false)
 	
 	local function GetColor() --Get current color for preview model
-		local color = SplatoonSWEPs:GetColor(SplatoonSWEPs:GetConVarInt("InkColor"))
+		local color = SplatoonSWEPs:GetColor(SplatoonSWEPs:GetConVarInt "InkColor")
 		return Vector(color.r, color.g, color.b) / 255
 	end
 	
 	local function SetPlayerModel(DModelPanel) --Apply changes to preview model
-		local model = SplatoonSWEPs.Playermodel[SplatoonSWEPs:GetConVarInt("Playermodel")] or LocalPlayer():GetModel()
+		local model = SplatoonSWEPs.Playermodel[SplatoonSWEPs:GetConVarInt "Playermodel"] or LocalPlayer():GetModel()
 		local bone = table.HasValue(SplatoonSWEPs.PlayermodelName, model) and "ValveBiped.Bip01_Pelvis" or "ValveBiped.Bip01_Spine4"
 		
 		if not file.Exists(model, "GAME") then
@@ -107,7 +107,7 @@ function SplatoonSWEPs:ConfigMenu()
 		local center = DModelPanel.Entity:GetBonePosition(DModelPanel.Entity:LookupBone(bone))
 		DModelPanel:SetLookAt(center)
 		DModelPanel:SetCamPos(center - Vector(-60, -10, -10))
-		DModelPanel.Entity:SetSequence("idle_fist")
+		DModelPanel.Entity:SetSequence "idle_fist"
 		DModelPanel.Entity:SetEyeTarget(center - Vector(-40, 0, -10))
 		DModelPanel.Entity.GetPlayerColor = GetColor
 		DModelPanel.Entity.GetInkColorProxy = GetColor
@@ -142,15 +142,16 @@ function SplatoonSWEPs:ConfigMenu()
 	SetPlayerModel(Playermodel)
 	
 	local ComboColor = vgui.Create("DComboBox", Window) --Ink color selection box
+	ComboColor:SetSortItems(false)
 	ComboColor:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 4)
 	ComboColor:SetSize(Window:GetWide() * 0.31, 24)
-	ComboColor:SetValue(SplatoonSWEPs.ColorName[SplatoonSWEPs:GetConVarInt("InkColor")])
-	for i, c in ipairs(SplatoonSWEPs.ColorName) do
-		ComboColor:AddChoice(c)
+	ComboColor:SetValue(SplatoonSWEPs:GetColorName(SplatoonSWEPs:GetConVarInt "InkColor"))
+	for i = 1, SplatoonSWEPs.MAX_COLORS do
+		ComboColor:AddChoice(SplatoonSWEPs:GetColorName(i))
 	end
 	
 	function ComboColor:OnSelect(index, value, data)
-		local cvar = SplatoonSWEPs:GetConVar("InkColor")
+		local cvar = SplatoonSWEPs:GetConVar "InkColor"
 		if cvar then cvar:SetInt(index) end
 	end
 	
@@ -159,15 +160,16 @@ function SplatoonSWEPs:ConfigMenu()
 	LabelColor:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 4 - 24)
 	
 	local ComboModel = vgui.Create("DComboBox", Window) --Playermodel selection box
+	ComboModel:SetSortItems(false)
 	ComboModel:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2)
 	ComboModel:SetSize(Window:GetWide() * 0.31, 24)
-	ComboModel:SetValue(SplatoonSWEPs.PlayermodelName[SplatoonSWEPs:GetConVarInt("Playermodel")])
+	ComboModel:SetValue(SplatoonSWEPs.PlayermodelName[SplatoonSWEPs:GetConVarInt "Playermodel"])
 	for i, c in ipairs(SplatoonSWEPs.PlayermodelName) do
 		ComboModel:AddChoice(c)
 	end
 	
 	function ComboModel:OnSelect(index, value, data)
-		local cvar = SplatoonSWEPs:GetConVar("Playermodel")
+		local cvar = SplatoonSWEPs:GetConVar "Playermodel"
 		if cvar then cvar:SetInt(index) end
 		SetPlayerModel(Playermodel)
 	end

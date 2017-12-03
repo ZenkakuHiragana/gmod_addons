@@ -25,9 +25,9 @@ function ENT:Initialize()
 	
 	local ph = self:GetPhysicsObject()
 	if not IsValid(ph) then return end
-	ph:SetMaterial("watermelon") --or "flesh"
+	ph:SetMaterial "watermelon" --or "flesh"
 	
-	self.InkRadius = 160
+	self.InkRadius = 50
 	self.InkRadiusSqr = self.InkRadius^2
 end
 

@@ -5,7 +5,6 @@
 SplatoonSWEPs = SplatoonSWEPs or {
 	Models = {},
 	SortedSurfaces = {},
-	Surfaces = {Area = 0, AreaBound = 0, LongestEdge = 0},
 }
 AddCSLuaFile "../splatoonsweps_shared.lua"
 AddCSLuaFile "../splatoonsweps_bsp.lua"
@@ -18,6 +17,10 @@ include "splatoonsweps_network.lua"
 
 function SplatoonSWEPs:ClearAllInk()
 	BroadcastLua "SplatoonSWEPs:ClearAllInk()"
+	for _, f in ipairs(self.SortedSurfaces) do
+		f.InkCounter = 0
+		f.InkRectangles = {}
+	end
 end
 
 local function Initialize()
@@ -25,6 +28,7 @@ local function Initialize()
 	self.BSP:Init()
 	self.BSP = nil
 	self:InitSortSurfaces()
+	collectgarbage()
 end
 
 hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", Initialize)

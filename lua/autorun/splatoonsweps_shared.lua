@@ -66,7 +66,7 @@ end
 
 function SplatoonSWEPs:FindLeaf(face, modelindex)
 	local node = self.Models[modelindex or 1].RootNode
-	while not node.IsLeaf do
+	while node.Separator do
 		local sign = self:AcrossPlane(face.Vertices, node.Separator.normal, node.Separator.distance)
 		if sign == 0 then return node end
 		node = node.ChildNodes[sign > 0 and 1 or 2]
@@ -100,5 +100,10 @@ function SplatoonSWEPs:InitSortSurfaces()
 	table.sort(self.SortedSurfaces, function(a, b) return a.Vertices2D.Area > b.Vertices2D.Area end)
 	for i, f in ipairs(self.SortedSurfaces) do
 		f.id = i
+		if SERVER then
+			f.InkCounter = 0
+			f.InkRectangles = {}
+			f.Vertices2D = nil
+		end
 	end
 end

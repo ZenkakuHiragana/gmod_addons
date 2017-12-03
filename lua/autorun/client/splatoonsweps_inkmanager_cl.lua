@@ -3,7 +3,7 @@
 if not SplatoonSWEPs then return end
 SplatoonSWEPs.InkQueue = {}
 
-local MAX_PROCESS_QUEUE_AT_ONCE = 1000
+local MAX_PROCESS_QUEUE_AT_ONCE = 80
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 local inklightmaterial = Material "splatoonsweps/splatooninklight"
@@ -72,33 +72,28 @@ local function ProcessQueue()
 			local radius = self:UnitsToPixels(q.r)
 			local size = radius * 2
 			local f = self.SortedSurfaces[q.facenumber]
-			local facearray = f.Parent
-			local org = self:UVToPixels(f.MeshVertex.origin)
-			local bound = self:UnitsToPixels(f.Vertices2D.bound)
-			local center = org + self:UnitsToPixels(self:To2D(q.pos, f.origin, f.Vertices2D.angle))
+			local org = self:UVToPixels(f.UVorigin)
+			local bound = self:UnitsToPixels(f.bound)
+			local center = org + self:UnitsToPixels(self:To2D(q.pos, f.origin, f.angle))
 			local s = Vector(math.floor(org.x) - 1, math.floor(org.y) - 1)
 			local b = Vector(math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1)
-			local light = GetLight(q.pos, facearray.normal)
+			local light = GetLight(q.pos, f.normal)
 			local corner = center - Vector(radius, radius)
 			if not self:CollisionAABB2D(s, b, corner, corner + Vector(size, size)) then continue end
 			
 			inkmaterial:SetVector("$color", Vector(c.r, c.g, c.b) / 255)
-			inklightmaterial:SetFloat("$alpha", math.Rand(0.05, .4))
+			inklightmaterial:SetFloat("$alpha", q.alpha)
 			lightmapmaterial:SetVector("$color", light)
 			render.PushRenderTarget(self.RenderTarget.BaseTexture)
-			-- render.OverrideAlphaWriteEnable(true, false)
-			render.OverrideBlendFunc(true, BLEND_ONE, BLEND_ZERO, BLEND_ONE, BLEND_ONE)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
 			surface.SetDrawColor(color_white)
 			surface.SetMaterial(inkmaterial)
 			surface.DrawTexturedRect(corner.x, corner.y, size, size)
-			-- surface.SetMaterial(inklightmaterial)
-			-- surface.DrawTexturedRectRotated(center.x, center.y, size, size, math.Rand(-90, 90))
+			surface.SetMaterial(inklightmaterial)
+			surface.DrawTexturedRectRotated(center.x, center.y, size, size, q.rotate)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
-			render.OverrideBlendFunc(false)
-			-- render.OverrideAlphaWriteEnable(false)
 			render.PopRenderTarget()
 			
 			--Draw on normal map
@@ -107,7 +102,6 @@ local function ProcessQueue()
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
 			surface.SetMaterial(normalmaterial)
-			-- surface.DrawTexturedRect(corner.x, corner.y, size, size)
 			local cr = radius * 1.01
 			local circle = {
 				{x = center.x, y = center.y, u = .5, v = .5},
@@ -130,7 +124,6 @@ local function ProcessQueue()
 			--Draw on lightmap
 			radius, size, bound = math.ceil(radius / 8), math.ceil(size / 8), bound / 2
 			center, org = center / 2, org / 2
-			-- s, b = s / 2, b / 2
 			s = Vector(math.floor(s.x / 2), math.floor(s.y / 2))
 			b = Vector(math.ceil(b.x / 2), math.ceil(b.y / 2))
 			render.PushRenderTarget(self.RenderTarget.Lightmap)
@@ -139,14 +132,15 @@ local function ProcessQueue()
 			surface.SetDrawColor(light:ToColor())
 			surface.SetMaterial(lightmapmaterial)
 			surface.DrawTexturedRect(math.floor(center.x - radius), math.floor(center.y - radius), size, size)
-			-- radius, size = radius / 2, size / 2
 			for n, rad in pairs {[7] = radius * 1.3, [14] = radius * 2.4, [18] = radius * 3.6} do
 				for i = 1, n do
 					local r = Vector(Lightcos[n][i], Lightsin[n][i]) * rad + center
-					lightmapmaterial:SetVector("$color", GetLight(self:To3D(
-						self:PixelsToUnits((r - org) * 2),
-						f.origin, f.Vertices2D.angle), facearray.normal))
-					surface.DrawTexturedRect(math.floor(r.x - radius), math.floor(r.y - radius), size, size)
+					if s.x < r.x and r.x < b.x and s.y < r.y and r.y < b.y then
+						lightmapmaterial:SetVector("$color", GetLight(self:To3D(
+							self:PixelsToUnits((r - org) * 2), f.origin, f.angle), f.normal))
+						r.x, r.y = math.floor(r.x - radius), math.floor(r.y - radius)
+						surface.DrawTexturedRect(r.x, r.y, size, size)
+					end
 				end
 			end
 			cam.End2D()

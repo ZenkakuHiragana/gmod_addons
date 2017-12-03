@@ -113,65 +113,95 @@ end
 SplatoonSWEPs.SEND_ERROR_DURATION_BITS = 4
 SplatoonSWEPs.SEND_ERROR_NOTIFY_BITS = 3
 
---List of available ink colors
+--List of available ink colors(25 colors)
 local InkColors = {
-	Color(255, 165, 0), --Orange
-	Color(255, 144, 192), --Pink
-	Color(160, 0, 160), --Purple
-	Color(0, 255, 0), --Green
-	Color(0, 160, 0), --Dark green
-	Color(0, 255, 255), --Cyan
-	Color(0, 139, 139), --Dark cyan
-	Color(0, 0, 255), --Blue
-	Color(0, 191, 255), --Sky blue
-	Color(255, 0, 0), --Red
-	Color(178, 34, 34), --Dark red
-	Color(255, 255, 0), --Yellow
-	Color(178, 178, 0), --Dark yellow
-	Color(255, 255, 255), --White
-	Color(3, 3, 3), --Black
-	Color(169, 169, 169), --Grey
+	{Name = "Red",
+		HSVToColor(0, 1, 1)
+	},
+	{Name = "Orange",
+		HSVToColor(40, 1, 1)
+	},
+	{Name = "Yellow",
+		HSVToColor(60, 1, 1)
+	},
+	{Name = "Yellowish green",
+		HSVToColor(70, 1, 1)
+	},
+	{Name = "Lime",
+		HSVToColor(120, 1, 1)
+	},
+	{Name = "Spring green",
+		HSVToColor(150, 1, 1)
+	},
+	{Name = "Cyan",
+		HSVToColor(180, 1, 1)
+	},
+	{Name = "Azure blue",
+		HSVToColor(210, 1, 1)
+	},
+	{Name = "Blue",
+		HSVToColor(240, 1, 1)
+	},
+	{Name = "Light indigo",
+		HSVToColor(270, 1, 1)
+	},
+	{Name = "Magenta",
+		HSVToColor(300, 1, 1)
+	},
+	{Name = "Deep pink",
+		HSVToColor(330, 1, 1)
+	},
+	
+	{Name = "Maroon",
+		HSVToColor(0, 1, .5)
+	},
+	{Name = "Olive",
+		HSVToColor(60, 1, .5)
+	},
+	{Name = "Green",
+		HSVToColor(120, 1, .5)
+	},
+	{Name = "Dark cyan",
+		HSVToColor(180, 1, .5)
+	},
+	{Name = "Navy",
+		HSVToColor(240, 1, .5)
+	},
+	{Name = "Purple",
+		HSVToColor(300, 1, .5)
+	},
+	
+	{Name = "Light green",
+		HSVToColor(105, .5, 1)
+	},
+	{Name = "Light blue",
+		HSVToColor(210, .5, 1)
+	},
+	{Name = "Pink",
+		HSVToColor(315, .5, 1)
+	},
+	
+	{Name = "Black",
+		HSVToColor(0, 0, .05)
+	},
+	{Name = "Gray",
+		HSVToColor(0, 0, .5)
+	},
+	{Name = "Light gray",
+		HSVToColor(0, 0, .75)
+	},
+	{Name = "White",
+		HSVToColor(0, 0, 1)
+	},
 }
-SplatoonSWEPs.COLOR = {
-	ORANGE = 1,
-	PINK = 2,
-	PURPLE = 3,
-	GREEN = 4,
-	DARKGREEN = 5,
-	CYAN = 6,
-	DARKCYAN = 7,
-	BLUE = 8,
-	SKYBLUE = 9,
-	RED = 10,
-	DARKRED = 11,
-	YELLOW = 12,
-	DARKYELLOW = 13,
-	WHITE = 14,
-	BLACK = 15,
-	GREY = 16,
-}
-SplatoonSWEPs.ColorName = {
-	"Orange",
-	"Pink",
-	"Purple",
-	"Green",
-	"Dark green",
-	"Cyan",
-	"Dark cyan",
-	"Blue",
-	"Sky blue",
-	"Red",
-	"Dark red",
-	"Yellow",
-	"Dark yellow",
-	"White",
-	"Black",
-	"Grey",
-}
+
 SplatoonSWEPs.MAX_COLORS = #InkColors
-SplatoonSWEPs.COLOR_BITS = 5
+SplatoonSWEPs.COLOR_BITS = 6
+function SplatoonSWEPs:GetColorName(colorid)
+	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)].Name
+end
 function SplatoonSWEPs:GetColor(colorid)
-	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)]
+	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)][1]
 end
 
 SplatoonSWEPs.TEXTUREFLAGS = {

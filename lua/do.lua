@@ -128,9 +128,9 @@ end
 -- surface.SetMaterial(Material "splatoonsweps/splatoonink")
 -- surface.DrawTexturedRect(0, 0, 512, 512)
 
--- local p = LocalPlayer():GetEyeTrace()
--- local n = p.HitNormal
--- p = p.HitPos
+local tr = (CLIENT and LocalPlayer() or Entity(1)):GetEyeTrace()
+local n = tr.HitNormal
+local p = tr.HitPos
 -- p = p - n
 -- DebugPoint(p, 1, true)
 -- local color = render.ComputeLighting(p, n):ToColor()
@@ -145,21 +145,21 @@ end
 -- local lightmapsize = SplatoonSWEPs:GetRTSize() * SplatoonSWEPs.RenderTarget.LightmapScale
 -- for _, face in ipairs(SplatoonSWEPs.SortedSurfaces) do
 	-- if _ == 1 then continue end
-	-- local start = face.MeshVertex.origin
+	-- local start = face.UVorigin
 	-- local endpos = start + SplatoonSWEPs:UnitsToUV(face.Vertices2D.bound)
 	-- local spx, epx = start * lightmapsize, endpos * lightmapsize
 	-- for u = spx.x, epx.x do
 		-- for v = spx.y, epx.y do
-			-- local pos2d = SplatoonSWEPs:UVToUnits(Vector(u, v, 0) / lightmapsize - face.MeshVertex.origin)
+			-- local pos2d = SplatoonSWEPs:UVToUnits(Vector(u, v, 0) / lightmapsize - face.UVorigin)
 			-- local pos = SplatoonSWEPs:To3D(pos2d, face.origin, face.Vertices2D.angle)
-			-- DebugPoint(pos + face.Parent.normal * 2, 5, true)
+			-- DebugPoint(pos + face.normal * 2, 5, true)
 			-- DebugPoint(Vector(u, v, 0) / lightmapsize * c, 5, true)
-			-- print(render.GetLightColor(pos + face.Parent.normal * 0.00002):ToColor())
+			-- print(render.GetLightColor(pos + face.normal * 0.00002):ToColor())
 		-- end
 	-- end
 	
 	-- for i, v in ipairs(face.Vertices2D) do
-		-- DebugPoint(SplatoonSWEPs:To3D(v, face.origin, face.Vertices2D.angle), 5, true)
+		-- DebugPoint(SplatoonSWEPs:To3D(v, face.origin, face.angle), 5, true)
 	-- end
 	-- break
 -- end
@@ -203,4 +203,12 @@ end
 -- for k, v in pairs(SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.LEAFS).data) do
 	-- print(k, v, v.id)
 -- end
+
+-- PrintTable(tr)
+-- print(util.GetSurfacePropName(tr.SurfaceProps))
+-- local cvar = SplatoonSWEPs:GetConVar "InkColor"
+-- cvar:SetInt(cvar:GetInt() % SplatoonSWEPs.MAX_COLORS + 1)
+
+local leaf = SplatoonSWEPs:FindLeaf {Vertices = {p + n, p - n}}
+PrintTable(leaf.Surfaces)
 

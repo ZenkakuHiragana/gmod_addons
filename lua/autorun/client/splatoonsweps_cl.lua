@@ -12,7 +12,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 		WaterMaterialName = "splatoonsweps_watermaterial",
 	},
 	SortedSurfaces = {},
-	Surfaces = {Area = 0, AreaBound = 0, LongestEdge = 0},
+	AreaBound = 0,
 }
 include "../splatoonsweps_shared.lua"
 include "../splatoonsweps_bsp.lua"
@@ -49,7 +49,7 @@ function SplatoonSWEPs:ClearAllInk()
 	render.ClearDepth()
 	render.ClearStencil()
 	render.Clear(0, 0, 0, 0)
-	render.OverrideAlphaWriteEnable(false)
+	render.OverrideColorWriteEnable(false)
 	render.PopRenderTarget()
 	
 	render.PushRenderTarget(SplatoonSWEPs.RenderTarget.Normalmap)
@@ -72,13 +72,13 @@ end
 -- 10922 = 32767 / 3 with mesh.Begin(),
 -- 21845 = 65535 / 3 with BuildFromTriangles()
 local MAX_TRIANGLES = math.floor(32768 / 3)
-local INK_SURFACE_DELTA_NORMAL = 0.8 --Distance between map surface and ink mesh
+local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
 local function Initialize()
 	local self = SplatoonSWEPs
-	self.HDR = GetConVar("mat_hdr_level"):GetInt() == 2
-	self.InkLightLevel = self.HDR and 0.4 or 0.6
+	self.HDR = GetConVar"mat_hdr_level":GetInt() == 2
+	self.InkLightLevel = .5
 	self.BSP:Init() --Parsing BSP file
-	-- self.BSP = nil
+	self.BSP = nil
 	self:InitSortSurfaces()
 	
 	local rtsize = math.min(self:GetRTSize(), render.MaxTextureWidth())
@@ -90,30 +90,31 @@ local function Initialize()
 		local u, v, nextV = 0, 0, 0
 		local convSqr = convertunit^2
 		for _, face in ipairs(self.SortedSurfaces) do --Using next-fit approach
-			local bound = face.Vertices2D.bound / convertunit
+			local bound = face.bound / convertunit
 			nextV = math.max(nextV, bound.y)
 			if 1 - u < bound.x then 
 				u, v, nextV = 0, v + nextV + rtmergin, bound.y
 			end
 			
+			face.MeshVertex = {}
 			for i, vertex in ipairs(face.Vertices2D) do
 				local UV = vertex / convertunit --Get UV coordinates
 				face.MeshVertex[i] = {
-					pos = face.Vertices[i] + face.Parent.normal * INK_SURFACE_DELTA_NORMAL,
+					pos = face.Vertices[i] + face.normal * INK_SURFACE_DELTA_NORMAL,
 					u = UV.x + u,
 					v = UV.y + v,
 				}
 			end
 			
-			face.MeshVertex.origin = Vector(u, v)
+			face.UVorigin = Vector(u, v)
 			u = u + bound.x + rtmergin --Advance U-coordinate
 		end
 		
 		return v + nextV
 	end
 	
-	--Ratio[(units^2 / pixel^2)^1/2 -> units/pixel] --, self.Surfaces.LongestEdge / rtsize)
-	self.RenderTarget.Ratio = math.max(math.sqrt(self.Surfaces.AreaBound / rtarea))
+	--Ratio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	self.RenderTarget.Ratio = math.max(math.sqrt(self.AreaBound / rtarea))
 	
 	--convertunit[pixel * units/pixel -> units]
 	local convertunit = rtsize * self.RenderTarget.Ratio
@@ -192,7 +193,7 @@ local function Initialize()
 	for _, face in ipairs(self.SortedSurfaces) do
 		for t = 3, #face.MeshVertex do
 			for _, i in ipairs {t - 1, t, 1} do
-				mesh.Normal(face.Parent.normal)
+				mesh.Normal(face.normal)
 				mesh.Color(255, 255, 255, 255)
 				mesh.Position(face.MeshVertex[i].pos)
 				mesh.TexCoord(0, face.MeshVertex[i].u, face.MeshVertex[i].v)
@@ -208,53 +209,14 @@ local function Initialize()
 				mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
 			end
 		end
+		face.MeshVertex = nil
+		face.Vertices2D = nil
 	end
 	mesh.End()
 	
-	-- self.IMesh[build + 1] = Mesh(self.RenderTarget.Material)
-	-- mesh.Begin(self.IMesh[build + 1], MATERIAL_TRIANGLES, 2)
-	-- mesh.Position(Vector(0, 0, 80))
-	-- mesh.Normal(vector_up)
-	-- mesh.TexCoord(0, 0, 0)
-	-- mesh.TexCoord(1, 0, 0)
-	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	-- mesh.AdvanceVertex()
-	-- mesh.Position(Vector(0, 100, 80))
-	-- mesh.Normal(vector_up)
-	-- mesh.TexCoord(0, 1, 0)
-	-- mesh.TexCoord(1, 1, 0)
-	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	-- mesh.AdvanceVertex()
-	-- mesh.Position(Vector(100, 0, 80))
-	-- mesh.Normal(vector_up)
-	-- mesh.TexCoord(0, 0, 1)
-	-- mesh.TexCoord(1, 0, 1)
-	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	-- mesh.AdvanceVertex()
-	
-	-- mesh.Position(Vector(100, 0, 80))
-	-- mesh.Normal(vector_up)
-	-- mesh.TexCoord(0, 0, 1)
-	-- mesh.TexCoord(1, 0, 1)
-	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	-- mesh.AdvanceVertex()
-	-- mesh.Position(Vector(0, 100, 80))
-	-- mesh.Normal(vector_up)
-	-- mesh.TexCoord(0, 1, 0)
-	-- mesh.TexCoord(1, 1, 0)
-	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	-- mesh.AdvanceVertex()
-	-- mesh.Position(Vector(100, 100, 80))
-	-- mesh.Normal(vector_up)
-	-- mesh.TexCoord(0, 1, 1)
-	-- mesh.TexCoord(1, 1, 1)
-	-- mesh.Color(MeshColor.r, MeshColor.g, MeshColor.b, MeshColor.a)
-	-- mesh.AdvanceVertex()
-	-- mesh.End()
-	-- print("number of IMesh", #self.IMesh)
-	
 	self.RenderTarget.Ready = true
 	self:ClearAllInk()
+	collectgarbage()
 end
 
 hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", Initialize)

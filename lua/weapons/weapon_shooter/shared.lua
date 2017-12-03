@@ -4,12 +4,12 @@ SWEP.PrintName = "Shooter base"
 SWEP.Spawnable = true
 SWEP.FirePosition = Vector(6, -8, -8)
 
-SWEP.Primary.Delay = 0.01
+SWEP.Primary.Delay = 0.1
 SWEP.Primary.TakeAmmo = 0
 
 --Serverside: create ink projectile.
 local function paint(self)
-	local p = ents.Create("projectile_ink")
+	local p = ents.Create "projectile_ink"
 	if not IsValid(p) then return end
 	local aim = IsValid(self.Owner) and self.Owner:GetAimVector() or self:GetForward()
 	local ang = aim:Angle()
