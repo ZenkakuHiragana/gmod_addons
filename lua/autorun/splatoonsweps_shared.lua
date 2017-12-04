@@ -64,26 +64,26 @@ function SplatoonSWEPs:AcrossPlane(vertices, normal, dist)
 	return sign or 0
 end
 
-function SplatoonSWEPs:FindLeaf(face, modelindex)
+function SplatoonSWEPs:FindLeaf(vertices, modelindex)
 	local node = self.Models[modelindex or 1].RootNode
 	while node.Separator do
-		local sign = self:AcrossPlane(face.Vertices, node.Separator.normal, node.Separator.distance)
+		local sign = self:AcrossPlane(vertices, node.Separator.normal, node.Separator.distance)
 		if sign == 0 then return node end
 		node = node.ChildNodes[sign > 0 and 1 or 2]
 	end
 	return node
 end
 
--- table Face -> node/leaf it is in
-function SplatoonSWEPs:BSPPairs(face, modelindex)
+-- table Vertices -> node/leaf it is in
+function SplatoonSWEPs:BSPPairs(vertices, modelindex)
 	return function(queue, old)
 		if old.Separator then
-			local sign = SplatoonSWEPs:AcrossPlane(queue.face.Vertices, old.Separator.normal, old.Separator.distance)
+			local sign = SplatoonSWEPs:AcrossPlane(vertices, old.Separator.normal, old.Separator.distance)
 			if sign >= 0 then table.insert(queue, old.ChildNodes[1]) end
 			if sign <= 0 then table.insert(queue, old.ChildNodes[2]) end
 		end
 		return table.remove(queue, 1)
-	end, {face = face, self.Models[modelindex or 1].RootNode}, {}
+	end, {self.Models[modelindex or 1].RootNode}, {}
 end
 
 function SplatoonSWEPs:BSPPairsAll(modelindex)
@@ -102,7 +102,7 @@ function SplatoonSWEPs:InitSortSurfaces()
 		f.id = i
 		if SERVER then
 			f.InkCounter = 0
-			f.InkRectangles = {}
+			f.InkCircles = {}
 			f.Vertices2D = nil
 		end
 	end

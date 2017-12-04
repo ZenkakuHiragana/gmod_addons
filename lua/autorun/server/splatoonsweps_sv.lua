@@ -19,7 +19,7 @@ function SplatoonSWEPs:ClearAllInk()
 	BroadcastLua "SplatoonSWEPs:ClearAllInk()"
 	for _, f in ipairs(self.SortedSurfaces) do
 		f.InkCounter = 0
-		f.InkRectangles = {}
+		f.InkCircles = {}
 	end
 end
 

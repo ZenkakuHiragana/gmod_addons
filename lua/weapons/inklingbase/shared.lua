@@ -45,30 +45,37 @@ function SWEP:ChangePlayermodel(data)
 	end
 end
 
+function SWEP:SetPlayerSpeed(spd)
+	self.MaxSpeed = spd
+	self.Owner:SetMaxSpeed(self.MaxSpeed)
+	self.Owner:SetRunSpeed(self.MaxSpeed)
+	self.Owner:SetWalkSpeed(self.MaxSpeed)
+end
+
 --Squids have a limited movement speed.
+local LIMIT_Z_DEG = math.cos(math.rad(165))
 local function LimitSpeed(ply, data)
 	if not IsValid(ply) or not ply:IsPlayer() then return end
 	local weapon = ply:GetActiveWeapon()
 	if not IsValid(weapon) or not weapon.IsSplatoonWeapon then return end
 	
-	local maxspeed = weapon.MaxSpeed
-	if not isnumber(maxspeed) then return end
-	
+	--Disruptors make Inklings slower
+	local maxspeed = weapon.MaxSpeed * (weapon.poison and 0.5 or 1)
 	local velocity = ply:GetVelocity() --Inkling's current velocity
-	local speed2D = velocity:Length2D() --Horizontal speed
-	local dot = velocity:GetNormalized():Dot(-vector_up) --Checking if it's falling
+	local speed2D = velocity.x * velocity.x + velocity.y * velocity.y --Horizontal speed
+	local dot = -vector_up:Dot(velocity:GetNormalized()) --Checking if it's falling
 	
-	--Disruptors make Inkling slower
-	if weapon.poison then
-		maxspeed = maxspeed / 2
-	end
-	
-	--This only limits horizontal speed.
-	if speed2D > maxspeed then
-		local newVelocity2D = Vector(velocity.x, velocity.y, 0)
+	--Limits horizontal speed
+	if speed2D > maxspeed * maxspeed then
+		local newVelocity2D = Vector(velocity.x, velocity.y)
 		newVelocity2D = newVelocity2D:GetNormalized() * maxspeed
 		velocity.x = newVelocity2D.x
 		velocity.y = newVelocity2D.y
+	end
+	
+	--Vertical speed clamp
+	if velocity.zs > maxspeed and dot < LIMIT_Z_DEG then
+		velocity.z = maxspeed * 0.8
 	end
 	
 	data:SetVelocity(velocity)
@@ -116,7 +123,7 @@ end
 --Predicted Hooks
 function SWEP:Deploy()
 	if not IsValid(self) or not IsValid(self.Owner) or not self.Owner:IsPlayer() then return true end
-	if game.SinglePlayer() then self:CallOnClient("Deploy") end
+	if game.SinglePlayer() then self:CallOnClient "Deploy" end
 	
 	self.BackupPlayerInfo = {
 		Color = self.Owner:GetColor(),
@@ -143,34 +150,31 @@ function SWEP:Deploy()
 		v.num = self.Owner:GetBodygroup(v.id)
 	end
 	
+	self:SetPlayerSpeed(250)
 	self.Owner:SetColor(color_white)
-	
-	self.CanHealStand = SplatoonSWEPs:GetConVarBool("CanHealStand")
-	self.CanHealInk = SplatoonSWEPs:GetConVarBool("CanHealInk")
-	self.CanReloadStand = SplatoonSWEPs:GetConVarBool("CanReloadStand")
-	self.CanReloadInk = SplatoonSWEPs:GetConVarBool("CanReloadInk")
-	self.MaxSpeed = 250
 	self.Owner:SetCrouchedWalkSpeed(0.5)
-	self.Owner:SetMaxSpeed(self.MaxSpeed)
-	self.Owner:SetRunSpeed(self.MaxSpeed)
-	self.Owner:SetWalkSpeed(self.MaxSpeed)
+	self.CanHealStand = SplatoonSWEPs:GetConVarBool "CanHealStand"
+	self.CanHealInk = SplatoonSWEPs:GetConVarBool "CanHealInk"
+	self.CanReloadStand = SplatoonSWEPs:GetConVarBool "CanReloadStand"
+	self.CanReloadInk = SplatoonSWEPs:GetConVarBool "CanReloadInk"
 	
 	if SERVER then
+		self.InkDamageTime = CurTime()
+		self.PMName = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "Playermodel", 1)
 		local squidindex
-		if self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("Playermodel"), 1) == SplatoonSWEPs.PLAYER.OCTO then
+		if self.PMName == SplatoonSWEPs.PLAYER.OCTO then
 			squidindex = SplatoonSWEPs.SQUID.OCTO
 		else
 			squidindex = SplatoonSWEPs.SQUID.INKLING
 		end
 	
-		self.Squid = file.Exists(SplatoonSWEPs.Squidmodel[squidindex], "GAME")
-		self.ColorCode = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("InkColor"), 1)
+		self.SquidAvailable = file.Exists(SplatoonSWEPs.Squidmodel[squidindex], "GAME")
+		self.ColorCode = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "InkColor", 1)
 		self.Color = SplatoonSWEPs:GetColor(self.ColorCode)
-		self.VectorColor = Vector(self.Color.r / 255, self.Color.g / 255, self.Color.b / 255)
+		self.VectorColor = Vector(self.Color.r, self.Color.g, self.Color.b) / 255
 		self:SetInkColorProxy(self.VectorColor)
-		self:SetCurrentInkColor(Vector(self.Color.r, self.Color.g, self.Color.b))
 		
-		local model = SplatoonSWEPs.Playermodel[self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("Playermodel"), 1)]
+		local model = SplatoonSWEPs.Playermodel[self.PMName]
 		if model then
 			if file.Exists(model, "GAME") then
 				self:ChangePlayermodel({
@@ -185,11 +189,11 @@ function SWEP:Deploy()
 			end
 		end
 		
-		if self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("Playermodel"), 1) ~= SplatoonSWEPs.PLAYER.NOSQUID then
+		if self.PMName ~= SplatoonSWEPs.PLAYER.NOSQUID then
 			self.Owner:SetMaterial(self.Owner:Crouching() and "color" or "")
 		end
 	elseif self.Squid then
-		if SplatoonSWEPs:GetConVarInt("Playermodel") == SplatoonSWEPs.PLAYER.OCTO and self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
+		if SplatoonSWEPs:GetConVarInt "Playermodel" == SplatoonSWEPs.PLAYER.OCTO and self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
 			self.Squid:SetModel(SplatoonSWEPs.Squidmodel[SplatoonSWEPs.SQUID.OCTO])
 			self.SquidModelNumber = SplatoonSWEPs.SQUID.OCTO
 		elseif self.SquidModelNumber ~= SplatoonSWEPs.SQUID.INKLING then
@@ -204,7 +208,7 @@ end
 
 function SWEP:Holster()
 	if not IsValid(self) or not IsValid(self.Owner) or not self.Owner:IsPlayer() then return true end
-	if game.SinglePlayer() then self:CallOnClient("Holster") end
+	if game.SinglePlayer() then self:CallOnClient "Holster" end
 	
 	--Restores owner's information.
 	if SERVER and istable(self.BackupPlayerInfo) then
@@ -241,8 +245,10 @@ local HealingDelay = 0.1 --Healing rate(inkling)
 local inklingVM = ACT_VM_IDLE --Viewmodel animation(inkling)
 local squidVM = ACT_VM_HOLSTER --Viewmodel animation(squid)
 local throwingVM = ACT_VM_IDLE_LOWERED --Viewmodel animation(throwing sub weapon)
+local InkTraceLength = 20
+local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:Think()
-	self:CallOnClient("Think")
+	self:CallOnClient "Think"
 	local issquid = self.Owner:Crouching()
 	if IsFirstTimePredicted() then
 		--Gradually heals the owner
@@ -259,6 +265,7 @@ function SWEP:Think()
 			end
 			self:SetNextHealTime(CurTime() + delay)
 		end
+		
 		--Recharging ink
 		local reloadamount = CurTime() - self:GetNextReloadTime()
 		if reloadamount > 0 then
@@ -276,16 +283,38 @@ function SWEP:Think()
 		end
 		
 		--Make playermodel invisible while crouching
-		local plymodel
 		if SERVER then
-			plymodel = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName("Playermodel"), 1)
-		else
-			plymodel = SplatoonSWEPs:GetConVarInt("Playermodel")
-		end
+			local groundcolor = SplatoonSWEPs:GetSurfaceColor(
+				util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner))
+			local ang = Angle(0, self.Owner:GetAngles().yaw, 0)
+			local p = self.Owner:WorldSpaceCenter()
+			local fw, right = ang:Forward(), ang:Right()
+			self:SetInInk(issquid and (groundcolor == self.ColorCode or not self.Owner:OnGround()
+			and (SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
+				(fw - right) * InkTraceLength, self.Owner)) == self.ColorCode
+			or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
+				(fw + right) * InkTraceLength, self.Owner)) == self.ColorCode
+			or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
+				(right + fw) * -InkTraceLength, self.Owner)) == self.ColorCode
+			or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
+				(right - fw) * InkTraceLength, self.Owner)) == self.ColorCode)))
+			
 		
-		if self.Squid and plymodel ~= SplatoonSWEPs.PLAYER.NOSQUID then
-			self.Owner:SetMaterial(issquid and "color" or "")
-			self:DrawShadow(not issquid)
+			--When in ink
+			local enemyink = groundcolor and groundcolor ~= self.ColorCode
+			self.Owner:SetCrouchedWalkSpeed(self:GetInInk() and 1 or 0.5)
+			self:SetPlayerSpeed(self:GetInInk() and 460 or (enemyink and 125 or 250))
+			if self:GetInInk() and self.Owner:KeyDown(IN_JUMP + IN_FORWARD + IN_BACK) then
+				self.Owner:SetVelocity(self.Owner:GetForward() * 40 * self.Owner:EyeAngles().pitch / -90)
+			end
+			
+			if enemyink then
+				self.Owner:RemoveFlags(FL_DUCKING)
+				if CurTime() > self.InkDamageTime and self.Owner:Health() > self.Owner:GetMaxHealth() / 2 then
+					self.InkDamageTime = CurTime() + 0.016
+					self.Owner:TakeDamage(2)
+				end
+			end
 		end
 		
 		--Sending Viewmodel animation.
@@ -302,6 +331,11 @@ function SWEP:Think()
 	
 	if CLIENT then --Move clientside model to player's position.
 		if self.Squid then
+			if self.PMName ~= SplatoonSWEPs.PLAYER.NOSQUID then
+				self.Owner:SetMaterial(issquid and "color" or "")
+				self:DrawShadow(not issquid)
+			end
+			
 			local v = self.Owner:GetVelocity()
 			local a = (v + self.Owner:GetForward() * 40):Angle()
 			if v:LengthSqr() < 16 then --Speed limit: 
@@ -376,7 +410,6 @@ function SWEP:SetupDataTables()
 	self:NetworkVar("Float", 2, "NextReloadTime") --Owner recharging ink gradually.
 	self:NetworkVar("Float", 3, "Ink") --Ink remainig. 0-100
 	self:NetworkVar("Vector", 0, "InkColorProxy") --For material proxy.
-	self:NetworkVar("Vector", 1, "CurrentInkColor") --Hex Color code
 	
 	self:SetInInk(false)
 	self:SetCrouchPriority(false)
@@ -384,7 +417,6 @@ function SWEP:SetupDataTables()
 	self:SetNextHealTime(CurTime())
 	self:SetNextReloadTime(CurTime())
 	self:SetInk(100)
-	self:SetCurrentInkColor(vector_origin)
 	
 	if isfunction(self.CustomDataTables) then self:CustomDataTables() end
 end

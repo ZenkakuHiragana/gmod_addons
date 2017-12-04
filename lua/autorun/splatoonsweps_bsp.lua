@@ -239,7 +239,7 @@ local function MakeSurface(key, mins, maxs, normal, angle, origin, v2d, v3d)
 	angle:RotateAroundAxis(normal, -minangle.yaw)
 	facetable.angle = angle
 	if CLIENT then SplatoonSWEPs.AreaBound = SplatoonSWEPs.AreaBound + v2d.Area end
-	table.insert(SplatoonSWEPs:FindLeaf(facetable).Surfaces, facetable)
+	table.insert(SplatoonSWEPs:FindLeaf(facetable.Vertices).Surfaces, facetable)
 end
 
 local function MakeDispTriangle(vert, planenormal)
@@ -521,6 +521,8 @@ end,
 			center = center + fullverts[k]
 		end
 		center = center / (#fullverts + 1)
+		
+		if bit.band(util.PointContents(center - f.normal * 0.01), CONTENTS_GRATE) ~= 0 then continue end
 		
 		for k, v in pairs(fullverts) do
 			full2d[k] = SplatoonSWEPs:To2D(v, center, f.angle)

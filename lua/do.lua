@@ -164,6 +164,7 @@ local p = tr.HitPos
 	-- break
 -- end
 
+local flag = true
 local function lighttest()
 	draw.NoTexture()
 	surface.SetFont "ChatFont"
@@ -171,6 +172,12 @@ local function lighttest()
 	local t = LocalPlayer():GetEyeTrace()
 	local p, n = t.HitPos, t.HitNormal
 	local amb = render.GetAmbientLightColor()
+	if flag then flag = false
+		print("Length: ", amb:Length())
+		print("LengthSqr", amb:LengthSqr())
+		print("Average: ", (amb.x + amb.y + amb.z) / 3)
+		print("Grayscale: ", 0.298912 * amb.x + 0.586611 * amb.y + 0.114478 * amb.z)
+	end
 	local light = render.ComputeLighting(p, n)
 	local color = render.GetLightColor(p)
 	local x, y = 0, 1
@@ -193,10 +200,10 @@ local function lighttest()
 		color = render.GetLightColor(p)
 	end
 end
--- hook.Remove("HUDPaint", "test")
--- hook.Add("HUDPaint", "test", lighttest)
+hook.Remove("HUDPaint", "test")
+hook.Add("HUDPaint", "test", lighttest)
 
--- local l = SplatoonSWEPs:FindLeaf({Vertices = {LocalPlayer():GetPos(), LocalPlayer():GetPos() + vector_up * 50}})
+-- local l = SplatoonSWEPs:FindLeaf {LocalPlayer():GetPos(), LocalPlayer():GetPos() + vector_up * 50}
 -- print(l, l and l.id, l and l.IsLeaf)
 -- for i, v in ipairs(l.Surfaces) do DebugPoly(v.Vertices, true) end
 -- PrintTable(l, 0, {[l.ParentNode] = true, [l.Surfaces] = true})
@@ -206,9 +213,40 @@ end
 
 -- PrintTable(tr)
 -- print(util.GetSurfacePropName(tr.SurfaceProps))
--- local cvar = SplatoonSWEPs:GetConVar "InkColor"
--- cvar:SetInt(cvar:GetInt() % SplatoonSWEPs.MAX_COLORS + 1)
+local cvar = SplatoonSWEPs:GetConVar "InkColor"
+cvar:SetInt(cvar:GetInt() % SplatoonSWEPs.MAX_COLORS + 1)
 
-local leaf = SplatoonSWEPs:FindLeaf {Vertices = {p + n, p - n}}
-PrintTable(leaf.Surfaces)
+local ccode = Entity(1):GetActiveWeapon().ColorCode
+if not ccode then return end
+
+-- local leaf = SplatoonSWEPs:FindLeaf {p + n, p - n}
+-- PrintTable(leaf.Surfaces[1].InkRectangles)
+-- for _, leafface in ipairs(leaf.Surfaces) do
+	-- for r, z in pairs(leafface.InkRectangles) do
+		-- DebugVector(SplatoonSWEPs:To3D(r.pos, leafface.origin, leafface.angle), leafface.normal * 50)
+		-- for b in pairs(r.bounds) do
+			-- DebugBox(SplatoonSWEPs:To3D(b.mins, leafface.origin, leafface.angle),
+				-- SplatoonSWEPs:To3D(b.maxs, leafface.origin, leafface.angle))
+		-- end
+	-- end
+-- end
+
+-- local bound = Vector(20, 20, 20)
+-- for node in SplatoonSWEPs:BSPPairs {p} do
+	-- for k, f in ipairs(node.Surfaces) do
+		-- if f.normal:Dot(n) <= 0.8 then continue end
+		-- if not SplatoonSWEPs:CollisionAABB(p - bound, p + bound, f.mins, f.maxs) then continue end
+		-- local p2d = SplatoonSWEPs:To2D(p, f.origin, f.angle)
+		-- for r, z in SortedPairsByValue(f.InkRectangles, true) do
+			-- if p2d:DistToSqr(r.pos) < r.radius^2 then
+				-- if ccode == r.color then
+					-- Entity(1):SetHealth(Entity(1):Health() + 1000)
+				-- else
+					-- Entity(1):TakeDamage(10)
+				-- end
+				-- break
+			-- end
+		-- end
+	-- end
+-- end
 

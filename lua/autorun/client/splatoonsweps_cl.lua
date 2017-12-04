@@ -71,12 +71,12 @@ end
 --Mesh limitation is
 -- 10922 = 32767 / 3 with mesh.Begin(),
 -- 21845 = 65535 / 3 with BuildFromTriangles()
-local MAX_TRIANGLES = math.floor(32768 / 3)
+local MAX_TRIANGLES = math.min(math.floor(32768 / 3), 10000)
 local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
 local function Initialize()
 	local self = SplatoonSWEPs
-	self.HDR = GetConVar"mat_hdr_level":GetInt() == 2
-	self.InkLightLevel = .5
+	self.HDR = GetConVar "mat_hdr_level":GetInt() == 2
+	self.InkLightLevel = math.Clamp(1 - render.GetAmbientLightColor():LengthSqr(), 0.1, 0.6)
 	self.BSP:Init() --Parsing BSP file
 	self.BSP = nil
 	self:InitSortSurfaces()
@@ -204,8 +204,8 @@ local function Initialize()
 			if mesh.VertexCount() >= MAX_TRIANGLES * 3 then
 				build = build + 1
 				numtriangles = numtriangles - MAX_TRIANGLES
-				self.IMesh[build] = Mesh(self.RenderTarget.Material)
 				mesh.End()
+				self.IMesh[build] = Mesh(self.RenderTarget.Material)
 				mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
 			end
 		end

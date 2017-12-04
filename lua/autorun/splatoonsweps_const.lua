@@ -119,13 +119,13 @@ local InkColors = {
 		HSVToColor(0, 1, 1)
 	},
 	{Name = "Orange",
-		HSVToColor(40, 1, 1)
+		HSVToColor(30, 1, 1)
 	},
 	{Name = "Yellow",
 		HSVToColor(60, 1, 1)
 	},
 	{Name = "Yellowish green",
-		HSVToColor(70, 1, 1)
+		HSVToColor(90, 1, 1)
 	},
 	{Name = "Lime",
 		HSVToColor(120, 1, 1)

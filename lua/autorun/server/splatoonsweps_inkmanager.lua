@@ -4,62 +4,47 @@ if not SplatoonSWEPs then return end
 
 local PaintQueue = {}
 local InkGroup = {}
-local function MakeRect(tx, ty, x1, x2, y1, y2)
-	return {
-		mins = Vector(tx[x1], ty[y1]),
-		maxs = Vector(tx[x2], ty[y2]),
-	}
-end
-
-local function AddInkRectangle(face, newrects, sz)
-	local org = newrects[1]
-	local notcollide = true
-	local keys = table.GetKeys(face.InkRectangles)
-	while #newrects > 0 do
-		local s = table.remove(newrects, 1)
-		for _, r in ipairs(keys) do
-			if r.color == s.color then continue end
-			
-			local x11, x12, y11, y12 = s.mins.x, s.maxs.x, s.mins.y, s.maxs.y
-			local x21, x22, y21, y22 = r.mins.x, r.maxs.x, r.mins.y, r.maxs.y
-			if x11 > x22 or x12 < x21 or y11 > y22 or y12 < y21 then continue end
-			
-			local z = face.InkRectangles[r]
-			local sx, sy = {x11, x12, x21, x22}, {y11, y12, y21, y22}
-			table.sort(sx) table.sort(sy) --sorted X, sorted Y
-			for y, ry in ipairs {
-				{MakeRect(sx, sy, 1, 2, 1, 2), MakeRect(sx, sy, 2, 3, 1, 2), MakeRect(sx, sy, 3, 4, 1, 2)},
-				{MakeRect(sx, sy, 1, 2, 2, 3), MakeRect(sx, sy, 2, 3, 2, 3), MakeRect(sx, sy, 3, 4, 2, 3)},
-				{MakeRect(sx, sy, 1, 2, 3, 4), MakeRect(sx, sy, 2, 3, 3, 4), MakeRect(sx, sy, 3, 4, 3, 4)},
-			} do
-				for _, ryx in ipairs(ry) do
-					if SplatoonSWEPs:CollisionAABB2D(s.mins, s.maxs, ryx.mins, ryx.maxs) then
-						ryx.color = s.color
-						face.InkRectangles[s] = nil
-						face.InkRectangles[ryx] = sz
-						table.insert(newrects, ryx)
-					elseif SplatoonSWEPs:CollisionAABB2D(r.mins, r.maxs, ryx.mins, ryx.maxs) then
-						ryx.color = r.color
-						face.InkRectangles[ryx] = z
-					end
-				end
-			end
-			
-			face.InkRectangles[r] = nil
-			notcollide = false
-		end
-	end
-	
-	if notcollide then
-		face.InkRectangles[org] = sz
-	end
-end
-
-local rootpi = math.sqrt(math.pi)
+local rootpi = math.sqrt(math.pi) / 2
 local MIN_BOUND = 20 --Ink minimum bounding box scale
+local MIN_BOUND_AREA = 10 --minimum ink bounding box area
 local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surfaces
 local MAX_PROCESS_QUEUE_AT_ONCE = 20 --Running QueueCoroutine() at once
+local MAX_INKQUEUE_AT_ONCE = 10 --Processing new ink request at once
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
+local function MakeRect(tx, ty, x1, x2, y1, y2)
+	return {mins = Vector(tx[x1], ty[y1]), maxs = Vector(tx[x2], ty[y2])}
+end
+
+local function AddInkRectangle(face, newink, sz)
+	local nb = newink.bounds
+	local x11, x12, y11, y12 = nb.mins.x, nb.maxs.x, nb.mins.y, nb.maxs.y
+	for r, z in pairs(face.InkCircles) do
+		for b in pairs(r.bounds) do
+			local x21, x22, y21, y22 = b.mins.x, b.maxs.x, b.mins.y, b.maxs.y
+			if (x22 - x21) * (y22 - y21) < MIN_BOUND_AREA then r.bounds[b] = nil end
+			if x11 > x22 or x12 < x21 or y11 > y22 or y12 < y21 then continue end
+			
+			local sx, sy = {x11, x12, x21, x22}, {y11, y12, y21, y22}
+			table.sort(sx) table.sort(sy) --sorted X, sorted Y
+			r.bounds[b] = nil
+			for _, sub in ipairs {
+				MakeRect(sx, sy, 1, 2, 1, 2), MakeRect(sx, sy, 2, 3, 1, 2), MakeRect(sx, sy, 3, 4, 1, 2),
+				MakeRect(sx, sy, 1, 2, 2, 3), MakeRect(sx, sy, 2, 3, 2, 3), MakeRect(sx, sy, 3, 4, 2, 3),
+				MakeRect(sx, sy, 1, 2, 3, 4), MakeRect(sx, sy, 2, 3, 3, 4), MakeRect(sx, sy, 3, 4, 3, 4),
+			} do
+				if SplatoonSWEPs:CollisionAABB2D(b.mins, b.maxs, sub.mins, sub.maxs) and
+				not SplatoonSWEPs:CollisionAABB2D(nb.mins, nb.maxs, sub.mins, sub.maxs) then
+					r.bounds[sub] = true
+				end
+			end
+		end
+		if not next(r.bounds) then face.InkCircles[r] = nil end
+	end
+	
+	newink.bounds = {[newink.bounds] = true}
+	face.InkCircles[newink] = sz
+end
+
 local function QueueCoroutine(pos, normal, radius, color, polys)
 	local ang = normal:Angle()
 	local reference_polys = {}
@@ -67,11 +52,12 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 		reference_polys[i] = SplatoonSWEPs:To3D(v * radius, pos, ang)
 	end
 	
+	local inkqueue = 0
 	local rectsize = radius * rootpi
 	local sizevec = Vector(rectsize, rectsize)
 	local whitealpha, whiterotate = math.Rand(0, 255), math.Rand(0, 255)
 	local mins, maxs = SplatoonSWEPs:GetBoundingBox(MIN_BOUND, reference_polys)
-	for node in SplatoonSWEPs:BSPPairs({Vertices = reference_polys}, i) do
+	for node in SplatoonSWEPs:BSPPairs(reference_polys) do
 		for k, f in ipairs(node.Surfaces) do
 			if f.normal:Dot(normal) <= COS_MAX_DEG_DIFF then continue end
 			if not SplatoonSWEPs:CollisionAABB(mins, maxs, f.mins, f.maxs) then continue end
@@ -84,12 +70,18 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			net.WriteUInt(whiterotate, 8)
 			net.Broadcast()
 			
-			f.InkCounter = f.InkCounter + 1
-			local rectangle = {color = color}
 			local pos2d = SplatoonSWEPs:To2D(pos, f.origin, f.angle)
-			rectangle.mins = pos2d - sizevec
-			rectangle.maxs = pos2d + sizevec
-			-- AddInkRectangle(f, {rectangle}, f.InkCounter)
+			local inkdata = {
+				color = color,
+				radiusSqr = radius * radius,
+				pos = pos2d,
+				bounds = {mins = pos2d - sizevec, maxs = pos2d + sizevec},
+			}
+			AddInkRectangle(f, inkdata, f.InkCounter)
+			f.InkCounter = f.InkCounter + 1
+			
+			inkqueue = inkqueue + 1
+			if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 	end
 	
@@ -146,6 +138,25 @@ local function DoCoroutines()
 			-- if done % MAX_COROUTINES_AT_ONCE == 0 then coroutine.yield() end
 		end
 		coroutine.yield()
+	end
+end
+
+local MAX_DEG_GETSURF = 30
+local MAX_COS_GETSURF = math.cos(math.rad(MAX_DEG_GETSURF))
+local POINT_BOUND = Vector(1, 1, 1) * .1
+function SplatoonSWEPs:GetSurfaceColor(tr)
+	if not tr.Hit then return end
+	for node in self:BSPPairs {tr.HitPos} do
+		for k, f in ipairs(node.Surfaces) do
+			if f.normal:Dot(tr.HitNormal) <= MAX_COS_GETSURF then continue end
+			if not self:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, f.mins, f.maxs) then continue end
+			local p2d = self:To2D(tr.HitPos, f.origin, f.angle)
+			for r in SortedPairsByValue(f.InkCircles, true) do
+				if p2d:DistToSqr(r.pos) < r.radiusSqr then
+					return r.color
+				end
+			end
+		end
 	end
 end
 
