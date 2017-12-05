@@ -1,15 +1,10 @@
 
 include "shared.lua"
+SWEP.PrintName = "Shooter base"
 
 --When the weapon is fired, it slightly expands.  This is maximum time to get back to normal size.
 local FireWeaponCooldown = 0.1
 local FireWeaponMultiplier = 1.5
-
-function SWEP:ClientInit()
-end
-
-function SWEP:ClientThink(issquid)
-end
 
 --Custom functions executed before weapon model is drawn.
 --model | Weapon model(Clientside Entity)

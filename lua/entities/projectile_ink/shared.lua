@@ -3,20 +3,8 @@
 ]]
 
 ENT.Type = "anim"
-ENT.Base = "base_entity"
-ENT.RenderGroup = RENDERGROUP_OPAQUE
- 
-local classname = "projectile_ink"
-ENT.PrintName		= "Projectile Ink"
-ENT.Author			= "GreatZenkakuMan"
-ENT.Contact			= "GitHub repository here"
-ENT.Purpose			= "Projectile Ink"
-ENT.Instructions	= ""
-ENT.AutomaticFrameAdvance = true
-
-ENT.Spawnable = false
-ENT.AdminOnly = false
-ENT.DisableDuplicator = true
+ENT.FlyingModel = "models/blooryevan/ink/inkprojectile.mdl"
+util.PrecacheModel(ENT.FlyingModel)
 
 local HitSound = {} --When ink meets wall
 for i = 0, 20 do
@@ -31,24 +19,21 @@ for i = 0, 4 do
 end
 
 local DmgSound = Sound("SplatoonSWEPs/misc/DamageInkLook00.wav") --When ink meets enemy player.
-ENT.FlyingModel = "models/blooryevan/ink/inkprojectile.mdl"
 
 function ENT:SharedInit()
 	self:SetModel(self.FlyingModel)
 	self:PhysicsInit(SOLID_BBOX)
-	self:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+	self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
 	self:SetCustomCollisionCheck(true)
 end
 
 function ENT:SetupDataTables()
-	self:NetworkVar("Bool", 0, "IsInk")
 	self:NetworkVar("Int", 0, "ColorCode") --Color number
 	self:NetworkVar("Vector", 0, "InkColorProxy") --For material proxy.
-	self:NetworkVar("Vector", 2, "HitPos")
-	self:NetworkVar("Vector", 3, "HitNormal")
 end
 
 local bound = Vector(1, 1, 1) * 10
+local classname = "projectile_ink"
 hook.Add("ShouldCollide", "SplatoonSWEPs: Ink go through grates", function(ent1, ent2)
 	local class1, class2 = ent1:GetClass(), ent2:GetClass()	
 	local ink, targetent = ent1, ent2

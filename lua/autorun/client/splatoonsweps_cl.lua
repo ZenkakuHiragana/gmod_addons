@@ -14,9 +14,9 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	SortedSurfaces = {},
 	AreaBound = 0,
 }
-include "../splatoonsweps_shared.lua"
-include "../splatoonsweps_bsp.lua"
-include "../splatoonsweps_const.lua"
+include "autorun/splatoonsweps_shared.lua"
+include "autorun/splatoonsweps_bsp.lua"
+include "autorun/splatoonsweps_const.lua"
 include "splatoonsweps_userinfo.lua"
 include "splatoonsweps_inkmanager_cl.lua"
 include "splatoonsweps_network_cl.lua"

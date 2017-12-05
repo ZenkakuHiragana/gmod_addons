@@ -110,9 +110,6 @@ for i, v in ipairs(SplatoonSWEPs.Squidmodel) do
 	util.PrecacheModel(v)
 end
 
-SplatoonSWEPs.SEND_ERROR_DURATION_BITS = 4
-SplatoonSWEPs.SEND_ERROR_NOTIFY_BITS = 3
-
 --List of available ink colors(25 colors)
 local InkColors = {
 	{Name = "Red",
@@ -195,8 +192,6 @@ local InkColors = {
 	},
 }
 
-SplatoonSWEPs.MAX_COLORS = #InkColors
-SplatoonSWEPs.COLOR_BITS = 6
 function SplatoonSWEPs:GetColorName(colorid)
 	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)].Name
 end
@@ -204,6 +199,10 @@ function SplatoonSWEPs:GetColor(colorid)
 	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)][1]
 end
 
+SplatoonSWEPs.MAX_COLORS = #InkColors
+SplatoonSWEPs.COLOR_BITS = 6
+SplatoonSWEPs.SEND_ERROR_DURATION_BITS = 4
+SplatoonSWEPs.SEND_ERROR_NOTIFY_BITS = 3
 SplatoonSWEPs.TEXTUREFLAGS = {
 	POINTSAMPLE			= 0x00000001, --Low quality, "pixel art" texture filtering.
 	TRILINEAR			= 0x00000002, --Medium quality texture filtering.
@@ -238,3 +237,14 @@ SplatoonSWEPs.TEXTUREFLAGS = {
 	UNUSED_40000000		= 0x40000000, --
 	UNUSED_80000000		= 0x80000000, --
 }
+
+SplatoonSWEPs.InklingBaseSpeed = 250 --Walking speed [units/s]
+SplatoonSWEPs.SquidBaseSpeed = 460 --Swimming speed [units/s]
+SplatoonSWEPs.InklingJumpPower = 250
+SplatoonSWEPs.OnEnemyInkJumpPower = SplatoonSWEPs.InklingJumpPower / 2
+SplatoonSWEPs.vector_one = Vector(1, 1, 1)
+SplatoonSWEPs.MaxInkAmount = 100
+SplatoonSWEPs.SquidBoundMins = -Vector(13, 13, 0)
+SplatoonSWEPs.SquidBoundMaxs = Vector(13, 13, 33)
+SplatoonSWEPs.SquidViewOffset = Vector(0, 0, 10)
+

@@ -8,7 +8,7 @@ local rootpi = math.sqrt(math.pi) / 2
 local MIN_BOUND = 20 --Ink minimum bounding box scale
 local MIN_BOUND_AREA = 10 --minimum ink bounding box area
 local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surfaces
-local MAX_PROCESS_QUEUE_AT_ONCE = 20 --Running QueueCoroutine() at once
+local MAX_PROCESS_QUEUE_AT_ONCE = 16 --Running QueueCoroutine() at once
 local MAX_INKQUEUE_AT_ONCE = 10 --Processing new ink request at once
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
 local function MakeRect(tx, ty, x1, x2, y1, y2)
