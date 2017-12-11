@@ -6,7 +6,7 @@ include "shared.lua"
 
 function SWEP:ServerInit()
 	self:SetModifyWeaponSize(CurTime() - 1)
-	self.AimTimer = self:AddSchedule(100000, 0, function(self, schedule)
+	self.AimTimer = self:AddSchedule(math.huge, 0, function(self, schedule)
 		if schedule.disabled then return end
 		schedule.disabled = true
 		self:SetHoldType "passive"

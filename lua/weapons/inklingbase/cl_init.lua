@@ -113,7 +113,6 @@ function SWEP:Initialize()
 	local icon = "vgui/entities/" .. self:GetClass()
 	if not file.Exists(icon .. ".vmt", "GAME") then icon = "weapons/swep" end
 	self.WepSelectIcon = surface.GetTextureID(icon)
-	self.ViewAnim = ACT_VM_IDLE
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:MakeSquidModel()
 	self:ChangeHullDuck()
@@ -188,12 +187,6 @@ function SWEP:Think()
 		issquid = self.Owner:Crouching()
 	else
 		issquid = self.Owner:GetFlags(FL_DUCKING)
-	end
-	
-	if self.Owner == LocalPlayer() and self.Squid and
-		self.PMName ~= SplatoonSWEPs.PLAYER.NOSQUID then
-		self.Owner:SetMaterial(issquid and "color" or "")
-		self:DrawShadow(not issquid)
 	end
 	
 	self:ProcessSchedules()

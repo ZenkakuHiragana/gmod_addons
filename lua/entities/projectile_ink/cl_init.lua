@@ -3,7 +3,7 @@ include "shared.lua"
 
 ENT.AutomaticFrameAdvance = true
 ENT.Author			= "GreatZenkakuMan"
-ENT.Contact			= "GitHub repository here"
+ENT.Contact			= ""
 ENT.Instructions	= ""
 ENT.PrintName		= "Projectile Ink"
 ENT.Purpose			= "Projectile Ink"

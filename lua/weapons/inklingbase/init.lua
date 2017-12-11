@@ -173,6 +173,11 @@ function SWEP:Think()
 		self.Owner:SetVelocity(self.Owner:GetForward() * 40 * self.Owner:EyeAngles().pitch / -90)
 	end
 	
+	if self.SquidAvailable and self.PMID ~= SplatoonSWEPs.PLAYER.NOSQUID then
+		self.Owner:SetMaterial(issquid and "color" or "")
+		self:DrawShadow(not issquid)
+	end
+	
 	--Send viewmodel animation.
 	if issquid and self.ViewAnim ~= squidVM then
 		self:SendWeaponAnim(squidVM)

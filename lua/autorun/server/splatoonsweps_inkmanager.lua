@@ -68,6 +68,9 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			net.WriteFloat(radius)
 			net.WriteUInt(whitealpha, 8)
 			net.WriteUInt(whiterotate, 8)
+			net.WriteVector(f.origin)
+			net.WriteVector(f.normal)
+			net.WriteAngle(f.angle)
 			net.Broadcast()
 			
 			local pos2d = SplatoonSWEPs:To2D(pos, f.origin, f.angle)
@@ -77,8 +80,8 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 				pos = pos2d,
 				bounds = {mins = pos2d - sizevec, maxs = pos2d + sizevec},
 			}
-			AddInkRectangle(f, inkdata, f.InkCounter)
-			f.InkCounter = f.InkCounter + 1
+			AddInkRectangle(f, inkdata, SplatoonSWEPs.InkCounter)
+			SplatoonSWEPs.InkCounter = SplatoonSWEPs.InkCounter + 1
 			
 			inkqueue = inkqueue + 1
 			if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
@@ -143,7 +146,7 @@ end
 
 local MAX_DEG_GETSURF = 30
 local MAX_COS_GETSURF = math.cos(math.rad(MAX_DEG_GETSURF))
-local POINT_BOUND = Vector(1, 1, 1) * .1
+local POINT_BOUND = SplatoonSWEPs.vector_one * .1
 function SplatoonSWEPs:GetSurfaceColor(tr)
 	if not tr.Hit then return end
 	for node in self:BSPPairs {tr.HitPos} do

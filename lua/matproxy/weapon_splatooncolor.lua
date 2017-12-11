@@ -1,7 +1,14 @@
 
+local OldItemTintBind
 local function ItemTintInit(self, mat, values)
 	-- Store the name of the variable we want to set
 	self.ResultTo = values.resultvar
+end
+
+if steamworks.ShouldMountAddon "135491961" then
+	include "matproxy/tf2itempaint.lua"
+	ItemTintInit = matproxy.ProxyList["ItemTintColor"].init
+	OldItemTintBind = matproxy.ProxyList["ItemTintColor"].bind
 end
 
 local function ItemTintBind(self, mat, ent)
@@ -10,26 +17,16 @@ local function ItemTintBind(self, mat, ent)
 		--If the target ent has a function called GetInkColorProxy then use that
 		--The function SHOULD return a Vector with the chosen ink color.
 		mat:SetVector(self.ResultTo, ent:GetInkColorProxy())
-	end
-end
-
-local matInit, matBind = ItemTintInit, ItemTintBind
-if matproxy.ProxyList["ItemTintColor"] then
-	local OldItemTintInit = matproxy.ProxyList["ItemTintColor"].init
-	local OldItemTintBind = matproxy.ProxyList["ItemTintColor"].bind
-	matInit = function(self, mat, values)
-		OldItemTintInit(self, mat, values)
-		ItemTintInit(self, mat, values)
-	end
-	matBind = function(self, mat, ent)
-		OldItemTintBind(self, mat, ent)
-		ItemTintBind(self, mat, ent)
+	elseif OldItemTintBind then
+		return OldItemTintBind(self, mat, ent)
+	else
+		mat:SetVector(self.ResultTo, vector_origin)
 	end
 end
 
 matproxy.Add(
 {
 	name = "ItemTintColor", 
-	init = matInit,
-	bind = matBind
+	init = ItemTintInit,
+	bind = ItemTintBind,
 })

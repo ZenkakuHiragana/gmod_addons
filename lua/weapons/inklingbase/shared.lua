@@ -192,7 +192,8 @@ function SWEP:AddNetworkVar(typeof, name)
 end
 
 function SWEP:SetupDataTables()
-	self.NetworkSlot = self.NetworkSlot or {
+	self.FunctionQueue = {}
+	self.NetworkSlot = {
 		String = -1, Bool = -1, Float = -1, Int = -1,
 		Vector = -1, Angle = -1, Entity = -1,
 	}

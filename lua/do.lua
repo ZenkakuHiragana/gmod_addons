@@ -1,4 +1,5 @@
-
+collectgarbage "collect"
+do return end
 -- local vs = SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.VERTEXES).data
 -- local edg = SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.SURFEDGES).data
 -- local ofaces = SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.ORIGINALFACES).data
@@ -79,7 +80,7 @@ local function doit()
 	local q = {SplatoonSWEPs.BSP:GetWorldRoot()}
 	-- local q = {}
 	-- for i, v in pairs(SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.MODELS).data) do
-		-- table.insert(q, v.RootNode)
+		-- table.insert(q, v)
 	-- end
 	-- debugoverlay.Box(p, mins, maxs, 3, Color(0, 255, 0, 128))
 	while #q > 0 do
@@ -195,13 +196,13 @@ local function lighttest()
 			surface.DrawText(text)
 			y = y + 1
 		end
-		p = p + n * 100
+		p = p + n
 		light = render.ComputeLighting(p, n)
 		color = render.GetLightColor(p)
 	end
 end
-hook.Remove("HUDPaint", "test")
-hook.Add("HUDPaint", "test", lighttest)
+-- hook.Remove("HUDPaint", "test")
+-- hook.Add("HUDPaint", "test", lighttest)
 
 -- local l = SplatoonSWEPs:FindLeaf {LocalPlayer():GetPos(), LocalPlayer():GetPos() + vector_up * 50}
 -- print(l, l and l.id, l and l.IsLeaf)
@@ -216,13 +217,13 @@ hook.Add("HUDPaint", "test", lighttest)
 local cvar = SplatoonSWEPs:GetConVar "InkColor"
 cvar:SetInt(cvar:GetInt() % SplatoonSWEPs.MAX_COLORS + 1)
 
-local ccode = Entity(1):GetActiveWeapon().ColorCode
-if not ccode then return end
+-- local ccode = Entity(1):GetActiveWeapon().ColorCode
+-- if not ccode then return end
 
 -- local leaf = SplatoonSWEPs:FindLeaf {p + n, p - n}
--- PrintTable(leaf.Surfaces[1].InkRectangles)
+-- PrintTable(leaf.Surfaces[1].InkCircles)
 -- for _, leafface in ipairs(leaf.Surfaces) do
-	-- for r, z in pairs(leafface.InkRectangles) do
+	-- for r, z in pairs(leafface.InkCircles) do
 		-- DebugVector(SplatoonSWEPs:To3D(r.pos, leafface.origin, leafface.angle), leafface.normal * 50)
 		-- for b in pairs(r.bounds) do
 			-- DebugBox(SplatoonSWEPs:To3D(b.mins, leafface.origin, leafface.angle),

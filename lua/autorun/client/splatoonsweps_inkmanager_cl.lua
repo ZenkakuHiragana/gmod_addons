@@ -9,32 +9,27 @@ local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 local inklightmaterial = Material "splatoonsweps/splatooninklight"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
 local WaterOverlap = Material "splatoonsweps/splatoonwater"
-local function DrawMeshes()
-	if SplatoonSWEPs.RenderTarget.Ready then
-		render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
-		render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
-		for i, m in ipairs(SplatoonSWEPs.IMesh) do
-			m:Draw()
-		end
-		
-		if LocalPlayer():FlashlightIsOn() or #ents.FindByClass("*projectedtexture*") > 0 then
-			render.PushFlashlightMode(true)
-			for i, m in ipairs(SplatoonSWEPs.IMesh) do
-				m:Draw()
-			end
-			render.PopFlashlightMode()
-		end
-		
-		render.SetMaterial(SplatoonSWEPs.RenderTarget.WaterMaterial)
-		for i, m in ipairs(SplatoonSWEPs.IMesh) do
-			m:Draw()
-		end
+local colormat = Material "color"
+local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
+	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox
+		or bDrawingDepth or not SplatoonSWEPs.RenderTarget.Ready then return end
+	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
+	render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
+	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
+	
+	if LocalPlayer():FlashlightIsOn() or #ents.FindByClass "*projectedtexture*" > 0 then
+		render.PushFlashlightMode(true)
+		for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
+		render.PopFlashlightMode()
 	end
+	
+	render.SetMaterial(SplatoonSWEPs.RenderTarget.WaterMaterial)
+	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
 end
 
 local function GetLight(p, n)
 	local amb = render.GetAmbientLightColor()
-	local lightcolor = render.GetLightColor(p)
+	local lightcolor = render.GetLightColor(p + n)
 	local light = render.ComputeLighting(p + n, n)
 	local avg = (light + lightcolor + amb / 5) / 2.2
 	avg.x = math.Remap(avg.x, 0, 1, 0, SplatoonSWEPs.InkLightLevel)
@@ -63,7 +58,6 @@ end
 
 local function ProcessQueue()
 	local self = SplatoonSWEPs
-	local vector_one = Vector(1, 1, 1)
 	while true do
 		local done = 0
 		for i, q in ipairs(self.InkQueue) do
@@ -71,13 +65,13 @@ local function ProcessQueue()
 			local c = self:GetColor(q.c)
 			local radius = self:UnitsToPixels(q.r)
 			local size = radius * 2
-			local f = self.SortedSurfaces[q.facenumber]
+			local f = self.SequentialSurfaces[q.facenumber]
 			local org = self:UVToPixels(f.UVorigin)
 			local bound = self:UnitsToPixels(f.bound)
-			local center = org + self:UnitsToPixels(self:To2D(q.pos, f.origin, f.angle))
+			local center = org + self:UnitsToPixels(self:To2D(q.pos, q.origin, q.angle))
 			local s = Vector(math.floor(org.x) - 1, math.floor(org.y) - 1)
 			local b = Vector(math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1)
-			local light = GetLight(q.pos, f.normal)
+			local light = GetLight(q.pos, q.normal)
 			local corner = center - Vector(radius, radius)
 			if not self:CollisionAABB2D(s, b, corner, corner + Vector(size, size)) then continue end
 			
@@ -137,7 +131,7 @@ local function ProcessQueue()
 					local r = Vector(Lightcos[n][i], Lightsin[n][i]) * rad + center
 					if s.x < r.x and r.x < b.x and s.y < r.y and r.y < b.y then
 						lightmapmaterial:SetVector("$color", GetLight(self:To3D(
-							self:PixelsToUnits((r - org) * 2), f.origin, f.angle), f.normal))
+							self:PixelsToUnits((r - org) * 2), q.origin, q.angle), q.normal))
 						r.x, r.y = math.floor(r.x - radius), math.floor(r.y - radius)
 						surface.DrawTexturedRect(r.x, r.y, size, size)
 					end
@@ -173,3 +167,7 @@ end
 
 hook.Add("PostDrawOpaqueRenderables", "SplatoonSWEPsDrawInk", DrawMeshes)
 hook.Add("Tick", "SplatoonSWEPsRegisterInk_cl", GMTick)
+hook.Add("PostDrawSkyBox", "SplatoonSWEPsTestIfMapHas3DSkyBox", function()
+	SplatoonSWEPs.Has3DSkyBox = true
+	hook.Remove("PostDrawSkyBox", "SplatoonSWEPsTestIfMapHas3DSkyBox")
+end)

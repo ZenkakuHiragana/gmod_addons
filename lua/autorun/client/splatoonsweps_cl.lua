@@ -4,14 +4,13 @@ local InkAlpha = 255
 local MeshColor = ColorAlpha(color_white, InkAlpha)
 SplatoonSWEPs = SplatoonSWEPs or {
 	IMesh = {},
-	Models = {},
 	RenderTarget = {
 		BaseTextureName = "splatoonsweps_rendertarget",
 		NormalmapName = "splatoonsweps_normalmap",
 		LightmapName = "splatoonsweps_lightmap",
 		WaterMaterialName = "splatoonsweps_watermaterial",
 	},
-	SortedSurfaces = {},
+	SequentialSurfaces = {},
 	AreaBound = 0,
 }
 include "autorun/splatoonsweps_shared.lua"
@@ -71,15 +70,21 @@ end
 --Mesh limitation is
 -- 10922 = 32767 / 3 with mesh.Begin(),
 -- 21845 = 65535 / 3 with BuildFromTriangles()
-local MAX_TRIANGLES = math.min(math.floor(32768 / 3), 10000)
+local MAX_TRIANGLES = math.floor(32768 / 3)
 local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
 local function Initialize()
 	local self = SplatoonSWEPs
+	local amb = render.GetAmbientLightColor()
+	local level = amb:LengthSqr()
+	if level > 1 then level = self.GrayScaleFactor:Dot(amb) end
 	self.HDR = GetConVar "mat_hdr_level":GetInt() == 2
-	self.InkLightLevel = math.Clamp(1 - render.GetAmbientLightColor():LengthSqr(), 0.1, 0.6)
+	self.InkLightLevel = math.Clamp(1 - level, 0.15, 0.55)
 	self.BSP:Init() --Parsing BSP file
 	self.BSP = nil
-	self:InitSortSurfaces()
+	local sortedsurfaces = {}
+	for k in SortedPairsByMemberValue(self.SequentialSurfaces, "area", true) do
+		table.insert(sortedsurfaces, k)
+	end
 	
 	local rtsize = math.min(self:GetRTSize(), render.MaxTextureWidth())
 	local rtheight = math.min(self:GetRTSize(), render.MaxTextureHeight())
@@ -89,7 +94,8 @@ local function Initialize()
 	local function GetUV(convertunit)
 		local u, v, nextV = 0, 0, 0
 		local convSqr = convertunit^2
-		for _, face in ipairs(self.SortedSurfaces) do --Using next-fit approach
+		for _, k in ipairs(sortedsurfaces) do --Using next-fit approach
+			local face = self.SequentialSurfaces[k]
 			local bound = face.bound / convertunit
 			nextV = math.max(nextV, bound.y)
 			if 1 - u < bound.x then 
@@ -183,18 +189,19 @@ local function Initialize()
 	
 	--Building MeshVertex
 	self.NumMeshTriangles = 0
-	for i, face in ipairs(self.SortedSurfaces) do
-		self.NumMeshTriangles = self.NumMeshTriangles + #face.MeshVertex - 2
+	for _, k in ipairs(sortedsurfaces) do
+		local mverts = self.SequentialSurfaces[k].MeshVertex
+		self.NumMeshTriangles = self.NumMeshTriangles + #mverts - 2
 	end
 	
 	local build, numtriangles = 1, self.NumMeshTriangles
 	self.IMesh[build] = Mesh(self.RenderTarget.Material)
 	mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
-	for _, face in ipairs(self.SortedSurfaces) do
+	for _, k in ipairs(sortedsurfaces) do
+		local face = self.SequentialSurfaces[k]
 		for t = 3, #face.MeshVertex do
 			for _, i in ipairs {t - 1, t, 1} do
 				mesh.Normal(face.normal)
-				mesh.Color(255, 255, 255, 255)
 				mesh.Position(face.MeshVertex[i].pos)
 				mesh.TexCoord(0, face.MeshVertex[i].u, face.MeshVertex[i].v)
 				mesh.TexCoord(1, face.MeshVertex[i].u, face.MeshVertex[i].v)
@@ -211,12 +218,15 @@ local function Initialize()
 		end
 		face.MeshVertex = nil
 		face.Vertices2D = nil
+		face.Vertices = nil
+		face.area = nil
+		face.normal = nil
 	end
 	mesh.End()
 	
 	self.RenderTarget.Ready = true
 	self:ClearAllInk()
-	collectgarbage()
+	collectgarbage "collect"
 end
 
 hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", Initialize)

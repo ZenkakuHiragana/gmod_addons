@@ -199,6 +199,7 @@ function SplatoonSWEPs:GetColor(colorid)
 	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)][1]
 end
 
+SplatoonSWEPs.GrayScaleFactor = Vector(.298912, .586611, .114478)
 SplatoonSWEPs.MAX_COLORS = #InkColors
 SplatoonSWEPs.COLOR_BITS = 6
 SplatoonSWEPs.SEND_ERROR_DURATION_BITS = 4
@@ -245,6 +246,6 @@ SplatoonSWEPs.OnEnemyInkJumpPower = SplatoonSWEPs.InklingJumpPower / 2
 SplatoonSWEPs.vector_one = Vector(1, 1, 1)
 SplatoonSWEPs.MaxInkAmount = 100
 SplatoonSWEPs.SquidBoundMins = -Vector(13, 13, 0)
-SplatoonSWEPs.SquidBoundMaxs = Vector(13, 13, 33)
-SplatoonSWEPs.SquidViewOffset = Vector(0, 0, 10)
+SplatoonSWEPs.SquidBoundMaxs = Vector(13, 13, 24)
+SplatoonSWEPs.SquidViewOffset = Vector(0, 0, 24)
 

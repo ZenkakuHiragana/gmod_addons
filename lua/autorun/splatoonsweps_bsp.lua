@@ -72,8 +72,8 @@ local LUMP = {
 -- local TextureMeta = {}
 local bsp = SplatoonSWEPs.BSP
 -- local LUMP = SplatoonSWEPs.LUMP
-local FACE_MIN_SEGLEN_SQR = 1.5^2 --minimum length of line segment
-local FACE_MIN_ANGLE = 0.1 --degrees
+local FACE_MIN_SEGLEN_SQR = 0.5^2 --minimum length of line segment
+local FACE_MIN_ANGLE = 0.01 --degrees
 local FACE_MIN_SIN = math.sin(math.rad(FACE_MIN_ANGLE))
 local DISP_MIN_BOUND = 0
 local TextureFilterBits = bit.bor(SURF_SKY, SURF_WARP, SURF_NOPORTAL, SURF_TRIGGER, SURF_NODRAW, SURF_HINT, SURF_SKIP)
@@ -145,6 +145,7 @@ end
 function bsp:Init()
 	self.bspname = "maps/" .. game.GetMap() .. ".bsp"
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
+	self.FaceIndex = 0
 	
 	self:ReadHeader()
 	self:Parse(LUMP.PLANES)
@@ -156,12 +157,17 @@ function bsp:Init()
 	self:Parse(LUMP.TEXDATA)
 	self:Parse(LUMP.TEXINFO)
 	
-	self:Parse(LUMP.LEAFS)
-	self:Parse(LUMP.NODES)
-	self:Parse(LUMP.MODELS)
+	if SERVER then
+		self:Parse(LUMP.LEAFS)
+		self:Parse(LUMP.NODES)
+		self:Parse(LUMP.MODELS)
+	end
 	
-	self:Parse(LUMP.FACES)
+	self:Parse(SplatoonSWEPs.HDR and LUMP_FACES_HDR or LUMP.FACES)
 	self:Parse(LUMP.DISPINFO)
+	
+	self:Parse(LUMP.GAME_LUMP)
+	self.bsp:Close()
 	self.bsp = nil
 end
 
@@ -193,63 +199,69 @@ local function GetRotatedAABB(v2d, angle)
 	return mins, maxs
 end
 
-local function MakeSurface(key, mins, maxs, normal, angle, origin, v2d, v3d)
-	if #v2d < 3 then return end
-	local facetable = {
-		maxs = maxs,
-		mins = mins,
-		origin = origin,
-		normal = normal,
-		angle = angle,
-		Vertices2D = v2d,
-		Vertices = v3d,
-	}
-	table.insert(SplatoonSWEPs.SortedSurfaces, facetable)
+local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d)
+	if #v3d < 3 or bsp.FaceIndex > (160000 or 1247232) then return end
+	local hitair = false
+	for _, v in ipairs(v3d) do
+		if bit.band(util.PointContents(v + normal * .01), CONTENTS_WATER) == 0 then
+			hitair = true
+			break
+		end
+	end
+	if not hitair then return end
+	local facetable = {normal = normal}
+	bsp.FaceIndex = bsp.FaceIndex + 1
 	
-	local area, minangle, minmins = 0, nil, nil
+	local area, minangle, minmins = math.huge, nil, nil
 	for i, v in ipairs(v2d) do --Get minimum AABB with O(n^2)
 		local seg = v2d[i % #v2d + 1] - v
 		local ang = Angle(0, 90 - math.deg(math.atan2(seg.y, seg.x)))
 		local mins, maxs = GetRotatedAABB(v2d, ang)
 		local bound = maxs - mins
-		local area = bound.x * bound.y
-		if v2d.Area > area then
-			minangle = ang
+		if area > bound.x * bound.y then
 			if bound.x < bound.y then
 				ang.yaw = ang.yaw - 90
 				minmins, maxs = GetRotatedAABB(v2d, ang)
-				v2d.Area = bound.x * bound.y
-				facetable.bound = maxs - minmins
 			else
 				minmins = mins
-				v2d.Area = area
-				facetable.bound = bound
 			end
+			minangle = ang
+			bound = maxs - minmins
+			area = bound.x * bound.y
+			if CLIENT then facetable.bound = bound end
 		end
 	end
 	
 	for i, v in ipairs(v2d) do
-		area = area + v:Cross(v2d[i % #v2d + 1]).z
 		v:Rotate(minangle)
 		v:Sub(minmins)
 	end
 
-	minmins:Rotate(-minangle)
-	facetable.origin = SplatoonSWEPs:To3D(minmins, origin, angle)
-	angle:RotateAroundAxis(normal, -minangle.yaw)
-	facetable.angle = angle
-	if CLIENT then SplatoonSWEPs.AreaBound = SplatoonSWEPs.AreaBound + v2d.Area end
-	table.insert(SplatoonSWEPs:FindLeaf(facetable.Vertices).Surfaces, facetable)
+	if CLIENT then
+		facetable.area = area
+		facetable.Vertices2D = v2d
+		facetable.Vertices = v3d
+		SplatoonSWEPs.AreaBound = SplatoonSWEPs.AreaBound + area
+		return table.insert(SplatoonSWEPs.SequentialSurfaces, facetable)
+	else
+		facetable.InkCircles = {}
+		facetable.id = bsp.FaceIndex
+		facetable.mins, facetable.maxs = mins, maxs
+		minmins:Rotate(-minangle)
+		facetable.origin = SplatoonSWEPs:To3D(minmins, origin, angle)
+		angle:RotateAroundAxis(normal, -minangle.yaw)
+		facetable.angle = angle
+		return table.insert(SplatoonSWEPs:FindLeaf(v3d).Surfaces, facetable)
+	end
 end
 
-local function MakeDispTriangle(vert, planenormal)
+local function MakeDispTriangle(vert)
 	local normal = (vert[1] - vert[2]):Cross(vert[3] - vert[2]):GetNormalized()
 	local angle = normal:Angle()
-	local surfkey = tostring(normal)
 	local origin = (vert[1] + vert[2] + vert[3]) / 3
 	local mins = Vector(math.huge, math.huge, math.huge)
 	local maxs = -mins
-	local v2d = {Area = math.huge}
+	local v2d = {}
 	for i, v in ipairs(vert) do
 		maxs.x = math.max(maxs.x, v.x + DISP_MIN_BOUND) --Calculate bounding box
 		maxs.y = math.max(maxs.y, v.y + DISP_MIN_BOUND)
@@ -260,7 +272,7 @@ local function MakeDispTriangle(vert, planenormal)
 		v2d[i] = SplatoonSWEPs:To2D(v, origin, angle)
 	end
 	
-	MakeSurface(surfkey, mins, maxs, normal, angle, origin, v2d, vert)
+	return MakeSurface(mins, maxs, normal, angle, origin, v2d, vert)
 end
 
 local ParseFunction = {
@@ -278,9 +290,7 @@ end,
 		lump.data[i] = {}
 		lump.data[i].normal = read "Vector"
 		lump.data[i].distance = read "Float"
-		-- lump.data[i].Origin = lump.data[i].normal * lump.data[i].distance
-		-- lump.data[i].type = 
-		read "Long"
+		bsp.bsp:Skip(4) --type
 	end
 end,
 
@@ -324,17 +334,13 @@ end,
 	lump.num = math.min(math.floor(lump.length / size) - 1, 2048 - 1)
 	for i = 0, lump.num do
 		lump.data[i] = {}
-		-- lump.data[i].refrectivity = read "Vector"
-		bsp.bsp:Skip(12)
+		bsp.bsp:Skip(12) --reflectivity
 		local strID = read "Long" * 4
-		-- lump.data[i].width = read "Long"
-		-- lump.data[i].height = read "Long"
-		-- lump.data[i].view_width = read "Long"
-		-- lump.data[i].view_height = read "Long"
-		bsp.bsp:Skip(4 * 4)
+		lump.data[i].width = read "Long"
+		lump.data[i].height = read "Long"
 		lump.data[i].name = ""
 
-		local here = bsp.bsp:Tell()
+		local here = bsp.bsp:Tell() + 8 --view_width, view_height
 		bsp.bsp:Seek(strtable.offset + strID)
 		local stroffset = read "Long"
 		bsp.bsp:Seek(strdata.offset + stroffset)
@@ -350,18 +356,17 @@ end,
 
 [LUMP.TEXINFO] = function(lump)
 	local size = 72
-	-- local s, t = 0, 1
+	local s, t = 0, 1
 	local TexData = bsp:GetLump(LUMP.TEXDATA)
 	lump.num = math.min(math.floor(lump.length / size) - 1, 12288 - 1)
 	for i = 0, lump.num do
 		local here = bsp.bsp:Tell()
 		bsp.bsp:Seek(here + size - 4)
-		lump.data[i] = {} --setmetatable({}, texture_structure)
+		lump.data[i] = {}
 		-- lump.data[i].textureVecs = {[s] = {}, [t] = {}}
-		-- lump.data[i].lightmapVecs = {[s] = {}, [t] = {}}
 		local texdataID = read "Long"
 		if texdataID >= 0 then
-			bsp.bsp:Seek(here + 16 * 4)
+			bsp.bsp:Seek(here + 32)
 			-- lump.data[i].textureVecs[s][0] = read "Float"
 			-- lump.data[i].textureVecs[s][1] = read "Float"
 			-- lump.data[i].textureVecs[s][2] = read "Float"
@@ -371,18 +376,12 @@ end,
 			-- lump.data[i].textureVecs[t][2] = read "Float"
 			-- lump.data[i].textureVecs[t][3] = read "Float"
 
-			-- lump.data[i].lightmapVecs[s][0] = read "Float"
-			-- lump.data[i].lightmapVecs[s][1] = read "Float"
-			-- lump.data[i].lightmapVecs[s][2] = read "Float"
-			-- lump.data[i].lightmapVecs[s][3] = read "Float"
-			-- lump.data[i].lightmapVecs[t][0] = read "Float"
-			-- lump.data[i].lightmapVecs[t][1] = read "Float"
-			-- lump.data[i].lightmapVecs[t][2] = read "Float"
-			-- lump.data[i].lightmapVecs[t][3] = read "Float"
-
+			bsp.bsp:Skip(32)
 			lump.data[i].TexData = TexData.data[texdataID]
 			lump.data[i].flags = read "Long"
 			bsp.bsp:Skip(4) --texdataID
+			
+			lump.data[i].Normal = Material(lump.data[i].TexData.name):GetTexture "$bumpmap"
 		end
 	end
 end,
@@ -393,22 +392,11 @@ end,
 	for i = 0, lump.num do
 		lump.data[i] = {}
 		lump.data[i].Surfaces = {}
-		lump.data[i].id = i
-		-- local contents = read "Long"
-		-- local cluster = read "Short"
-		-- local areaflags = read "Short"
-		-- lump.data[i].area = bit.band(areaflags, 0x01FF)
-		-- lump.data[i].flags = bit.band(bit.rshift(areaflags, 9), 0x007F)
-		bsp.bsp:Skip(4 + 2 + 2)
-		lump.data[i].mins = read "Vector"
-		lump.data[i].maxs = read "Vector"
-		-- local firstleafface = read "UShort"
-		-- local numleaffaces = read "UShort"
-		-- local firstleafbrush = read "UShort"
-		-- local numleafbrushes = read "UShort"
-		-- local leafWaterDataID = read "Short"
-		-- local padding = read "Short"
-		bsp.bsp:Seek(2 * 6)
+		bsp.bsp:Skip(8) --contents, cluster, areaflags
+		-- lump.data[i].mins = read "Vector"
+		-- lump.data[i].maxs = read "Vector"
+		bsp.bsp:Seek(24) --mins, maxs
+		bsp.bsp:Seek(12) --firstleafface, numleaffaces, firstleafbrush, numleafbrushes, leafWaterDataID, padding
 	end
 end,
 
@@ -425,25 +413,21 @@ end,
 		lump.data[i].children = {}
 		lump.data[i].children[1] = read "Long"
 		lump.data[i].children[2] = read "Long"
-		lump.data[i].mins = read "ShortVector"
-		lump.data[i].maxs = read "ShortVector"
-		-- local firstface = read "UShort"
-		-- local numfaces = read "UShort"
-		-- local area = read "Short"
-		-- local padding = read "Short"
-		bsp.bsp:Skip(2 * 4)
+		-- lump.data[i].mins = read "ShortVector"
+		-- lump.data[i].maxs = read "ShortVector"
+		bsp.bsp:Skip(2 * 3 * 2) --mins, maxs
+		bsp.bsp:Skip(2 * 4) --firstface, numfaces, area, padding
 	end
 	
 	for i = 0, lump.num do
 		for k = 1, 2 do
 			local child = lump.data[i].children[k]
 			if child < 0 then
-				child = leafs.data[-child - 1]
+				child, leafs.data[-child - 1] = leafs.data[-child - 1]
 			else
 				child = lump.data[child]
 			end
 			lump.data[i].ChildNodes[k] = child
-			child.ParentNode = lump.data[i]
 		end
 		lump.data[i].children = nil
 	end
@@ -455,18 +439,15 @@ end,
 	lump.num = math.floor(lump.length / size) - 1
 	for i = 0, lump.num do
 		local m = {}
-		m.mins = read("Vector")
-		m.maxs = read("Vector")
-		m.origin = read("Vector")
-		m.headnode = read("Long")
-		m.firstface = read("Long")
-		m.numfaces = read("Long")
-		table.insert(SplatoonSWEPs.Models, {
-			RootNode = nodes.data[m.headnode],
-			mins = m.mins,
-			maxs = m.maxs,
-			origin = m.origin,
-		})
+		-- m.mins = read "Vector"
+		-- m.maxs = read "Vector"
+		-- m.origin = read "Vector"
+		bsp.bsp:Skip(12 * 3)
+		-- m.headnode = read "Long"
+		-- m.firstface = read "Long"
+		-- m.numfaces = read "Long"
+		table.insert(SplatoonSWEPs.Models, nodes.data[read "Long"])
+		bsp.bsp:Skip(4 * 3)
 	end
 end,
 
@@ -528,7 +509,7 @@ end,
 			full2d[k] = SplatoonSWEPs:To2D(v, center, f.angle)
 		end
 		
-		local v2d = {Area = math.huge} --Vector2D
+		local v2d = {} --Vector2D
 		local nf = #full2d + 1
 		local mins = Vector(math.huge, math.huge, math.huge)
 		local maxs = -mins
@@ -536,24 +517,22 @@ end,
 			local v, v3d = full2d[k], fullverts[k]
 			local _next, prev = full2d[(k + 1) % nf], full2d[(k + nf - 1) % nf]
 			local sin = (prev - v):GetNormalized():Cross((_next - v):GetNormalized()).z
-			if v:DistToSqr(_next) > FACE_MIN_SEGLEN_SQR and sin > FACE_MIN_SIN then
-				maxs.x = math.max(maxs.x, v3d.x) --Calculate bounding box
-				maxs.y = math.max(maxs.y, v3d.y)
-				maxs.z = math.max(maxs.z, v3d.z)
-				mins.x = math.min(mins.x, v3d.x)
-				mins.y = math.min(mins.y, v3d.y)
-				mins.z = math.min(mins.z, v3d.z)
-				
-				table.insert(v2d, v)
-				table.insert(f.Vertices, v3d)
-			end
+			maxs.x = math.max(maxs.x, v3d.x) --Calculate bounding box
+			maxs.y = math.max(maxs.y, v3d.y)
+			maxs.z = math.max(maxs.z, v3d.z)
+			mins.x = math.min(mins.x, v3d.x)
+			mins.y = math.min(mins.y, v3d.y)
+			mins.z = math.min(mins.z, v3d.z)
+			
+			table.insert(v2d, v)
+			table.insert(f.Vertices, v3d)
 		end
 		
 		if f.dispinfo >= 0 then
 			lump.data[i] = f
 			continue
 		end
-		MakeSurface(f.plane, mins, maxs, f.normal, f.angle, center, v2d, f.Vertices)
+		MakeSurface(mins, maxs, f.normal, f.angle, center, v2d, f.Vertices)
 	end
 end,
 
@@ -564,17 +543,11 @@ end,
 	lump.num = math.floor(lump.length / size) - 1
 	for i = 0, lump.num do
 		bsp.bsp:Seek(lump.offset + i * size)
-		-- lump.data[i] = {}
-		local disp = {}
 		local startPosition = read "Vector"
 		local DispVertStart = read "Long"
-		-- lump.data[i].DispTriStart = read "Long"
-		bsp.bsp:Skip(4)
+		bsp.bsp:Skip(4) --DispTriStart
 		local power = 2^(read "Long") + 1
-		-- lump.data[i].minTess = read "Long"
-		-- lump.data[i].smoothingAngle = read "Float"
-		-- lump.data[i].contents = read "Long"
-		bsp.bsp:Skip(4 * 3)
+		bsp.bsp:Skip(4 * 3) --minTess, smoothingAngle, contents
 		local dispface = faces.data[read "UShort"]
 		if not dispface then continue end
 
@@ -632,20 +605,141 @@ end,
 		for k = 0, #dispverts do
 			local tri_inv = k % 2 == 0
 			if k % power < power - 1 and math.floor(k / power) < power - 1 then
-				MakeDispTriangle({
+				MakeDispTriangle {
 					dispverts[tri_inv and k + power + 1 or k + power].pos,
 					dispverts[k + 1].pos,
 					dispverts[k].pos,
-				}, dispface.normal)
+				}
 
-				MakeDispTriangle({
+				MakeDispTriangle {
 					dispverts[tri_inv and k or k + 1].pos,
 					dispverts[k + power].pos,
 					dispverts[k + power + 1].pos,
-				}, dispface.normal)
+				}
 			end
 		end
 	end
+end,
+
+[LUMP.GAME_LUMP] = function(lump)
+	local lumpCount = read "Long"
+	local headers = {}
+	for i = 1, lumpCount do
+		headers[i] = {}
+		headers[i].id = read "Long"
+		headers[i].flags = read "UShort"
+		headers[i].version = read "UShort"
+		headers[i].fileofs = read "Long"
+		headers[i].filelen = read "Long"
+	end
+	print("Number of gamelumps: ", #headers)
+	
+	local props = 0
+	for _, l in ipairs(headers) do --id == "scrp", Static Prop Gamelump
+		print(l.version)
+		if l.id ~= 1936749168 then continue end
+		bsp.bsp:Seek(l.fileofs)
+		local nextlump = l.fileofs + l.filelen
+		local entries = read "Long"
+		local modelnames = {} --Model name dictionary
+		for e = 1, entries do
+			modelnames[e] = ""
+			for i = 1, 128 do
+				local c = read(1)
+				if c ~= '\x00' then
+					modelnames[e] = modelnames[e] .. c
+				end
+			end
+		end
+		
+		entries = read "Long" --Leaf indices
+		bsp.bsp:Skip(entries * 2)
+		-- local leafindices = {}
+		-- for e = 1, entries do
+			-- leafindices[e] = read "UShort"
+		-- end
+		entries = read "Long"
+		local here = bsp.bsp:Tell()
+		local remaining = nextlump - here
+		local entrysize = math.floor(remaining / entries)
+		for e = 1, entries do
+			bsp.bsp:Seek(here + entrysize * e)
+			local p = {}
+			p.Origin = read "Vector"
+			p.Angles = read "Vector" --(x, y, z) -> (pitch, yaw, roll)
+			p.Angles = Angle(p.Angles.x, p.Angles.y, p.Angles.z)
+			p.Angles:Normalize()
+			p.PropType = read "UShort"
+			p.ModelName = modelnames[p.PropType + 1]
+			-- p.FirstLeaf = read "UShort"
+			-- p.LeafCount = read "UShort"
+			-- p.LeafIndices = {}
+			-- for i = p.FirstLeaf + 1, p.FirstLeaf + p.LeafCount do
+				-- table.insert(p.LeafIndices, leafindices[i])
+			-- end
+			-- p.Solid = read "Byte"
+			-- p.Flags = read "Byte"
+			-- p.Skin = read "Long"
+			-- p.FadeMinDist = read "Float"
+			-- p.FadeMaxDist = read "Float"
+			-- p.LightingOrigin = read "Vector"
+			-- if l.version >= 5 then
+				-- p.ForcedFadeScale = read "Float"
+			-- end
+			
+			-- if l.version == 6 or l.version == 7 then
+				-- p.MinDXLevel = read "UShort"
+				-- p.MaxDXLevel = read "UShort"
+			-- end
+			
+			-- if l.version >= 8 then
+				-- p.MinCPULevel = read "Byte"
+				-- p.MaxCPULevel = read "Byte"
+				-- p.MinGPULevel = read "Byte"
+				-- p.MaxGPULevel = read "Byte"
+			-- end
+			
+			-- if l.version >= 7 then
+				-- local r = read "Byte"
+				-- local g = read "Byte"
+				-- local b = read "Byte"
+				-- local a = read "Byte"
+				-- p.DiffuseModulation = Color(r, g, b, a)
+			-- end
+			
+			-- if l.version >= 10 then
+				-- p.unknown = read "Float"
+			-- end
+			
+			-- if l.version >= 9 then
+				-- p.DisableX360 = read "Long" ~= 0
+			-- end
+			
+			if not file.Exists(p.ModelName or "/", "GAME") then continue end
+			util.PrecacheModel(p.ModelName)
+			local mdl = SERVER and ents.Create "prop_physics" or ClientsideModel(p.ModelName)
+			mdl:SetModel(p.ModelName)
+			if mdl:PhysicsInit(SOLID_VPHYSICS) then
+				local ph = mdl:GetPhysicsObject()
+				local mat = ph:GetMaterial()
+				if not (mat:find "chain" or mat:find "grate") then
+					local physmesh = ph:GetMesh()
+					for i, v in ipairs(physmesh) do
+						v.pos:Rotate(p.Angles)
+						v.pos:Add(p.Origin)
+					end
+					-- props = props + #physmesh / 3
+					for i = 1, #physmesh, 3 do
+						MakeDispTriangle {physmesh[i].pos, physmesh[i + 1].pos, physmesh[i + 2].pos}
+					end
+				end
+			end
+			mdl:Remove()
+		end
+		
+		break
+	end
+	-- print("additional faces: ", props)
 end,
 }
 ParseFunction[LUMP.FACES_HDR] = ParseFunction[FACES]

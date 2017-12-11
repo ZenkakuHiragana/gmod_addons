@@ -2,7 +2,6 @@
 function SWEP:FrameToSec(f) return f / 60 end
 function SWEP:SecToFrame(s) return s * 60 end
 
-local FunctionQueue = {}
 local ScheduleFunc = {}
 local ScheduleMeta = {__index = ScheduleFunc}
 function ScheduleFunc:SetDelay(newdelay)
@@ -33,7 +32,7 @@ function SWEP:AddNetworkSchedule(delay, func)
 	schedule.delay = "TimerDelay" .. tostring(self:GetLastSlot "Float")
 	self:AddNetworkVar("Float", schedule.delay)
 	self["Set" .. schedule.delay](self, delay)
-	table.insert(FunctionQueue, schedule)
+	table.insert(self.FunctionQueue, schedule)
 	return schedule
 end
 
@@ -47,12 +46,12 @@ function SWEP:AddSchedule(delay, numcall, func)
 		prevtime = CurTime(),
 		weapon = self,
 	}, ScheduleMeta)
-	table.insert(FunctionQueue, schedule)
+	table.insert(self.FunctionQueue, schedule)
 	return schedule
 end
 
 function SWEP:ProcessSchedules()
-	for i, s in pairs(FunctionQueue) do
+	for i, s in pairs(self.FunctionQueue) do
 		if isstring(s.time) then
 			if CurTime() > self["Get" .. s.time](self) then
 				s.func(self, s)
@@ -68,7 +67,7 @@ function SWEP:ProcessSchedules()
 				remove = remove or s.done >= s.numcall
 			end
 			
-			if remove then FunctionQueue[i] = nil end
+			if remove then self.FunctionQueue[i] = nil end
 		end
 	end
 end
