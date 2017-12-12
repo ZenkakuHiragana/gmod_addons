@@ -16,8 +16,8 @@ function SplatoonSWEPs:ClearAllInk()
 	BroadcastLua "SplatoonSWEPs:ClearAllInk()"
 	SplatoonSWEPs.InkCounter = 0
 	for node in self:BSPPairsAll() do
-		for k, f in ipairs(node.Surfaces) do
-			f.InkCircles = {}
+		for i = 1, #node.Surfaces.InkCircles do
+			node.Surfaces.InkCircles[i] = {}
 		end
 	end
 end
@@ -26,13 +26,6 @@ local function Initialize()
 	local self = SplatoonSWEPs
 	self.BSP:Init()
 	self.BSP = nil
-	for node in self:BSPPairsAll() do
-		for k, f in ipairs(node.Surfaces) do
-			PrintTable(f)
-			break
-		end
-		if #node.Surfaces > 0 then break end
-	end
 	collectgarbage "collect"
 end
 

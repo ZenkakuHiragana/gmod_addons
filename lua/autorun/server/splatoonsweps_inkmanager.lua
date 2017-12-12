@@ -15,10 +15,10 @@ local function MakeRect(tx, ty, x1, x2, y1, y2)
 	return {mins = Vector(tx[x1], ty[y1]), maxs = Vector(tx[x2], ty[y2])}
 end
 
-local function AddInkRectangle(face, newink, sz)
+local function AddInkRectangle(ink, newink, sz)
 	local nb = newink.bounds
 	local x11, x12, y11, y12 = nb.mins.x, nb.maxs.x, nb.mins.y, nb.maxs.y
-	for r, z in pairs(face.InkCircles) do
+	for r, z in pairs(ink) do
 		for b in pairs(r.bounds) do
 			local x21, x22, y21, y22 = b.mins.x, b.maxs.x, b.mins.y, b.maxs.y
 			if (x22 - x21) * (y22 - y21) < MIN_BOUND_AREA then r.bounds[b] = nil end
@@ -38,11 +38,11 @@ local function AddInkRectangle(face, newink, sz)
 				end
 			end
 		end
-		if not next(r.bounds) then face.InkCircles[r] = nil end
+		if not next(r.bounds) then ink[r] = nil end
 	end
 	
 	newink.bounds = {[newink.bounds] = true}
-	face.InkCircles[newink] = sz
+	ink[newink] = sz
 end
 
 local function QueueCoroutine(pos, normal, radius, color, polys)
@@ -58,29 +58,30 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	local whitealpha, whiterotate = math.Rand(0, 255), math.Rand(0, 255)
 	local mins, maxs = SplatoonSWEPs:GetBoundingBox(MIN_BOUND, reference_polys)
 	for node in SplatoonSWEPs:BSPPairs(reference_polys) do
-		for k, f in ipairs(node.Surfaces) do
-			if f.normal:Dot(normal) <= COS_MAX_DEG_DIFF then continue end
-			if not SplatoonSWEPs:CollisionAABB(mins, maxs, f.mins, f.maxs) then continue end
+		local surf = node.Surfaces
+		for i = 1, #surf.Origins do
+			if surf.Normals[i]:Dot(normal) <= COS_MAX_DEG_DIFF then continue end
+			if not SplatoonSWEPs:CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
 			net.Start "SplatoonSWEPs: DrawInk"
-			net.WriteUInt(f.id, 20)
+			net.WriteUInt(surf.Indices[i], 20)
 			net.WriteUInt(color, SplatoonSWEPs.COLOR_BITS)
 			net.WriteVector(pos)
 			net.WriteFloat(radius)
 			net.WriteUInt(whitealpha, 8)
 			net.WriteUInt(whiterotate, 8)
-			net.WriteVector(f.origin)
-			net.WriteVector(f.normal)
-			net.WriteAngle(f.angle)
+			net.WriteVector(surf.Origins[i])
+			net.WriteVector(surf.Normals[i])
+			net.WriteAngle(surf.Angles[i])
 			net.Broadcast()
 			
-			local pos2d = SplatoonSWEPs:To2D(pos, f.origin, f.angle)
+			local pos2d = SplatoonSWEPs:To2D(pos, surf.Origins[i], surf.Angles[i])
 			local inkdata = {
 				color = color,
 				radiusSqr = radius * radius,
 				pos = pos2d,
 				bounds = {mins = pos2d - sizevec, maxs = pos2d + sizevec},
 			}
-			AddInkRectangle(f, inkdata, SplatoonSWEPs.InkCounter)
+			AddInkRectangle(surf.InkCircles[i], inkdata, SplatoonSWEPs.InkCounter)
 			SplatoonSWEPs.InkCounter = SplatoonSWEPs.InkCounter + 1
 			
 			inkqueue = inkqueue + 1
@@ -150,11 +151,12 @@ local POINT_BOUND = SplatoonSWEPs.vector_one * .1
 function SplatoonSWEPs:GetSurfaceColor(tr)
 	if not tr.Hit then return end
 	for node in self:BSPPairs {tr.HitPos} do
-		for k, f in ipairs(node.Surfaces) do
-			if f.normal:Dot(tr.HitNormal) <= MAX_COS_GETSURF then continue end
-			if not self:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, f.mins, f.maxs) then continue end
-			local p2d = self:To2D(tr.HitPos, f.origin, f.angle)
-			for r in SortedPairsByValue(f.InkCircles, true) do
+		local surf = node.Surfaces
+		for i = 1, #surf.Origins do
+			if surf.Normals[i]:Dot(tr.HitNormal) <= MAX_COS_GETSURF then continue end
+			if not self:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
+			local p2d = self:To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
+			for r in SortedPairsByValue(surf.InkCircles[i], true) do
 				if p2d:DistToSqr(r.pos) < r.radiusSqr then
 					return r.color
 				end

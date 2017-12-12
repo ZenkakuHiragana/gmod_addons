@@ -65,9 +65,9 @@ local function ProcessQueue()
 			local c = self:GetColor(q.c)
 			local radius = self:UnitsToPixels(q.r)
 			local size = radius * 2
-			local f = self.SequentialSurfaces[q.facenumber]
-			local org = self:UVToPixels(f.UVorigin)
-			local bound = self:UnitsToPixels(f.bound)
+			local surf = self.SequentialSurfaces
+			local org = self:UVToPixels(surf.UVorigins[q.facenumber])
+			local bound = self:UnitsToPixels(surf.Bounds[q.facenumber])
 			local center = org + self:UnitsToPixels(self:To2D(q.pos, q.origin, q.angle))
 			local s = Vector(math.floor(org.x) - 1, math.floor(org.y) - 1)
 			local b = Vector(math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1)
