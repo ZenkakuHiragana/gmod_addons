@@ -10,15 +10,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 		LightmapName = "splatoonsweps_lightmap",
 		WaterMaterialName = "splatoonsweps_watermaterial",
 	},
-	SequentialSurfaces = {
-		Angles = {},
-		Areas = {},
-		Bounds = {},
-		Normals = {},
-		Origins = {},
-		UVorigins = {},
-		Vertices = {},
-	},
+	SequentialSurfaces = {},
 	AreaBound = 0,
 }
 include "autorun/splatoonsweps_shared.lua"
@@ -89,12 +81,8 @@ local function Initialize()
 	self.InkLightLevel = math.Clamp(1 - level, 0.15, 0.55)
 	self.BSP:Init() --Parsing BSP file
 	self.BSP = nil
-	collectgarbage "collect"
-	
-	local meshvertex = {}
 	local sortedsurfaces = {}
-	local surf = self.SequentialSurfaces
-	for k in SortedPairsByValue(surf.Areas, true) do
+	for k in SortedPairsByMemberValue(self.SequentialSurfaces, "area", true) do
 		table.insert(sortedsurfaces, k)
 	end
 	
@@ -107,23 +95,24 @@ local function Initialize()
 		local u, v, nextV = 0, 0, 0
 		local convSqr = convertunit^2
 		for _, k in ipairs(sortedsurfaces) do --Using next-fit approach
-			local bound = surf.Bounds[k] / convertunit
+			local face = self.SequentialSurfaces[k]
+			local bound = face.bound / convertunit
 			nextV = math.max(nextV, bound.y)
 			if 1 - u < bound.x then 
 				u, v, nextV = 0, v + nextV + rtmergin, bound.y
 			end
 			
-			meshvertex[k] = {}
-			for i, vertex in ipairs(surf.Vertices[k]) do
-				local UV = SplatoonSWEPs:To2D(vertex, surf.Origins[k], surf.Angles[k]) / convertunit --Get UV coordinates
-				meshvertex[k][i] = {
-					pos = vertex + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL,
+			face.MeshVertex = {}
+			for i, vertex in ipairs(face.Vertices2D) do
+				local UV = vertex / convertunit --Get UV coordinates
+				face.MeshVertex[i] = {
+					pos = face.Vertices[i] + face.normal * INK_SURFACE_DELTA_NORMAL,
 					u = UV.x + u,
 					v = UV.y + v,
 				}
 			end
 			
-			surf.UVorigins[k] = Vector(u, v)
+			face.UVorigin = Vector(u, v)
 			u = u + bound.x + rtmergin --Advance U-coordinate
 		end
 		
@@ -137,7 +126,7 @@ local function Initialize()
 	local convertunit = rtsize * self.RenderTarget.Ratio
 	local maxY = GetUV(convertunit) --UV mapping to map geometry
 	while maxY > 1 do
-		convertunit = convertunit * ((maxY - 1) * 0.475 + 1.01)
+		convertunit = convertunit * ((maxY - 1) * 0.475 + 1.0005)
 		maxY = GetUV(convertunit)
 	end
 	
@@ -199,21 +188,23 @@ local function Initialize()
 	)
 	
 	--Building MeshVertex
-	local NumMeshTriangles = 0
+	self.NumMeshTriangles = 0
 	for _, k in ipairs(sortedsurfaces) do
-		NumMeshTriangles = NumMeshTriangles + #meshvertex[k] - 2
+		local mverts = self.SequentialSurfaces[k].MeshVertex
+		self.NumMeshTriangles = self.NumMeshTriangles + #mverts - 2
 	end
 	
-	local build, numtriangles = 1, NumMeshTriangles
+	local build, numtriangles = 1, self.NumMeshTriangles
 	self.IMesh[build] = Mesh(self.RenderTarget.Material)
 	mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
 	for _, k in ipairs(sortedsurfaces) do
-		for t = 3, #meshvertex[k] do
+		local face = self.SequentialSurfaces[k]
+		for t = 3, #face.MeshVertex do
 			for _, i in ipairs {t - 1, t, 1} do
-				mesh.Normal(surf.Normals[k])
-				mesh.Position(meshvertex[k][i].pos)
-				mesh.TexCoord(0, meshvertex[k][i].u, meshvertex[k][i].v)
-				mesh.TexCoord(1, meshvertex[k][i].u, meshvertex[k][i].v)
+				mesh.Normal(face.normal)
+				mesh.Position(face.MeshVertex[i].pos)
+				mesh.TexCoord(0, face.MeshVertex[i].u, face.MeshVertex[i].v)
+				mesh.TexCoord(1, face.MeshVertex[i].u, face.MeshVertex[i].v)
 				mesh.AdvanceVertex()
 			end
 		
@@ -225,16 +216,14 @@ local function Initialize()
 				mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
 			end
 		end
-		meshvertex[k] = nil
+		face.MeshVertex = nil
+		face.Vertices2D = nil
+		face.Vertices = nil
+		face.area = nil
+		face.normal = nil
 	end
 	mesh.End()
 	
-	surf.Angles = nil
-	surf.Areas = nil
-	surf.Normals = nil
-	surf.Origins = nil
-	surf.Vertices = nil
-	self.AreaBound = nil
 	self.RenderTarget.Ready = true
 	self:ClearAllInk()
 	collectgarbage "collect"
