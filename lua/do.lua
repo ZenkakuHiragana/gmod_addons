@@ -1,5 +1,5 @@
-collectgarbage "collect"
-do return end
+
+
 -- local vs = SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.VERTEXES).data
 -- local edg = SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.SURFEDGES).data
 -- local ofaces = SplatoonSWEPs.BSP:GetLump(SplatoonSWEPs.LUMP.ORIGINALFACES).data
@@ -98,24 +98,21 @@ end
 
 include "autorun/debug.lua"
 local c = 1000
--- debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 1) * c, 5, Color(255, 255, 0), true)
--- debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 0) * c, 5, Color(255, 255, 0), true)
--- debugoverlay.Line(Vector(1, 0, 0) * c, Vector(1, 1, 0) * c, 5, Color(255, 255, 0), true)
--- debugoverlay.Line(Vector(1, 1, 0) * c, Vector(0, 1, 0) * c, 5, Color(255, 255, 0), true)
--- debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 1) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(1, 0, 0) * c, Vector(1, 1, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(1, 1, 0) * c, Vector(0, 1, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0), true)
 
-for i, f in ipairs(SplatoonSWEPs.SortedSurfaces) do
-	-- f = SplatoonSWEPs.SortedSurfaces[3]
-	-- local t = f.Vertices2D
-	local t = f.MeshVertex or {}
-	for k, v in ipairs(t) do
-		local w = t[k % #t + 1]
-		-- print(v.u, v.v)
-		-- DebugLine(Vector(v.u, v.v, 0) * c, Vector(w.u, w.v, 0) * c, true)
-		-- if i == 3 then DebugLine(v.pos, w.pos, true) end
-		-- if i == 3 then DebugLine(v, w, true) DebugText(v, k) end
+for k, f in ipairs(SplatoonSWEPs.SequentialSurfaces.Vertices) do
+	for i, v in ipairs(f) do
+		-- v = SplatoonSWEPs:To2D(v, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
+		local w = f[i % #f + 1]
+		v = SplatoonSWEPs:UnitsToUV(v) + SplatoonSWEPs.SequentialSurfaces.UVorigins[k]
+		w = SplatoonSWEPs:UnitsToUV(w) + SplatoonSWEPs.SequentialSurfaces.UVorigins[k]
+		DebugLine(v * c, w * c, true)
+		DebugLine(v, w, true)
 	end
-	-- if i > 3 then break end
 end
 
 -- if SERVER then return end
@@ -214,20 +211,20 @@ end
 
 -- PrintTable(tr)
 -- print(util.GetSurfacePropName(tr.SurfaceProps))
-local cvar = SplatoonSWEPs:GetConVar "InkColor"
-cvar:SetInt(cvar:GetInt() % SplatoonSWEPs.MAX_COLORS + 1)
+-- local cvar = SplatoonSWEPs:GetConVar "InkColor"
+-- cvar:SetInt(cvar:GetInt() % SplatoonSWEPs.MAX_COLORS + 1)
 
 -- local ccode = Entity(1):GetActiveWeapon().ColorCode
 -- if not ccode then return end
 
 -- local leaf = SplatoonSWEPs:FindLeaf {p + n, p - n}
 -- PrintTable(leaf.Surfaces[1].InkCircles)
--- for _, leafface in ipairs(leaf.Surfaces) do
-	-- for r, z in pairs(leafface.InkCircles) do
-		-- DebugVector(SplatoonSWEPs:To3D(r.pos, leafface.origin, leafface.angle), leafface.normal * 50)
+-- for i, leafface in ipairs(leaf.Surfaces.InkCircles) do
+	-- for r, z in pairs(leafface) do
+		-- DebugVector(SplatoonSWEPs:To3D(r.pos, leaf.Surfaces.Origins[i], leaf.Surfaces.Angles[i]), leaf.Surfaces.Normals[i] * 50)
 		-- for b in pairs(r.bounds) do
-			-- DebugBox(SplatoonSWEPs:To3D(b.mins, leafface.origin, leafface.angle),
-				-- SplatoonSWEPs:To3D(b.maxs, leafface.origin, leafface.angle))
+			-- DebugBox(SplatoonSWEPs:To3D(b.mins, leaf.Surfaces.Origins[i], leaf.Surfaces.Angles[i]),
+				-- SplatoonSWEPs:To3D(b.maxs, leaf.Surfaces.Origins[i], leaf.Surfaces.Angles[i]))
 		-- end
 	-- end
 -- end

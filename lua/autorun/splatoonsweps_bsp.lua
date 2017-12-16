@@ -162,7 +162,7 @@ local function GetRotatedAABB(v2d, angle)
 end
 
 local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d)
-	if #v3d < 3 or bsp.FaceIndex > (320000000 or 1247232) then return end
+	if #v3d < 3 or bsp.FaceIndex > (600000 or 1247232) then return end
 	local hitair = false
 	for _, v in ipairs(v3d) do
 		if bit.band(util.PointContents(v + normal * .01), CONTENTS_WATER) == 0 then
@@ -178,9 +178,9 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d)
 		local seg = v2d[i % #v2d + 1] - v
 		local ang = Angle(0, 90 - math.deg(math.atan2(seg.y, seg.x)))
 		local mins, maxs = GetRotatedAABB(v2d, ang)
-		bound = maxs - mins
-		if area > bound.x * bound.y then
-			if bound.x < bound.y then
+		local tmpbound = maxs - mins
+		if area > tmpbound.x * tmpbound.y then
+			if tmpbound.x < tmpbound.y then
 				ang.yaw = ang.yaw - 90
 				minmins, maxs = GetRotatedAABB(v2d, ang)
 			else
@@ -580,7 +580,7 @@ end,
 		local here = bsp.bsp:Tell()
 		local remaining = nextlump - here
 		local entrysize = math.floor(remaining / entries)
-		for e = 1, entries do
+		for e = 0, entries - 1 do
 			bsp.bsp:Seek(here + entrysize * e)
 			local p = {}
 			p.Origin = read "Vector"
@@ -598,7 +598,7 @@ end,
 				util.PrecacheModel(p.ModelName)
 				mdl = ents.Create "prop_physics"
 			else
-				mdl = ents.CreateClientProp()
+				mdl = ClientsideModel(p.ModelName)
 			end
 			mdl:SetModel(p.ModelName)
 			mdl:Spawn()
@@ -608,13 +608,14 @@ end,
 				local mat = ph:GetMaterial()
 				if not (mat:find "chain" or mat:find "grate") then
 					local physmesh = ph:GetMesh()
-					for i, v in ipairs(physmesh) do
-						v.pos:Rotate(p.Angles)
-						v.pos:Add(p.Origin)
-					end
 					props = props + #physmesh / 3
 					for i = 1, #physmesh, 3 do
-						MakeDispTriangle {physmesh[i].pos, physmesh[i + 1].pos, physmesh[i + 2].pos}
+						local t = {physmesh[i].pos, physmesh[i + 1].pos, physmesh[i + 2].pos}
+						for _, v in ipairs(t) do
+							v:Rotate(p.Angles)
+							v:Add(p.Origin)
+						end
+						MakeDispTriangle(t)
 					end
 				end
 			end

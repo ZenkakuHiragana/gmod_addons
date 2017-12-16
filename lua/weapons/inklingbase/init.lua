@@ -7,6 +7,8 @@ include "cooldownlib.lua"
 include "baseinfo.lua"
 include "shared.lua"
 
+local InkTraceLength = 20
+local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:SetPlayerSpeed(spd)
 	self.MaxSpeed = spd
 	self.Owner:SetMaxSpeed(self.MaxSpeed)
@@ -24,6 +26,25 @@ function SWEP:Initialize()
 	self:SetInk(SplatoonSWEPs.MaxInkAmount)
 	self:SetInkColorProxy(SplatoonSWEPs.vector_one)
 	self:ChangeHullDuck()
+	self:AddSchedule(self:FrameToSec(3),
+	function(self, schedule)
+		--Set whether player is in ink or not
+		local groundcolor = SplatoonSWEPs:GetSurfaceColor(
+			util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner))
+		local ang = Angle(0, self.Owner:GetAngles().yaw, 0)
+		local p = self.Owner:WorldSpaceCenter()
+		local fw, right = ang:Forward(), ang:Right()
+		self:SetInInk(self.IsSquid and (groundcolor == self.ColorCode or not self.Owner:OnGround()
+		and (SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
+			(fw - right) * InkTraceLength, self.Owner)) == self.ColorCode
+		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
+			(fw + right) * InkTraceLength, self.Owner)) == self.ColorCode
+		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
+			(right + fw) * -InkTraceLength, self.Owner)) == self.ColorCode
+		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
+			(right - fw) * InkTraceLength, self.Owner)) == self.ColorCode)))
+		self:SetOnEnemyInk(groundcolor and groundcolor ~= self.ColorCode)
+	end)
 	if isfunction(self.ServerInit) then return self:ServerInit() end
 end
 
@@ -140,33 +161,14 @@ end
 local inklingVM = ACT_VM_IDLE --Viewmodel animation(inkling)
 local squidVM = ACT_VM_HOLSTER --Viewmodel animation(squid)
 local throwingVM = ACT_VM_IDLE_LOWERED --Viewmodel animation(throwing sub weapon)
-local InkTraceLength = 20
-local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:Think()
 	if not IsValid(self.Owner) then return end
-	local issquid = self.Owner:IsPlayer()
-	if issquid then
-		issquid = self.Owner:Crouching()
+	self.IsSquid = self.Owner:IsPlayer()
+	if self.IsSquid then
+		self.IsSquid = self.Owner:Crouching()
 	else
-		issquid = self.Owner:GetFlags(FL_DUCKING)
+		self.IsSquid = self.Owner:GetFlags(FL_DUCKING)
 	end
-	
-	--Make playermodel invisible while in ink
-	local groundcolor = SplatoonSWEPs:GetSurfaceColor(
-		util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner))
-	local ang = Angle(0, self.Owner:GetAngles().yaw, 0)
-	local p = self.Owner:WorldSpaceCenter()
-	local fw, right = ang:Forward(), ang:Right()
-	self:SetInInk(issquid and (groundcolor == self.ColorCode or not self.Owner:OnGround()
-	and (SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
-		(fw - right) * InkTraceLength, self.Owner)) == self.ColorCode
-	or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
-		(fw + right) * InkTraceLength, self.Owner)) == self.ColorCode
-	or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
-		(right + fw) * -InkTraceLength, self.Owner)) == self.ColorCode
-	or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
-		(right - fw) * InkTraceLength, self.Owner)) == self.ColorCode)))
-	self:SetOnEnemyInk(groundcolor and groundcolor ~= self.ColorCode)
 	
 	--When in ink
 	if not self.Owner:OnGround() and self:GetInInk() and self.Owner:KeyDown(IN_JUMP + IN_FORWARD + IN_BACK) then
@@ -174,15 +176,15 @@ function SWEP:Think()
 	end
 	
 	if self.SquidAvailable and self.PMID ~= SplatoonSWEPs.PLAYER.NOSQUID then
-		self.Owner:SetMaterial(issquid and "color" or "")
-		self:DrawShadow(not issquid)
+		self.Owner:SetMaterial(self.IsSquid and "color" or "")
+		self:DrawShadow(not self.IsSquid)
 	end
 	
 	--Send viewmodel animation.
-	if issquid and self.ViewAnim ~= squidVM then
+	if self.IsSquid and self.ViewAnim ~= squidVM then
 		self:SendWeaponAnim(squidVM)
 		self.ViewAnim = squidVM
-	elseif not issquid and self.ViewAnim ~= inklingVM then
+	elseif not self.IsSquid and self.ViewAnim ~= inklingVM then
 		self:SendWeaponAnim(inklingVM)
 		self.ViewAnim = inklingVM
 	end
@@ -193,5 +195,5 @@ function SWEP:Think()
 	
 	self:ProcessSchedules()
 	self:SetClip1(self:GetInk() / SplatoonSWEPs.MaxInkAmount * 100)
-	if isfunction(self.ServerThink) then return self:ServerThink(issquid) end
+	if isfunction(self.ServerThink) then return self:ServerThink() end
 end

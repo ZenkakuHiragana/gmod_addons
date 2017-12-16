@@ -182,13 +182,13 @@ end
 
 function SWEP:Think()
 	if not IsValid(self.Owner) then return end
-	local issquid = self.Owner:IsPlayer()
-	if issquid then
-		issquid = self.Owner:Crouching()
+	self.IsSquid = self.Owner:IsPlayer()
+	if self.IsSquid then
+		self.IsSquid = self.Owner:Crouching()
 	else
-		issquid = self.Owner:GetFlags(FL_DUCKING)
+		self.IsSquid = self.Owner:GetFlags(FL_DUCKING)
 	end
 	
 	self:ProcessSchedules()
-	if isfunction(self.ClientThink) then return self:ClientThink(issquid) end
+	if isfunction(self.ClientThink) then return self:ClientThink() end
 end

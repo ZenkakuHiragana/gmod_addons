@@ -45,9 +45,10 @@ for i = 0, NumPoly do
 	Polysin[i], Polycos[i] = math.sin(a), math.cos(a)
 end
 
-local LightPoly = {[7] = true, [14] = true, [18] = true}
+local LightmapSampleTable = {[7] = 1.3, [14] = 2.4, [18] = 3.6}
+local LightmapSampleTable = {[7] = 1.5}
 local Lightsin, Lightcos = {}, {}
-for n in pairs(LightPoly) do
+for n in pairs(LightmapSampleTable) do
 	Lightsin[n], Lightcos[n] = {}, {}
 	local frac = math.rad(360 / n)
 	for k = 1, n do
@@ -66,7 +67,10 @@ local function ProcessQueue()
 			local radius = self:UnitsToPixels(q.r)
 			local size = radius * 2
 			local surf = self.SequentialSurfaces
-			local org = self:UVToPixels(surf.UVorigins[q.facenumber])
+			-- print(surf.Normals[q.facenumber] == q.normal, surf.Normals[q.facenumber], q.normal)
+			-- print(surf.Angles[q.facenumber] == q.angle, surf.Angles[q.facenumber], q.angle)
+			-- print(surf.Origins[q.facenumber] == q.origin, surf.Origins[q.facenumber], q.origin)
+			local org = self:UVToPixels(Vector(surf.u[q.facenumber], surf.v[q.facenumber]))
 			local bound = self:UnitsToPixels(surf.Bounds[q.facenumber])
 			local center = org + self:UnitsToPixels(self:To2D(q.pos, q.origin, q.angle))
 			local s = Vector(math.floor(org.x) - 1, math.floor(org.y) - 1)
@@ -116,7 +120,7 @@ local function ProcessQueue()
 			render.PopRenderTarget()
 			
 			--Draw on lightmap
-			radius, size, bound = math.ceil(radius / 8), math.ceil(size / 8), bound / 2
+			radius, size, bound = math.ceil(radius / 4), math.ceil(size / 4), bound / 2
 			center, org = center / 2, org / 2
 			s = Vector(math.floor(s.x / 2), math.floor(s.y / 2))
 			b = Vector(math.ceil(b.x / 2), math.ceil(b.y / 2))
@@ -126,15 +130,13 @@ local function ProcessQueue()
 			surface.SetDrawColor(light:ToColor())
 			surface.SetMaterial(lightmapmaterial)
 			surface.DrawTexturedRect(math.floor(center.x - radius), math.floor(center.y - radius), size, size)
-			for n, rad in pairs {[7] = radius * 1.3, [14] = radius * 2.4, [18] = radius * 3.6} do
+			for n, mul in pairs(LightmapSampleTable) do
 				for i = 1, n do
-					local r = Vector(Lightcos[n][i], Lightsin[n][i]) * rad + center
-					if s.x < r.x and r.x < b.x and s.y < r.y and r.y < b.y then
-						lightmapmaterial:SetVector("$color", GetLight(self:To3D(
-							self:PixelsToUnits((r - org) * 2), q.origin, q.angle), q.normal))
-						r.x, r.y = math.floor(r.x - radius), math.floor(r.y - radius)
-						surface.DrawTexturedRect(r.x, r.y, size, size)
-					end
+					local r = Vector(Lightcos[n][i], Lightsin[n][i]) * radius * mul + center
+					lightmapmaterial:SetVector("$color", GetLight(self:To3D(
+						self:PixelsToUnits((r - org) * 2), q.origin, q.angle), q.normal))
+					r.x, r.y = math.floor(r.x - radius), math.floor(r.y - radius)
+					surface.DrawTexturedRect(r.x, r.y, size, size)
 				end
 			end
 			cam.End2D()

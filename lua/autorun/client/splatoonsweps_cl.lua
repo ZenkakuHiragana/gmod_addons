@@ -16,7 +16,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 		Bounds = {},
 		Normals = {},
 		Origins = {},
-		UVorigins = {},
+		u = {}, v = {},
 		Vertices = {},
 	},
 	AreaBound = 0,
@@ -91,11 +91,15 @@ local function Initialize()
 	self.BSP = nil
 	collectgarbage "collect"
 	
-	local meshvertex = {}
 	local sortedsurfaces = {}
 	local surf = self.SequentialSurfaces
+	local NumMeshTriangles = 0
 	for k in SortedPairsByValue(surf.Areas, true) do
 		table.insert(sortedsurfaces, k)
+		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2
+		for i, vertex in ipairs(surf.Vertices[k]) do
+			surf.Vertices[k][i] = {pos = vertex + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL}
+		end
 	end
 	
 	local rtsize = math.min(self:GetRTSize(), render.MaxTextureWidth())
@@ -113,17 +117,14 @@ local function Initialize()
 				u, v, nextV = 0, v + nextV + rtmergin, bound.y
 			end
 			
-			meshvertex[k] = {}
 			for i, vertex in ipairs(surf.Vertices[k]) do
-				local UV = SplatoonSWEPs:To2D(vertex, surf.Origins[k], surf.Angles[k]) / convertunit --Get UV coordinates
-				meshvertex[k][i] = {
-					pos = vertex + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL,
-					u = UV.x + u,
-					v = UV.y + v,
-				}
+				local UV = SplatoonSWEPs:To2D(vertex.pos, surf.Origins[k], surf.Angles[k]) / convertunit --Get UV coordinates
+				surf.Vertices[k][i].u = UV.x + u
+				surf.Vertices[k][i].v = UV.y + v
 			end
 			
-			surf.UVorigins[k] = Vector(u, v)
+			surf.u[k] = u
+			surf.v[k] = v
 			u = u + bound.x + rtmergin --Advance U-coordinate
 		end
 		
@@ -131,13 +132,13 @@ local function Initialize()
 	end
 	
 	--Ratio[(units^2 / pixel^2)^1/2 -> units/pixel]
-	self.RenderTarget.Ratio = math.max(math.sqrt(self.AreaBound / rtarea))
+	self.RenderTarget.Ratio = math.max(math.sqrt(self.AreaBound / rtarea)) * 0.8
 	
 	--convertunit[pixel * units/pixel -> units]
 	local convertunit = rtsize * self.RenderTarget.Ratio
 	local maxY = GetUV(convertunit) --UV mapping to map geometry
 	while maxY > 1 do
-		convertunit = convertunit * ((maxY - 1) * 0.475 + 1.01)
+		convertunit = convertunit * ((maxY - 1) * 0.475 + 1.0005)
 		maxY = GetUV(convertunit)
 	end
 	
@@ -199,21 +200,16 @@ local function Initialize()
 	)
 	
 	--Building MeshVertex
-	local NumMeshTriangles = 0
-	for _, k in ipairs(sortedsurfaces) do
-		NumMeshTriangles = NumMeshTriangles + #meshvertex[k] - 2
-	end
-	
 	local build, numtriangles = 1, NumMeshTriangles
 	self.IMesh[build] = Mesh(self.RenderTarget.Material)
 	mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
 	for _, k in ipairs(sortedsurfaces) do
-		for t = 3, #meshvertex[k] do
+		for t = 3, #surf.Vertices[k] do
 			for _, i in ipairs {t - 1, t, 1} do
 				mesh.Normal(surf.Normals[k])
-				mesh.Position(meshvertex[k][i].pos)
-				mesh.TexCoord(0, meshvertex[k][i].u, meshvertex[k][i].v)
-				mesh.TexCoord(1, meshvertex[k][i].u, meshvertex[k][i].v)
+				mesh.Position(surf.Vertices[k][i].pos)
+				mesh.TexCoord(0, surf.Vertices[k][i].u, surf.Vertices[k][i].v)
+				mesh.TexCoord(1, surf.Vertices[k][i].u, surf.Vertices[k][i].v)
 				mesh.AdvanceVertex()
 			end
 		
@@ -225,7 +221,7 @@ local function Initialize()
 				mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
 			end
 		end
-		meshvertex[k] = nil
+		surf.Vertices[k] = nil
 	end
 	mesh.End()
 	

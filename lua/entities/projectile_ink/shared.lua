@@ -32,10 +32,17 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Vector", 0, "InkColorProxy") --For material proxy.
 end
 
-local bound = Vector(1, 1, 1) * 10
+local bound = SplatoonSWEPs.vector_one * 10
 local classname = "projectile_ink"
 hook.Add("ShouldCollide", "SplatoonSWEPs: Ink go through grates", function(ent1, ent2)
-	local class1, class2 = ent1:GetClass(), ent2:GetClass()	
+	local class1, class2 = ent1:GetClass(), ent2:GetClass()
+	local collide1, collide2 = class1 == classname, class2 == classname
+	if collide1 == collide2 then return false end
+	-- local wep1 = isfunction(ent1.GetActiveWeapon) and IsValid(ent1:GetActiveWeapon()) and ent1:GetActiveWeapon()
+	-- local wep2 = isfunction(ent2.GetActiveWeapon) and IsValid(ent2:GetActiveWeapon()) and ent2:GetActiveWeapon()
+	-- if wep1 and wep2 then
+		
+	-- end
 	local ink, targetent = ent1, ent2
 	if class2 == classname then
 		if class1 == clasname then return false end
