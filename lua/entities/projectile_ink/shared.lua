@@ -4,7 +4,6 @@
 
 ENT.Type = "anim"
 ENT.FlyingModel = "models/blooryevan/ink/inkprojectile.mdl"
-util.PrecacheModel(ENT.FlyingModel)
 
 local HitSound = {} --When ink meets wall
 for i = 0, 20 do
@@ -20,15 +19,13 @@ end
 
 local DmgSound = Sound("SplatoonSWEPs/misc/DamageInkLook00.wav") --When ink meets enemy player.
 
-function ENT:SharedInit()
-	self:SetModel(self.FlyingModel)
-	self:PhysicsInit(SOLID_BBOX)
+function ENT:SharedInit(mdl)
+	self:SetModel(mdl or self.FlyingModel)
 	self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
 	self:SetCustomCollisionCheck(true)
 end
 
 function ENT:SetupDataTables()
-	self:NetworkVar("Int", 0, "ColorCode") --Color number
 	self:NetworkVar("Vector", 0, "InkColorProxy") --For material proxy.
 end
 

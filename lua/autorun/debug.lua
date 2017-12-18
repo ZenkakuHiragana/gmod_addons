@@ -53,7 +53,7 @@ function RequestInkOrder(self)
 	local tr = self.Owner:GetEyeTrace()
 	local pos, normal = tr.HitPos, tr.HitNormal
 	local radius = 500
-	SplatoonSWEPsInkManager.AddQueue(pos, normal, radius, self.ColorCode, reference_polys)
+	SplatoonSWEPs.InkManager.AddQueue(pos, normal, radius, self.ColorCode, reference_polys)
 	DebugPoint(pos, 5, true)
 	DebugVector(pos, normal * 50, true)
 	for i, v in ipairs(reference_polys) do

@@ -106,10 +106,11 @@ debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0
 
 for k, f in ipairs(SplatoonSWEPs.SequentialSurfaces.Vertices) do
 	for i, v in ipairs(f) do
-		-- v = SplatoonSWEPs:To2D(v, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
-		local w = f[i % #f + 1]
-		v = SplatoonSWEPs:UnitsToUV(v) + SplatoonSWEPs.SequentialSurfaces.UVorigins[k]
-		w = SplatoonSWEPs:UnitsToUV(w) + SplatoonSWEPs.SequentialSurfaces.UVorigins[k]
+		v = SplatoonSWEPs:To2D(v.pos, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
+		local w = SplatoonSWEPs:To2D(f[i % #f + 1].pos, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
+		local uvorg = Vector(SplatoonSWEPs.SequentialSurfaces.u[k], SplatoonSWEPs.SequentialSurfaces.v[k])
+		v = SplatoonSWEPs:UnitsToUV(v) + uvorg
+		w = SplatoonSWEPs:UnitsToUV(w) + uvorg
 		DebugLine(v * c, w * c, true)
 		DebugLine(v, w, true)
 	end

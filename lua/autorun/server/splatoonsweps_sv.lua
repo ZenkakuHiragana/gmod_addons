@@ -23,9 +23,12 @@ function SplatoonSWEPs:ClearAllInk()
 end
 
 local function Initialize()
+	local set = physenv.GetPerformanceSettings()
 	local self = SplatoonSWEPs
 	self.BSP:Init()
 	self.BSP = nil
+	set.MaxVelocity = SplatoonSWEPs.MaxVelocity
+	physenv.SetPerformanceSettings(set)
 	collectgarbage "collect"
 end
 

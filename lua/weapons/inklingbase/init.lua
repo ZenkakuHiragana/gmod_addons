@@ -1,11 +1,9 @@
 
-AddCSLuaFile "cooldownlib.lua"
-AddCSLuaFile "baseinfo.lua"
 AddCSLuaFile "shared.lua"
+AddCSLuaFile "baseinfo.lua"
 AddCSLuaFile "cl_draw.lua"
-include "cooldownlib.lua"
-include "baseinfo.lua"
 include "shared.lua"
+include "baseinfo.lua"
 
 local InkTraceLength = 20
 local InkTraceDown = -vector_up * InkTraceLength
@@ -26,7 +24,7 @@ function SWEP:Initialize()
 	self:SetInk(SplatoonSWEPs.MaxInkAmount)
 	self:SetInkColorProxy(SplatoonSWEPs.vector_one)
 	self:ChangeHullDuck()
-	self:AddSchedule(self:FrameToSec(3),
+	self:AddSchedule(SplatoonSWEPs:FrameToSec(3),
 	function(self, schedule)
 		--Set whether player is in ink or not
 		local groundcolor = SplatoonSWEPs:GetSurfaceColor(

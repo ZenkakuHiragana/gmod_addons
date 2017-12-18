@@ -122,7 +122,7 @@ end
 --Do a list of coroutines.
 local function DoCoroutines()
 	while true do
-		local self = SplatoonSWEPsInkManager
+		local self = SplatoonSWEPs.InkManager
 		local threads = self.Threads
 		local done = 0
 		for i, co in pairs(threads) do
@@ -165,14 +165,14 @@ function SplatoonSWEPs:GetSurfaceColor(tr)
 	end
 end
 
-SplatoonSWEPsInkManager = {
+SplatoonSWEPs.InkManager = {
 	DoCoroutines = coroutine.create(DoCoroutines),
 	Threads = {
 		ProcessQueue = coroutine.create(ProcessQueue),
 		Think2 = nil,
 	},
 	Think = function()
-		local self = SplatoonSWEPsInkManager
+		local self = SplatoonSWEPs.InkManager
 		if coroutine.status(self.DoCoroutines) ~= "dead" then
 			local ok, message = coroutine.resume(self.DoCoroutines)
 			if not ok then
@@ -181,9 +181,9 @@ SplatoonSWEPsInkManager = {
 		end
 	end,
 	AddQueue = function(pos, normal, radius, color, polys)
-		-- print(coroutine.status(SplatoonSWEPsInkManager.Threads.ProcessQueue))
-		-- if coroutine.status(SplatoonSWEPsInkManager.Threads.ProcessQueue) == "running" then
-			-- SplatoonSWEPsInkManager.Threads.ProcessQueue = coroutine.create(ProcessQueue)
+		-- print(coroutine.status(SplatoonSWEPs.InkManager.Threads.ProcessQueue))
+		-- if coroutine.status(SplatoonSWEPs.InkManager.Threads.ProcessQueue) == "running" then
+			-- SplatoonSWEPs.InkManager.Threads.ProcessQueue = coroutine.create(ProcessQueue)
 		-- end
 		table.insert(PaintQueue, {
 			pos = pos,
@@ -204,4 +204,4 @@ SplatoonSWEPsInkManager = {
 		end
 	end,
 }
-hook.Add("Tick", "SplatoonSWEPsDoInkCoroutines", SplatoonSWEPsInkManager.Think)
+hook.Add("Tick", "SplatoonSWEPsDoInkCoroutines", SplatoonSWEPs.InkManager.Think)

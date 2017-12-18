@@ -135,13 +135,15 @@ local function Initialize()
 	self.RenderTarget.Ratio = math.max(math.sqrt(self.AreaBound / rtarea)) * 0.8
 	
 	--convertunit[pixel * units/pixel -> units]
+	local loop = 0
 	local convertunit = rtsize * self.RenderTarget.Ratio
 	local maxY = GetUV(convertunit) --UV mapping to map geometry
 	while maxY > 1 do
-		convertunit = convertunit * ((maxY - 1) * 0.475 + 1.0005)
+		convertunit = convertunit * ((maxY - 1) * 0.415 + 1.0005)
 		maxY = GetUV(convertunit)
+		loop = loop + 1
 	end
-	
+	print("loops: ", loop, 100 - maxY * 100)
 	function self:PixelsToUnits(pixels) return pixels * self.RenderTarget.Ratio end
 	function self:PixelsToUV(pixels) return pixels / rtsize end
 	function self:UnitsToPixels(units) return units / self.RenderTarget.Ratio end
@@ -221,18 +223,22 @@ local function Initialize()
 				mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
 			end
 		end
-		surf.Vertices[k] = nil
+		-- surf.Vertices[k] = nil
 	end
 	mesh.End()
 	
-	surf.Angles = nil
+	-- surf.Angles = nil
 	surf.Areas = nil
 	surf.Normals = nil
-	surf.Origins = nil
-	surf.Vertices = nil
+	-- surf.Origins = nil
+	-- surf.Vertices = nil
 	self.AreaBound = nil
 	self.RenderTarget.Ready = true
 	self:ClearAllInk()
+	
+	local set = physenv.GetPerformanceSettings()
+	set.MaxVelocity = SplatoonSWEPs.MaxVelocity
+	physenv.SetPerformanceSettings(set)
 	collectgarbage "collect"
 end
 

@@ -10,9 +10,9 @@ local inklightmaterial = Material "splatoonsweps/splatooninklight"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
 local WaterOverlap = Material "splatoonsweps/splatoonwater"
 local colormat = Material "color"
-local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
-	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox
-		or bDrawingDepth or not SplatoonSWEPs.RenderTarget.Ready then return end
+function SplatoonSWEPs:DrawMeshes()
+	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox or bDrawingDeptn then return end
+	if not SplatoonSWEPs.RenderTarget.Ready then return end
 	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
 	render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
 	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
@@ -167,7 +167,7 @@ local function GMTick()
 	end
 end
 
-hook.Add("PostDrawOpaqueRenderables", "SplatoonSWEPsDrawInk", DrawMeshes)
+hook.Add("PostDrawOpaqueRenderables", "SplatoonSWEPsDrawInk", SplatoonSWEPs.DrawMeshes)
 hook.Add("Tick", "SplatoonSWEPsRegisterInk_cl", GMTick)
 hook.Add("PostDrawSkyBox", "SplatoonSWEPsTestIfMapHas3DSkyBox", function()
 	SplatoonSWEPs.Has3DSkyBox = true

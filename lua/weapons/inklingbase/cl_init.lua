@@ -1,7 +1,6 @@
 
-include "cooldownlib.lua"
-include "baseinfo.lua"
 include "shared.lua"
+include "baseinfo.lua"
 include "cl_draw.lua"
 
 local errorduration = 10
@@ -181,14 +180,26 @@ function SWEP:OnRemove()
 end
 
 function SWEP:Think()
-	if not IsValid(self.Owner) then return end
-	self.IsSquid = self.Owner:IsPlayer()
-	if self.IsSquid then
-		self.IsSquid = self.Owner:Crouching()
-	else
-		self.IsSquid = self.Owner:GetFlags(FL_DUCKING)
+	if not IsValid(self.Owner) then
+		return
 	end
 	
+	local sq = self.Owner:IsPlayer()
+	
+	if sq then
+		sq = self.Owner:Crouching()
+	else
+		sq = self.Owner:GetFlags(FL_DUCKING)
+	end
+	
+	if not self.IsSquid and sq then
+		self.Owner:RemoveAllDecals()
+	end
+	
+	self.IsSquid = sq
 	self:ProcessSchedules()
-	if isfunction(self.ClientThink) then return self:ClientThink() end
+	
+	if isfunction(self.ClientThink) then
+		return self:ClientThink()
+	end
 end

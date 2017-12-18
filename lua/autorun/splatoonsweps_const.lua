@@ -239,8 +239,9 @@ SplatoonSWEPs.TEXTUREFLAGS = {
 	UNUSED_80000000		= 0x80000000, --
 }
 
-SplatoonSWEPs.InklingBaseSpeed = 250 --Walking speed [units/s]
-SplatoonSWEPs.SquidBaseSpeed = 460 --Swimming speed [units/s]
+SplatoonSWEPs.MaxVelocity = 32768 --physenv.GetPerformanceSettings().MaxVelocity, default is 3500
+SplatoonSWEPs.InklingBaseSpeed = 302.3622144 --Walking speed [units/s]
+SplatoonSWEPs.SquidBaseSpeed = 605.06364140928 --Swimming speed [units/s]
 SplatoonSWEPs.InklingJumpPower = 250
 SplatoonSWEPs.OnEnemyInkJumpPower = SplatoonSWEPs.InklingJumpPower / 2
 SplatoonSWEPs.vector_one = Vector(1, 1, 1)
@@ -248,4 +249,8 @@ SplatoonSWEPs.MaxInkAmount = 100
 SplatoonSWEPs.SquidBoundMins = -Vector(13, 13, 0)
 SplatoonSWEPs.SquidBoundMaxs = Vector(13, 13, 24)
 SplatoonSWEPs.SquidViewOffset = Vector(0, 0, 24)
-
+SplatoonSWEPs.MPdt = game.SinglePlayer() and 0 or FrameTime()
+SplatoonSWEPs.mSplashDrawRadius = 15.748032
+SplatoonSWEPs.mPaintNearDistance = 57.742784
+SplatoonSWEPs.mPaintFarDistance = 1049.8688
+SplatoonSWEPs.SpashInitDelta = 16

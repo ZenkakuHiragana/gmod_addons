@@ -1,4 +1,5 @@
 
+SplatoonSWEPs:AddTimerFramework(SWEP)
 function SWEP:ChangePlayermodel(data)
 	self.Owner:SetModel(data.Model)
 	self.Owner:SetSkin(data.Skin)
@@ -53,7 +54,7 @@ function SWEP:ChangeHullDuck()
 end
 
 --Squids have a limited movement speed.
-local LIMIT_Z_DEG = math.cos(math.rad(165))
+local LIMIT_Z_DEG = math.cos(math.rad(180 - 30))
 local function LimitSpeed(ply, data)
 	if not IsValid(ply) or not ply:IsPlayer() then return end
 	local weapon = ply:GetActiveWeapon()
@@ -138,7 +139,7 @@ function SWEP:CommonFire(isprimary)
 	if self:GetCrouchPriority() then return end
 	local Weapon = isprimary and self.Primary or self.Secondary
 	self.ReloadSchedule:SetDelay(Weapon.ReloadDelay)
-	self:SetNextCrouchTime(CurTime() + Weapon.CrouchCooldown)
+	self:SetNextCrouchTime(CurTime() + Weapon.CrouchDelay)
 	
 	local CanFire = isprimary and self.CanPrimaryAttack or self.CanSecondaryAttack
 	if not CanFire(self) then return false end --Check fire delay
@@ -146,7 +147,7 @@ function SWEP:CommonFire(isprimary)
 	self:SetNextPrimaryFire(CurTime() + Weapon.Delay)
 	self:MuzzleFlash()
 	
-	if math.random() < Weapon.PercentageRecoilAnimation then
+	if math.random() < Weapon.PlayAnimPercent then
 		self.Owner:SetAnimation(PLAYER_ATTACK1)
 	end
 	
@@ -226,21 +227,9 @@ function SWEP:SetupDataTables()
 	self:NetworkVarNotify("InInk", function(self, name, old, new)
 		local outofink = old and not new
 		local intoink = not old and new
-		if outofink == intoink then return
-		elseif intoink then
-			self.Owner:SetCrouchedWalkSpeed(1)
-			self:SetPlayerSpeed(SplatoonSWEPs.SquidBaseSpeed)
-		elseif self.Owner:OnGround() or self.Owner:GetVelocity():GetNormalized():Dot(vector_up) > 0.9 then
-			self.Owner:SetCrouchedWalkSpeed(0.5)
-			self:SetPlayerSpeed(SplatoonSWEPs.InklingBaseSpeed)
-		else
-			self:AddSchedule(self:FrameToSec(30), function(self, schedule)
-				if self:GetInInk() or self.Owner:OnGround() then return true end
-				self.Owner:SetCrouchedWalkSpeed(0.5)
-				self:SetPlayerSpeed(SplatoonSWEPs.InklingBaseSpeed)
-				return true
-			end)
-		end
+		if outofink == intoink then return end
+		self.Owner:SetCrouchedWalkSpeed(intoink and 1 or 0.5)
+		self:SetPlayerSpeed(intoink and SplatoonSWEPs.SquidBaseSpeed or SplatoonSWEPs.InklingBaseSpeed)
 	end)
 	
 	self:NetworkVarNotify("OnEnemyInk", function(self, name, old, new)
@@ -250,13 +239,13 @@ function SWEP:SetupDataTables()
 		elseif intoink then
 			self:SetPlayerSpeed(self.MaxSpeed / 2) --Hard to move
 			self.Owner:SetJumpPower(SplatoonSWEPs.OnEnemyInkJumpPower) --Reduce jump power
-			self:AddSchedule(self:FrameToSec(50), function(self, schedule)
+			self:AddSchedule(SplatoonSWEPs:FrameToSec(50), function(self, schedule)
 				if not self:GetOnEnemyInk() then return true end --Can't crouch on enemy ink
-				self:SetNextCrouchTime(CurTime() + self:FrameToSec(20))
+				self:SetNextCrouchTime(CurTime() + SplatoonSWEPs:FrameToSec(20))
 			end)
 			
 			if CLIENT then return end
-			self:AddSchedule(self:FrameToSec(2), function(self, schedule)
+			self:AddSchedule(SplatoonSWEPs:FrameToSec(2), function(self, schedule)
 				if not self:GetOnEnemyInk() then return true end --Enemy ink damage
 				if self.Owner:Health() > self.Owner:GetMaxHealth() / 2 then
 					self.Owner:SetHealth(self.Owner:Health() - 1)
