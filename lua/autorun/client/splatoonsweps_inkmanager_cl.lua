@@ -10,9 +10,30 @@ local inklightmaterial = Material "splatoonsweps/splatooninklight"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
 local WaterOverlap = Material "splatoonsweps/splatoonwater"
 local colormat = Material "color"
-function SplatoonSWEPs:DrawMeshes()
-	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox or bDrawingDeptn then return end
+local NumPoly = 16
+local Polysin, Polycos = {}, {}
+local LightmapSampleTable = {[7] = 1.3, [14] = 2.4, [18] = 3.6}
+local LightmapSampleTable = {[7] = 1.5}
+local Lightsin, Lightcos = {}, {}
+for i = 0, NumPoly do
+	local a = math.rad(i * -360 / NumPoly)
+	Polysin[i], Polycos[i] = math.sin(a), math.cos(a)
+end
+
+for n in pairs(LightmapSampleTable) do
+	Lightsin[n], Lightcos[n] = {}, {}
+	local frac = math.rad(360 / n)
+	for k = 1, n do
+		Lightsin[n][k] = math.sin(frac * k)
+		Lightcos[n][k] = math.cos(frac * k)
+	end
+end
+
+function SplatoonSWEPs:DrawMeshes(bDrawingSkybox, bDrawingDepth)
+	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox or bDrawingDepth then return end
 	if not SplatoonSWEPs.RenderTarget.Ready then return end
+	local hdrscale = render.GetToneMappingScaleLinear()
+	render.SetToneMappingScaleLinear(hdrscale / 10)
 	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
 	render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
 	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
@@ -25,40 +46,24 @@ function SplatoonSWEPs:DrawMeshes()
 	
 	render.SetMaterial(SplatoonSWEPs.RenderTarget.WaterMaterial)
 	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
+	render.SetToneMappingScaleLinear(hdrscale)
 end
 
+local amb
 local function GetLight(p, n)
-	local amb = render.GetAmbientLightColor()
-	local lightcolor = render.GetLightColor(p + n)
-	local light = render.ComputeLighting(p + n, n)
-	local avg = (light + lightcolor + amb / 5) / 2.2
-	avg.x = math.Remap(avg.x, 0, 1, 0, SplatoonSWEPs.InkLightLevel)
-	avg.y = math.Remap(avg.y, 0, 1, 0, SplatoonSWEPs.InkLightLevel)
-	avg.z = math.Remap(avg.z, 0, 1, 0, SplatoonSWEPs.InkLightLevel)
-	return avg
-end
-
-local NumPoly = 16
-local Polysin, Polycos = {}, {}
-for i = 0, NumPoly do
-	local a = math.rad(i * -360 / NumPoly)
-	Polysin[i], Polycos[i] = math.sin(a), math.cos(a)
-end
-
-local LightmapSampleTable = {[7] = 1.3, [14] = 2.4, [18] = 3.6}
-local LightmapSampleTable = {[7] = 1.5}
-local Lightsin, Lightcos = {}, {}
-for n in pairs(LightmapSampleTable) do
-	Lightsin[n], Lightcos[n] = {}, {}
-	local frac = math.rad(360 / n)
-	for k = 1, n do
-		Lightsin[n][k] = math.sin(frac * k)
-		Lightcos[n][k] = math.cos(frac * k)
-	end
+	local lightcolor = render.GetLightColor(p + n) / 2
+	local light = render.ComputeLighting(p + n, n) / 2
+	local tone = 2 - lightcolor:Length() * 2
+	if lightcolor:LengthSqr() > 1 then lightcolor:Normalize() end
+	if light:LengthSqr() > 1 then light:Normalize() end
+	return (light + lightcolor + amb) / 2.1
 end
 
 local function ProcessQueue()
+	amb = render.GetAmbientLightColor() / 10
 	local self = SplatoonSWEPs
+	local amblen = amb:Length() * 10
+	if amblen > 1 then amb = amb / amblen end
 	while true do
 		local done = 0
 		for i, q in ipairs(self.InkQueue) do
@@ -67,9 +72,6 @@ local function ProcessQueue()
 			local radius = self:UnitsToPixels(q.r)
 			local size = radius * 2
 			local surf = self.SequentialSurfaces
-			-- print(surf.Normals[q.facenumber] == q.normal, surf.Normals[q.facenumber], q.normal)
-			-- print(surf.Angles[q.facenumber] == q.angle, surf.Angles[q.facenumber], q.angle)
-			-- print(surf.Origins[q.facenumber] == q.origin, surf.Origins[q.facenumber], q.origin)
 			local org = self:UVToPixels(Vector(surf.u[q.facenumber], surf.v[q.facenumber]))
 			local bound = self:UnitsToPixels(surf.Bounds[q.facenumber])
 			local center = org + self:UnitsToPixels(self:To2D(q.pos, q.origin, q.angle))

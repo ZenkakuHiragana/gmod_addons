@@ -15,6 +15,7 @@ function SWEP:SetPlayerSpeed(spd)
 end
 
 function SWEP:Initialize()
+	self.OwnerVelocity = vector_origin
 	self.ViewAnim = ACT_VM_IDLE
 	self:SetHoldType "passive"
 	self:SetInInk(false)
@@ -27,12 +28,11 @@ function SWEP:Initialize()
 	self:AddSchedule(SplatoonSWEPs:FrameToSec(3),
 	function(self, schedule)
 		--Set whether player is in ink or not
-		local groundcolor = SplatoonSWEPs:GetSurfaceColor(
-			util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner))
+		self.Owner.GroundColor = SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner))
 		local ang = Angle(0, self.Owner:GetAngles().yaw, 0)
 		local p = self.Owner:WorldSpaceCenter()
 		local fw, right = ang:Forward(), ang:Right()
-		self:SetInInk(self.IsSquid and (groundcolor == self.ColorCode or not self.Owner:OnGround()
+		self:SetInInk(self.IsSquid and (self.Owner.GroundColor == self.ColorCode or not self.Owner:OnGround()
 		and (SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
 			(fw - right) * InkTraceLength, self.Owner)) == self.ColorCode
 		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
@@ -41,8 +41,11 @@ function SWEP:Initialize()
 			(right + fw) * -InkTraceLength, self.Owner)) == self.ColorCode
 		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
 			(right - fw) * InkTraceLength, self.Owner)) == self.ColorCode)))
-		self:SetOnEnemyInk(groundcolor and groundcolor ~= self.ColorCode)
+		self:SetOnEnemyInk(self.Owner.GroundColor and self.Owner.GroundColor ~= self.ColorCode)
+		self.OwnerVelocity = self.Owner:GetVelocity()
 	end)
+	
+	self:SharedInitBase()
 	if isfunction(self.ServerInit) then return self:ServerInit() end
 end
 
@@ -54,18 +57,9 @@ function SWEP:ShouldDropOnDie()
 	return true
 end
 
-local function ImmuneFallDamage(ply, speed)
-	local weapon = ply:GetActiveWeapon()
-	if IsValid(weapon) and weapon.IsSplatoonWeapon then
-		return 0
-	end
-end
-hook.Add("GetFallDamage", "Inklings don't take fall damage.", ImmuneFallDamage)
-
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return true end
-	self:CallOnClient "Deploy"
-	
+	if game.SinglePlayer() then self:CallOnClient "Deploy" end
 	self.BackupPlayerInfo = {
 		Color = self.Owner:GetColor(),
 		Flags = self.Owner:GetFlags(),
@@ -93,11 +87,17 @@ function SWEP:Deploy()
 		v.num = self.Owner:GetBodygroup(v.id)
 	end
 	
+	self:SetInInk(false)
+	self:SetOnEnemyInk(false)
+	self:SetCrouchPriority(false)
+	self:SetNextCrouchTime(CurTime())
 	self:SetPlayerSpeed(SplatoonSWEPs.InklingBaseSpeed)
 	self.Owner:SetJumpPower(SplatoonSWEPs.InklingJumpPower)
 	self.Owner:SetColor(color_white)
 	self.Owner:SetCrouchedWalkSpeed(0.5)
 	
+	self.OwnerVelocity = self.Owner:GetVelocity()
+	self.ViewAnim = ACT_VM_IDLE
 	self.PMID = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "Playermodel", 1)
 	if self.PMID ~= SplatoonSWEPs.PLAYER.NOSQUID then
 		self.Owner:SetMaterial(self.Owner:Crouching() and "color" or "")
@@ -127,12 +127,12 @@ function SWEP:Deploy()
 		SplatoonSWEPs:SendError("SplatoonSWEPs: Required playermodel is not found!", NOTIFY_ERROR, 10, self.Owner)
 	end
 	
-	return self:SharedDeploy()
+	return self:SharedDeployBase()
 end
 
 function SWEP:Holster()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return true end
-	self:CallOnClient "Holster"
+	if game.SinglePlayer() then self:CallOnClient "Holster" end
 	if istable(self.BackupPlayerInfo) then --Restores owner's information.
 		self:ChangePlayermodel(self.BackupPlayerInfo.Playermodel)
 		self.Owner:SetColor(self.BackupPlayerInfo.Color)
@@ -152,24 +152,19 @@ function SWEP:Holster()
 		self.Owner:SetViewOffsetDucked(self.BackupPlayerInfo.ViewOffsetDucked)
 	end
 	
-	if isfunction(self.ServerHolster) then self:ServerHolster() end
-	return true
+	return self:SharedHolsterBase()
 end
+
+function SWEP:OnRemove() return self:Holster() end
 
 local inklingVM = ACT_VM_IDLE --Viewmodel animation(inkling)
 local squidVM = ACT_VM_HOLSTER --Viewmodel animation(squid)
 local throwingVM = ACT_VM_IDLE_LOWERED --Viewmodel animation(throwing sub weapon)
 function SWEP:Think()
 	if not IsValid(self.Owner) then return end
-	self.IsSquid = self.Owner:IsPlayer()
-	if self.IsSquid then
-		self.IsSquid = self.Owner:Crouching()
-	else
-		self.IsSquid = self.Owner:GetFlags(FL_DUCKING)
-	end
 	
 	--When in ink
-	if not self.Owner:OnGround() and self:GetInInk() and self.Owner:KeyDown(IN_JUMP + IN_FORWARD + IN_BACK) then
+	if self:GetInInk() and self.Owner:KeyDown(IN_JUMP + IN_FORWARD + IN_BACK) then
 		self.Owner:SetVelocity(self.Owner:GetForward() * 40 * self.Owner:EyeAngles().pitch / -90)
 	end
 	
@@ -192,6 +187,7 @@ function SWEP:Think()
 	end
 	
 	self:ProcessSchedules()
-	self:SetClip1(self:GetInk() / SplatoonSWEPs.MaxInkAmount * 100)
+	self:SharedThinkBase()
+	self:SetClip1(math.max(0, self:GetInk() / SplatoonSWEPs.MaxInkAmount * 100))
 	if isfunction(self.ServerThink) then return self:ServerThink() end
 end

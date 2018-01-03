@@ -84,17 +84,14 @@ SplatoonSWEPs.PLAYER = {
 	NOSQUID = 7,
 }
 SplatoonSWEPs.Playermodel = {
-	"models/drlilrobot/splatoon/ply/inkling_girl.mdl",
-	"models/drlilrobot/splatoon/ply/inkling_boy.mdl",
-	"models/drlilrobot/splatoon/ply/octoling.mdl",
-	"models/drlilrobot/splatoon/ply/marie.mdl",
-	"models/drlilrobot/splatoon/ply/callie.mdl",
+	Model "models/drlilrobot/splatoon/ply/inkling_girl.mdl",
+	Model "models/drlilrobot/splatoon/ply/inkling_boy.mdl",
+	Model "models/drlilrobot/splatoon/ply/octoling.mdl",
+	Model "models/drlilrobot/splatoon/ply/marie.mdl",
+	Model "models/drlilrobot/splatoon/ply/callie.mdl",
 	nil,
 	nil,
 }
-for i, v in ipairs(SplatoonSWEPs.Playermodel) do
-	util.PrecacheModel(v)
-end
 
 SplatoonSWEPs.SQUID = {
 	INKLING = 1,
@@ -102,13 +99,10 @@ SplatoonSWEPs.SQUID = {
 	OCTO = 3,
 }
 SplatoonSWEPs.Squidmodel = {
-	"models/props_splatoon/squids/squid_beta.mdl",
-	"models/props_splatoon/squids/kraken_beta.mdl",
-	"models/props_splatoon/squids/octopus_beta.mdl",
+	Model "models/props_splatoon/squids/squid_beta.mdl",
+	Model "models/props_splatoon/squids/kraken_beta.mdl",
+	Model "models/props_splatoon/squids/octopus_beta.mdl",
 }
-for i, v in ipairs(SplatoonSWEPs.Squidmodel) do
-	util.PrecacheModel(v)
-end
 
 --List of available ink colors(25 colors)
 local InkColors = {
@@ -239,18 +233,24 @@ SplatoonSWEPs.TEXTUREFLAGS = {
 	UNUSED_80000000		= 0x80000000, --
 }
 
-SplatoonSWEPs.MaxVelocity = 32768 --physenv.GetPerformanceSettings().MaxVelocity, default is 3500
-SplatoonSWEPs.InklingBaseSpeed = 302.3622144 --Walking speed [units/s]
-SplatoonSWEPs.SquidBaseSpeed = 605.06364140928 --Swimming speed [units/s]
-SplatoonSWEPs.InklingJumpPower = 250
-SplatoonSWEPs.OnEnemyInkJumpPower = SplatoonSWEPs.InklingJumpPower / 2
+-- SplatoonSWEPs.MPdt = game.SinglePlayer() and 0 or FrameTime()
 SplatoonSWEPs.vector_one = Vector(1, 1, 1)
 SplatoonSWEPs.MaxInkAmount = 100
+SplatoonSWEPs.MaxVelocity = 32768 --physenv.GetPerformanceSettings().MaxVelocity, default is 3500
 SplatoonSWEPs.SquidBoundMins = -Vector(13, 13, 0)
 SplatoonSWEPs.SquidBoundMaxs = Vector(13, 13, 24)
 SplatoonSWEPs.SquidViewOffset = Vector(0, 0, 24)
-SplatoonSWEPs.MPdt = game.SinglePlayer() and 0 or FrameTime()
-SplatoonSWEPs.mSplashDrawRadius = 15.748032
-SplatoonSWEPs.mPaintNearDistance = 57.742784
-SplatoonSWEPs.mPaintFarDistance = 1049.8688
-SplatoonSWEPs.SpashInitDelta = 16
+SplatoonSWEPs.InklingJumpPower = 250
+SplatoonSWEPs.OnEnemyInkJumpPower = SplatoonSWEPs.InklingJumpPower * .75
+SplatoonSWEPs.ToHammerUnits = 0.1 * 3.28084 * 16
+for key, value in pairs {
+	InklingBaseSpeed = .96 * 60, --Walking speed [Splatoon units/frame]
+	SquidBaseSpeed = 1.923 * 60, --Swimming speed [Splatoon units/frame]
+	mColRadius = 2, --Shooter's ink collision radius
+	mPaintNearDistance = 11, --Start decreasing distance
+	mPaintFarDistance = 200, --Minimum radius after distance
+	mSplashDrawRadius = 3, --Ink drop position random spread value
+	mSplashColRadius = 1.5, --Ink drop collision radius
+} do
+	SplatoonSWEPs[key] = value * SplatoonSWEPs.ToHammerUnits
+end

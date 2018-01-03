@@ -313,7 +313,7 @@ function SWEP:DrawWorldModelTranslucent()
 				self.Squid:DrawShadow(true)
 				self.Squid:CreateShadow()
 			end
-			self.JustUsableTime = CurTime() - 1
+			
 			return
 		end
 		bone_ent = self.Owner
@@ -324,15 +324,10 @@ function SWEP:DrawWorldModelTranslucent()
 		local v = self.WElements[name]
 		if not v then self.wRenderOrder = nil break end
 		if name == "subweaponusable" then
-			if v.hide and self:GetInk() >= self.Secondary.TakeAmmo and
-				self:GetInk() < self.Secondary.TakeAmmo + 1 then
-				self.JustUsableTime = CurTime()
-			end
-			v.hide = not self.WElements["inktank"].modelEnt or self:GetInk() < self.Secondary.TakeAmmo
-			
 			local fraction = math.Clamp(self.JustUsableTime + 0.15 - CurTime(), 0, 0.15)
 			local size = -1600 * (fraction - 0.075)^2 + 20
 			v.size = {x = size, y = size}
+			v.hide = not self.WElements["inktank"].modelEnt or self:GetInk() < self.Secondary.TakeAmmo
 		end
 		if v.hide then continue end
 		

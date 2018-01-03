@@ -1,7 +1,5 @@
 
 --Clientside ink manager
-local InkAlpha = 255
-local MeshColor = ColorAlpha(color_white, InkAlpha)
 SplatoonSWEPs = SplatoonSWEPs or {
 	IMesh = {},
 	RenderTarget = {
@@ -22,8 +20,6 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	AreaBound = 0,
 }
 include "autorun/splatoonsweps_shared.lua"
-include "autorun/splatoonsweps_bsp.lua"
-include "autorun/splatoonsweps_const.lua"
 include "splatoonsweps_userinfo.lua"
 include "splatoonsweps_inkmanager_cl.lua"
 include "splatoonsweps_network_cl.lua"
@@ -80,7 +76,7 @@ end
 -- 21845 = 65535 / 3 with BuildFromTriangles()
 local MAX_TRIANGLES = math.floor(32768 / 3)
 local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
-local function Initialize()
+hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function()
 	local self = SplatoonSWEPs
 	local amb = render.GetAmbientLightColor()
 	local level = amb:LengthSqr()
@@ -132,7 +128,7 @@ local function Initialize()
 	end
 	
 	--Ratio[(units^2 / pixel^2)^1/2 -> units/pixel]
-	self.RenderTarget.Ratio = math.max(math.sqrt(self.AreaBound / rtarea)) * 0.8
+	self.RenderTarget.Ratio = math.max(math.sqrt(self.AreaBound / rtarea)) * 1.2
 	
 	--convertunit[pixel * units/pixel -> units]
 	local loop = 0
@@ -143,7 +139,7 @@ local function Initialize()
 		maxY = GetUV(convertunit)
 		loop = loop + 1
 	end
-	print("loops: ", loop, 100 - maxY * 100)
+	print("loops: ", loop, 100 - maxY * 100, convertunit / rtsize, self.RenderTarget.Ratio)
 	function self:PixelsToUnits(pixels) return pixels * self.RenderTarget.Ratio end
 	function self:PixelsToUV(pixels) return pixels / rtsize end
 	function self:UnitsToPixels(units) return units / self.RenderTarget.Ratio end
@@ -178,7 +174,7 @@ local function Initialize()
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.LightmapFlags,
 		CREATERENDERTARGETFLAGS_HDR,
-		IMAGE_FORMAT_RGBA16161616 -- 4096x4096, 128MB
+		IMAGE_FORMAT_RGBA8888 --IMAGE_FORMAT_BGRA5551, 4096x4096, 128MB
 	)
 	self.RenderTarget.Material = CreateMaterial(
 		self.RenderTarget.BaseTextureName,
@@ -223,23 +219,17 @@ local function Initialize()
 				mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
 			end
 		end
-		-- surf.Vertices[k] = nil
+		surf.Vertices[k] = nil
 	end
 	mesh.End()
 	
-	-- surf.Angles = nil
+	surf.Angles = nil
 	surf.Areas = nil
 	surf.Normals = nil
-	-- surf.Origins = nil
-	-- surf.Vertices = nil
+	surf.Origins = nil
+	surf.Vertices = nil
 	self.AreaBound = nil
 	self.RenderTarget.Ready = true
 	self:ClearAllInk()
-	
-	local set = physenv.GetPerformanceSettings()
-	set.MaxVelocity = SplatoonSWEPs.MaxVelocity
-	physenv.SetPerformanceSettings(set)
-	collectgarbage "collect"
-end
-
-hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", Initialize)
+	return collectgarbage "collect"
+end)

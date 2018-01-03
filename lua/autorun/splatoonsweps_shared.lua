@@ -1,6 +1,9 @@
 
 --Shared library
 if not SplatoonSWEPs then return end
+include "splatoonsweps_bsp.lua"
+include "splatoonsweps_const.lua"
+include "splatoonsweps_sound.lua"
 
 --number miminum boundary size, table of Vectors
 --returning AABB(mins, maxs)
@@ -152,3 +155,105 @@ function SplatoonSWEPs.SetSecondary(self, info)
 	self.Secondary = s
 	if isfunction(self.CustomSecondary) then return self:CustomSecondary(s, info) end
 end
+
+--Squids have a limited movement speed.
+local LIMIT_Z_DEG = math.cos(math.rad(180 - 30))
+hook.Add("Move", "SplatoonSWEPs: Limit squid's speed", function(ply, data)
+	if not IsValid(ply) or not ply:IsPlayer() then return end
+	local weapon = ply:GetActiveWeapon()
+	if not IsValid(weapon) or not weapon.IsSplatoonWeapon then return end
+	
+	--Disruptors make Inklings slower
+	local maxspeed = ply:GetWalkSpeed() * (weapon.poison and 0.5 or 1)
+	local velocity = ply:GetVelocity() --Inkling's current velocity
+	local speed2D = velocity.x * velocity.x + velocity.y * velocity.y --Horizontal speed
+	local dot = -vector_up:Dot(velocity:GetNormalized()) --Checking if it's falling
+	
+	--Limits horizontal speed
+	if speed2D > maxspeed * maxspeed then
+		local newVelocity2D = Vector(velocity.x, velocity.y)
+		newVelocity2D = newVelocity2D:GetNormalized() * maxspeed
+		velocity.x = newVelocity2D.x
+		velocity.y = newVelocity2D.y
+	end
+	
+	--Vertical speed clamp
+	if not weapon:GetOnEnemyInk() and velocity.z > maxspeed and dot < LIMIT_Z_DEG then
+		velocity.z = maxspeed * 0.5
+	end
+	
+	weapon:ChangeHullDuck()
+	data:SetVelocity(velocity)
+end)
+
+hook.Add("StartCommand", "SplatoonSWEPs: Prevent owner from crouch", function(ply, data)
+	if not IsFirstTimePredicted() then return end
+	if not IsValid(ply) or not ply:IsPlayer() then return end
+	local weapon = ply:GetActiveWeapon()
+	if not IsValid(weapon) or not weapon.IsSplatoonWeapon then return end
+	if data:IsForced() then return end
+	
+	--MOUSE1+LCtrl makes crouch, LCtrl+MOUSE1 makes primary attack.
+	local copy = data:GetButtons() --Since CUserCmd doesn't have KeyPressed(), I try workaround.
+	if weapon.PreviousCmd then
+		local duck, attack = data:KeyDown(IN_DUCK), data:KeyDown(IN_ATTACK + IN_ATTACK2)
+		if duck then
+			if bit.band(weapon.PreviousCmd, IN_ATTACK + IN_ATTACK2) == 0 and attack then
+				weapon:SetCrouchPriority(false)
+			elseif attack and CurTime() < weapon:GetNextCrouchTime() and bit.band(weapon.PreviousCmd, IN_DUCK) == 0 then
+				weapon:SetCrouchPriority(true)
+			end
+		else
+			weapon:SetCrouchPriority(not attack)
+		end
+	end
+	weapon.PreviousCmd = copy
+	weapon.EnemyInkPreventCrouching = 
+	weapon.EnemyInkPreventCrouching and weapon:GetOnEnemyInk() and data:KeyDown(IN_DUCK)
+	
+	--Prevent crouching after firing.
+	if CurTime() < weapon:GetNextCrouchTime() or weapon.EnemyInkPreventCrouching then
+		data:RemoveKey(IN_DUCK)
+		ply:RemoveFlags(FL_DUCKING)
+	end
+end)
+
+hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", function(ply, pos, foot, sound, volume, filter)
+	local weapon = ply:GetActiveWeapon()
+	local IsSplatoonWeapon = IsValid(weapon) and weapon.IsSplatoonWeapon
+	if IsSplatoonWeapon and ply.GroundColor or SERVER and SplatoonSWEPs:GetSurfaceColor(
+		util.QuickTrace(ply:GetPos(), -vector_up * 20, ply)) then
+		if not (IsSplatoonWeapon and weapon:GetInInk()) then ply:EmitSound "SplatoonSWEPs_Player.FootstepsInk" end
+		return true
+	end
+	
+	return false
+end)
+
+local bound = SplatoonSWEPs.vector_one * 10
+hook.Add("ShouldCollide", "SplatoonSWEPs: Ink go through grates", function(ent1, ent2)
+	local class1, class2 = ent1:GetClass(), ent2:GetClass()
+	local collide1, collide2 = class1 == "projectile_ink", class2 == "projectile_ink"
+	if collide1 == collide2 then return false end
+	-- local wep1 = isfunction(ent1.GetActiveWeapon) and IsValid(ent1:GetActiveWeapon()) and ent1:GetActiveWeapon()
+	-- local wep2 = isfunction(ent2.GetActiveWeapon) and IsValid(ent2:GetActiveWeapon()) and ent2:GetActiveWeapon()
+	-- if wep1 and wep2 then
+		
+	-- end
+	local ink, targetent = ent1, ent2
+	if class2 == "projectile_ink" then
+		if class1 == clasname then return false end
+		ink, targetent, class1, class2 = targetent, ink, class2, class1
+	end
+	if class1 ~= "projectile_ink" then return true end
+	if SERVER and targetent:GetMaterialType() == MAT_GRATE then return false end
+	local dir = ink:GetVelocity()
+	local filter = player.GetAll()
+	table.insert(filter, ink)
+	local tr = util.TraceLine({
+		start = ink:GetPos(),
+		endpos = ink:GetPos() + dir,
+		filter = filter,
+	})
+	return tr.MatType ~= MAT_GRATE
+end)

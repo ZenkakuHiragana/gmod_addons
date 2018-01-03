@@ -97,24 +97,24 @@ local function doit()
 end
 
 include "autorun/debug.lua"
-local c = 1000
-debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 1) * c, 5, Color(255, 255, 0), true)
-debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 0) * c, 5, Color(255, 255, 0), true)
-debugoverlay.Line(Vector(1, 0, 0) * c, Vector(1, 1, 0) * c, 5, Color(255, 255, 0), true)
-debugoverlay.Line(Vector(1, 1, 0) * c, Vector(0, 1, 0) * c, 5, Color(255, 255, 0), true)
-debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0), true)
+-- local c = 1000
+-- debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 1) * c, 5, Color(255, 255, 0), true)
+-- debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 0) * c, 5, Color(255, 255, 0), true)
+-- debugoverlay.Line(Vector(1, 0, 0) * c, Vector(1, 1, 0) * c, 5, Color(255, 255, 0), true)
+-- debugoverlay.Line(Vector(1, 1, 0) * c, Vector(0, 1, 0) * c, 5, Color(255, 255, 0), true)
+-- debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0), true)
 
-for k, f in ipairs(SplatoonSWEPs.SequentialSurfaces.Vertices) do
-	for i, v in ipairs(f) do
-		v = SplatoonSWEPs:To2D(v.pos, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
-		local w = SplatoonSWEPs:To2D(f[i % #f + 1].pos, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
-		local uvorg = Vector(SplatoonSWEPs.SequentialSurfaces.u[k], SplatoonSWEPs.SequentialSurfaces.v[k])
-		v = SplatoonSWEPs:UnitsToUV(v) + uvorg
-		w = SplatoonSWEPs:UnitsToUV(w) + uvorg
-		DebugLine(v * c, w * c, true)
-		DebugLine(v, w, true)
-	end
-end
+-- for k, f in ipairs(SplatoonSWEPs.SequentialSurfaces.Vertices) do
+	-- for i, v in ipairs(f) do
+		-- v = SplatoonSWEPs:To2D(v.pos, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
+		-- local w = SplatoonSWEPs:To2D(f[i % #f + 1].pos, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
+		-- local uvorg = Vector(SplatoonSWEPs.SequentialSurfaces.u[k], SplatoonSWEPs.SequentialSurfaces.v[k])
+		-- v = SplatoonSWEPs:UnitsToUV(v) + uvorg
+		-- w = SplatoonSWEPs:UnitsToUV(w) + uvorg
+		-- DebugLine(v * c, w * c, true)
+		-- DebugLine(v, w, true)
+	-- end
+-- end
 
 -- if SERVER then return end
 
@@ -179,6 +179,8 @@ local function lighttest()
 	end
 	local light = render.ComputeLighting(p, n)
 	local color = render.GetLightColor(p)
+	local surf = render.GetSurfaceColor(p + n, p - n)
+	local tone = render.GetToneMappingScaleLinear()
 	local x, y = 0, 1
 	for x = 0, 1 do
 		local y = 1
@@ -187,6 +189,8 @@ local function lighttest()
 			["GetColor"] = color,
 			["Avg."] = (light + color + amb / 5) / 2.2,
 			["Amb."] = amb,
+			["Surf."] = surf,
+			["Tone"] = tone,
 		} do
 			surface.SetDrawColor(vec:ToColor())
 			surface.DrawRect(10 + x * 140, y * 80, 128, 64)
@@ -249,3 +253,31 @@ end
 	-- end
 -- end
 
+cvars.RemoveChangeCallback("mat_hdr_tonemapscale", "cvarchanges")
+-- cvars.AddChangeCallback("mat_hdr_tonemapscale", function(cvar, old, new)
+	-- print(cvar, old, new)
+-- end, "cvarchanges")
+local campos = p + n
+local exp = render.GetLightColor(campos)
+local lit = render.ComputeLighting(campos, n)
+local dlit = render.ComputeDynamicLighting(campos, n)
+local hdrvector = render.GetToneMappingScaleLinear()
+local hdrscale = (hdrvector.x + hdrvector.y + hdrvector.z) / 3
+print(hdrvector, hdrscale)
+print(exp, "", lit, "", dlit)
+print(exp:Length(), lit:Length(), dlit:Length(), GetConVar "mat_hdr_tonemapscale":GetFloat())
+-- local localpos, localang = LocalPlayer():GetPos(), LocalPlayer():GetAngles()
+-- local viewpos, viewang = GetViewEntity():GetPos(), GetViewEntity():GetAngles()
+DebugPoint(campos, 10, true)
+-- print(GetConVar "mat_hdr_tonemapscale":GetFloat())
+-- LocalPlayer():SetPos(campos)
+-- LocalPlayer():SetAngles(campos:Angle())
+-- GetViewEntity():GetPos(campos)
+-- GetViewEntity():GetAngles(campos:Angle())
+-- hook.Run("CalcView", LocalPlayer(), campos, campos:Angle(), LocalPlayer():GetFOV(), 1, 2000)
+-- cam.Start3D(campos, campos:Angle())
+-- cam.End()
+-- LocalPlayer():SetPos(localpos)
+-- LocalPlayer():SetAngles(localang)
+-- GetViewEntity():GetPos(viewpos)
+-- GetViewEntity():GetAngles(viewang)

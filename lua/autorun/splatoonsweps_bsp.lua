@@ -590,37 +590,36 @@ end,
 			p.PropType = read "UShort"
 			bsp.bsp:Skip(4)
 			p.Solid = read "Byte"
-			p.ModelName = modelnames[p.PropType + 1]
-			if p.Solid == SOLID_NONE or not file.Exists(p.ModelName or "/", "GAME") then continue end
-			
-			local mdl
-			if SERVER then
-				util.PrecacheModel(p.ModelName)
-				mdl = ents.Create "prop_physics"
-			else
-				mdl = ClientsideModel(p.ModelName)
-			end
-			mdl:SetModel(p.ModelName)
-			mdl:Spawn()
-			
-			if mdl:PhysicsInit(p.Solid) then
-				local ph = mdl:GetPhysicsObject()
-				local mat = ph:GetMaterial()
-				if not (mat:find "chain" or mat:find "grate") then
-					local physmesh = ph:GetMesh()
-					props = props + #physmesh / 3
-					for i = 1, #physmesh, 3 do
-						local t = {physmesh[i].pos, physmesh[i + 1].pos, physmesh[i + 2].pos}
-						for _, v in ipairs(t) do
-							v:Rotate(p.Angles)
-							v:Add(p.Origin)
+			p.ModelName = Model(modelnames[p.PropType + 1])
+			if p.Solid ~= SOLID_VPHYSICS or not file.Exists(p.ModelName or "/", "GAME") then continue end
+			local mdl = SERVER and ents.Create "prop_physics" or ClientsideModel(p.ModelName)
+			if mdl and IsValid(mdl) then
+				mdl:SetModel(p.ModelName)
+				mdl:Spawn()
+				
+				if mdl:PhysicsInit(p.Solid) then
+					local ph = mdl:GetPhysicsObject()
+					local mat = ph:GetMaterial()
+					if not (mat:find "chain" or mat:find "grate") then
+						local physmesh = ph:GetMesh()
+						props = props + #physmesh / 3
+						for i = 1, #physmesh, 3 do
+							local t = {physmesh[i].pos, physmesh[i + 1].pos, physmesh[i + 2].pos}
+							if (t[2] - t[1]):Cross(t[3] - t[1]):LengthSqr() > 4000 then
+								for _, v in ipairs(t) do
+									v:Rotate(p.Angles)
+									v:Add(p.Origin)
+								end
+								MakeDispTriangle(t)
+							end
 						end
-						MakeDispTriangle(t)
 					end
 				end
+				mdl:PhysicsDestroy()
+				mdl:Remove()
+			elseif CLIENT then
+				mdl:Remove()
 			end
-			mdl:PhysicsDestroy()
-			mdl:Remove()
 		end
 		
 		break

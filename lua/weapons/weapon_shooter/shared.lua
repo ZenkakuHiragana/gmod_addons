@@ -12,7 +12,7 @@ function SWEP:CustomPrimary(p, info)
 	p.Spread = info.Spread
 	p.SpreadJump = info.SpreadJump
 	p.SpreadBias = info.SpreadBias
-	p.MoveSpeed = SplatoonSWEPs.InklingBaseSpeed * info.MoveSpeed
+	p.MoveSpeed = SplatoonSWEPs.ToHammerUnits * info.MoveSpeed * 60
 	p.MinDamageTime = SplatoonSWEPs:FrameToSec(info.Delay.MinDamage)
 	p.DecreaseDamage = SplatoonSWEPs:FrameToSec(info.Delay.DecreaseDamage)
 	p.InitVelocity = info.InitVelocity
@@ -25,7 +25,7 @@ SplatoonSWEPs.SetPrimary(SWEP, {
 	Recoil				= .2,					--Viewmodel recoil intensity
 	TakeAmmo			= .9,					--Ink consumption per fire[%]
 	PlayAnimPercent		= 0,					--Play PLAYER_ATTACK1 animation frequency[%]
-	FirePosition		= Vector(6, -6, -9),	--Ink spawn position
+	FirePosition		= Vector(0, -6, -9),	--Ink spawn position
 	Damage				= 36,					--Maximum damage[units]
 	MinDamage			= 18,					--Minimum damage[units]
 	InkRadius			= 100.8,				--Painting radius[units]
@@ -37,7 +37,7 @@ SplatoonSWEPs.SetPrimary(SWEP, {
 	Spread				= 6,					--Aim cone[deg]
 	SpreadJump			= 15,					--Aim cone while jumping[deg]
 	SpreadBias			= .25,					--Aim cone random component[deg]
-	MoveSpeed			= .72,					--Walk speed while shooting[mag.]
+	MoveSpeed			= .72,					--Walk speed while shooting[Splatoon units/frame]
 	InitVelocity		= 6929.13408,			--Ink initial velocity[units/s]	
 	Delay = {
 		Fire			= 6,					--Fire rate[frames]
@@ -48,6 +48,27 @@ SplatoonSWEPs.SetPrimary(SWEP, {
 		DecreaseDamage	= 8,					--Start decreasing damage[frames]
 	},
 })
+
+function SWEP:SharedInit()
+	self.NextPlayEmpty = CurTime()
+end
+
+--Playing sounds
+function SWEP:SharedPrimaryAttack(canattack)
+	if self:GetInk() <= 0 then
+		if CLIENT and self.PreviousInk then
+			surface.PlaySound(SplatoonSWEPs.TankEmpty)
+			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
+			self.PreviousInk = false
+		elseif SERVER and CurTime() > self.NextPlayEmpty then
+			self:EmitSound "SplatoonSWEPs.EmptyShot"
+			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
+		end
+	elseif canattack then
+		self:EmitSound "SplatoonSWEPs.Splattershot"
+		if CLIENT then self.PreviousInk = true end
+	end
+end
 
 function SWEP:SharedSecondaryAttack(canattack)
 	SplatoonSWEPs:ClearAllInk()

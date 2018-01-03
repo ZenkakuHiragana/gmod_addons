@@ -8,6 +8,10 @@ function SWEP:PopupError(msg)
 	notification.AddLegacy(msg, NOTIFY_ERROR, errorduration)
 end
 
+function SWEP:IsFirstTimePredicted()
+	return game.SinglePlayer() or IsFirstTimePredicted()
+end
+
 --Fully copies the table, meaning all tables inside this table are copied too and so on
 --(normal table.Copy copies only their reference).
 --Does not copy entities of course, only copies their reference.
@@ -112,6 +116,8 @@ function SWEP:Initialize()
 	local icon = "vgui/entities/" .. self:GetClass()
 	if not file.Exists(icon .. ".vmt", "GAME") then icon = "weapons/swep" end
 	self.WepSelectIcon = surface.GetTextureID(icon)
+	self.EnoughSubWeapon = true
+	self.PreviousInk = true
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:MakeSquidModel()
 	self:ChangeHullDuck()
@@ -121,11 +127,13 @@ function SWEP:Initialize()
 		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 	end
+	
+	self:SharedInitBase()
 	if isfunction(self.ClientInit) then return self:ClientInit() end
 end
 
 function SWEP:Deploy()
-	if not IsFirstTimePredicted() then return end
+	if not self:IsFirstTimePredicted() then return end
 	self.PMID = SplatoonSWEPs:GetConVarInt "Playermodel"
 	if IsValid(self.Squid) then
 		if self.PMID == SplatoonSWEPs.PLAYER.OCTO and self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
@@ -142,12 +150,11 @@ function SWEP:Deploy()
 	self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 	self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 	self:ChangeHullDuck()
-	return self:SharedDeploy()
+	return self:SharedDeployBase()
 end
 
 function SWEP:Holster()
-	if not IsFirstTimePredicted() then return end
-	if not IsValid(self.Owner) then return true end
+	if not (IsValid(self.Owner) and self:IsFirstTimePredicted()) then return end
 	local vm = self.Owner:GetViewModel()
 	if IsValid(vm) then self:ResetBonePositions(vm) end
 	
@@ -156,8 +163,8 @@ function SWEP:Holster()
 		self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 		self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 	end
-	if isfunction(self.ClientHolster) then self:ClientHolster() end
-	return true
+	
+	return self:SharedHolsterBase()
 end
 
 --It's important to remove CSEnt with CSEnt:Remove() when it's no longer needed.
@@ -180,26 +187,17 @@ function SWEP:OnRemove()
 end
 
 function SWEP:Think()
-	if not IsValid(self.Owner) then
-		return
+	if not IsValid(self.Owner) then return end
+	if self:IsFirstTimePredicted() then
+		local enough = self:GetInk() > self.Secondary.TakeAmmo
+		if not self.EnoughSubWeapon and enough then
+			self.JustUsableTime = CurTime()
+			surface.PlaySound(SplatoonSWEPs.BombAvailable)
+		end
+		self.EnoughSubWeapon = enough
 	end
 	
-	local sq = self.Owner:IsPlayer()
-	
-	if sq then
-		sq = self.Owner:Crouching()
-	else
-		sq = self.Owner:GetFlags(FL_DUCKING)
-	end
-	
-	if not self.IsSquid and sq then
-		self.Owner:RemoveAllDecals()
-	end
-	
-	self.IsSquid = sq
 	self:ProcessSchedules()
-	
-	if isfunction(self.ClientThink) then
-		return self:ClientThink()
-	end
+	self:SharedThinkBase()
+	if isfunction(self.ClientThink) then return self:ClientThink() end
 end

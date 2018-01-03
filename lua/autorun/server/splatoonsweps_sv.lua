@@ -7,8 +7,6 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	InkCounter = 0,
 }
 include "autorun/splatoonsweps_shared.lua"
-include "autorun/splatoonsweps_bsp.lua"
-include "autorun/splatoonsweps_const.lua"
 include "splatoonsweps_inkmanager.lua"
 include "splatoonsweps_network.lua"
 
@@ -20,16 +18,6 @@ function SplatoonSWEPs:ClearAllInk()
 			node.Surfaces.InkCircles[i] = {}
 		end
 	end
-end
-
-local function Initialize()
-	local set = physenv.GetPerformanceSettings()
-	local self = SplatoonSWEPs
-	self.BSP:Init()
-	self.BSP = nil
-	set.MaxVelocity = SplatoonSWEPs.MaxVelocity
-	physenv.SetPerformanceSettings(set)
-	collectgarbage "collect"
 end
 
 --table vertices of face, Vector normal of plane, number distance from plane to origin
@@ -81,7 +69,6 @@ function SplatoonSWEPs:BSPPairsAll(modelindex)
 	end, {self.Models[modelindex or 1]}
 end
 
-hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", Initialize)
 function SplatoonSWEPs:SendError(msg, icon, duration, user)
 	net.Start "SplatoonSWEPs: Send an error message"
 	net.WriteString(msg)
@@ -93,3 +80,33 @@ function SplatoonSWEPs:SendError(msg, icon, duration, user)
 		net.Broadcast()
 	end
 end
+
+hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function()
+	local self = SplatoonSWEPs
+	self.BSP:Init()
+	self.BSP = nil
+	return collectgarbage "collect"
+end)
+
+hook.Add("GetFallDamage", "Inklings don't take fall damage.", function(ply, speed)
+	local weapon = ply:GetActiveWeapon()
+	if IsValid(weapon) and weapon.IsSplatoonWeapon then
+		return 0
+	end
+end)
+
+hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, dmg)
+	local atk = dmg:GetAttacker()
+	if not (IsValid(atk) and dmg:GetDamage() > 0 and ent:Health() > 0) then return end
+	if atk:GetClass() == "projectile_ink" then return true end
+	if not atk:IsPlayer() then return end
+	local wep = atk:GetActiveWeapon()
+	if not (IsValid(wep) and wep.IsSplatoonWeapon) then return end
+	if dmg:GetDamage() < 100 then
+		atk:SendLua "surface.PlaySound(SplatoonSWEPs.DealDamage)"
+		if not (ent:IsPlayer() and IsValid(ent:GetActiveWeapon()) and ent:GetActiveWeapon().IsSplatoonWeapon) then return end
+		ent:SendLua "surface.PlaySound(SplatoonSWEPs.TakeDamage)"
+	else
+		atk:SendLua "surface.PlaySound(SplatoonSWEPs.DealDamageCritical)"
+	end
+end)
