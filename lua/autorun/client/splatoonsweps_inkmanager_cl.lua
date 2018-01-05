@@ -72,9 +72,11 @@ local function ProcessQueue()
 			local radius = self:UnitsToPixels(q.r)
 			local size = radius * 2
 			local surf = self.SequentialSurfaces
+			if surf.Moved[q.facenumber] then q.angle:RotateAroundAxis(q.normal, -90) end
 			local org = self:UVToPixels(Vector(surf.u[q.facenumber], surf.v[q.facenumber]))
 			local bound = self:UnitsToPixels(surf.Bounds[q.facenumber])
-			local center = org + self:UnitsToPixels(self:To2D(q.pos, q.origin, q.angle))
+			local center = self:UnitsToPixels(self:To2D(q.pos, q.origin, q.angle))
+			if surf.Moved[q.facenumber] then center.x = -center.x end center = center + org
 			local s = Vector(math.floor(org.x) - 1, math.floor(org.y) - 1)
 			local b = Vector(math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1)
 			local light = GetLight(q.pos, q.normal)

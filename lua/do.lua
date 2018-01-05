@@ -97,24 +97,33 @@ local function doit()
 end
 
 include "autorun/debug.lua"
--- local c = 1000
--- debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 1) * c, 5, Color(255, 255, 0), true)
--- debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 0) * c, 5, Color(255, 255, 0), true)
--- debugoverlay.Line(Vector(1, 0, 0) * c, Vector(1, 1, 0) * c, 5, Color(255, 255, 0), true)
--- debugoverlay.Line(Vector(1, 1, 0) * c, Vector(0, 1, 0) * c, 5, Color(255, 255, 0), true)
--- debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0), true)
+local c = 1000
+debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 1) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(0, 0, 0) * c, Vector(1, 0, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(1, 0, 0) * c, Vector(1, 1, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(1, 1, 0) * c, Vector(0, 1, 0) * c, 5, Color(255, 255, 0), true)
+debugoverlay.Line(Vector(0, 1, 0) * c, Vector(0, 0, 0) * c, 5, Color(255, 255, 0), true)
 
--- for k, f in ipairs(SplatoonSWEPs.SequentialSurfaces.Vertices) do
-	-- for i, v in ipairs(f) do
-		-- v = SplatoonSWEPs:To2D(v.pos, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
-		-- local w = SplatoonSWEPs:To2D(f[i % #f + 1].pos, SplatoonSWEPs.SequentialSurfaces.Origins[k], SplatoonSWEPs.SequentialSurfaces.Angles[k])
-		-- local uvorg = Vector(SplatoonSWEPs.SequentialSurfaces.u[k], SplatoonSWEPs.SequentialSurfaces.v[k])
-		-- v = SplatoonSWEPs:UnitsToUV(v) + uvorg
-		-- w = SplatoonSWEPs:UnitsToUV(w) + uvorg
-		-- DebugLine(v * c, w * c, true)
-		-- DebugLine(v, w, true)
-	-- end
--- end
+local surf = SplatoonSWEPs.SequentialSurfaces
+for k, f in ipairs(surf.Vertices) do
+	-- surf.Angles[k]:RotateAroundAxis((f[2].pos - f[1].pos):GetNormalized(), 180)
+	local ang = Angle(surf.Angles[k])
+	if surf.Moved[k] then ang:RotateAroundAxis(surf.Normals[k], -90) end
+	for i, v in ipairs(f) do
+		local uvorg = Vector(surf.u[k], surf.v[k])
+		-- v = SplatoonSWEPs:To2D(v.pos, surf.Origins[k], ang)
+		-- local w = SplatoonSWEPs:To2D(f[i % #f + 1].pos, surf.Origins[k], ang)
+		-- v = SplatoonSWEPs:UnitsToUV(v)
+		-- w = SplatoonSWEPs:UnitsToUV(w)
+		-- if surf.Moved[k] then v.x, w.x = -v.x , -w.x end
+		-- v, w = v + uvorg, w + uvorg
+		local w = f[i % #f + 1]
+		v = Vector(v.u, v.v)
+		w = Vector(w.u, w.v)
+		DebugLine(v * c, w * c, true)
+	end
+	-- break
+end
 
 -- if SERVER then return end
 
@@ -253,22 +262,22 @@ end
 	-- end
 -- end
 
-cvars.RemoveChangeCallback("mat_hdr_tonemapscale", "cvarchanges")
+-- cvars.RemoveChangeCallback("mat_hdr_tonemapscale", "cvarchanges")
 -- cvars.AddChangeCallback("mat_hdr_tonemapscale", function(cvar, old, new)
 	-- print(cvar, old, new)
 -- end, "cvarchanges")
-local campos = p + n
-local exp = render.GetLightColor(campos)
-local lit = render.ComputeLighting(campos, n)
-local dlit = render.ComputeDynamicLighting(campos, n)
-local hdrvector = render.GetToneMappingScaleLinear()
-local hdrscale = (hdrvector.x + hdrvector.y + hdrvector.z) / 3
-print(hdrvector, hdrscale)
-print(exp, "", lit, "", dlit)
-print(exp:Length(), lit:Length(), dlit:Length(), GetConVar "mat_hdr_tonemapscale":GetFloat())
+-- local campos = p + n
+-- local exp = render.GetLightColor(campos)
+-- local lit = render.ComputeLighting(campos, n)
+-- local dlit = render.ComputeDynamicLighting(campos, n)
+-- local hdrvector = render.GetToneMappingScaleLinear()
+-- local hdrscale = (hdrvector.x + hdrvector.y + hdrvector.z) / 3
+-- print(hdrvector, hdrscale)
+-- print(exp, "", lit, "", dlit)
+-- print(exp:Length(), lit:Length(), dlit:Length(), GetConVar "mat_hdr_tonemapscale":GetFloat())
 -- local localpos, localang = LocalPlayer():GetPos(), LocalPlayer():GetAngles()
 -- local viewpos, viewang = GetViewEntity():GetPos(), GetViewEntity():GetAngles()
-DebugPoint(campos, 10, true)
+-- DebugPoint(campos, 10, true)
 -- print(GetConVar "mat_hdr_tonemapscale":GetFloat())
 -- LocalPlayer():SetPos(campos)
 -- LocalPlayer():SetAngles(campos:Angle())

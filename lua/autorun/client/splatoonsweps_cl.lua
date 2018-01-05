@@ -12,6 +12,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 		Angles = {},
 		Areas = {},
 		Bounds = {},
+		Moved = {},
 		Normals = {},
 		Origins = {},
 		u = {}, v = {},
@@ -19,11 +20,11 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	},
 	AreaBound = 0,
 }
+
 include "autorun/splatoonsweps_shared.lua"
 include "splatoonsweps_userinfo.lua"
 include "splatoonsweps_inkmanager_cl.lua"
 include "splatoonsweps_network_cl.lua"
-
 SplatoonSWEPs.RenderTarget.BaseTextureFlags = bit.bor(
 	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
 	SplatoonSWEPs.TEXTUREFLAGS.EIGHTBITALPHA,
@@ -41,10 +42,6 @@ SplatoonSWEPs.RenderTarget.LightmapFlags = bit.bor(
 	SplatoonSWEPs.TEXTUREFLAGS.RENDERTARGET,
 	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER
 )
-
-function SplatoonSWEPs:GetRTSize()
-	return SplatoonSWEPs.RTSize[SplatoonSWEPs:GetConVarInt "RTResolution"]
-end
 
 function SplatoonSWEPs:ClearAllInk()
 	render.PushRenderTarget(SplatoonSWEPs.RenderTarget.BaseTexture)
@@ -77,81 +74,26 @@ end
 local MAX_TRIANGLES = math.floor(32768 / 3)
 local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
 hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function()
+	SplatoonSWEPs.BSP:Init() --Parsing BSP file
+	SplatoonSWEPs.BSP = nil
 	local self = SplatoonSWEPs
-	local amb = render.GetAmbientLightColor()
-	local level = amb:LengthSqr()
-	if level > 1 then level = self.GrayScaleFactor:Dot(amb) end
-	self.HDR = GetConVar "mat_hdr_level":GetInt() == 2
-	self.InkLightLevel = math.Clamp(1 - level, 0.15, 0.55)
-	self.BSP:Init() --Parsing BSP file
-	self.BSP = nil
-	collectgarbage "collect"
-	
-	local sortedsurfaces = {}
 	local surf = self.SequentialSurfaces
-	local NumMeshTriangles = 0
-	for k in SortedPairsByValue(surf.Areas, true) do
-		table.insert(sortedsurfaces, k)
-		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2
-		for i, vertex in ipairs(surf.Vertices[k]) do
-			surf.Vertices[k][i] = {pos = vertex + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL}
-		end
-	end
-	
-	local rtsize = math.min(self:GetRTSize(), render.MaxTextureWidth())
-	local rtheight = math.min(self:GetRTSize(), render.MaxTextureHeight())
+	local rtsize = math.min(self.RTSize[self:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
 	local rtmergin = 2 / rtsize
-	local rtmerginSqr = rtmergin^2
-	local function GetUV(convertunit)
-		local u, v, nextV = 0, 0, 0
-		local convSqr = convertunit^2
-		for _, k in ipairs(sortedsurfaces) do --Using next-fit approach
-			local bound = surf.Bounds[k] / convertunit
-			nextV = math.max(nextV, bound.y)
-			if 1 - u < bound.x then 
-				u, v, nextV = 0, v + nextV + rtmergin, bound.y
-			end
-			
-			for i, vertex in ipairs(surf.Vertices[k]) do
-				local UV = SplatoonSWEPs:To2D(vertex.pos, surf.Origins[k], surf.Angles[k]) / convertunit --Get UV coordinates
-				surf.Vertices[k][i].u = UV.x + u
-				surf.Vertices[k][i].v = UV.y + v
-			end
-			
-			surf.u[k] = u
-			surf.v[k] = v
-			u = u + bound.x + rtmergin --Advance U-coordinate
-		end
-		
-		return v + nextV
-	end
-	
-	--Ratio[(units^2 / pixel^2)^1/2 -> units/pixel]
-	self.RenderTarget.Ratio = math.max(math.sqrt(self.AreaBound / rtarea)) * 1.2
-	
-	--convertunit[pixel * units/pixel -> units]
-	local loop = 0
-	local convertunit = rtsize * self.RenderTarget.Ratio
-	local maxY = GetUV(convertunit) --UV mapping to map geometry
-	while maxY > 1 do
-		convertunit = convertunit * ((maxY - 1) * 0.415 + 1.0005)
-		maxY = GetUV(convertunit)
-		loop = loop + 1
-	end
-	print("loops: ", loop, 100 - maxY * 100, convertunit / rtsize, self.RenderTarget.Ratio)
-	function self:PixelsToUnits(pixels) return pixels * self.RenderTarget.Ratio end
+	local arearatio = math.sqrt(self.AreaBound / rtarea) * 1.2 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
+	function self:PixelsToUnits(pixels) return pixels * arearatio end
 	function self:PixelsToUV(pixels) return pixels / rtsize end
-	function self:UnitsToPixels(units) return units / self.RenderTarget.Ratio end
+	function self:UnitsToPixels(units) return units / arearatio end
 	function self:UnitsToUV(units) return units / convertunit end
 	function self:UVToPixels(uv) return uv * rtsize end
 	function self:UVToUnits(uv) return uv * convertunit end
 	
 	--21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
-	self.RenderTarget.Ratio = convertunit / rtsize
 	self.RenderTarget.BaseTexture = GetRenderTargetEx(
 		self.RenderTarget.BaseTextureName,
-		rtsize, rtheight,
+		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.BaseTextureFlags,
@@ -160,7 +102,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	)
 	self.RenderTarget.Normalmap = GetRenderTargetEx(
 		self.RenderTarget.NormalmapName,
-		rtsize, rtheight,
+		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.NormalmapFlags,
@@ -169,7 +111,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	)
 	self.RenderTarget.Lightmap = GetRenderTargetEx(
 		self.RenderTarget.LightmapName,
-		rtsize / 2, rtheight / 2,
+		rtsize / 2, rtsize / 2,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.LightmapFlags,
@@ -183,9 +125,10 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 			["$basetexture"] = self.RenderTarget.BaseTexture:GetName(),
 			["$bumpmap"] = self.RenderTarget.Normalmap:GetName(),
 			["$ssbump"] = "1",
-			["$translucent"] = "1",
+			["$alphatest"] = "1",
 		}
 	)
+	self.IMesh[1] = Mesh(self.RenderTarget.Material)
 	self.RenderTarget.WaterMaterial = CreateMaterial(
 		self.RenderTarget.WaterMaterialName,
 		"Refract",
@@ -197,38 +140,81 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		}
 	)
 	
-	--Building MeshVertex
-	local build, numtriangles = 1, NumMeshTriangles
-	self.IMesh[build] = Mesh(self.RenderTarget.Material)
-	mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
-	for _, k in ipairs(sortedsurfaces) do
-		for t = 3, #surf.Vertices[k] do
-			for _, i in ipairs {t - 1, t, 1} do
-				mesh.Normal(surf.Normals[k])
-				mesh.Position(surf.Vertices[k][i].pos)
-				mesh.TexCoord(0, surf.Vertices[k][i].u, surf.Vertices[k][i].v)
-				mesh.TexCoord(1, surf.Vertices[k][i].u, surf.Vertices[k][i].v)
-				mesh.AdvanceVertex()
-			end
+	local sortedsurfs, movesurfs = {}, {}
+	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
+	local u, v, nv, bu, bv, bk = 0, 0, 0 --cursor(u, v), shelf height, rectangle size(u, v), beginning of k
+	for k in SortedPairsByValue(surf.Areas, true) do
+		table.insert(sortedsurfs, k)
+		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2
 		
-			if mesh.VertexCount() >= MAX_TRIANGLES * 3 then
-				build = build + 1
-				numtriangles = numtriangles - MAX_TRIANGLES
-				mesh.End()
-				self.IMesh[build] = Mesh(self.RenderTarget.Material)
-				mesh.Begin(self.IMesh[build], MATERIAL_TRIANGLES, math.min(numtriangles, MAX_TRIANGLES))
+		--Using next-fit approach
+		bu, bv = surf.Bounds[k].x / convertunit, surf.Bounds[k].y / convertunit
+		nv = math.max(nv, bv)
+		if u + bu > 1 then --Creating a new shelf
+			if v + nv + rtmergin > 1 then table.insert(movesurfs, {id = bk, v = v}) end
+			u, v, nv = 0, v + nv + rtmergin, bv
+		end
+		
+		if u == 0 then bk = #sortedsurfs end --The first element of the current shelf
+		for i, vertex in ipairs(surf.Vertices[k]) do --Get UV coordinates
+			local meshvert = vertex + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL
+			local UV = SplatoonSWEPs:To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
+			surf.Vertices[k][i] = {pos = meshvert, u = UV.x + u, v = UV.y + v}
+		end
+		
+		surf.u[k], surf.v[k] = u, v
+		u = u + bu + rtmergin --Advance U-coordinate
+	end
+	
+	if v + nv > 1 then
+		local min, halfv = math.huge, movesurfs[#movesurfs].v / 2 + .5
+		for _, m in ipairs(movesurfs) do
+			local v = math.abs(m.v - halfv)
+			if v < min then min, half = v, m end
+		end
+		
+		dv = half.v - 1
+		divuv = math.max(half.v, v + nv - dv)
+		arearatio = arearatio * divuv
+		convertunit = convertunit * divuv
+	end
+	
+	--Building MeshVertex
+	mesh.Begin(self.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
+	for sortedID, k in ipairs(sortedsurfs) do
+		if half and sortedID >= half.id then
+			surf.Bounds[k].x, surf.Bounds[k].y, surf.u[k], surf.v[k], surf.Moved[k]
+				= surf.Bounds[k].y, surf.Bounds[k].x, surf.v[k] - dv, surf.u[k], true
+			for _, vertex in ipairs(surf.Vertices[k]) do
+				vertex.u, vertex.v = vertex.v - dv, vertex.u
 			end
 		end
-		surf.Vertices[k] = nil
+		
+		surf.u[k], surf.v[k] = surf.u[k] / divuv, surf.v[k] / divuv
+		for t, v in ipairs(surf.Vertices[k]) do
+			v.u, v.v = v.u / divuv, v.v / divuv
+			if t < 3 then continue end
+			for _, i in ipairs {t - 1, t, 1} do
+				local v = surf.Vertices[k][i]
+				mesh.Normal(surf.Normals[k])
+				mesh.Position(v.pos)
+				mesh.TexCoord(0, v.u, v.v)
+				mesh.TexCoord(1, v.u, v.v)
+				mesh.AdvanceVertex()
+			end
+			
+			if mesh.VertexCount() >= MAX_TRIANGLES * 3 then
+				mesh.End()
+				nummeshes, NumMeshTriangles = nummeshes + 1, NumMeshTriangles - MAX_TRIANGLES
+				self.IMesh[nummeshes] = Mesh(self.RenderTarget.Material)
+				mesh.Begin(self.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
+			end
+		end
+		-- surf.Angles[k], surf.Areas[k], surf.Normals[k], surf.Origins[k], surf.Vertices[k] = nil
 	end
 	mesh.End()
 	
-	surf.Angles = nil
-	surf.Areas = nil
-	surf.Normals = nil
-	surf.Origins = nil
-	surf.Vertices = nil
-	self.AreaBound = nil
+	-- surf.Angles, surf.Areas, surf.Normals, surf.Origins, surf.Vertices, surf.AreaBound = nil
 	self.RenderTarget.Ready = true
 	self:ClearAllInk()
 	return collectgarbage "collect"
