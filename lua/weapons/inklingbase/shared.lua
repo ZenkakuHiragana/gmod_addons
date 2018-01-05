@@ -100,7 +100,7 @@ function SWEP:SharedThinkBase()
 				/ SplatoonSWEPs.SquidBaseSpeed / SplatoonSWEPs.SquidBaseSpeed or 0)
 			if not self.IsSquid then
 				self.Owner:RemoveAllDecals()
-				self.Owner:EmitSound "SplatoonSWEPs_Player.ToSquid"
+				if SERVER then self.Owner:EmitSound "SplatoonSWEPs_Player.ToSquid" end
 			end
 			
 			if self:GetOnEnemyInk() then
@@ -110,7 +110,7 @@ function SWEP:SharedThinkBase()
 			end
 		elseif not sq and self.IsSquid then
 			self.SwimSound:ChangeVolume(0)
-			self.Owner:EmitSound "SplatoonSWEPs_Player.ToHuman"
+			if SERVER then self.Owner:EmitSound "SplatoonSWEPs_Player.ToHuman" end
 		end
 		
 		self.IsSquid = sq
@@ -127,11 +127,12 @@ end
 function SWEP:CommonFire(isprimary)
 	if self:GetCrouchPriority() then return false end
 	local Weapon = isprimary and self.Primary or self.Secondary
-	self.ReloadSchedule:SetDelay(Weapon.ReloadDelay)
-	self:SetNextCrouchTime(CurTime() + Weapon.CrouchDelay)
+	local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
+	self.ReloadSchedule:SetDelay(Weapon.ReloadDelay * laggedvalue)
+	self:SetNextCrouchTime(CurTime() + Weapon.CrouchDelay * laggedvalue)
 	
 	if self:GetInk() <= 0 then return false end --Check remaining amount of ink
-	self:SetNextPrimaryFire(CurTime() + Weapon.Delay)
+	self:SetNextPrimaryFire(CurTime() + Weapon.Delay * laggedvalue)
 	self:MuzzleFlash()
 	
 	if math.random() < Weapon.PlayAnimPercent then
@@ -176,7 +177,7 @@ function SWEP:ChangeInInk(name, old, new)
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
 			self:CallOnClient("ChangeInInk", table.concat({name, tostring(old), tostring(new)}, " "))
-		else
+		elseif not self:IsFirstTimePredicted() then return else
 			old, new = tobool(old), tobool(new)
 		end
 	end
@@ -203,7 +204,7 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
 			self:CallOnClient("ChangeOnEnemyInk", table.concat({name, tostring(old), tostring(new)}, " "))
-		else
+		elseif not self:IsFirstTimePredicted() then return else
 			old, new = tobool(old), tobool(new)
 		end
 	end
@@ -267,7 +268,7 @@ function SWEP:SetupDataTables()
 	
 	self.ReloadSchedule = self:AddNetworkSchedule(0,
 	function(self, schedule) --Recharging ink
-		local reloadamount = schedule:SinceLastCalled()
+		local reloadamount = math.max(0, schedule:SinceLastCalled())
 		local canreload = self.CanReloadInk and self:GetInInk()
 		local mul = ReloadMultiply * (canreload and 4 or 1)
 		if self.CanReloadStand or canreload then

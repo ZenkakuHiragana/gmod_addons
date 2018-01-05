@@ -79,16 +79,6 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	local self = SplatoonSWEPs
 	local surf = self.SequentialSurfaces
 	local rtsize = math.min(self.RTSize[self:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
-	local rtarea = rtsize^2
-	local rtmergin = 2 / rtsize
-	local arearatio = math.sqrt(self.AreaBound / rtarea) * 1.2 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
-	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
-	function self:PixelsToUnits(pixels) return pixels * arearatio end
-	function self:PixelsToUV(pixels) return pixels / rtsize end
-	function self:UnitsToPixels(units) return units / arearatio end
-	function self:UnitsToUV(units) return units / convertunit end
-	function self:UVToPixels(uv) return uv * rtsize end
-	function self:UVToUnits(uv) return uv * convertunit end
 	
 	--21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
 	self.RenderTarget.BaseTexture = GetRenderTargetEx(
@@ -140,9 +130,20 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		}
 	)
 	
+	rtsize = self.RenderTarget.BaseTexture:Width()
+	local rtarea = rtsize^2
+	local rtmergin = 2 / rtsize
+	local arearatio = math.sqrt(self.AreaBound / rtarea) * 1.2 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
 	local u, v, nv, bu, bv, bk = 0, 0, 0 --cursor(u, v), shelf height, rectangle size(u, v), beginning of k
+	function self:PixelsToUnits(pixels) return pixels * arearatio end
+	function self:PixelsToUV(pixels) return pixels / rtsize end
+	function self:UnitsToPixels(units) return units / arearatio end
+	function self:UnitsToUV(units) return units / convertunit end
+	function self:UVToPixels(uv) return uv * rtsize end
+	function self:UVToUnits(uv) return uv * convertunit end
 	for k in SortedPairsByValue(surf.Areas, true) do
 		table.insert(sortedsurfs, k)
 		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2

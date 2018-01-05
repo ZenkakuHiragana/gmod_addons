@@ -130,7 +130,7 @@ function SWEP:Deploy()
 			self:ChangePlayermodel(self.PMTable)
 			self:ChangeHullDuck()
 		else
-			SplatoonSWEPs:SendError("SplatoonSWEPs: Required playermodel is not found!", NOTIFY_ERROR, 10, self.Owner)
+			SplatoonSWEPs:SendError("SplatoonSWEPs: Required playermodel is not found!", 1, 10, self.Owner)
 		end
 	end
 	
