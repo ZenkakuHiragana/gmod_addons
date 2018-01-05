@@ -98,8 +98,8 @@ function SWEP:Deploy()
 	
 	self.OwnerVelocity = self.Owner:GetVelocity()
 	self.ViewAnim = ACT_VM_IDLE
-	self.PMID = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "Playermodel", 1)
-	if self.PMID ~= SplatoonSWEPs.PLAYER.NOSQUID then
+	self:SetPMID(self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "Playermodel", 1))
+	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
 		self.Owner:SetMaterial(self.Owner:Crouching() and "color" or "")
 	end
 	
@@ -107,24 +107,31 @@ function SWEP:Deploy()
 		self.ColorCode = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "InkColor", 1)
 		self:SetHoldType "passive"
 	end
-	self.SquidAvailable = file.Exists(SplatoonSWEPs.Squidmodel[self.PMID == SplatoonSWEPs.PLAYER.OCTO
+	
+	if self.ColorCode == 0 then 
+		self.ColorCode = math.random(SplatoonSWEPs.MAX_COLORS)
+	end
+	
+	self.SquidAvailable = file.Exists(SplatoonSWEPs.Squidmodel[self:GetPMID() == SplatoonSWEPs.PLAYER.OCTO
 		and SplatoonSWEPs.SQUID.OCTO or SplatoonSWEPs.SQUID.INKLING], "GAME")
 	self.Color = SplatoonSWEPs:GetColor(self.ColorCode)
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 	
-	self.PMPath = SplatoonSWEPs.Playermodel[self.PMID]
-	if file.Exists(self.PMPath, "GAME") then
-		self.PMTable = {
-			Model = self.PMPath,
-			Skin = 0,
-			BodyGroups = {},
-			SetOffsets = true,
-			PlayerColor = self:GetInkColorProxy(),
-		}
-		self:ChangePlayermodel(self.PMTable)
-		self:ChangeHullDuck()
-	else
-		SplatoonSWEPs:SendError("SplatoonSWEPs: Required playermodel is not found!", NOTIFY_ERROR, 10, self.Owner)
+	self.PMPath = SplatoonSWEPs.Playermodel[self:GetPMID()]
+	if self.PMPath then
+		if file.Exists(self.PMPath, "GAME") then
+			self.PMTable = {
+				Model = self.PMPath,
+				Skin = 0,
+				BodyGroups = {},
+				SetOffsets = true,
+				PlayerColor = self:GetInkColorProxy(),
+			}
+			self:ChangePlayermodel(self.PMTable)
+			self:ChangeHullDuck()
+		else
+			SplatoonSWEPs:SendError("SplatoonSWEPs: Required playermodel is not found!", NOTIFY_ERROR, 10, self.Owner)
+		end
 	end
 	
 	return self:SharedDeployBase()
@@ -168,7 +175,7 @@ function SWEP:Think()
 		self.Owner:SetVelocity(self.Owner:GetForward() * 40 * self.Owner:EyeAngles().pitch / -90)
 	end
 	
-	if self.SquidAvailable and self.PMID ~= SplatoonSWEPs.PLAYER.NOSQUID then
+	if self.SquidAvailable and self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
 		self.Owner:SetMaterial(self.IsSquid and "color" or "")
 		self:DrawShadow(not self.IsSquid)
 	end

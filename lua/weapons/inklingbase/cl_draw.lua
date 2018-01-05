@@ -290,7 +290,7 @@ end
 function SWEP:DrawWorldModelTranslucent()
 	local bone_ent = self // when the weapon is dropped
 	if IsValid(self.Owner) and self.Owner:IsPlayer() then
-		if self.Squid and self.PMID ~= SplatoonSWEPs.PLAYER.NOSQUID and self.Owner:Crouching() then
+		if self.Squid and self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID and self.Owner:Crouching() then
 			if not self:GetInInk() then
 				--It seems changing eye position doesn't work.
 				self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)

@@ -39,7 +39,7 @@ local function FullCopy(t)
 end
 
 function SWEP:MakeSquidModel(id)
-	self.SquidModelNumber = self.PMID == SplatoonSWEPs.PLAYER.OCTO
+	self.SquidModelNumber = self:GetPMID() == SplatoonSWEPs.PLAYER.OCTO
 		and SplatoonSWEPs.SQUID.OCTO or SplatoonSWEPs.SQUID.INKLING
 	local modelpath = SplatoonSWEPs.Squidmodel[self.SquidModelNumber] --Octopus or squid?
 	if IsValid(self.Squid) then self.Squid:Remove() end
@@ -59,7 +59,7 @@ function SWEP:MakeSquidModel(id)
 		end
 	else
 		print "SplatoonSWEPs: Squid model is not found!  Check your subscription!"
-		if self.PMID ~= SplatoonSWEPs.PLAYER.NOSQUID then
+		if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
 			self:PopupError "SplatoonSWEPs: Squid model is not found!  You cannot become squid!"
 		end
 	end
@@ -118,6 +118,7 @@ function SWEP:Initialize()
 	self.WepSelectIcon = surface.GetTextureID(icon)
 	self.EnoughSubWeapon = true
 	self.PreviousInk = true
+	print(self:GetPMID())
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:MakeSquidModel()
 	self:ChangeHullDuck()
@@ -134,9 +135,8 @@ end
 
 function SWEP:Deploy()
 	if not self:IsFirstTimePredicted() then return end
-	self.PMID = SplatoonSWEPs:GetConVarInt "Playermodel"
 	if IsValid(self.Squid) then
-		if self.PMID == SplatoonSWEPs.PLAYER.OCTO and self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
+		if self:GetPMID() == SplatoonSWEPs.PLAYER.OCTO and self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
 			self.Squid:SetModel(SplatoonSWEPs.Squidmodel[SplatoonSWEPs.SQUID.OCTO])
 			self.SquidModelNumber = SplatoonSWEPs.SQUID.OCTO
 		elseif self.SquidModelNumber ~= SplatoonSWEPs.SQUID.INKLING then
@@ -159,7 +159,7 @@ function SWEP:Holster()
 	if IsValid(vm) then self:ResetBonePositions(vm) end
 	
 	self.Owner:ManipulateBoneAngles(0, angle_zero)
-	if self.PMID ~= SplatoonSWEPs.PLAYER.NOSQUID then
+	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
 		self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 		self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 	end

@@ -9,6 +9,7 @@ function ENT:SharedInit(mdl)
 	self:SetModel(mdl or self.FlyingModel)
 	self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
 	self:SetCustomCollisionCheck(true)
+	self:SetMoveCollide(MOVECOLLIDE_FLY_SLIDE)
 end
 
 function ENT:SetupDataTables()

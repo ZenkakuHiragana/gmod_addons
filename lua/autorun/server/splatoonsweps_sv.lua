@@ -97,12 +97,14 @@ end)
 
 hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, dmg)
 	local atk = dmg:GetAttacker()
-	if not (IsValid(atk) and dmg:GetDamage() > 0 and ent:Health() > 0) then return end
+	if not (dmg:GetDamage() > 0 and ent:Health() > 0 and IsValid(atk)) then return end
 	if atk:GetClass() == "projectile_ink" then return true end
-	if not atk:IsPlayer() then return end
+	if not isfunction(atk.GetActiveWeapon) then return end
 	local wep = atk:GetActiveWeapon()
 	if not (IsValid(wep) and wep.IsSplatoonWeapon) then return end
-	if dmg:GetDamage() < 100 then
+	local entwep = isfunction(ent.GetActiveWeapon) and ent:GetActiveWeapon()
+	if entwep.IsSplatoonWeapon and entwep.ColorCode == wep.ColorCode then return true
+	elseif dmg:GetDamage() < 100 then
 		atk:SendLua "surface.PlaySound(SplatoonSWEPs.DealDamage)"
 		if not (ent:IsPlayer() and IsValid(ent:GetActiveWeapon()) and ent:GetActiveWeapon().IsSplatoonWeapon) then return end
 		ent:SendLua "surface.PlaySound(SplatoonSWEPs.TakeDamage)"

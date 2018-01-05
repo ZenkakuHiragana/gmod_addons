@@ -46,7 +46,7 @@ end
 
 function SWEP:ChangeHullDuck()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
-	if self.PMID ~= SplatoonSWEPs.PLAYER.NOSQUID then
+	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
 		self.Owner:SetHullDuck(SplatoonSWEPs.SquidBoundMins, SplatoonSWEPs.SquidBoundMaxs)
 		self.Owner:SetViewOffsetDucked(SplatoonSWEPs.SquidViewOffset)
 	end
@@ -65,12 +65,10 @@ end
 
 --Predicted hooks
 function SWEP:SharedDeployBase()
-	if SERVER or self:IsFirstTimePredicted() then
-		self.SwimSound:Play()
-		self.EnemyInkSound:Play()
-		self.SwimSound:ChangeVolume(0)
-		self.EnemyInkSound:ChangeVolume(0)
-	end
+	self.SwimSound:Play()
+	self.EnemyInkSound:Play()
+	self.SwimSound:ChangeVolume(0)
+	self.EnemyInkSound:ChangeVolume(0)
 	self.CanHealStand = SplatoonSWEPs:GetConVarBool "CanHealStand"
 	self.CanHealInk = SplatoonSWEPs:GetConVarBool "CanHealInk"
 	self.CanReloadStand = SplatoonSWEPs:GetConVarBool "CanReloadStand"
@@ -80,12 +78,10 @@ function SWEP:SharedDeployBase()
 end
 
 function SWEP:SharedHolsterBase()
-	if SERVER or self:IsFirstTimePredicted() then
-		self.SwimSound:ChangeVolume(0)
-		self.EnemyInkSound:ChangeVolume(0)
-		self.SwimSound:Stop()
-		self.EnemyInkSound:Stop()
-	end
+	self.SwimSound:ChangeVolume(0)
+	self.EnemyInkSound:ChangeVolume(0)
+	self.SwimSound:Stop()
+	self.EnemyInkSound:Stop()
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
 	return true
 end
@@ -260,6 +256,7 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Float", "Ink") --Ink remainig. 0 ~ SplatoonSWEPs.MaxInkAmount
 	self:AddNetworkVar("Vector", "InkColorProxy") --For material proxy.
 	self:AddNetworkVar("Float", "NextCrouchTime") --Shooting cooldown.
+	self:AddNetworkVar("Int", "PMID") --Playermodel ID
 	self:AddNetworkSchedule(HealingDelay, function(self, schedule) --Gradually heals the owner
 		local canheal = self.CanHealInk and self:GetInInk()
 		schedule:SetDelay(HealingDelay / (canheal and 8 or 1))
