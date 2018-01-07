@@ -197,6 +197,8 @@ function SWEP:CreateModels(t)
 	end
 end
 
+function SWEP:PreDrawViewModel() render.SetBlend(0) end
+function SWEP:PostDrawViewModel() render.SetBlend(1) end
 function SWEP:ViewModelDrawn()
 	if not IsValid(self) or not IsValid(self.Owner) then return end	
 	if not self.VElements then return end
@@ -290,13 +292,15 @@ end
 function SWEP:DrawWorldModelTranslucent()
 	local bone_ent = self // when the weapon is dropped
 	if IsValid(self.Owner) and self.Owner:IsPlayer() then
-		if IsValid(self.Squid) and self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID and self.Owner:Crouching() then
+		bone_ent = self.Owner
+		if IsValid(self.Squid) and self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID and self.IsSquid then
 			if not self:GetInInk() then
 				--It seems changing eye position doesn't work.
 				self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
 				 --Move clientside model to player's position.
 				local v = self.Owner:GetVelocity()
-				local a = (v + self.Owner:GetForward() * 40):Angle()
+				local a = v:Angle()
+				a.yaw = a.yaw + self.Owner:GetAimVector():Angle().yaw
 				if v:LengthSqr() < 16 then --Speed limit: 
 					a.p = 0
 				elseif a.p > 45 and a.p <= 90 then --Angle limit: up and down
@@ -316,7 +320,6 @@ function SWEP:DrawWorldModelTranslucent()
 			
 			return
 		end
-		bone_ent = self.Owner
 	end
 	
 	if not self.WElements then return end

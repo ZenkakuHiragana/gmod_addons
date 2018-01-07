@@ -95,21 +95,7 @@ function SWEP:Initialize()
 	--init view model bone build function
 	if IsValid(self.Owner) and self.Owner:IsPlayer() then
 		local vm = self.Owner:GetViewModel()
-		if IsValid(vm) then
-			self:ResetBonePositions(vm)
-			
-			--Init viewmodel visibility
-			if self.ShowViewModel == nil or self.ShowViewModel then
-				vm:SetColor(color_white)
-			else
-				--we set the alpha to 1 instead of 0 because else ViewModelDrawn stops being called
-				vm:SetColor(ColorAlpha(color_white, 1))
-				--^ stopped working in GMod 13 because you have to do Entity:SetRenderMode(1) for translucency to kick in
-				--however for some reason the view model resets to render mode 0 every frame
-				--so we just apply a debug material to prevent it from drawing
-				vm:SetMaterial "Debug/hsv"
-			end
-		end
+		if IsValid(vm) then self:ResetBonePositions(vm) end
 	end
 	
 	--Our initialize code
@@ -157,8 +143,6 @@ function SWEP:Holster()
 	if not (IsValid(self.Owner) and self:IsFirstTimePredicted()) then return end
 	local vm = self.Owner:GetViewModel()
 	if IsValid(vm) then self:ResetBonePositions(vm) end
-	
-	self.Owner:ManipulateBoneAngles(0, angle_zero)
 	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
 		self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 		self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
@@ -195,6 +179,11 @@ function SWEP:Think()
 			surface.PlaySound(SplatoonSWEPs.BombAvailable)
 		end
 		self.EnoughSubWeapon = enough
+	end
+	
+	if IsValid(self.Squid) and self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
+		self.Owner:SetMaterial(self.IsSquid and "color" or "")
+		self:DrawShadow(not self.IsSquid)
 	end
 	
 	self:ProcessSchedules()

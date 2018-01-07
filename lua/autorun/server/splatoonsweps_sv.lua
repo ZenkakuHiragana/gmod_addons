@@ -103,7 +103,7 @@ hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, 
 	local wep = atk:GetActiveWeapon()
 	if not (IsValid(wep) and wep.IsSplatoonWeapon) then return end
 	local entwep = isfunction(ent.GetActiveWeapon) and ent:GetActiveWeapon()
-	if entwep.IsSplatoonWeapon and entwep.ColorCode == wep.ColorCode then return true
+	if entwep and entwep.IsSplatoonWeapon and entwep.ColorCode == wep.ColorCode then return true
 	elseif dmg:GetDamage() < 100 then
 		atk:SendLua "surface.PlaySound(SplatoonSWEPs.DealDamage)"
 		if not (ent:IsPlayer() and IsValid(ent:GetActiveWeapon()) and ent:GetActiveWeapon().IsSplatoonWeapon) then return end

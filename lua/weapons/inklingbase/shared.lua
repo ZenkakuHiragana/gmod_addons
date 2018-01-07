@@ -86,6 +86,9 @@ function SWEP:SharedHolsterBase()
 	return true
 end
 
+local inklingVM = ACT_VM_IDLE --Viewmodel animation(inkling)
+local squidVM = ACT_VM_HOLSTER --Viewmodel animation(squid)
+local throwingVM = ACT_VM_IDLE_LOWERED --Viewmodel animation(throwing sub weapon)
 function SWEP:SharedThinkBase()
 	if SERVER or self:IsFirstTimePredicted() then
 		local sq = self.Owner:IsPlayer()
@@ -94,13 +97,22 @@ function SWEP:SharedThinkBase()
 		else
 			sq = self.Owner:GetFlags(FL_DUCKING)
 		end
+	
+		--Send viewmodel animation.
+		if self.IsSquid and self.ViewAnim ~= squidVM then
+			self:SendWeaponAnim(squidVM)
+			self.ViewAnim = squidVM
+		elseif not self.IsSquid and self.ViewAnim ~= inklingVM then
+			self:SendWeaponAnim(inklingVM)
+			self.ViewAnim = inklingVM
+		end
 		
 		if sq then
 			self.SwimSound:ChangeVolume(self:GetInInk() and self.Owner:GetVelocity():LengthSqr()
 				/ SplatoonSWEPs.SquidBaseSpeed / SplatoonSWEPs.SquidBaseSpeed or 0)
 			if not self.IsSquid then
 				self.Owner:RemoveAllDecals()
-				if SERVER then self.Owner:EmitSound "SplatoonSWEPs_Player.ToSquid" end
+				if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToSquid" end
 			end
 			
 			if self:GetOnEnemyInk() then
@@ -110,7 +122,7 @@ function SWEP:SharedThinkBase()
 			end
 		elseif not sq and self.IsSquid then
 			self.SwimSound:ChangeVolume(0)
-			if SERVER then self.Owner:EmitSound "SplatoonSWEPs_Player.ToHuman" end
+			if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToHuman" end
 		end
 		
 		self.IsSquid = sq

@@ -7,21 +7,21 @@ SWEP.ViewModelBoneMods = {
 		pos = Vector(0, 0, 0),
 		angle = Angle(7, -27, 0),
 	},
-	["Base"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(-30, 30, -30),
-		angle = Angle(0, 0, 0),
-	},
+	-- ["Base"] = {
+		-- scale = Vector(1, 1, 1),
+		-- pos = Vector(-30, 30, -30),
+		-- angle = Angle(0, 0, 0),
+	-- },
 	["ValveBiped.Bip01_L_Clavicle"] = {
 		scale = Vector(1, 1, 1),
 		pos = Vector(2, -2, 2),
 		angle = Angle(0, 0, 0),
 	},
-	["ValveBiped.Bip01_Spine4"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(-30, 26, 30),
-		angle = Angle(0, -8, 0),
-	},
+	-- ["ValveBiped.Bip01_Spine4"] = {
+		-- scale = Vector(1, 1, 1),
+		-- pos = Vector(-30, 26, 30),
+		-- angle = Angle(0, -8, 0),
+	-- },
 	["ValveBiped.Bip01_L_Hand"] = {
 		scale = Vector(1, 1, 1),
 		pos = Vector(0, 0, 0),

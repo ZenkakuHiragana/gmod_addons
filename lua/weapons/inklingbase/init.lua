@@ -163,30 +163,12 @@ function SWEP:Holster()
 end
 
 function SWEP:OnRemove() return self:Holster() end
-
-local inklingVM = ACT_VM_IDLE --Viewmodel animation(inkling)
-local squidVM = ACT_VM_HOLSTER --Viewmodel animation(squid)
-local throwingVM = ACT_VM_IDLE_LOWERED --Viewmodel animation(throwing sub weapon)
 function SWEP:Think()
 	if not IsValid(self.Owner) then return end
 	
 	--When in ink
 	if self:GetInInk() and self.Owner:KeyDown(IN_JUMP + IN_FORWARD + IN_BACK) then
 		self.Owner:SetVelocity(self.Owner:GetForward() * 40 * self.Owner:EyeAngles().pitch / -90)
-	end
-	
-	if self.SquidAvailable and self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
-		self.Owner:SetMaterial(self.IsSquid and "color" or "")
-		self:DrawShadow(not self.IsSquid)
-	end
-	
-	--Send viewmodel animation.
-	if self.IsSquid and self.ViewAnim ~= squidVM then
-		self:SendWeaponAnim(squidVM)
-		self.ViewAnim = squidVM
-	elseif not self.IsSquid and self.ViewAnim ~= inklingVM then
-		self:SendWeaponAnim(inklingVM)
-		self.ViewAnim = inklingVM
 	end
 	
 	if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
