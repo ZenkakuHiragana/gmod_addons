@@ -17,6 +17,7 @@ function SWEP:CustomPrimary(p, info)
 	p.DecreaseDamage = SplatoonSWEPs:FrameToSec(info.Delay.DecreaseDamage)
 	p.InitVelocity = info.InitVelocity
 	p.FirePosition = info.FirePosition
+	p.AimDuration = SplatoonSWEPs:FrameToSec(info.Delay.Aim)
 end
 
 SWEP.Spawnable = true
@@ -40,9 +41,10 @@ SplatoonSWEPs.SetPrimary(SWEP, {
 	MoveSpeed			= .72,					--Walk speed while shooting[Splatoon units/frame]
 	InitVelocity		= 6929.13408,			--Ink initial velocity[units/s]	
 	Delay = {
+		Aim				= 20,					--Change hold type[frames]
 		Fire			= 6,					--Fire rate[frames]
 		Reload			= 20,					--Start reloading after firing weapon[frames]
-		Crouch			= 10,					--Can't crouch for some frames after firing
+		Crouch			= 1,					--Can't crouch for some frames after firing
 		Straight		= 4,					--Ink goes without gravity[frames]
 		MinDamage		= 15,					--Deals minimum damage[frames]
 		DecreaseDamage	= 8,					--Start decreasing damage[frames]
@@ -51,16 +53,32 @@ SplatoonSWEPs.SetPrimary(SWEP, {
 
 function SWEP:SharedInit()
 	self.NextPlayEmpty = CurTime()
+	self.AimTimer = self:AddSchedule(math.huge, function(self, schedule)
+		if schedule.disabled then return end
+		schedule.disabled = true
+		self:SetHoldType "passive"
+		self:SetPlayerSpeed(self:GetOnEnemyInk() and SplatoonSWEPs.OnEnemyInkSpeed
+		or self:GetInInk() and SplatoonSWEPs.SquidBaseSpeed or SplatoonSWEPs.InklingBaseSpeed)
+	end)
 end
 
 --Playing sounds
 function SWEP:SharedPrimaryAttack(canattack)
+	if not self.CrouchPriority then
+		self:SetHoldType(self.HoldType)
+		self:SetPlayerSpeed(self:GetOnEnemyInk()
+		and SplatoonSWEPs.OnEnemyInkSpeed or self.Primary.MoveSpeed)
+		self.AimTimer:SetDelay(self.Primary.AimDuration)
+		self.AimTimer.disabled = false
+		self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
+	end
+	
 	if self:GetInk() <= 0 then
 		if CLIENT and self.PreviousInk then
 			surface.PlaySound(SplatoonSWEPs.TankEmpty)
 			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
 			self.PreviousInk = false
-		elseif SERVER and CurTime() > self.NextPlayEmpty then
+		elseif CurTime() > self.NextPlayEmpty then
 			self:EmitSound "SplatoonSWEPs.EmptyShot"
 			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
 		end

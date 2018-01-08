@@ -166,6 +166,14 @@ hook.Add("Move", "SplatoonSWEPs: Limit squid's speed", function(ply, data)
 	--Disruptors make Inklings slower
 	local maxspeed = ply:GetWalkSpeed() * (weapon.poison and 0.5 or 1)
 	local velocity = ply:GetVelocity() --Inkling's current velocity
+	--When in ink
+	if weapon:GetInWallInk() and ply:KeyDown(bit.bor(IN_JUMP, IN_FORWARD, IN_BACK)) then
+		local inkjump = 24 * ply:EyeAngles().pitch / -90
+		if ply:KeyDown(IN_BACK) then inkjump = inkjump * -1 end
+		if ply:KeyDown(IN_JUMP) then inkjump = math.abs(inkjump) end
+		velocity = velocity + vector_up * math.Clamp(inkjump, 0, maxspeed)
+	end
+	
 	local speed2D = velocity.x * velocity.x + velocity.y * velocity.y --Horizontal speed
 	local dot = -vector_up:Dot(velocity:GetNormalized()) --Checking if it's falling
 	
@@ -177,44 +185,43 @@ hook.Add("Move", "SplatoonSWEPs: Limit squid's speed", function(ply, data)
 		velocity.y = newVelocity2D.y
 	end
 	
-	--Vertical speed clamp
-	if not weapon:GetOnEnemyInk() and velocity.z > maxspeed and dot < LIMIT_Z_DEG then
-		velocity.z = maxspeed * 0.5
+	if weapon.OnOutOfInk then
+		velocity.z = math.min(velocity.z, maxspeed * .8)
+		weapon.OnOutOfInk = false
 	end
 	
 	weapon:ChangeHullDuck()
 	data:SetVelocity(velocity)
 end)
 
-hook.Add("StartCommand", "SplatoonSWEPs: Prevent owner from crouch", function(ply, data)
-	if not IsFirstTimePredicted() then return end
-	if not IsValid(ply) or not ply:IsPlayer() then return end
+--MOUSE1+LCtrl makes crouch, LCtrl+MOUSE1 makes primary attack.
+hook.Add("KeyPress", "SplattonSWEPs: Detect controls", function(ply, button)
+	if not (IsValid(ply) and ply:IsPlayer()) then return end
 	local weapon = ply:GetActiveWeapon()
-	if not IsValid(weapon) or not weapon.IsSplatoonWeapon then return end
-	if data:IsForced() then return end
+	if not (IsValid(weapon) and weapon.IsSplatoonWeapon) then return end
+	if button == IN_ATTACK then weapon.IsAttackDown = true end
+	if weapon.IsAttackDown and button == IN_DUCK then weapon.CrouchPriority = true end
+end)
+
+hook.Add("KeyRelease", "SplatoonSWEPs: Detect controls", function(ply, button)
+	if not (IsValid(ply) and ply:IsPlayer()) then return end
+	local weapon = ply:GetActiveWeapon()
+	if not (IsValid(weapon) and weapon.IsSplatoonWeapon) then return end
+	if button == IN_ATTACK then weapon.IsAttackDown = false end
+	if button == IN_ATTACK or button == IN_DUCK then weapon.CrouchPriority = false end
+end)
+
+hook.Add("SetupMove", "SplatoonSWEPs: Prevent owner from crouch", function(ply, mvd)
+	if not (IsValid(ply) and ply:IsPlayer()) then return end
+	local weapon = ply:GetActiveWeapon()
+	if not (IsValid(weapon) and weapon.IsSplatoonWeapon) then return end
+	weapon.EnemyInkPreventCrouching = weapon.EnemyInkPreventCrouching
+	and weapon:GetOnEnemyInk() and mvd:KeyDown(IN_DUCK)
 	
-	--MOUSE1+LCtrl makes crouch, LCtrl+MOUSE1 makes primary attack.
-	local copy = data:GetButtons() --Since CUserCmd doesn't have KeyPressed(), I try workaround.
-	if weapon.PreviousCmd then
-		local duck, attack = data:KeyDown(IN_DUCK), data:KeyDown(IN_ATTACK + IN_ATTACK2)
-		if duck then
-			if bit.band(weapon.PreviousCmd, IN_ATTACK + IN_ATTACK2) == 0 and attack then
-				weapon:SetCrouchPriority(false)
-			elseif attack and CurTime() < weapon:GetNextCrouchTime() and bit.band(weapon.PreviousCmd, IN_DUCK) == 0 then
-				weapon:SetCrouchPriority(true)
-			end
-		else
-			weapon:SetCrouchPriority(not attack)
-		end
-	end
-	weapon.PreviousCmd = copy
-	weapon.EnemyInkPreventCrouching = 
-	weapon.EnemyInkPreventCrouching and weapon:GetOnEnemyInk() and data:KeyDown(IN_DUCK)
-	
-	--Prevent crouching after firing.
-	if CurTime() < weapon:GetNextCrouchTime() or weapon.EnemyInkPreventCrouching then
-		data:RemoveKey(IN_DUCK)
-		ply:RemoveFlags(FL_DUCKING)
+	-- Prevent crouching after firing.
+	if (not weapon.CrouchPriority and mvd:KeyDown(IN_DUCK) and mvd:KeyDown(IN_ATTACK))
+	or CurTime() < weapon:GetNextCrouchTime() or weapon.EnemyInkPreventCrouching then
+		mvd:SetButtons(bit.band(mvd:GetButtons(), bit.bnot(IN_DUCK)))
 	end
 end)
 

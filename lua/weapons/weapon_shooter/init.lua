@@ -4,17 +4,11 @@ include "shared.lua"
 
 function SWEP:ServerInit()
 	self.SplashInitMul = 0
-	self:SetModifyWeaponSize(CurTime() - 1)
-	self.AimTimer = self:AddSchedule(math.huge, function(self, schedule)
-		if schedule.disabled then return end
-		schedule.disabled = true
-		self:SetHoldType "passive"
-		self:SetPlayerSpeed(SplatoonSWEPs.InklingBaseSpeed)
-	end)
 end
 
 --Serverside: create ink projectile.
-local function paint(self)
+function SWEP:ServerPrimaryAttack(canattack)
+	if self.CrouchPriority or self:GetInk() <= 0 then return end
 	self.SplashInitMul = self.SplashInitMul + 1
 	local aim = IsValid(self.Owner) and self.Owner:GetAimVector() or self:GetForward()
 	local ang = aim:Angle()
@@ -84,22 +78,4 @@ local function paint(self)
 	p:Spawn()
 	p:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
 	p:SetModelScale(0.5)
-end
-
-function SWEP:ServerPrimaryAttack(canattack)
-	if self:GetCrouchPriority() then return end
-	self:SetHoldType(self.HoldType)
-	self:SetPlayerSpeed(self.Primary.MoveSpeed)
-	self.AimTimer:SetDelay(self.Primary.CrouchDelay)
-	self.AimTimer.disabled = false
-	local vel = self.Owner:GetVelocity()
-	if vel.z > self.MaxSpeed / 2 then self.Owner:SetVelocity(Vector(vel.x, vel.y, 0)) end
-	if self:GetInk() <= 0 then return end
-	if self.Owner:IsPlayer() then
-		self:SetModifyWeaponSize(CurTime()) --Expand weapon model
-		self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
-	else
-		--Visual effects for NPCs
-	end
-	return paint(self)
 end

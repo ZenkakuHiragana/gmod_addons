@@ -1,6 +1,7 @@
 
 SplatoonSWEPs:AddTimerFramework(SWEP)
 function SWEP:ChangePlayermodel(data)
+	-- if SERVER then return end
 	self.Owner:SetModel(data.Model)
 	self.Owner:SetSkin(data.Skin)
 	local bodygroups = ""
@@ -14,7 +15,6 @@ function SWEP:ChangePlayermodel(data)
 		end
 	end
 	if bodygroups == "" then bodygroups = "0" end
-	
 	if data.SetOffsets then
 		self.Owner:SetNWInt("splt_isSet", 1)
 		self.Owner:SetNWInt("splt_SplatoonOffsets", 2)
@@ -30,18 +30,20 @@ function SWEP:ChangePlayermodel(data)
 	end
 	self.Owner:SetSubMaterial()
 	self.Owner:SetPlayerColor(data.PlayerColor)
-	
 	self.Owner:ConCommand("cl_playermodel " .. player_manager.TranslateToPlayerModelName(data.Model))
 	self.Owner:ConCommand("cl_playerskin " .. tostring(data.Skin))
 	self.Owner:ConCommand("cl_playerbodygroups " .. bodygroups)
 	self.Owner:ConCommand("cl_playercolor " .. tostring(data.PlayerColor))
 	
-	if CLIENT then return end
-	return self:AddSchedule(0.1, 1, function(self, schedule)
-		if IsValid(self.Owner) and isfunction(self.Owner.SetupHands) then
-			self.Owner:SetupHands()
+	local hands = self.Owner:GetHands()
+	if IsValid(hands) then
+		local info = player_manager.TranslatePlayerHands(player_manager.TranslateToPlayerModelName(data.Model))
+		if info then
+			hands:SetModel(info.model)
+			hands:SetSkin(info.skin)
+			hands:SetBodyGroups(info.body)
 		end
-	end)
+	end
 end
 
 function SWEP:ChangeHullDuck()
@@ -50,6 +52,13 @@ function SWEP:ChangeHullDuck()
 		self.Owner:SetHullDuck(SplatoonSWEPs.SquidBoundMins, SplatoonSWEPs.SquidBoundMaxs)
 		self.Owner:SetViewOffsetDucked(SplatoonSWEPs.SquidViewOffset)
 	end
+end
+
+function SWEP:SetPlayerSpeed(spd)
+	self.MaxSpeed = spd
+	self.Owner:SetMaxSpeed(self.MaxSpeed)
+	self.Owner:SetRunSpeed(self.MaxSpeed)
+	self.Owner:SetWalkSpeed(self.MaxSpeed)
 end
 
 --When NPC weapon is picked up by player.
@@ -73,6 +82,54 @@ function SWEP:SharedDeployBase()
 	self.CanHealInk = SplatoonSWEPs:GetConVarBool "CanHealInk"
 	self.CanReloadStand = SplatoonSWEPs:GetConVarBool "CanReloadStand"
 	self.CanReloadInk = SplatoonSWEPs:GetConVarBool "CanReloadInk"
+	self.BackupPlayerInfo = {
+		Color = self.Owner:GetColor(),
+		Flags = self.Owner:GetFlags(),
+		JumpPower = self.Owner:GetJumpPower(),
+		MoveType = self.Owner:GetMoveType(),
+		RenderMode = self:GetRenderMode(),
+		Speed = {
+			Crouched = self.Owner:GetCrouchedWalkSpeed(),
+			Duck = self.Owner:GetDuckSpeed(),
+			Max = self.Owner:GetMaxSpeed(),
+			Run = self.Owner:GetRunSpeed(),
+			Walk = self.Owner:GetWalkSpeed(),
+			UnDuck = self.Owner:GetUnDuckSpeed(),
+		},
+		Playermodel = {
+			Model = self.Owner:GetModel(),
+			Skin = self.Owner:GetSkin(),
+			BodyGroups = self.Owner:GetBodyGroups(),
+			SetOffsets = table.HasValue(SplatoonTable or {}, self.Owner:GetModel()),
+			PlayerColor = self.Owner:GetPlayerColor(),
+		},
+		ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
+	}
+	self.BackupPlayerInfo.HullMins, self.BackupPlayerInfo.HullMaxs = self.Owner:GetHullDuck()
+	for k, v in pairs(self.BackupPlayerInfo.Playermodel.BodyGroups) do
+		v.num = self.Owner:GetBodygroup(v.id)
+	end
+	self:SetPlayerSpeed(SplatoonSWEPs.InklingBaseSpeed)
+	self.Owner:SetJumpPower(SplatoonSWEPs.InklingJumpPower)
+	self.Owner:SetColor(color_white)
+	self.Owner:SetCrouchedWalkSpeed(0.5)
+	local PMPath = SplatoonSWEPs.Playermodel[self:GetPMID()]
+	if PMPath then
+		if file.Exists(PMPath, "GAME") then
+			self.PMTable = {
+				Model = PMPath,
+				Skin = 0,
+				BodyGroups = {},
+				SetOffsets = true,
+				PlayerColor = self:GetInkColorProxy(),
+			}
+			self:ChangePlayermodel(self.PMTable)
+			self:ChangeHullDuck()
+		elseif SERVER then
+			SplatoonSWEPs:SendError("SplatoonSWEPs: Required playermodel is not found!", 1, 10, self.Owner)
+		end
+	end
+	
 	if isfunction(self.SharedDeploy) then self:SharedDeploy() end
 	return true
 end
@@ -82,6 +139,27 @@ function SWEP:SharedHolsterBase()
 	self.EnemyInkSound:ChangeVolume(0)
 	self.SwimSound:Stop()
 	self.EnemyInkSound:Stop()
+	self.PMTable = nil
+	if istable(self.BackupPlayerInfo) then --Restores owner's information.
+		self:ChangePlayermodel(self.BackupPlayerInfo.Playermodel)
+		self.Owner:SetColor(self.BackupPlayerInfo.Color)
+	--	self.Owner:RemoveFlags(self.Owner:GetFlags()) --Restores no target flag and something.
+	--	self.Owner:AddFlags(self.BackupPlayerInfo.Flags)
+		self.Owner:SetJumpPower(self.BackupPlayerInfo.JumpPower)
+		self.Owner:DrawShadow(true)
+		self.Owner:SetMaterial ""
+		self.Owner:SetMoveType(self.BackupPlayerInfo.MoveType)
+		self.Owner:SetRenderMode(self.BackupPlayerInfo.RenderMode)
+		self.Owner:SetCrouchedWalkSpeed(self.BackupPlayerInfo.Speed.Crouched)
+		self.Owner:SetDuckSpeed(self.BackupPlayerInfo.Speed.Duck)
+		self.Owner:SetMaxSpeed(self.BackupPlayerInfo.Speed.Max)
+		self.Owner:SetRunSpeed(self.BackupPlayerInfo.Speed.Run)
+		self.Owner:SetWalkSpeed(self.BackupPlayerInfo.Speed.Walk)
+		self.Owner:SetUnDuckSpeed(self.BackupPlayerInfo.Speed.UnDuck)
+		self.Owner:SetHullDuck(self.BackupPlayerInfo.HullMins, self.BackupPlayerInfo.HullMaxs)
+		self.Owner:SetViewOffsetDucked(self.BackupPlayerInfo.ViewOffsetDucked)
+	end
+	
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
 	return true
 end
@@ -105,6 +183,10 @@ function SWEP:SharedThinkBase()
 		elseif not self.IsSquid and self.ViewAnim ~= inklingVM then
 			self:SendWeaponAnim(inklingVM)
 			self.ViewAnim = inklingVM
+		end
+		
+		if not self.Holstering and self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
+			self:ChangePlayermodel(self.PMTable)
 		end
 		
 		if sq then
@@ -137,7 +219,7 @@ function SWEP:Reload()
 end
 
 function SWEP:CommonFire(isprimary)
-	if self:GetCrouchPriority() then return false end
+	if self.CrouchPriority then return false end
 	local Weapon = isprimary and self.Primary or self.Secondary
 	local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
 	self.ReloadSchedule:SetDelay(Weapon.ReloadDelay * laggedvalue)
@@ -151,11 +233,13 @@ function SWEP:CommonFire(isprimary)
 		self.Owner:SetAnimation(PLAYER_ATTACK1)
 	end
 	
-	local rnda = Weapon.Recoil * -1
-	local rndb = Weapon.Recoil * math.Rand(-1, 1)
 	if self.Owner:IsPlayer() then
-		self.Owner:ViewPunch(Angle(rnda,rndb,rnda)) --Apply viewmodel punch
+		local rnda = Weapon.Recoil * -1
+		local rndb = Weapon.Recoil * util.SharedRandom(
+		"SplatoonSWEPs: Weapon base recoil" .. self:EntIndex(), -1, 1)
+		self.Owner:ViewPunch(Angle(rnda, rndb, rnda)) --Apply viewmodel punch
 	end
+	
 	return true
 end
 
@@ -200,7 +284,7 @@ function SWEP:ChangeInInk(name, old, new)
 	if outofink == intoink then return end
 	self.Owner:SetCrouchedWalkSpeed(intoink and 1 or 0.5)
 	self:SetPlayerSpeed(intoink and SplatoonSWEPs.SquidBaseSpeed or SplatoonSWEPs.InklingBaseSpeed)
-	if intoink then
+	if intoink and SERVER then
 		local velocity = self.OwnerVelocity:Length()
 		if self.Owner:OnGround() and velocity > 400 then
 			local dp = math.Clamp(600 - velocity, 0, 200) / 2
@@ -209,6 +293,8 @@ function SWEP:ChangeInInk(name, old, new)
 			local dp = 50 - velocity / 4
 			self.Owner:EmitSound("SplatoonSWEPs_Player.InkDiveShallow", 75, 100 + dp, .5, CHAN_BODY)
 		end
+	elseif outofink then
+		self.OnOutOfInk = true
 	end
 end
 
@@ -225,7 +311,7 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	local intoink = not old and new
 	if outofink == intoink then return
 	elseif intoink then
-		self:SetPlayerSpeed(self.MaxSpeed / 3) --Hard to move
+		self:SetPlayerSpeed(SplatoonSWEPs.OnEnemyInkSpeed) --Hard to move
 		self.Owner:SetJumpPower(SplatoonSWEPs.OnEnemyInkJumpPower) --Reduce jump power
 		self.EnemyInkSound:ChangeVolume(1, 0.5)
 		
@@ -263,9 +349,10 @@ function SWEP:SetupDataTables()
 		String = -1, Bool = -1, Float = -1, Int = -1,
 		Vector = -1, Angle = -1, Entity = -1,
 	}
-	self:AddNetworkVar("Bool", "InInk") --Whether or not owner is in ink.
-	self:AddNetworkVar("Bool", "OnEnemyInk") --Whether or not owner is on enemy ink.
-	self:AddNetworkVar("Bool", "CrouchPriority") --True if crouch input takes a priority.
+	self:AddNetworkVar("Bool", "InInk") --If owner is in ink.
+	self:AddNetworkVar("Bool", "InWallInk") --If owner is on wall.
+	self:AddNetworkVar("Bool", "OnEnemyInk") --If owner is on enemy ink.
+	-- self:AddNetworkVar("Bool", "CrouchPriority") --If crouch input takes a priority.
 	self:AddNetworkVar("Float", "Ink") --Ink remainig. 0 ~ SplatoonSWEPs.MaxInkAmount
 	self:AddNetworkVar("Vector", "InkColorProxy") --For material proxy.
 	self:AddNetworkVar("Float", "NextCrouchTime") --Shooting cooldown.

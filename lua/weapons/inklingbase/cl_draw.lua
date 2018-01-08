@@ -144,8 +144,14 @@ function SWEP:CreateModels(t)
 			(not IsValid(v.modelEnt) or v.createdModel ~= v.model) then
 			
 			if file.Exists(v.model, "GAME") then
-				v.modelEnt = ClientsideModel(v.model, RENDERGROUP_VIEWMODEL)
+				v.modelEnt = ClientsideModel(v.model, RENDERGROUP_BOTH)
 				if IsValid(v.modelEnt) then
+					v.createdModel = v.model
+					v.modelEnt:SetPos(self:GetPos())
+					v.modelEnt:SetAngles(self:GetAngles())
+					v.modelEnt:SetParent(self)
+					v.modelEnt:SetNoDraw(true)
+					v.modelEnt:DrawShadow(true)
 					v.modelEnt.GetInkColorProxy = function()
 						if IsValid(self) then
 							return self:GetInkColorProxy()
@@ -153,12 +159,6 @@ function SWEP:CreateModels(t)
 							return SplatoonSWEPs.vector_one
 						end
 					end
-					v.modelEnt:SetPos(self:GetPos())
-					v.modelEnt:SetAngles(self:GetAngles())
-					v.modelEnt:SetParent(self)
-					v.modelEnt:SetNoDraw(true)
-					v.modelEnt:DrawShadow(true)
-					v.createdModel = v.model
 				else
 					v.modelEnt = nil
 				end
@@ -197,13 +197,41 @@ function SWEP:CreateModels(t)
 	end
 end
 
+function SWEP:MakeSquidModel(id)
+	self.SquidModelNumber = self:GetPMID() == SplatoonSWEPs.PLAYER.OCTO
+		and SplatoonSWEPs.SQUID.OCTO or SplatoonSWEPs.SQUID.INKLING
+	local modelpath = SplatoonSWEPs.Squidmodel[self.SquidModelNumber] --Octopus or squid?
+	if IsValid(self.Squid) then self.Squid:Remove() end
+	if file.Exists(modelpath, "GAME") then
+		self.Squid = ClientsideModel(modelpath, RENDERGROUP_BOTH)
+		if IsValid(self.Squid) then
+			self.Squid:SetPos(self:GetPos())
+			self.Squid:SetAngles(self:GetAngles())
+			self.Squid:SetNoDraw(true)
+			self.Squid:DrawShadow(true)
+			self.Squid.GetInkColorProxy = function()
+				if IsValid(self) then
+					return self:GetInkColorProxy()
+				else
+					return SplatoonSWEPs.vector_one
+				end
+			end
+		else
+			self.Squid = nil
+		end
+	else
+		print "SplatoonSWEPs: Squid model is not found!  Check your subscription!"
+		if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
+			self:PopupError "SplatoonSWEPs: Squid model is not found!  You cannot become squid!"
+		end
+	end
+end
+
 function SWEP:PreDrawViewModel() render.SetBlend(0) end
 function SWEP:PostDrawViewModel() render.SetBlend(1) end
 function SWEP:ViewModelDrawn()
-	if not IsValid(self) or not IsValid(self.Owner) then return end	
-	if not self.VElements then return end
-	local bone_ent = self.Owner
-	local vm = self.Owner:GetViewModel()
+	if not (IsValid(self) and IsValid(self.Owner) and self.VElements) or self.Holstering then return end	
+	local bone_ent, vm = self.Owner, self.Owner:GetViewModel()
 	self:UpdateBonePositions(vm)
 	
 	for k, name in ipairs(self.vRenderOrder) do
@@ -289,7 +317,8 @@ function SWEP:GetBombMeterPosition(inkconsumption)
 	return self.BombMeterPosition
 end
 
-function SWEP:DrawWorldModelTranslucent()
+function SWEP:DrawWorldModel()
+	if self.Holstering then return end
 	local bone_ent = self // when the weapon is dropped
 	if IsValid(self.Owner) and self.Owner:IsPlayer() then
 		bone_ent = self.Owner
@@ -373,7 +402,6 @@ function SWEP:DrawWorldModelTranslucent()
 			end
 			
 			if v.inktank then
-				-- do continue end
 				--Sub weapon usable meter
 				model:ManipulateBonePosition(model:LookupBone "bip_inktank_bombmeter", self.BombMeterPosition)
 				--Ink remaining
@@ -429,7 +457,7 @@ function SWEP:DrawWorldModelTranslucent()
 		end
 	end
 end
--- SWEP.DrawWorldModelTranslucent = SWEP.DrawWorldModel
+SWEP.DrawWorldModelTranslucent = SWEP.DrawWorldModel
 
 --Show remaining amount of ink tank
 function SWEP:CustomAmmoDisplay()
