@@ -38,6 +38,13 @@ local function FullCopy(t)
 	return res
 end
 
+local function Deploy(self)
+	self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
+	self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
+	self:SharedDeployBase()
+	return self:ChangeHullDuck()
+end
+
 function SWEP:Initialize()
 	--we build a render order because sprites need to be drawn after models
 	self.vRenderOrder = {}
@@ -89,21 +96,16 @@ function SWEP:Initialize()
 	end
 	
 	self:SharedInitBase()
-	if isfunction(self.ClientInit) then return self:ClientInit() end
+	if isfunction(self.ClientInit) then self:ClientInit() end
+	return Deploy(self)
 end
 
 function SWEP:Deploy()
-	if not self:IsFirstTimePredicted() then return end
-	self.Holstering = false
-	self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
-	self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
-	self:SharedDeployBase()
-	return self:ChangeHullDuck()
+	if self:IsFirstTimePredicted() then Deploy(self) end
 end
 
 function SWEP:Holster()
 	if not (IsValid(self.Owner) and self:IsFirstTimePredicted()) then return end
-	self.Holstering = true
 	local vm = self.Owner:GetViewModel()
 	if IsValid(vm) then self:ResetBonePositions(vm) end
 	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
@@ -145,7 +147,6 @@ function SWEP:Think()
 	end
 	
 	if IsValid(self.Squid) then
-			-- print(self:GetPMID(), self.SquidModelNumber)
 		if self:GetPMID() == SplatoonSWEPs.PLAYER.OCTO then
 			if self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
 				self.Squid:SetModel(SplatoonSWEPs.Squidmodel[SplatoonSWEPs.SQUID.OCTO])

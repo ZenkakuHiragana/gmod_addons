@@ -12,36 +12,36 @@ local MAX_PROCESS_QUEUE_AT_ONCE = 4 --Running QueueCoroutine() at once
 local MAX_INKQUEUE_AT_ONCE = 15 --Processing new ink request at once
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
 local function MakeRect(tx, ty, x1, x2, y1, y2)
-	return {mins = Vector(tx[x1], ty[y1]), maxs = Vector(tx[x2], ty[y2])}
+	return {Vector(tx[x1], ty[y1]), Vector(tx[x2], ty[y2])}
 end
 
+--[1] = minimum bound, [2] = maximum bound
 local function AddInkRectangle(ink, newink, sz)
 	local nb = newink.bounds
-	local x11, x12, y11, y12 = nb.mins.x, nb.maxs.x, nb.mins.y, nb.maxs.y
 	for r, z in pairs(ink) do
-		for b in pairs(r.bounds) do
-			local x21, x22, y21, y22 = b.mins.x, b.maxs.x, b.mins.y, b.maxs.y
-			if (x22 - x21) * (y22 - y21) < MIN_BOUND_AREA then r.bounds[b] = nil end
-			if x11 > x22 or x12 < x21 or y11 > y22 or y12 < y21 then continue end
-			
-			local sx, sy = {x11, x12, x21, x22}, {y11, y12, y21, y22}
-			table.sort(sx) table.sort(sy) --sorted X, sorted Y
-			r.bounds[b] = nil
-			for _, sub in ipairs {
-				MakeRect(sx, sy, 1, 2, 1, 2), MakeRect(sx, sy, 2, 3, 1, 2), MakeRect(sx, sy, 3, 4, 1, 2),
-				MakeRect(sx, sy, 1, 2, 2, 3), MakeRect(sx, sy, 2, 3, 2, 3), MakeRect(sx, sy, 3, 4, 2, 3),
-				MakeRect(sx, sy, 1, 2, 3, 4), MakeRect(sx, sy, 2, 3, 3, 4), MakeRect(sx, sy, 3, 4, 3, 4),
-			} do
-				if SplatoonSWEPs:CollisionAABB2D(b.mins, b.maxs, sub.mins, sub.maxs) and
-				not SplatoonSWEPs:CollisionAABB2D(nb.mins, nb.maxs, sub.mins, sub.maxs) then
-					r.bounds[sub] = true
+		if not next(r.bounds) then ink[r] = nil else
+			for b in pairs(r.bounds) do
+				if (b[3] - b[1]) * (b[4] - b[2]) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
+				if nb[1] > b[3] or nb[3] < b[1] or nb[2] > b[4] or nb[4] < b[2] then continue end
+				
+				r.bounds[b] = nil
+				local x, y = {nb[1], nb[3], b[1], b[3]}, {nb[2], nb[4], b[2], b[4]}
+				table.sort(x) table.sort(y) --sorted X, sorted Y
+				for _, c in ipairs {
+					{x[1], y[1], x[2], y[2]}, {x[2], y[1], x[3], y[2]}, {x[3], y[1], x[4], y[2]},
+					{x[1], y[2], x[2], y[3]}, {x[2], y[2], x[3], y[3]}, {x[3], y[2], x[4], y[3]},
+					{x[1], y[3], x[2], y[4]}, {x[2], y[3], x[3], y[4]}, {x[3], y[3], x[4], y[4]},
+				} do
+					if b[1] < c[3] and b[3] > c[1] and b[2] < c[4] and b[4] > c[2] and
+						(nb[1] >= c[3] or nb[3] <= c[1] or nb[2] >= c[4] or nb[4] <= c[2]) then
+						r.bounds[c] = true
+					end
 				end
 			end
 		end
-		if not next(r.bounds) then ink[r] = nil end
 	end
 	
-	newink.bounds = {[newink.bounds] = true}
+	newink.bounds = {[nb] = true}
 	ink[newink] = sz
 end
 
@@ -55,7 +55,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	local inkqueue = 0
 	local rectsize = radius * rootpi
 	local sizevec = Vector(rectsize, rectsize)
-	local whitealpha, whiterotate = math.Rand(0, 255), math.Rand(0, 255)
+	local whitealpha, whiterotate = math.Rand(0, 63), math.Rand(0, 255)
 	local mins, maxs = SplatoonSWEPs:GetBoundingBox(MIN_BOUND, reference_polys)
 	for node in SplatoonSWEPs:BSPPairs(reference_polys) do
 		local surf = node.Surfaces
@@ -67,7 +67,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			net.WriteUInt(color, SplatoonSWEPs.COLOR_BITS)
 			net.WriteVector(pos)
 			net.WriteFloat(radius)
-			net.WriteUInt(whitealpha, 8)
+			net.WriteUInt(whitealpha, 6)
 			net.WriteUInt(whiterotate, 8)
 			net.WriteVector(surf.Origins[i])
 			net.WriteVector(surf.Normals[i])
@@ -75,17 +75,18 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			net.Broadcast()
 			
 			local pos2d = SplatoonSWEPs:To2D(pos, surf.Origins[i], surf.Angles[i])
+			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
 			local inkdata = {
 				color = color,
 				radiusSqr = radius * radius,
 				pos = pos2d,
-				bounds = {mins = pos2d - sizevec, maxs = pos2d + sizevec},
+				bounds = {bmins.x, bmins.y, bmaxs.x, bmaxs.y},
 			}
 			AddInkRectangle(surf.InkCircles[i], inkdata, SplatoonSWEPs.InkCounter)
 			SplatoonSWEPs.InkCounter = SplatoonSWEPs.InkCounter + 1
 			
 			inkqueue = inkqueue + 1
-			if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
+			-- if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 	end
 	
@@ -107,7 +108,7 @@ local function ProcessQueue()
 			end
 
 			done = done + 1
-			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
+			-- if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 		
 		local newqueue = {}
@@ -126,7 +127,7 @@ local function DoCoroutines()
 		local threads = self.Threads
 		local done = 0
 		for i, co in pairs(threads) do
-			--Give a silent warning if Think(n) has returned
+			--Give a silent warning if Think(n) has stopped
 			if coroutine.status(co)  == "dead" then
 				Msg(self, "\tSplatoonSWEPs Warning: Coroutine " .. i .. " has finished executing.\n")
 				threads[i] = nil
@@ -169,16 +170,13 @@ SplatoonSWEPs.InkManager = {
 	DoCoroutines = coroutine.create(DoCoroutines),
 	Threads = {
 		ProcessQueue = coroutine.create(ProcessQueue),
-		Think2 = nil,
+		-- Think2 = nil,
 	},
 	Think = function()
 		local self = SplatoonSWEPs.InkManager
-		if coroutine.status(self.DoCoroutines) ~= "dead" then
-			local ok, message = coroutine.resume(self.DoCoroutines)
-			if not ok then
-				ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n")
-			end
-		end
+		if coroutine.status(self.DoCoroutines) == "dead" then return end
+		local ok, message = coroutine.resume(self.DoCoroutines)
+		if not ok then ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n") end
 	end,
 	AddQueue = function(pos, normal, radius, color, polys)
 		-- print(coroutine.status(SplatoonSWEPs.InkManager.Threads.ProcessQueue))
@@ -193,15 +191,6 @@ SplatoonSWEPs.InkManager = {
 			polys = polys,
 			co = coroutine.create(QueueCoroutine),
 		})
-	end,
-	DrawInkGroup = function()
-		for _, g in pairs(InkGroup) do
-			for __, s in ipairs(g) do
-				for i, v in ipairs(s.poly3D) do
-					debugoverlay.Line(v.pos, s.poly3D[i % #s.poly3D + 1].pos, 5, Color(0, 255, 0), true)
-				end
-			end
-		end
 	end,
 }
 hook.Add("Tick", "SplatoonSWEPsDoInkCoroutines", SplatoonSWEPs.InkManager.Think)

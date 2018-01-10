@@ -63,7 +63,8 @@ function SplatoonSWEPs:ClearAllInk()
 	render.PushRenderTarget(SplatoonSWEPs.RenderTarget.Lightmap)
 	render.ClearDepth()
 	render.ClearStencil()
-	render.Clear(0, 0, 0, 255)
+	local amb = render.GetAmbientLightColor():ToColor()
+	render.Clear(amb.r, amb.g, amb.b, 255)
 	render.PopRenderTarget()
 	game.GetWorld():RemoveAllDecals()
 end
@@ -218,5 +219,5 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	-- surf.Angles, surf.Areas, surf.Normals, surf.Origins, surf.Vertices, surf.AreaBound = nil
 	self.RenderTarget.Ready = true
 	self:ClearAllInk()
-	return collectgarbage "collect"
+	collectgarbage "collect"
 end)

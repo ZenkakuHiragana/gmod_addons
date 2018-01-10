@@ -85,30 +85,25 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 	local self = SplatoonSWEPs
 	self.BSP:Init()
 	self.BSP = nil
-	return collectgarbage "collect"
+	collectgarbage "collect"
 end)
 
 hook.Add("GetFallDamage", "Inklings don't take fall damage.", function(ply, speed)
-	local weapon = ply:GetActiveWeapon()
-	if IsValid(weapon) and weapon.IsSplatoonWeapon then
-		return 0
-	end
+	if SplatoonSWEPs:IsValidInkling(ply) then return 0 end
 end)
 
 hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, dmg)
+	if not (IsValid(dmg:GetInflictor()) and dmg:GetInflictor().IsSplatoonWeapon and ent:Health() > 0) then return end
 	local atk = dmg:GetAttacker()
-	if not (dmg:GetDamage() > 0 and ent:Health() > 0 and IsValid(atk)) then return end
-	if atk:GetClass() == "projectile_ink" then return true end
-	if not isfunction(atk.GetActiveWeapon) then return end
-	local wep = atk:GetActiveWeapon()
-	if not (IsValid(wep) and wep.IsSplatoonWeapon) then return end
-	local entwep = isfunction(ent.GetActiveWeapon) and ent:GetActiveWeapon()
-	if entwep and entwep.IsSplatoonWeapon and entwep.ColorCode == wep.ColorCode then return true
-	elseif dmg:GetDamage() < 100 then
-		atk:SendLua "surface.PlaySound(SplatoonSWEPs.DealDamage)"
-		if not (ent:IsPlayer() and IsValid(ent:GetActiveWeapon()) and ent:GetActiveWeapon().IsSplatoonWeapon) then return end
-		ent:SendLua "surface.PlaySound(SplatoonSWEPs.TakeDamage)"
-	else
-		atk:SendLua "surface.PlaySound(SplatoonSWEPs.DealDamageCritical)"
+	if atk.IsSplatoonProjectile then return true end
+	if SplatoonSWEPs:IsValidInkling(ent) then
+		if ent:GetActiveWeapon().ColorCode == dmg:GetInflictor().ColorCode then return true end
+		net.Start "SplatoonSWEPs: Play damage sound"
+		net.WriteString "TakeDamage"
+		net.Send(ent)
 	end
+	
+	net.Start "SplatoonSWEPs: Play damage sound"
+	net.WriteString("DealDamage" .. (dmg:GetDamage() >= 100 and "Critical" or ""))
+	net.Send(atk)
 end)

@@ -14,6 +14,7 @@ for i = 1, circle_polys do
 end
 
 ENT.DisableDuplicator = true
+ENT.IsSplatoonProjectile = true
 function ENT:Initialize()
 	if not file.Exists(self.FlyingModel, "GAME") then
 		self:Remove()
@@ -115,13 +116,12 @@ function ENT:PhysicsUpdate(phys)
 end
 
 function ENT:PhysicsCollide(coldata, collider)
-	if self.Hit then return end
-	self.Hit = true
-	
-	local tr = util.QuickTrace(coldata.HitPos, coldata.HitNormal, self)
-	if not tr.HitSky and tr.HitWorld then
+	SafeRemoveEntityDelayed(self, 0)
+	if coldata.HitEntity:IsWorld() then
+		local tr = util.QuickTrace(coldata.HitPos, coldata.HitNormal, self)
+		if tr.HitSky then return end
 		self:EmitSound "SplatoonSWEPs_Ink.HitWorld"
-		SplatoonSWEPs.InkManager.AddQueue(
+		return SplatoonSWEPs.InkManager.AddQueue(
 			tr.HitPos,
 			tr.HitNormal,
 			math.Remap(math.Clamp(self.InitPos.z - self:GetPos().z,
@@ -135,14 +135,14 @@ function ENT:PhysicsCollide(coldata, collider)
 		local d, o = DamageInfo(), self:GetOwner()
 		local t = math.max(0, CurTime() - self.InitTime) - self.DecreaseDamage
 		d:SetDamage(math.Remap(-math.Clamp(t, 0, self.MinDamageTime), -self.MinDamageTime, 0, self.MinDamage, self.Damage))
-		d:SetDamageForce(vector_origin)
-		d:SetDamagePosition(tr.HitPos)
-		d:SetDamageType(DMG_BLAST)
+		d:SetDamageForce(-coldata.HitNormal)
+		d:SetDamagePosition(coldata.HitPos)
+		d:SetDamageType(DMG_GENERIC)
 		d:SetMaxDamage(self.Damage)
 		d:SetReportedPosition(self:GetPos())
 		d:SetAttacker(o)
 		d:SetInflictor(IsValid(o) and isfunction(o.GetActiveWeapon) and o:GetActiveWeapon() or NULL)
-		coldata.HitEntity:TakeDamageInfo(d)
+		return coldata.HitEntity:TakeDamageInfo(d)
 	end
 end
 

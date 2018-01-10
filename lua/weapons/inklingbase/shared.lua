@@ -61,6 +61,14 @@ function SWEP:SetPlayerSpeed(spd)
 	self.Owner:SetWalkSpeed(self.MaxSpeed)
 end
 
+function SWEP:GetInklingSpeed()
+	return SplatoonSWEPs.InklingBaseSpeed
+end
+
+function SWEP:GetSquidSpeed()
+	return SplatoonSWEPs.SquidBaseSpeed
+end
+
 --When NPC weapon is picked up by player.
 function SWEP:OwnerChanged()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return true end
@@ -109,8 +117,14 @@ function SWEP:SharedDeployBase()
 	for k, v in pairs(self.BackupPlayerInfo.Playermodel.BodyGroups) do
 		v.num = self.Owner:GetBodygroup(v.id)
 	end
-	self:SetPlayerSpeed(SplatoonSWEPs.InklingBaseSpeed)
-	self.Owner:SetJumpPower(SplatoonSWEPs.InklingJumpPower)
+	self.Holstering = false
+	self.InklingSpeed = self:GetInklingSpeed()
+	self.SquidSpeed = self:GetSquidSpeed()
+	self.OnEnemyInkSpeed = SplatoonSWEPs.OnEnemyInkSpeed
+	self.JumpPower = SplatoonSWEPs.InklingJumpPower
+	self.OnEnemyInkJumpPower = SplatoonSWEPs.OnEnemyInkJumpPower
+	self:SetPlayerSpeed(self.InklingSpeed)
+	self.Owner:SetJumpPower(self.JumpPower)
 	self.Owner:SetColor(color_white)
 	self.Owner:SetCrouchedWalkSpeed(0.5)
 	local PMPath = SplatoonSWEPs.Playermodel[self:GetPMID()]
@@ -140,6 +154,7 @@ function SWEP:SharedHolsterBase()
 	self.SwimSound:Stop()
 	self.EnemyInkSound:Stop()
 	self.PMTable = nil
+	self.Holstering = true
 	if istable(self.BackupPlayerInfo) then --Restores owner's information.
 		self:ChangePlayermodel(self.BackupPlayerInfo.Playermodel)
 		self.Owner:SetColor(self.BackupPlayerInfo.Color)
@@ -185,13 +200,13 @@ function SWEP:SharedThinkBase()
 			self.ViewAnim = inklingVM
 		end
 		
-		if not self.Holstering and self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
+		if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
 			self:ChangePlayermodel(self.PMTable)
 		end
 		
 		if sq then
 			self.SwimSound:ChangeVolume(self:GetInInk() and self.Owner:GetVelocity():LengthSqr()
-				/ SplatoonSWEPs.SquidBaseSpeed / SplatoonSWEPs.SquidBaseSpeed or 0)
+				/ self.SquidSpeed / self.SquidSpeed or 0)
 			if not self.IsSquid then
 				self.Owner:RemoveAllDecals()
 				if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToSquid" end
@@ -214,6 +229,7 @@ end
 
 --Begin to use special weapon.
 function SWEP:Reload()
+	if self.Holstering then return end
 	if game.SinglePlayer() then self:CallOnClient "Reload" end
 	
 end
@@ -245,6 +261,7 @@ end
 
 --Shoot ink.
 function SWEP:PrimaryAttack()
+	if self.Holstering then return end
 	local canattack = self:CommonFire(true)
 	if game.SinglePlayer() then self:CallOnClient "PrimaryAttack" end
 	if isfunction(self.SharedPrimaryAttack) then self:SharedPrimaryAttack(canattack) end
@@ -257,6 +274,7 @@ end
 
 --Use sub weapon
 function SWEP:SecondaryAttack()
+	if self.Holstering then return end
 	local canattack = self:CommonFire(false)
 	if game.SinglePlayer() then self:CallOnClient "SecondaryAttack" end
 	if isfunction(self.SharedSecondaryAttack) then self:SharedSecondaryAttack(canattack) end
@@ -283,7 +301,7 @@ function SWEP:ChangeInInk(name, old, new)
 	local intoink = not old and new
 	if outofink == intoink then return end
 	self.Owner:SetCrouchedWalkSpeed(intoink and 1 or 0.5)
-	self:SetPlayerSpeed(intoink and SplatoonSWEPs.SquidBaseSpeed or SplatoonSWEPs.InklingBaseSpeed)
+	self:SetPlayerSpeed(intoink and self.SquidSpeed or self.InklingSpeed)
 	if intoink and SERVER then
 		local velocity = self.OwnerVelocity:Length()
 		if self.Owner:OnGround() and velocity > 400 then
@@ -311,8 +329,8 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	local intoink = not old and new
 	if outofink == intoink then return
 	elseif intoink then
-		self:SetPlayerSpeed(SplatoonSWEPs.OnEnemyInkSpeed) --Hard to move
-		self.Owner:SetJumpPower(SplatoonSWEPs.OnEnemyInkJumpPower) --Reduce jump power
+		self:SetPlayerSpeed(self.OnEnemyInkSpeed) --Hard to move
+		self.Owner:SetJumpPower(self.OnEnemyInkJumpPower) --Reduce jump power
 		self.EnemyInkSound:ChangeVolume(1, 0.5)
 		
 		if CLIENT then return end
@@ -327,8 +345,8 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 			self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
 		end)
 	else
-		self:SetPlayerSpeed(self:GetInInk() and SplatoonSWEPs.SquidBaseSpeed or SplatoonSWEPs.InklingBaseSpeed)
-		self.Owner:SetJumpPower(SplatoonSWEPs.InklingJumpPower) --Restore
+		self:SetPlayerSpeed(self:GetInInk() and self.SquidSpeed or self.InklingSpeed)
+		self.Owner:SetJumpPower(self.JumpPower) --Restore
 		self.EnemyInkSound:ChangeVolume(0, 0.5)
 	end
 end

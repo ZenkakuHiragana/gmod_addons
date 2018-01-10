@@ -44,7 +44,7 @@ SplatoonSWEPs.SetPrimary(SWEP, {
 		Aim				= 20,					--Change hold type[frames]
 		Fire			= 6,					--Fire rate[frames]
 		Reload			= 20,					--Start reloading after firing weapon[frames]
-		Crouch			= 1,					--Can't crouch for some frames after firing
+		Crouch			= 6,					--Can't crouch for some frames after firing
 		Straight		= 4,					--Ink goes without gravity[frames]
 		MinDamage		= 15,					--Deals minimum damage[frames]
 		DecreaseDamage	= 8,					--Start decreasing damage[frames]
@@ -57,8 +57,10 @@ function SWEP:SharedInit()
 		if schedule.disabled then return end
 		schedule.disabled = true
 		self:SetHoldType "passive"
-		self:SetPlayerSpeed(self:GetOnEnemyInk() and SplatoonSWEPs.OnEnemyInkSpeed
-		or self:GetInInk() and SplatoonSWEPs.SquidBaseSpeed or SplatoonSWEPs.InklingBaseSpeed)
+		self.InklingSpeed = self:GetInklingSpeed()
+		if not (self:GetOnEnemyInk() or self:GetInInk()) then
+			self:SetPlayerSpeed(self.InklingSpeed)
+		end
 	end)
 end
 
@@ -66,8 +68,8 @@ end
 function SWEP:SharedPrimaryAttack(canattack)
 	if not self.CrouchPriority then
 		self:SetHoldType(self.HoldType)
-		self:SetPlayerSpeed(self:GetOnEnemyInk()
-		and SplatoonSWEPs.OnEnemyInkSpeed or self.Primary.MoveSpeed)
+		self.InklingSpeed = self.Primary.MoveSpeed
+		if not self:GetOnEnemyInk() then self:SetPlayerSpeed(self.Primary.MoveSpeed) end
 		self.AimTimer:SetDelay(self.Primary.AimDuration)
 		self.AimTimer.disabled = false
 		self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))

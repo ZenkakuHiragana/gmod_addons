@@ -7,7 +7,7 @@ net.Receive("SplatoonSWEPs: DrawInk", function(len, ply)
 	local color = net.ReadUInt(SplatoonSWEPs.COLOR_BITS)
 	local pos = net.ReadVector()
 	local radius = net.ReadFloat()
-	local whitealpha = net.ReadUInt(8)
+	local whitealpha = net.ReadUInt(6)
 	local whiterotate = net.ReadUInt(8)
 	local origin = net.ReadVector()
 	local normal = net.ReadVector()
@@ -17,7 +17,7 @@ net.Receive("SplatoonSWEPs: DrawInk", function(len, ply)
 		c = color,
 		pos = pos,
 		r = radius,
-		alpha = whitealpha / 1000 + 0.05,
+		alpha = whitealpha / 1000,
 		rotate = whiterotate - 128,
 		origin = origin,
 		normal = normal,
@@ -30,4 +30,8 @@ net.Receive("SplatoonSWEPs: Send error message from server", function(...)
 	local icon = net.ReadUInt(3)
 	local duration = net.ReadUInt(4)
 	notification.AddLegacy(msg, icon, duration)
+end)
+
+net.Receive("SplatoonSWEPs: Play damage sound", function(...)
+	surface.PlaySound(SplatoonSWEPs[net.ReadString()])
 end)

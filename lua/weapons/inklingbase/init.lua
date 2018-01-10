@@ -10,7 +10,6 @@ local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:Initialize()
 	self.OwnerVelocity = vector_origin
 	self.ViewAnim = ACT_VM_IDLE
-	self.IsFirstTimeDeploy = true
 	self:SetHoldType "passive"
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
@@ -34,7 +33,7 @@ function SWEP:Initialize()
 		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
 			(right - fw) * InkTraceLength, self.Owner)) == self.ColorCode))
 		self:SetInInk(self.IsSquid and self.Owner.GroundColor == self.ColorCode or self:GetInWallInk())
-		self:SetOnEnemyInk(self.Owner.GroundColor and self.Owner.GroundColor ~= self.ColorCode)
+		self:SetOnEnemyInk(self.Owner.GroundColor and self.Owner.GroundColor ~= self.ColorCode or false)
 		self.OwnerVelocity = self.Owner:GetVelocity()
 	end)
 	
@@ -52,13 +51,12 @@ end
 
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return true end
-	if game.SinglePlayer() or self.IsFirstTimeDeploy then self:CallOnClient "Deploy" end
+	if game.SinglePlayer() then self:CallOnClient "Deploy" end
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
 	self:SetNextCrouchTime(CurTime())
 	self.OwnerVelocity = self.Owner:GetVelocity()
 	self.ViewAnim = ACT_VM_IDLE
-	self.IsFirstTimeDeploy = nil
 	self:SetPMID(self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "Playermodel", 1))
 	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
 		self.Owner:SetMaterial(self.Owner:Crouching() and "color" or "")
@@ -88,7 +86,7 @@ end
 
 function SWEP:OnRemove() return self:Holster() end
 function SWEP:Think()
-	if not IsValid(self.Owner) then return end
+	if not IsValid(self.Owner) or self.Holstering then return end
 	self:ProcessSchedules()
 	self:SharedThinkBase()
 	self:SetClip1(math.max(0, self:GetInk() / SplatoonSWEPs.MaxInkAmount * 100))

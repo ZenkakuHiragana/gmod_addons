@@ -126,22 +126,21 @@ local function ProcessQueue()
 			--Draw on lightmap
 			radius, size, bound = math.ceil(radius / 4), math.ceil(size / 4), bound / 2
 			center, org = center / 2, org / 2
-			s = Vector(math.floor(s.x / 2), math.floor(s.y / 2))
-			b = Vector(math.ceil(b.x / 2), math.ceil(b.y / 2))
+			s, b = s / 2, b / 2
+			-- s = Vector(math.floor(s.x / 2), math.floor(s.y / 2))
+			-- b = Vector(math.ceil(b.x / 2), math.ceil(b.y / 2))
 			render.PushRenderTarget(self.RenderTarget.Lightmap)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
 			surface.SetDrawColor(light:ToColor())
 			surface.SetMaterial(lightmapmaterial)
 			surface.DrawTexturedRect(math.floor(center.x - radius), math.floor(center.y - radius), size, size)
-			for n, mul in pairs(LightmapSampleTable) do
-				for i = 1, n do
-					local r = Vector(Lightcos[n][i], Lightsin[n][i]) * radius * mul + center
-					lightmapmaterial:SetVector("$color", GetLight(self:To3D(
-						self:PixelsToUnits((r - org) * 2), q.origin, q.angle), q.normal))
-					r.x, r.y = math.floor(r.x - radius), math.floor(r.y - radius)
-					surface.DrawTexturedRect(r.x, r.y, size, size)
-				end
+			for i = 1, 7 do
+				local r = Vector(Lightcos[7][i], Lightsin[7][i]) * radius * 1.5 + center
+				lightmapmaterial:SetVector("$color", GetLight(self:To3D(
+					self:PixelsToUnits((r - org) * 2), q.origin, q.angle), q.normal))
+				r.x, r.y = r.x - radius * 2, r.y - radius * 2
+				surface.DrawTexturedRect(r.x, r.y, size * 2, size * 2)
 			end
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
@@ -163,12 +162,9 @@ end
 
 local DoCoroutine = coroutine.create(ProcessQueue)
 local function GMTick()
-	if coroutine.status(DoCoroutine) ~= "dead" then
-		local ok, message = coroutine.resume(DoCoroutine)
-		if not ok then
-			ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n")
-		end
-	end
+	if coroutine.status(DoCoroutine) == "dead" then return end
+	local ok, message = coroutine.resume(DoCoroutine)
+	if not ok then ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n") end
 end
 
 hook.Add("PostDrawOpaqueRenderables", "SplatoonSWEPsDrawInk", SplatoonSWEPs.DrawMeshes)

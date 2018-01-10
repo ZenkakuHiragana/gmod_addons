@@ -156,16 +156,23 @@ function SplatoonSWEPs.SetSecondary(self, info)
 	if isfunction(self.CustomSecondary) then return self:CustomSecondary(s, info) end
 end
 
+function SplatoonSWEPs:IsValidInkling(ply)
+	return IsValid(ply)
+	and isfunction(ply.GetActiveWeapon)
+	and IsValid(ply:GetActiveWeapon())
+	and ply:GetActiveWeapon().IsSplatoonWeapon
+	and not ply:GetActiveWeapon().Holstering
+end
+
 --Squids have a limited movement speed.
 local LIMIT_Z_DEG = math.cos(math.rad(180 - 30))
 hook.Add("Move", "SplatoonSWEPs: Limit squid's speed", function(ply, data)
-	if not IsValid(ply) or not ply:IsPlayer() then return end
+	if not (IsValid(ply) and ply:IsPlayer()) then return end
 	local weapon = ply:GetActiveWeapon()
-	if not IsValid(weapon) or not weapon.IsSplatoonWeapon then return end
+	if not (IsValid(weapon) and weapon.IsSplatoonWeapon) then return end
+	local maxspeed = weapon.MaxSpeed * (weapon.poison and 0.5 or 1)
+	local velocity = data:GetVelocity() --Inkling's current velocity
 	
-	--Disruptors make Inklings slower
-	local maxspeed = ply:GetWalkSpeed() * (weapon.poison and 0.5 or 1)
-	local velocity = ply:GetVelocity() --Inkling's current velocity
 	--When in ink
 	if weapon:GetInWallInk() and ply:KeyDown(bit.bor(IN_JUMP, IN_FORWARD, IN_BACK)) then
 		local inkjump = 24 * ply:EyeAngles().pitch / -90
@@ -196,25 +203,22 @@ end)
 
 --MOUSE1+LCtrl makes crouch, LCtrl+MOUSE1 makes primary attack.
 hook.Add("KeyPress", "SplattonSWEPs: Detect controls", function(ply, button)
-	if not (IsValid(ply) and ply:IsPlayer()) then return end
+	if not SplatoonSWEPs:IsValidInkling(ply) then return end
 	local weapon = ply:GetActiveWeapon()
-	if not (IsValid(weapon) and weapon.IsSplatoonWeapon) then return end
 	if button == IN_ATTACK then weapon.IsAttackDown = true end
 	if weapon.IsAttackDown and button == IN_DUCK then weapon.CrouchPriority = true end
 end)
 
 hook.Add("KeyRelease", "SplatoonSWEPs: Detect controls", function(ply, button)
-	if not (IsValid(ply) and ply:IsPlayer()) then return end
+	if not SplatoonSWEPs:IsValidInkling(ply) then return end
 	local weapon = ply:GetActiveWeapon()
-	if not (IsValid(weapon) and weapon.IsSplatoonWeapon) then return end
 	if button == IN_ATTACK then weapon.IsAttackDown = false end
 	if button == IN_ATTACK or button == IN_DUCK then weapon.CrouchPriority = false end
 end)
 
 hook.Add("SetupMove", "SplatoonSWEPs: Prevent owner from crouch", function(ply, mvd)
-	if not (IsValid(ply) and ply:IsPlayer()) then return end
+	if not SplatoonSWEPs:IsValidInkling(ply) then return end
 	local weapon = ply:GetActiveWeapon()
-	if not (IsValid(weapon) and weapon.IsSplatoonWeapon) then return end
 	weapon.EnemyInkPreventCrouching = weapon.EnemyInkPreventCrouching
 	and weapon:GetOnEnemyInk() and mvd:KeyDown(IN_DUCK)
 	
@@ -225,12 +229,15 @@ hook.Add("SetupMove", "SplatoonSWEPs: Prevent owner from crouch", function(ply, 
 	end
 end)
 
+local FootstepTrace = vector_up * -20
 hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", function(ply, pos, foot, sound, volume, filter)
+	if not (IsValid(ply) and isfunction(ply.GetActiveWeapon)) then return false end
 	local weapon = ply:GetActiveWeapon()
-	local IsSplatoonWeapon = IsValid(weapon) and weapon.IsSplatoonWeapon
-	if IsSplatoonWeapon and ply.GroundColor or SERVER and SplatoonSWEPs:GetSurfaceColor(
-		util.QuickTrace(ply:GetPos(), -vector_up * 20, ply)) then
-		if not (IsSplatoonWeapon and weapon:GetInInk()) then ply:EmitSound "SplatoonSWEPs_Player.FootstepsInk" end
+	local IsSplatoonWeapon = IsValid(weapon) and weapon.IsSplatoonWeapon and not weapon.Holstering
+	if ((IsSplatoonWeapon and ply.GroundColor) or (SERVER and
+	SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(ply:GetPos(), FootstepTrace, ply))))
+	and not (IsSplatoonWeapon and weapon:GetInInk()) then
+		ply:EmitSound "SplatoonSWEPs_Player.FootstepsInk"
 		return true
 	end
 	
