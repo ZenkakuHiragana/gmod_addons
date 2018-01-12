@@ -219,8 +219,9 @@ function SWEP:MakeSquidModel(id)
 		else
 			self.Squid = nil
 		end
-	else
+	elseif not self.ErrorSquidModel then
 		print "SplatoonSWEPs: Squid model is not found!  Check your subscription!"
+		self.ErrorSquidModel = true
 		if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
 			self:PopupError "SplatoonSWEPs: Squid model is not found!  You cannot become squid!"
 		end

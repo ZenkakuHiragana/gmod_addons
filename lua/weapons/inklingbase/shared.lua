@@ -1,7 +1,6 @@
 
 SplatoonSWEPs:AddTimerFramework(SWEP)
 function SWEP:ChangePlayermodel(data)
-	-- if SERVER then return end
 	self.Owner:SetModel(data.Model)
 	self.Owner:SetSkin(data.Skin)
 	local bodygroups = ""
@@ -82,41 +81,16 @@ end
 
 --Predicted hooks
 function SWEP:SharedDeployBase()
-	self.SwimSound:Play()
-	self.EnemyInkSound:Play()
-	self.SwimSound:ChangeVolume(0)
-	self.EnemyInkSound:ChangeVolume(0)
-	self.CanHealStand = SplatoonSWEPs:GetConVarBool "CanHealStand"
-	self.CanHealInk = SplatoonSWEPs:GetConVarBool "CanHealInk"
-	self.CanReloadStand = SplatoonSWEPs:GetConVarBool "CanReloadStand"
-	self.CanReloadInk = SplatoonSWEPs:GetConVarBool "CanReloadInk"
-	self.BackupPlayerInfo = {
-		Color = self.Owner:GetColor(),
-		Flags = self.Owner:GetFlags(),
-		JumpPower = self.Owner:GetJumpPower(),
-		MoveType = self.Owner:GetMoveType(),
-		RenderMode = self:GetRenderMode(),
-		Speed = {
-			Crouched = self.Owner:GetCrouchedWalkSpeed(),
-			Duck = self.Owner:GetDuckSpeed(),
-			Max = self.Owner:GetMaxSpeed(),
-			Run = self.Owner:GetRunSpeed(),
-			Walk = self.Owner:GetWalkSpeed(),
-			UnDuck = self.Owner:GetUnDuckSpeed(),
-		},
-		Playermodel = {
-			Model = self.Owner:GetModel(),
-			Skin = self.Owner:GetSkin(),
-			BodyGroups = self.Owner:GetBodyGroups(),
-			SetOffsets = table.HasValue(SplatoonTable or {}, self.Owner:GetModel()),
-			PlayerColor = self.Owner:GetPlayerColor(),
-		},
-		ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
-	}
-	self.BackupPlayerInfo.HullMins, self.BackupPlayerInfo.HullMaxs = self.Owner:GetHullDuck()
-	for k, v in pairs(self.BackupPlayerInfo.Playermodel.BodyGroups) do
-		v.num = self.Owner:GetBodygroup(v.id)
+	if not self.SwimSound:IsPlaying() then
+		self.SwimSound:Play()
+		self.SwimSound:ChangeVolume(0)
 	end
+	
+	if not self.EnemyInkSound:IsPlaying() then
+		self.EnemyInkSound:Play()
+		self.EnemyInkSound:ChangeVolume(0)
+	end
+	
 	self.Holstering = false
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
@@ -127,54 +101,22 @@ function SWEP:SharedDeployBase()
 	self.Owner:SetJumpPower(self.JumpPower)
 	self.Owner:SetColor(color_white)
 	self.Owner:SetCrouchedWalkSpeed(0.5)
-	local PMPath = SplatoonSWEPs.Playermodel[self:GetPMID()]
-	if PMPath then
-		if file.Exists(PMPath, "GAME") then
-			self.PMTable = {
-				Model = PMPath,
-				Skin = 0,
-				BodyGroups = {},
-				SetOffsets = true,
-				PlayerColor = self:GetInkColorProxy(),
-			}
-			self:ChangePlayermodel(self.PMTable)
-			self:ChangeHullDuck()
-		elseif SERVER then
-			SplatoonSWEPs:SendError("SplatoonSWEPs: Required playermodel is not found!", 1, 10, self.Owner)
-		end
-	end
-	
 	if isfunction(self.SharedDeploy) then self:SharedDeploy() end
 	return true
 end
 
 function SWEP:SharedHolsterBase()
-	self.SwimSound:ChangeVolume(0)
-	self.EnemyInkSound:ChangeVolume(0)
-	self.SwimSound:Stop()
-	self.EnemyInkSound:Stop()
-	self.PMTable = nil
-	self.Holstering = true
-	if istable(self.BackupPlayerInfo) then --Restores owner's information.
-		self:ChangePlayermodel(self.BackupPlayerInfo.Playermodel)
-		self.Owner:SetColor(self.BackupPlayerInfo.Color)
-	--	self.Owner:RemoveFlags(self.Owner:GetFlags()) --Restores no target flag and something.
-	--	self.Owner:AddFlags(self.BackupPlayerInfo.Flags)
-		self.Owner:SetJumpPower(self.BackupPlayerInfo.JumpPower)
-		self.Owner:DrawShadow(true)
-		self.Owner:SetMaterial ""
-		self.Owner:SetMoveType(self.BackupPlayerInfo.MoveType)
-		self.Owner:SetRenderMode(self.BackupPlayerInfo.RenderMode)
-		self.Owner:SetCrouchedWalkSpeed(self.BackupPlayerInfo.Speed.Crouched)
-		self.Owner:SetDuckSpeed(self.BackupPlayerInfo.Speed.Duck)
-		self.Owner:SetMaxSpeed(self.BackupPlayerInfo.Speed.Max)
-		self.Owner:SetRunSpeed(self.BackupPlayerInfo.Speed.Run)
-		self.Owner:SetWalkSpeed(self.BackupPlayerInfo.Speed.Walk)
-		self.Owner:SetUnDuckSpeed(self.BackupPlayerInfo.Speed.UnDuck)
-		self.Owner:SetHullDuck(self.BackupPlayerInfo.HullMins, self.BackupPlayerInfo.HullMaxs)
-		self.Owner:SetViewOffsetDucked(self.BackupPlayerInfo.ViewOffsetDucked)
+	if self.SwimSound:IsPlaying() then
+		self.SwimSound:ChangeVolume(0)
+		self.SwimSound:Stop()
 	end
 	
+	if self.EnemyInkSound:IsPlaying() then
+		self.EnemyInkSound:ChangeVolume(0)
+		self.EnemyInkSound:Stop()
+	end
+	
+	self.Holstering = true
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
 	return true
 end
@@ -230,7 +172,7 @@ end
 --Begin to use special weapon.
 function SWEP:Reload()
 	if self.Holstering then return end
-	if game.SinglePlayer() then self:CallOnClient "Reload" end
+	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "Reload" end
 	
 end
 
@@ -263,7 +205,7 @@ end
 function SWEP:PrimaryAttack()
 	if self.Holstering then return end
 	local canattack = self:CommonFire(true)
-	if game.SinglePlayer() then self:CallOnClient "PrimaryAttack" end
+	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "PrimaryAttack" end
 	if isfunction(self.SharedPrimaryAttack) then self:SharedPrimaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerPrimaryAttack) then
 		return self:ServerPrimaryAttack(canattack)
@@ -276,7 +218,7 @@ end
 function SWEP:SecondaryAttack()
 	if self.Holstering then return end
 	local canattack = self:CommonFire(false)
-	if game.SinglePlayer() then self:CallOnClient "SecondaryAttack" end
+	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "SecondaryAttack" end
 	if isfunction(self.SharedSecondaryAttack) then self:SharedSecondaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerSecondaryAttack) then
 		return self:ServerSecondaryAttack(canattack)
@@ -290,7 +232,9 @@ local NetworkVarNotifyCallsOnClient = false
 function SWEP:ChangeInInk(name, old, new)
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
-			self:CallOnClient("ChangeInInk", table.concat({name, tostring(old), tostring(new)}, " "))
+			if IsValid(self.Owner) then
+				self:CallOnClient("ChangeInInk", table.concat({name, tostring(old), tostring(new)}, " "))
+			end
 		elseif not self:IsFirstTimePredicted() then return else
 			old, new = tobool(old), tobool(new)
 		end
@@ -319,7 +263,9 @@ end
 function SWEP:ChangeOnEnemyInk(name, old, new)
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
-			self:CallOnClient("ChangeOnEnemyInk", table.concat({name, tostring(old), tostring(new)}, " "))
+			if IsValid(self.Owner) then
+				self:CallOnClient("ChangeOnEnemyInk", table.concat({name, tostring(old), tostring(new)}, " "))
+			end
 		elseif not self:IsFirstTimePredicted() then return else
 			old, new = tobool(old), tobool(new)
 		end
@@ -370,7 +316,6 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Bool", "InInk") --If owner is in ink.
 	self:AddNetworkVar("Bool", "InWallInk") --If owner is on wall.
 	self:AddNetworkVar("Bool", "OnEnemyInk") --If owner is on enemy ink.
-	-- self:AddNetworkVar("Bool", "CrouchPriority") --If crouch input takes a priority.
 	self:AddNetworkVar("Float", "Ink") --Ink remainig. 0 ~ SplatoonSWEPs.MaxInkAmount
 	self:AddNetworkVar("Vector", "InkColorProxy") --For material proxy.
 	self:AddNetworkVar("Float", "NextCrouchTime") --Shooting cooldown.
