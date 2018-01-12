@@ -9,7 +9,7 @@ local MIN_BOUND = 20 --Ink minimum bounding box scale
 local MIN_BOUND_AREA = 10 --minimum ink bounding box area
 local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surfaces
 local MAX_PROCESS_QUEUE_AT_ONCE = 4 --Running QueueCoroutine() at once
-local MAX_INKQUEUE_AT_ONCE = 15 --Processing new ink request at once
+local MAX_INKQUEUE_AT_ONCE = 50 --Processing new ink request at once
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
 local function MakeRect(tx, ty, x1, x2, y1, y2)
 	return {Vector(tx[x1], ty[y1]), Vector(tx[x2], ty[y2])}
@@ -86,7 +86,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			SplatoonSWEPs.InkCounter = SplatoonSWEPs.InkCounter + 1
 			
 			inkqueue = inkqueue + 1
-			-- if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
+			if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 	end
 	

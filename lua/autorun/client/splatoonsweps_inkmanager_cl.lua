@@ -72,6 +72,9 @@ local function ProcessQueue()
 			local radius = self:UnitsToPixels(q.r)
 			local size = radius * 2
 			local surf = self.SequentialSurfaces
+			-- q.angle = Angle(surf.Angles[q.facenumber])
+			-- q.normal = surf.Normals[q.facenumber]
+			-- q.origin = surf.Origins[q.facenumber]
 			if surf.Moved[q.facenumber] then q.angle:RotateAroundAxis(q.normal, -90) end
 			local org = self:UVToPixels(Vector(surf.u[q.facenumber], surf.v[q.facenumber]))
 			local bound = self:UnitsToPixels(surf.Bounds[q.facenumber])
@@ -165,6 +168,10 @@ local function GMTick()
 	if coroutine.status(DoCoroutine) == "dead" then return end
 	local ok, message = coroutine.resume(DoCoroutine)
 	if not ok then ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n") end
+	if not SplatoonSWEPs.RenderTarget.Ready then
+		net.Start "SplatoonSWEPs: Fetch ink information"
+		net.SendToServer()
+	end
 end
 
 hook.Add("PostDrawOpaqueRenderables", "SplatoonSWEPsDrawInk", SplatoonSWEPs.DrawMeshes)

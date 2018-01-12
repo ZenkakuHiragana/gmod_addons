@@ -212,12 +212,11 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 				mesh.Begin(self.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
 			end
 		end
-		-- surf.Angles[k], surf.Areas[k], surf.Normals[k], surf.Origins[k], surf.Vertices[k] = nil
+		surf.Angles[k], surf.Areas[k], surf.Normals[k], surf.Origins[k], surf.Vertices[k] = nil
 	end
 	mesh.End()
 	
-	-- surf.Angles, surf.Areas, surf.Normals, surf.Origins, surf.Vertices, surf.AreaBound = nil
-	self.RenderTarget.Ready = true
+	surf.Angles, surf.Areas, surf.Normals, surf.Origins, surf.Vertices, surf.AreaBound = nil
 	self:ClearAllInk()
 	collectgarbage "collect"
 end)

@@ -247,7 +247,7 @@ function SWEP:ChangeInInk(name, old, new)
 	self.Owner:SetCrouchedWalkSpeed(intoink and 1 or 0.5)
 	self:SetPlayerSpeed(intoink and self.SquidSpeed or self.InklingSpeed)
 	if intoink and SERVER then
-		local velocity = self.OwnerVelocity:Length()
+		local velocity = math.abs(self.OwnerVelocity.z)
 		if self.Owner:OnGround() and velocity > 400 then
 			local dp = math.Clamp(600 - velocity, 0, 200) / 2
 			self.Owner:EmitSound("SplatoonSWEPs_Player.InkDiveDeep", 75, 100 + dp, .5, CHAN_BODY)
@@ -319,6 +319,7 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Float", "Ink") --Ink remainig. 0 ~ SplatoonSWEPs.MaxInkAmount
 	self:AddNetworkVar("Vector", "InkColorProxy") --For material proxy.
 	self:AddNetworkVar("Float", "NextCrouchTime") --Shooting cooldown.
+	self:AddNetworkVar("Int", "GroundColor") --Surface ink color.
 	self:AddNetworkVar("Int", "PMID") --Playermodel ID
 	self:AddNetworkSchedule(HealingDelay, function(self, schedule) --Gradually heals the owner
 		local canheal = self.CanHealInk and self:GetInInk()

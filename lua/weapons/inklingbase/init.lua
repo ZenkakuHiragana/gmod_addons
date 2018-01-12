@@ -23,7 +23,8 @@ function SWEP:Initialize()
 		local ang = Angle(0, self.Owner:GetAngles().yaw, 0)
 		local p = self.Owner:WorldSpaceCenter()
 		local fw, right = ang:Forward(), ang:Right()
-		self.Owner.GroundColor = SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner))
+		self:SetGroundColor(SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner)) or -1)
+		local onourink = self:GetGroundColor() >= 0 and self:GetGroundColor() == self.ColorCode
 		self:SetInWallInk(self.IsSquid and (SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
 			(fw - right) * InkTraceLength, self.Owner)) == self.ColorCode
 		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
@@ -32,9 +33,9 @@ function SWEP:Initialize()
 			(right + fw) * -InkTraceLength, self.Owner)) == self.ColorCode
 		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
 			(right - fw) * InkTraceLength, self.Owner)) == self.ColorCode))
-		self:SetInInk(self.IsSquid and self.Owner.GroundColor == self.ColorCode or self:GetInWallInk())
-		self:SetOnEnemyInk(self.Owner.GroundColor and self.Owner.GroundColor ~= self.ColorCode or false)
-		self.OwnerVelocity = self.Owner:GetVelocity()
+		self:SetInInk(self.IsSquid and onourink or self:GetInWallInk())
+		self:SetOnEnemyInk(self:GetGroundColor() >= 0 and not onourink)
+		self.OwnerVelocity = self.Owner:GetPhysicsObject():GetVelocity()
 	end)
 	
 	self:SharedInitBase()

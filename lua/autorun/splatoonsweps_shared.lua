@@ -234,10 +234,11 @@ hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", function(ply, pos, foo
 	if not (IsValid(ply) and isfunction(ply.GetActiveWeapon)) then return false end
 	local weapon = ply:GetActiveWeapon()
 	local IsSplatoonWeapon = IsValid(weapon) and weapon.IsSplatoonWeapon and not weapon.Holstering
-	if ((IsSplatoonWeapon and ply.GroundColor) or (SERVER and
-	SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(ply:GetPos(), FootstepTrace, ply))))
-	and not (IsSplatoonWeapon and weapon:GetInInk()) then
-		ply:EmitSound "SplatoonSWEPs_Player.FootstepsInk"
+	if ((IsSplatoonWeapon and weapon:GetGroundColor() >= 0) or (SERVER and
+	SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(ply:GetPos(), FootstepTrace, ply)))) then
+		if not (IsSplatoonWeapon and weapon:GetInInk()) and (SERVER or ply ~= LocalPlayer()) then
+			ply:EmitSound "SplatoonSWEPs_Player.FootstepsInk"
+		end
 		return true
 	end
 	
