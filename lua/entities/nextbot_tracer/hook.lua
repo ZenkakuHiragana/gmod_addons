@@ -3,7 +3,7 @@
 --Arguments:
 ----Entity self | myself.
 ----Table t | Sound informations.
-local function OnHearSound(self, t)
+function ENT:OnHearSound(t)
 	--TODO: Tell other mates to alert
 	if self:GetState() == NPC_STATE_COMBAT then return end
 	local pos = isvector(t.Pos) and t.Pos or t.Entity:GetPos()
@@ -32,7 +32,7 @@ end
 --++Hooks++-----------------------------------{
 local classname = "nextbot_tracer"
 local targetname = "NextbotTracerRelationship"
-hook.Add("OnEntityCreated", "NextbotIsAlone!", function(e)
+hook.Add("OnEntityCreated", "NextbotTracerIsAlone!", function(e)
 	if IsValid(e) and e:GetClass() ~= classname and isfunction(e.AddEntityRelationship) then
 		local t = targetname .. e:EntIndex()
 		timer.Create(t, 1, 0, function()
@@ -45,23 +45,23 @@ hook.Add("OnEntityCreated", "NextbotIsAlone!", function(e)
 end)
 
 --Receiving serverside sound.
-hook.Add("EntityEmitSound", "NextbotHearsSound", function(t)
+hook.Add("EntityEmitSound", "NextbotTracerHearsSound", function(t)
 	if not IsValid(t.Entity) then return end
 	for k, v in pairs(ents.FindByClass(classname)) do
 		if t.Entity == v then return end
-		if IsValid(v) and v.IsInitialized and v:IsHearingSound(t) then
-			OnHearSound(v, t)
+		if IsValid(v) and isfunction(v.OnHearSound) and v.IsInitialized and v:IsHearingSound(t) then
+			v:OnHearSound(t)
 		end
 	end
 end)
 
 --Receiving clientside sound.
-util.AddNetworkString("NextbotHearsSound")
-net.Receive("NextbotHearsSound", function(len, ply)
+util.AddNetworkString("NextbotTracerHearsSound")
+net.Receive("NextbotTracerHearsSound", function(len, ply)
 	local bot = net.ReadEntity()
 	local t = net.ReadTable()
-	if IsValid(bot) and IsValid(t.Entity) and bot:GetClass() == classname then
-		OnHearSound(bot, t)
+	if IsValid(bot) and IsValid(t.Entity) and bot:GetClass() == classname and isfunction(bot.OnHearSound) then
+		bot:OnHearSound(t)
 	end
 end)
 

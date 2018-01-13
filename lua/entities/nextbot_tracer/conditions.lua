@@ -126,6 +126,7 @@ function ENT.Replacement:BuildConditions(e)
 	c.BehindEnemy = false
 	local mob_count = 0 --Mobbed by enemies.
 	for enemy, data in pairs(self.Memory.Enemies) do
+		if not IsValid(enemy) then self.Memory.Enemies[enemy] = nil continue end
 		if data.Distance < self.Dist.Mobbed then mob_count = mob_count + 1 end
 		if not c.BehindEnemy and self:CanSee(enemy:WorldSpaceCenter()) and 
 		self:GetAimVector(enemy:WorldSpaceCenter()):Dot(self:GetForward()) > 0.7 then
