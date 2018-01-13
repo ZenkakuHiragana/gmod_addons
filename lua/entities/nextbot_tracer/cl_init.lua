@@ -21,12 +21,12 @@ local head_yaw_min, head_yaw_max = -75, 75
 local head_pitch_min, head_pitch_max = -60, 60
 local parameter_movedivision = 8
 
-hook.Add("EntityEmitSound", "NextbotHearsSound", function(t)
+hook.Add("EntityEmitSound", "NextbotTracerHearsSound", function(t)
 	if not IsValid(t.Entity) then return end
 	for k, v in pairs(ents.FindByClass(classname)) do
 		if t.Entity == v then return end
 		if IsValid(v) and v.IsInitialized and v:IsHearingSound(t) then
-			net.Start("NextbotHearsSound")
+			net.Start("NextbotTracerHearsSound")
 			net.WriteEntity(v)
 			net.WriteTable(t)
 			net.SendToServer()

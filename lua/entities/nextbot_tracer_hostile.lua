@@ -13,6 +13,7 @@ ENT.Purpose = ""
 ENT.Spawnable = false
 ENT.AutomaticFrameAdvance = true
 
+local classname_hostile = ENT.classname
 if SERVER then
 	ENT.NPCClass = CLASS_COMBINE
 	ENT.Relationship = {
@@ -44,7 +45,6 @@ if SERVER then
 		[CLASS_COMBINE_HUNTER] = D_LI,
 	}
 	
-	local classname_hostile = ENT.classname
 	local targetname = "NextbotTracerRelationship(Hostile)"
 	hook.Add("OnEntityCreated", "NextbotTracerIsAlone!(Hostile)", function(e)
 		if IsValid(e) and e:GetClass() ~= classname_hostile and isfunction(e.AddEntityRelationship) then
@@ -76,6 +76,19 @@ if SERVER then
 		local t = net.ReadTable()
 		if IsValid(bot) and IsValid(t.Entity) and bot:GetClass() == classname_hostile and isfunction(bot.OnHearSound) then
 			bot:OnHearSound(t)
+		end
+	end)
+else
+	hook.Add("EntityEmitSound", "NextbotTracerHearsSoundHostile", function(t)
+		if not IsValid(t.Entity) then return end
+		for k, v in pairs(ents.FindByClass(classname_hostile)) do
+			if t.Entity == v then return end
+			if IsValid(v) and v.IsInitialized and v:IsHearingSound(t) then
+				net.Start("NextbotTracerHearsSoundHostile")
+				net.WriteEntity(v)
+				net.WriteTable(t)
+				net.SendToServer()
+			end
 		end
 	end)
 end
