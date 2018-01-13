@@ -1,5 +1,5 @@
 
-AddCSLuaFile("npc_combine_random.lua")
+AddCSLuaFile()
 local Category = "GreatZenkakuMan's NPCs"
 local Addons = engine.GetAddons()
 local CUPID = 488470325 --The addon ID of Combine Units +PLUS+
@@ -237,8 +237,8 @@ if SERVER then
 	
 	--Start a wall-rappelling animation.
 	function ENT:SetRappelling(rope)
-		if GetConVar("random_combine_rappel"):GetInt() == 0 then return end
-		if GetConVar("ai_disabled"):GetInt() ~= 0 then return end
+		if GetConVar "random_combine_rappel" :GetInt() == 0 then return end
+		if GetConVar "ai_disabled" :GetInt() ~= 0 then return end
 		if IsValid(self.seq) then return end
 		if not IsValid(self.npc) then return end
 		if self.npc:LookupSequence("rappel_" .. rappelindex[1]) == -1 then
@@ -250,8 +250,8 @@ if SERVER then
 		--Perform some traces and check if it should be a good time to rappel.
 		local filter = {self, self.npc}
 		local lookahead, lookdown, lookup = 80, 680, 60
-		if GetConVar("random_combine_search_ledge_radius") then
-			lookahead = GetConVar("random_combine_search_ledge_radius"):GetInt()
+		if GetConVar "random_combine_search_ledge_radius" then
+			lookahead = GetConVar "random_combine_search_ledge_radius" :GetInt()
 		end
 		
 		if util.QuickTrace(
@@ -314,8 +314,8 @@ if SERVER then
 					self:SetPos(tr.HitPos + tr.HitNormal)
 					timer.Simple(0.8, function() beginrappel(self, i) end)
 				end
-				self.npc:Fire("StopPatrolling")
-				self.seq = ents.Create("scripted_sequence")
+				self.npc:Fire "StopPatrolling"
+				self.seq = ents.Create "scripted_sequence"
 				self.seq:SetPos(pos)
 				
 				self.seq:SetAngles(ang)
@@ -326,7 +326,7 @@ if SERVER then
 				self.seq:SetKeyValue("m_flRepeat", "1")
 				
 				self.seq:Spawn()
-				self.seq:Fire("beginsequence")
+				self.seq:Fire "beginsequence"
 				
 				if IsValid(self.parent) then
 					self.parent:NextThink(CurTime() + 5)
@@ -338,7 +338,7 @@ if SERVER then
 	end
 	
 	local function setmanhack(self)
-		local manhack = GetConVar("random_combine_manhacks")
+		local manhack = GetConVar "random_combine_manhacks"
 		if manhack then manhack = manhack:GetInt() else manhack = 0 end
 		if manhack < 0 then manhack = math.random() < 0.5 and 0 or 1 end
 		self.npc:SetKeyValue("manhacks", manhack)
@@ -346,11 +346,29 @@ if SERVER then
 	
 	function ENT:Initialize()
 		self:SetNoDraw(true)
-		self:SetModel( "models/Gibs/wood_gib01e.mdl" )
+		self:SetModel "models/Gibs/wood_gib01e.mdl"
 		self:PhysicsInit(SOLID_VPHYSICS)
 		self:SetMoveType(MOVETYPE_NONE)
 		self:SetNotSolid(true)
-		self.kind = self:GetKeyValues()["friction"]
+		self.npctype = self:GetKeyValues()["friction"]
+		
+		local weapon
+		if game.IsDedicated() then
+			for id, block in pairs(undo.GetTable()) do
+				for _, data in ipairs(block) do
+					if not IsValid(data.Entities[1]) and data.CustomUndoText and data.CustomUndoText:find(list.Get"NPC"[self:GetClass()].Name) then
+						weapon = data.Owner:GetInfo "gmod_npcweapon"
+					end
+				end
+			end
+			
+			if not weapon and IsValid(player.GetByID(1)) then
+				weapon = player.GetByID(1):GetInfo "gmod_npcweapon"
+			end
+		else
+			weapon = GetConVar "gmod_npcweapon"
+			weapon = weapon and weapon:GetString() or ""
+		end
 		
 		local f = 256 --Spawnflags.
 		local switch = { --Actual spawn functions.
@@ -361,8 +379,8 @@ if SERVER then
 					"weapon_pistol",
 					"weapon_smg1",
 				}
-				local w = GetConVar("gmod_npcweapon"):GetString()
-				self.npc = ents.Create("npc_metropolice")
+				local w = weapon
+				self.npc = ents.Create "npc_metropolice"
 				if w == "" or w == "none" then
 					w = weaponlist[math.random(1, #weaponlist)]
 				end
@@ -389,11 +407,11 @@ if SERVER then
 					"models/Combine_Soldier_PrisonGuard.mdl",
 					"models/Police.mdl"
 				}
-				local modelnum = GetConVar("random_combine_plus"):GetInt() == 0 and #models - 1 or #models
-				local weaponnum = GetConVar("random_combine_additional_weapons"):GetInt() == 0 and
+				local modelnum = GetConVar "random_combine_plus" :GetInt() == 0 and #models - 1 or #models
+				local weaponnum = GetConVar "random_combine_additional_weapons" :GetInt() == 0 and
 					#weaponlist - 2 or #weaponlist
 				local m = models[math.random(1, modelnum)]
-				local w = GetConVar("gmod_npcweapon"):GetString()
+				local w = weapon
 				
 				if specify then
 					m = models[specify]
@@ -425,11 +443,11 @@ if SERVER then
 				end
 				
 				if m == models[#models] then --police
-					self.npc = ents.Create("npc_metropolice")
+					self.npc = ents.Create "npc_metropolice"
 					self.npc:SetKeyValue("additionalequipment", w)
 					setmanhack(self)
 				else
-					self.npc = ents.Create( "npc_combine_s" )
+					self.npc = ents.Create "npc_combine_s"
 					self.npc:SetKeyValue("model", m)
 					self.npc:SetKeyValue("additionalequipment", w)
 					self.npc:SetKeyValue("tacticalvariant", math.random(0, 2))
@@ -440,7 +458,7 @@ if SERVER then
 					self.npc:SetKeyValue("NumGrenades", math.random(0, 20))
 				end
 				
-				if GetConVar("random_combine_start_patrolling"):GetBool() then
+				if GetConVar "random_combine_start_patrolling" :GetBool() then
 					self.npc:Fire("StartPatrolling")
 				end
 			end,
@@ -469,7 +487,7 @@ if SERVER then
 					"npc_metro_arrest",
 				}
 				local n = #CUPClassname
-				if GetConVar("random_combine_plus"):GetInt() == 0 then
+				if GetConVar "random_combine_plus" :GetInt() == 0 then
 					n = n - 3
 				end
 				self.npc = ents.Create(CUPClassname[math.random(1, n)])
@@ -484,10 +502,10 @@ if SERVER then
 					"models/frosty/sparbines/sc_supersoldier.mdl",
 				}
 				local index = math.random(1, #models)
-				local w = GetConVar("gmod_npcweapon"):GetString()
+				local w = weapon
 				
 				if index == 1 then
-					self.npc = ents.Create("npc_metropolice")
+					self.npc = ents.Create "npc_metropolice"
 					if w == "" or w == "none" then
 						w = "weapon_pistol"
 					end
@@ -498,7 +516,7 @@ if SERVER then
 						end
 					end)
 				else
-					self.npc = ents.Create( "npc_combine_s" )
+					self.npc = ents.Create "npc_combine_s"
 					self.npc:SetKeyValue("tacticalvariant", math.random(0, 2))
 					self.npc:SetKeyValue("NumGrenades", math.random(3, 20))
 					if w == "" or w == "none" then
@@ -511,7 +529,7 @@ if SERVER then
 				self.npc:SetKeyValue("citizentype", "4")
 				self.npc:SetKeyValue("model", models[index])
 				self.npc:SetKeyValue("additionalequipment", w)
-				if GetConVar("random_combine_start_patrolling"):GetBool() then
+				if GetConVar "random_combine_start_patrolling" :GetBool() then
 					self.npc:Fire("StartPatrolling")
 				end
 			end,
@@ -541,10 +559,10 @@ if SERVER then
 				}
 				local grenades = {0, 5, 5, 3, 3, 10}
 				local index = math.random(1, #models)
-				local w = GetConVar("gmod_npcweapon"):GetString()
+				local w = weapon
 				
 				if index == 1 then -- Mark III
-					self.npc = ents.Create("npc_metropolice")
+					self.npc = ents.Create "npc_metropolice"
 					if w == "" or w == "none" then
 						w = mk3[math.random(1, #mk3)]
 					end
@@ -555,7 +573,7 @@ if SERVER then
 					end)
 					self.npc:SetKeyValue("weapondrawn", 0)
 				else
-					self.npc = ents.Create( "npc_combine_s" )
+					self.npc = ents.Create "npc_combine_s"
 					self.npc:SetKeyValue("tacticalvariant", math.random(0, 2))
 					self.npc:SetKeyValue("NumGrenades", grenades[index])
 					if w == "" or w == "none" then
@@ -575,7 +593,7 @@ if SERVER then
 				end
 				self.npc:SetKeyValue("squadname", "overwatch")
 				self.npc:SetKeyValue("additionalequipment", w)
-				if GetConVar("random_combine_start_patrolling"):GetBool() then
+				if GetConVar "random_combine_start_patrolling" :GetBool() then
 					self.npc:Fire("StartPatrolling")
 				end
 			end,
@@ -606,7 +624,7 @@ if SERVER then
 					"monster_sven_hgrunt_m4",
 					"monster_sven_hgrunt_shotgun",
 				}
-				local n = GetConVar("random_combine_plus"):GetInt() == 0 and #Classname - 8 or #Classname
+				local n = GetConVar "random_combine_plus" :GetInt() == 0 and #Classname - 8 or #Classname
 				self.npc = ents.Create(Classname[math.random(1, n)])
 			end,
 			
@@ -658,7 +676,7 @@ if SERVER then
 					"monster_robo_ally",
 					"monster_robo_shotgun_ally",
 				}
-				local n = GetConVar("random_combine_plus"):GetInt() == 0 and #Classname - 9 or #Classname
+				local n = GetConVar "random_combine_plus" :GetInt() == 0 and #Classname - 9 or #Classname
 				self.npc = ents.Create(Classname[math.random(1, n)])
 			end,
 			
@@ -708,9 +726,9 @@ if SERVER then
 		end
 		
 		--Spawn a NPC randomly.
-		switch[self.kind](self)
+		switch[self.npctype](self)
 		
-		local health = GetConVar("random_combine_healthvial")
+		local health = GetConVar "random_combine_healthvial"
 		if health then health = health:GetFloat() else health = 0.2 end
 		if math.random() < health then
 			f = f + 8	--Drop health vial
@@ -774,8 +792,8 @@ if SERVER then
 		
 		--Make a shield.
 		if HasAddon(CUPID) and
-			math.random() < GetConVar("random_combine_shield"):GetFloat() then
-			self.shield = ents.Create("cup_shield")
+			math.random() < GetConVar "random_combine_shield" :GetFloat() then
+			self.shield = ents.Create "cup_shield"
 			self.shield:SetPos(self.npc:GetPos() + self.npc:GetForward() * 30 + self.npc:GetUp() * 20)
 			self.shield:SetParent(self.npc, 0)
 			self.shield:SetAngles(self.npc:GetAngles() + Angle(10,160,-5))
@@ -801,7 +819,7 @@ if SERVER then
 	
 	--Begins to rappel(straight down).
 	function ENT:BeginRappel()
-		self:SetPos(self.npc:GetAttachment(self.npc:LookupAttachment("anim_attachment_LH")).Pos)
+		self:SetPos(self.npc:GetAttachment(self.npc:LookupAttachment "anim_attachment_LH").Pos)
 		self.npc:EmitSound("npc/combine_soldier/zipline_clip" .. math.random(1, 2) .. ".wav")
 		self.Rappel = false
 		
@@ -815,19 +833,19 @@ if SERVER then
 		timer.Simple(0.3, function()
 			if IsValid(self) and IsValid(self.npc) then
 				self.npc:EmitSound("npc/combine_soldier/zipline" .. math.random(1, 2) .. ".wav")
-				self.npc:Fire("BeginRappel")
+				self.npc:Fire "BeginRappel"
 			end
 		end)
 	end
 	
 	function ENT:SetSquadName()
-		if self.kind < COMBINE_PLUS then
+		if self.npctype < COMBINE_PLUS then
 			local sq = self.npc:GetKeyValues()["squadname"]
 			if sq ~= "novaprospekt" or sq ~= "overwatch" then
 				if self.npc:GetModel():lower() == "models/combine_soldier_prisonguard.mdl" then
-					self.npc:SetKeyValue( "squadname", "novaprospekt" )
+					self.npc:SetKeyValue("squadname", "novaprospekt")
 				else
-					self.npc:SetKeyValue( "squadname", "overwatch" )
+					self.npc:SetKeyValue("squadname", "overwatch")
 				end
 			end
 		end
@@ -837,7 +855,7 @@ if SERVER then
 		if not IsValid(self.npc) then self:Remove() return end
 		self:NextThink(CurTime() + 0.4)
 		
-		if self.kind >= GRUNT then return end
+		if self.npctype >= GRUNT then return end
 		if self.npc:Health() <= 0 then self:Remove() return end
 		
 		--Check if the NPC should begin rappelling.
@@ -848,9 +866,8 @@ if SERVER then
 			end
 			
 			--If squadmates have an enemy.
-			for k, v in pairs(ents.FindByClass("npc_*")) do
+			for k, v in pairs(ents.FindByClass "npc_*") do
 				if v ~= self.npc then
-				--	print(v:GetKeyValues()["squadname"], self.npc:GetKeyValues()["squadname"])
 					if v:GetKeyValues()["squadname"] == self.npc:GetKeyValues()["squadname"] then
 						if IsValid(v:GetEnemy()) then
 							self:BeginRappel()
@@ -864,7 +881,7 @@ if SERVER then
 			for k, v in pairs(ents.FindInSphere(self.npc:GetPos(), 3000)) do
 				if IsValid(v) and ((v.Type == "nextbot") or 
 					(v:IsNPC() and self.npc:Disposition(v) == D_HT) or
-					(v:IsPlayer() and not GetConVar("ai_ignoreplayers"):GetBool())) then
+					(v:IsPlayer() and not GetConVar "ai_ignoreplayers" :GetBool())) then
 					
 					local t = util.TraceLine({
 						start = self.npc:WorldSpaceCenter(),
@@ -892,10 +909,8 @@ if SERVER then
 		elseif self.played then
 			if string.find(self.npc:GetSequenceName(self.npc:GetSequence()), "Rappel_") or 
 				(self.z or self:GetPos().z) <= self.npc:GetPos().z then
-				local tr = util.QuickTrace(self.npc:GetPos() + Vector(0, 0, 60), 
-					Vector(0, 0, -90), 
+				local tr = util.QuickTrace(self.npc:GetPos() + vector_up * 60, vector_up * -90,
 					{self, self.npc, self.seq, self.npc:GetChildren()[1]})
-			--	debugoverlay.Line(tr.StartPos, tr.HitPos, 3, Color(0,255,0,255),true)
 				if tr.Hit and tr.HitNormal:Dot(Vector(0, 0, 1)) > 0.7 then
 					self.npc:SetPos(tr.HitPos + tr.HitNormal * 10)
 					self.played = nil
@@ -906,8 +921,8 @@ if SERVER then
 					self.angle = nil
 					self.pos = nil
 					self.npc.inpcIgnore = false --iNPC Compatible
-					if GetConVar("random_combine_start_patrolling"):GetBool() then
-						self.npc:Fire("StartPatrolling")
+					if GetConVar "random_combine_start_patrolling" :GetBool() then
+						self.npc:Fire "StartPatrolling"
 					end
 				end
 			else--if self.pos and self.pos.z > self.npc:GetPos().z then
