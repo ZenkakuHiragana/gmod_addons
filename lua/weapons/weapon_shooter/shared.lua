@@ -72,7 +72,7 @@ function SWEP:SharedPrimaryAttack(canattack)
 		if not self:GetOnEnemyInk() then self:SetPlayerSpeed(self.Primary.MoveSpeed) end
 		self.AimTimer:SetDelay(self.Primary.AimDuration)
 		self.AimTimer.disabled = false
-		self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
+		if SERVER then self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo)) end
 	end
 	
 	if self:GetInk() <= 0 then

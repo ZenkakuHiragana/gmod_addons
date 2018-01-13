@@ -181,6 +181,7 @@ function SWEP:CommonFire(isprimary)
 	local Weapon = isprimary and self.Primary or self.Secondary
 	local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
 	self.ReloadSchedule:SetDelay(Weapon.ReloadDelay * laggedvalue)
+	self.ReloadSchedule.prevtime = CurTime() + Weapon.ReloadDelay * laggedvalue
 	self:SetNextCrouchTime(CurTime() + Weapon.CrouchDelay * laggedvalue)
 	
 	if self:GetInk() <= 0 then return false end --Check remaining amount of ink
