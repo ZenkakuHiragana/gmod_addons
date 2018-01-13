@@ -29,11 +29,6 @@ function SWEP:ChangePlayermodel(data)
 	end
 	self.Owner:SetSubMaterial()
 	self.Owner:SetPlayerColor(data.PlayerColor)
-	self.Owner:ConCommand("cl_playermodel " .. player_manager.TranslateToPlayerModelName(data.Model))
-	self.Owner:ConCommand("cl_playerskin " .. tostring(data.Skin))
-	self.Owner:ConCommand("cl_playerbodygroups " .. bodygroups)
-	self.Owner:ConCommand("cl_playercolor " .. tostring(data.PlayerColor))
-	
 	local hands = self.Owner:GetHands()
 	if IsValid(hands) then
 		local info = player_manager.TranslatePlayerHands(player_manager.TranslateToPlayerModelName(data.Model))
@@ -231,6 +226,7 @@ end
 
 local NetworkVarNotifyCallsOnClient = false
 function SWEP:ChangeInInk(name, old, new)
+	if self.Holstering then return end
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
 			if IsValid(self.Owner) then
@@ -262,6 +258,7 @@ function SWEP:ChangeInInk(name, old, new)
 end
 
 function SWEP:ChangeOnEnemyInk(name, old, new)
+	if self.Holstering then return end
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
 			if IsValid(self.Owner) then

@@ -51,7 +51,7 @@ function SWEP:ShouldDropOnDie()
 end
 
 function SWEP:Deploy()
-	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return true end
+	if not (IsValid(self.Owner) and self.Owner:IsPlayer() and self.Owner:Alive()) then return true end
 	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "Deploy" end
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
