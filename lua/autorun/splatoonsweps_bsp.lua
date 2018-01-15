@@ -70,7 +70,7 @@ local LUMP = {
 }
 
 local bsp = SplatoonSWEPs.BSP
-local TextureFilterBits = SURF_SKY + SURF_WARP + SURF_NOPORTAL + SURF_TRIGGER + SURF_NODRAW + SURF_HINT + SURF_SKIP
+local TextureFilterBits = bit.bor(SURF_SKY, SURF_WARP, SURF_NOPORTAL, SURF_TRIGGER, SURF_NODRAW, SURF_HINT, SURF_SKIP)
 local function read(arg)
 	if isstring(arg) then
 		if arg == "UShort" then
@@ -106,6 +106,7 @@ end
 
 function bsp:Init()
 	self.bspname = "maps/" .. game.GetMap() .. ".bsp"
+	assert(file.Exists(self.bspname, "GAME"), "attempt to load a non-existent map!")
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
 	self.FaceIndex = 0
 	
@@ -122,13 +123,13 @@ function bsp:Init()
 	if SERVER then
 		self:Parse(LUMP.LEAFS)
 		self:Parse(LUMP.NODES)
-		self:Parse(LUMP.MODELS)
 	end
 	
-	self:Parse(SplatoonSWEPs.HDR and LUMP_FACES_HDR or LUMP.FACES)
+	self:Parse(LUMP.MODELS)
+	self:Parse(SplatoonSWEPs.HDR and LUMP.FACES_HDR or LUMP.FACES)
 	self:Parse(LUMP.DISPINFO)
-	
 	self:Parse(LUMP.GAME_LUMP)
+	
 	self.bsp:Close()
 	self.bsp = nil
 end
@@ -163,14 +164,7 @@ end
 
 local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d)
 	if #v3d < 3 or bsp.FaceIndex > (600000 or 1247232) then return end
-	local hitair = false
-	for _, v in ipairs(v3d) do
-		if bit.band(util.PointContents(v + normal * .01), CONTENTS_WATER) == 0 then
-			hitair = true
-			break
-		end
-	end
-	if not hitair then return end
+	--TODO: if the face is underwater then return end
 	bsp.FaceIndex = bsp.FaceIndex + 1
 	
 	local area, bound, minangle, minmins = math.huge, nil, nil, nil
@@ -196,7 +190,7 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d)
 		v:Rotate(minangle)
 		v:Sub(minmins)
 	end
-
+	
 	minmins:Rotate(-minangle)
 	origin = SplatoonSWEPs:To3D(minmins, origin, angle)
 	angle:RotateAroundAxis(normal, -minangle.yaw)
@@ -395,8 +389,15 @@ end,
 	lump.num = math.floor(lump.length / size) - 1
 	for i = 0, lump.num do
 		bsp.bsp:Skip(12 * 3)
-		table.insert(SplatoonSWEPs.Models, nodes.data[read "Long"])
-		bsp.bsp:Skip(8)
+		local headnode = read "Long"
+		if SERVER then table.insert(SplatoonSWEPs.Models, nodes.data[headnode]) end
+		if i == 0 then
+			bsp.FirstFace = read "Long"
+			bsp.NumFaces = read "Long"
+			if CLIENT then return end
+		else
+			bsp.bsp:Skip(8)
+		end
 	end
 end,
 
@@ -417,10 +418,10 @@ end,
 		local TexInfoTable = texinfo.data[read "Short"]
 		local dispinfo = read "Short"
 		bsp.bsp:Skip(42)
+		if not (bsp.FirstFace < i and i < bsp.NumFaces) then continue end
 		
 		local texname = TexInfoTable.TexData.name:lower()
-		if texname:find "tools/" or texname:find "water" or texname:find "color" or
-			bit.band(TexInfoTable.flags, TextureFilterBits) ~= 0 then
+		if texname:find "tools/" or texname:find "water" or bit.band(TexInfoTable.flags, TextureFilterBits) ~= 0 then
 			continue
 		end
 
@@ -431,7 +432,7 @@ end,
 		end
 		center = center / (#fullverts + 1)
 		
-		if bit.band(util.PointContents(center - normal * 0.01), CONTENTS_GRATE) ~= 0 then continue end
+		if bit.band(util.PointContents(center - normal * .01), CONTENTS_GRATE) ~= 0 then continue end
 		for k, v in pairs(fullverts) do
 			full2d[k] = SplatoonSWEPs:To2D(v, center, angle)
 		end
