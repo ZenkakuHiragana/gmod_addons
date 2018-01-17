@@ -5,18 +5,31 @@ include "splatoonsweps_bsp.lua"
 include "splatoonsweps_const.lua"
 include "splatoonsweps_sound.lua"
 
+function SplatoonSWEPs:MinVector(a, b)
+	local c = Vector()
+	c.x = math.min(a.x, b.x)
+	c.y = math.min(a.y, b.y)
+	c.z = math.min(a.z, b.z)
+	return c
+end
+
+function SplatoonSWEPs:MaxVector(a, b)
+	local c = Vector()
+	c.x = math.max(a.x, b.x)
+	c.y = math.max(a.y, b.y)
+	c.z = math.max(a.z, b.z)
+	return c
+end
+
 --number miminum boundary size, table of Vectors
 --returning AABB(mins, maxs)
-function SplatoonSWEPs:GetBoundingBox(minbound, vectors)
+function SplatoonSWEPs:GetBoundingBox(vectors, minbound)
 	local mins = Vector(math.huge, math.huge, math.huge)
 	local maxs = -mins
+	local bound = self.vector_one * (minbound or 0)
 	for _, v in ipairs(vectors) do
-		mins.x = math.min(mins.x, v.x - minbound)
-		mins.y = math.min(mins.y, v.y - minbound)
-		mins.z = math.min(mins.z, v.z - minbound)
-		maxs.x = math.max(maxs.x, v.x + minbound)
-		maxs.y = math.max(maxs.y, v.y + minbound)
-		maxs.z = math.max(maxs.z, v.z + minbound)
+		mins = self:MinVector(mins, v - bound)
+		maxs = self:MaxVector(maxs, v + bound)
 	end
 	return mins, maxs
 end

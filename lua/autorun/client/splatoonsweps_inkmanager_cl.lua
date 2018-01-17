@@ -79,7 +79,7 @@ local function ProcessQueue()
 			for i, v in ipairs(surf.Vertices[q.facenumber]) do
 				local w = surf.Vertices[q.facenumber][i % #surf.Vertices[q.facenumber] + 1]
 				-- DebugLine(Vector(v.u, v.v) * c, Vector(w.u, w.v) * c, true)
-				DebugLine(v.pos, w.pos)
+				DebugLine(v.pos, w.pos, true)
 			end
 			local org = self:UVToPixels(Vector(surf.u[q.facenumber], surf.v[q.facenumber]))
 			local bound = self:UnitsToPixels(surf.Bounds[q.facenumber])

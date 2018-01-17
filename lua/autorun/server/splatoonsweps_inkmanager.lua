@@ -56,14 +56,23 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	local rectsize = radius * rootpi
 	local sizevec = Vector(rectsize, rectsize)
 	local whitealpha, whiterotate = math.Rand(0, 63), math.Rand(0, 255)
-	local mins, maxs = SplatoonSWEPs:GetBoundingBox(MIN_BOUND, reference_polys)
+	local mins, maxs = SplatoonSWEPs:GetBoundingBox(reference_polys, MIN_BOUND)
 	for node in SplatoonSWEPs:BSPPairs(reference_polys) do
 		local surf = node.Surfaces
 		for i = 1, #surf.Origins do
-			if surf.Normals[i]:Dot(normal) <= COS_MAX_DEG_DIFF then continue end
+			local isdisp = surf.Indices[i] < 0
+			if isdisp and SplatoonSWEPs.Displacements.Mins[-surf.Indices[i]]
+			and SplatoonSWEPs.Displacements.Maxs[-surf.Indices[i]] then
+				surf.Mins[i] = SplatoonSWEPs.Displacements.Mins[-surf.Indices[i]]
+				surf.Maxs[i] = SplatoonSWEPs.Displacements.Maxs[-surf.Indices[i]]
+			end
+			
+			if surf.Normals[i]:Dot(normal) <= COS_MAX_DEG_DIFF * (isdisp and .5 or 1) then continue end
 			if not SplatoonSWEPs:CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
+			-- DebugBox(surf.Mins[i], surf.Maxs[i])
+			
 			net.Start "SplatoonSWEPs: DrawInk"
-			net.WriteUInt(surf.Indices[i], 20)
+			net.WriteUInt(math.abs(surf.Indices[i]), 20)
 			net.WriteUInt(color, SplatoonSWEPs.COLOR_BITS)
 			net.WriteVector(pos)
 			net.WriteFloat(radius)
@@ -89,7 +98,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 	end
-	
+	print(inkqueue)
 	coroutine.yield(true)
 end
 

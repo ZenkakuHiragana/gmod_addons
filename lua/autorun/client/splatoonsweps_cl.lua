@@ -1,6 +1,7 @@
 
 --Clientside ink manager
 SplatoonSWEPs = SplatoonSWEPs or {
+	Displacements = {},
 	IMesh = {},
 	RenderTarget = {
 		BaseTextureName = "splatoonsweps_rendertarget",
@@ -160,15 +161,25 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		if u == 0 then bk = #sortedsurfs end --The first element of the current shelf
 		for i, vertex in ipairs(surf.Vertices[k]) do --Get UV coordinates
 			local meshvert = vertex + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL
-			local UV = SplatoonSWEPs:To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
+			local UV = self:To2D(vertex, surf.Origins[k], surf.Angles[k]) / convertunit
 			surf.Vertices[k][i] = {pos = meshvert, u = UV.x + u, v = UV.y + v}
+		end
+		
+		if self.Displacements[k] then
+			NumMeshTriangles = NumMeshTriangles + #self.Displacements[k].Triangles - 2
+			for i = 0, #self.Displacements[k].Positions do
+				local vertex = self.Displacements[k].Positions[i]
+				local meshvert = surf.Vertices[k][1].pos + vertex.origin
+				local UV = self:To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
+				vertex.u, vertex.v = UV.x + u, UV.y + v
+			end
 		end
 		
 		surf.u[k], surf.v[k] = u, v
 		u = u + bu + rtmergin --Advance U-coordinate
 	end
 	
-	if v + nv > 1 then
+	if v + nv > 1 and #movesurfs > 0 then
 		local min, halfv = math.huge, movesurfs[#movesurfs].v / 2 + .5
 		for _, m in ipairs(movesurfs) do
 			local v = math.abs(m.v - halfv)
@@ -183,6 +194,15 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	
 	--Building MeshVertex
 	mesh.Begin(self.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
+	local function ContinueMesh()
+		if mesh.VertexCount() >= MAX_TRIANGLES * 3 then
+			mesh.End()
+			nummeshes, NumMeshTriangles = nummeshes + 1, NumMeshTriangles - MAX_TRIANGLES
+			self.IMesh[nummeshes] = Mesh(self.RenderTarget.Material)
+			mesh.Begin(self.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
+		end
+	end
+	
 	for sortedID, k in ipairs(sortedsurfs) do
 		if half and sortedID >= half.id then
 			surf.Bounds[k].x, surf.Bounds[k].y, surf.u[k], surf.v[k], surf.Moved[k]
@@ -190,26 +210,45 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 			for _, vertex in ipairs(surf.Vertices[k]) do
 				vertex.u, vertex.v = vertex.v - dv, vertex.u
 			end
+			
+			if self.Displacements[k] then
+				for i = 0, #self.Displacements[k].Positions do
+					local vertex = self.Displacements[k].Positions[i]
+					vertex.u, vertex.v = vertex.v - dv, vertex.u
+				end
+			end
 		end
 		
 		surf.u[k], surf.v[k] = surf.u[k] / divuv, surf.v[k] / divuv
-		for t, v in ipairs(surf.Vertices[k]) do
-			v.u, v.v = v.u / divuv, v.v / divuv
-			if t < 3 then continue end
-			for _, i in ipairs {t - 1, t, 1} do
-				local v = surf.Vertices[k][i]
-				mesh.Normal(surf.Normals[k])
-				mesh.Position(v.pos)
-				mesh.TexCoord(0, v.u, v.v)
-				mesh.TexCoord(1, v.u, v.v)
-				mesh.AdvanceVertex()
+		if self.Displacements[k] then
+			local verts = self.Displacements[k].Positions
+			for _, t in ipairs(self.Displacements[k].Triangles) do
+				local tv = {verts[t[1]], verts[t[2]], verts[t[3]]}
+				local n = (tv[1].pos - tv[2].pos):Cross(tv[3].pos - tv[2].pos):GetNormalized()
+				for _, p in ipairs(tv) do
+					mesh.Normal(n)
+					mesh.Position(p.pos + n * INK_SURFACE_DELTA_NORMAL)
+					mesh.TexCoord(0, p.u, p.v)
+					mesh.TexCoord(1, p.u, p.v)
+					mesh.AdvanceVertex()
+				end
+				
+				ContinueMesh()
 			end
-			
-			if mesh.VertexCount() >= MAX_TRIANGLES * 3 then
-				mesh.End()
-				nummeshes, NumMeshTriangles = nummeshes + 1, NumMeshTriangles - MAX_TRIANGLES
-				self.IMesh[nummeshes] = Mesh(self.RenderTarget.Material)
-				mesh.Begin(self.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
+		else
+			for t, v in ipairs(surf.Vertices[k]) do
+				v.u, v.v = v.u / divuv, v.v / divuv
+				if t < 3 then continue end
+				for _, i in ipairs {t - 1, t, 1} do
+					local v = surf.Vertices[k][i]
+					mesh.Normal(surf.Normals[k])
+					mesh.Position(v.pos)
+					mesh.TexCoord(0, v.u, v.v)
+					mesh.TexCoord(1, v.u, v.v)
+					mesh.AdvanceVertex()
+				end
+				
+				ContinueMesh()
 			end
 		end
 		-- surf.Angles[k], surf.Areas[k], surf.Normals[k], surf.Origins[k], surf.Vertices[k] = nil
