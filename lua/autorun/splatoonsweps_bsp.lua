@@ -1,8 +1,8 @@
 
---This lua parses the bsp file of current map.
+--This lua parses current map.
 if not SplatoonSWEPs then return end
 SplatoonSWEPs.BSP = SplatoonSWEPs.BSP or {}
-local LUMP = {
+local LUMP = { --Lump names. most of these are unused in SplatoonSWEPs.
 	ENTITIES						=  0,
 	PLANES							=  1,
 	TEXDATA							=  2,
@@ -92,7 +92,7 @@ local function read(arg)
 			local y = bsp.bsp:ReadFloat()
 			local z = bsp.bsp:ReadFloat()
 			return Vector(x, y, z)
-		else
+		elseif isfunction(bsp.bsp["Read" .. arg]) then
 			return bsp.bsp["Read" .. arg](bsp.bsp)
 		end
 	else
@@ -108,7 +108,7 @@ function bsp:Init()
 	self.bspname = "maps/" .. game.GetMap() .. ".bsp"
 	assert(file.Exists(self.bspname, "GAME"), "attempt to load a non-existent map!")
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
-	self.FaceIndex = 0
+	self.FaceIndex = 0 --Every face has an individual number.
 	
 	self:ReadHeader()
 	self:Parse(LUMP.PLANES)
@@ -126,7 +126,7 @@ function bsp:Init()
 	end
 	
 	self:Parse(LUMP.MODELS)
-	self:Parse(SplatoonSWEPs.HDR and LUMP.FACES_HDR or LUMP.FACES)
+	self:Parse(LUMP.FACES)
 	self:Parse(LUMP.DISPINFO)
 	self:Parse(LUMP.GAME_LUMP)
 	
@@ -282,8 +282,7 @@ end,
 		local an = math.abs(n)
 		local edge = edges.data[an]
 		local v1, v2 = edge[1], edge[2]
-		if n < 0 then v1, v2 = v2, v1 end
-		lump.data[i] = vertexes.data[v1] --{start = vertexes.data[v1], endpos = vertexes.data[v2]}
+		lump.data[i] = vertexes.data[n < 0 and v2 or v1]
 	end
 	vertexes.data, edges.data = nil
 end,
@@ -418,6 +417,7 @@ end,
 		local TexInfoTable = texinfo.data[read "Short"]
 		local dispinfo = read "Short"
 		bsp.bsp:Skip(42)
+		
 		if not (bsp.FirstFace < i and i < bsp.NumFaces) then continue end
 		
 		local texname = TexInfoTable.TexData.name:lower()
@@ -458,9 +458,9 @@ end,
 		
 		if dispinfo >= 0 then
 			lump.data[i] = v3d
-			continue
+		else
+			MakeSurface(mins, maxs, normal, angle, center, v2d, v3d)
 		end
-		MakeSurface(mins, maxs, normal, angle, center, v2d, v3d)
 	end
 end,
 
@@ -474,72 +474,76 @@ end,
 		local startPosition = read "Vector"
 		local DispVertStart = read "Long"
 		bsp.bsp:Skip(4) --DispTriStart
-		local power = 2^(read "Long") + 1
+		local power = 2^read "Long" + 1
 		bsp.bsp:Skip(4 * 3) --minTess, smoothingAngle, contents
+		
 		local verts = faces.data[read "UShort"]
 		if not verts or #verts ~= 4 then continue end
 		
-		local dispverts = {}
-		for k = 0, power^2 - 1 do
-			bsp.bsp:Seek(dispvertsoffset + 20 * (DispVertStart + k))
-			dispverts[k] = {}
-			dispverts[k].vec = read "Vector"
-			dispverts[k].dist = read "Float"
-		end
-
-		--DispInfo.startPosition isn't always equal to the first edge so let's find correct one
-		local indices, mindist, dist, startedge = {}, math.huge, 0, 0
-		for k, v in ipairs(verts) do
-			dist = startPosition:DistToSqr(v)
-			if dist < mindist then
+		if CLIENT then
+			local dispverts = {}
+			for k = 0, power^2 - 1 do
+				bsp.bsp:Seek(dispvertsoffset + 20 * (DispVertStart + k))
+				dispverts[k] = {}
+				dispverts[k].vec = read "Vector"
+				dispverts[k].dist = read "Float"
+			end
+			
+			--DispInfo.startPosition isn't always equal to verts[1] so let's find correct one
+			local indices, mindist, startedge = {}, math.huge, 0
+			for k, v in ipairs(verts) do
+				local dist = startPosition:DistToSqr(v)
+				if dist > mindist then continue end
 				startedge = k
 				mindist = dist
 			end
-		end
-
-		for k = 1, 4 do
-			indices[k] = (k + startedge - 2) % 4 + 1
-		end
-
-		verts[1],
-		verts[2],
-		verts[3],
-		verts[4]
-		=	verts[indices[1]],
-			verts[indices[2]],
-			verts[indices[3]],
-			verts[indices[4]]
-
-		local u1 = verts[4] - verts[1]
-		local u2 = verts[3] - verts[2]
-		local v1 = verts[2] - verts[1]
-		local v2 = verts[3] - verts[4]
-		local div1, div2 -- vector_origin, vector_origin
-		for k, w in pairs(dispverts) do --Get the world positions of the displacements
-			x = k % power --0 <= x <= power
-			y = math.floor(k / power) --0 <= y <= power
-			div1, div2 = v1 * y / (power - 1), u1 + v2 * y / (power - 1)
-			div2 = div2 - div1
-			w.origin = div1 + div2 * x / (power - 1)
-			w.pos = startPosition + w.origin + w.vec * w.dist
-		end
-		
-		--Generate triangles from displacement mesh.
-		for k = 0, #dispverts do
-			local tri_inv = k % 2 == 0
-			if k % power < power - 1 and math.floor(k / power) < power - 1 then
-				MakeDispTriangle {
-					dispverts[tri_inv and k + power + 1 or k + power].pos,
-					dispverts[k + 1].pos,
-					dispverts[k].pos,
-				}
-
-				MakeDispTriangle {
-					dispverts[tri_inv and k or k + 1].pos,
-					dispverts[k + power].pos,
-					dispverts[k + power + 1].pos,
-				}
+			
+			for k = 1, 4 do
+				indices[k] = (k + startedge - 2) % 4 + 1
 			end
+			
+			verts[1],
+			verts[2],
+			verts[3],
+			verts[4]
+			=	verts[indices[1]],
+				verts[indices[2]],
+				verts[indices[3]],
+				verts[indices[4]]
+			
+			local u1 = verts[4] - verts[1]
+			local u2 = verts[3] - verts[2]
+			local v1 = verts[2] - verts[1]
+			local v2 = verts[3] - verts[4]
+			local div1, div2 -- vector_origin, vector_origin
+			for k, w in pairs(dispverts) do --Get the world positions of the displacements
+				x = k % power --0 <= x <= power
+				y = math.floor(k / power) --0 <= y <= power
+				div1, div2 = v1 * y / (power - 1), u1 + v2 * y / (power - 1)
+				div2 = div2 - div1
+				w.origin = div1 + div2 * x / (power - 1)
+				w.pos = startPosition + w.origin + w.vec * w.dist
+			end
+			
+			--Generate triangles from displacement mesh.
+			for k = 0, #dispverts do
+				local tri_inv = k % 2 == 0
+				if k % power < power - 1 and math.floor(k / power) < power - 1 then
+					MakeDispTriangle {
+						dispverts[tri_inv and k + power + 1 or k + power].pos,
+						dispverts[k + 1].pos,
+						dispverts[k].pos,
+					}
+
+					MakeDispTriangle {
+						dispverts[tri_inv and k or k + 1].pos,
+						dispverts[k + power].pos,
+						dispverts[k + power + 1].pos,
+					}
+				end
+			end
+		else
+			
 		end
 	end
 end,
@@ -570,9 +574,7 @@ end,
 			modelnames[e] = ""
 			for i = 1, 128 do
 				local c = read(1)
-				if c ~= '\x00' then
-					modelnames[e] = modelnames[e] .. c
-				end
+				modelnames[e] = modelnames[e] .. (c ~= "\x00" and c or "")
 			end
 		end
 		
