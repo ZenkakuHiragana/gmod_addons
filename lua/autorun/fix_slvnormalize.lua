@@ -7,8 +7,8 @@ if SLVBase and not SLVBase.IsFixedNormalizeAngle then
 	local meta = FindMetaTable("Angle")
 	local NormalizeAngle = meta.Normalize
 	SLVBase.IsFixedNormalizeAngle = true
-	function meta:Normalize(ang)
-		ang:Set(NormalizeAngle(ang))
-		return ang
+	function meta:Normalize()
+		self:Set(NormalizeAngle(self))
+		return self
 	end
 end
