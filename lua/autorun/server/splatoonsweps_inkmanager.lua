@@ -60,19 +60,10 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 	for node in SplatoonSWEPs:BSPPairs(reference_polys) do
 		local surf = node.Surfaces
 		for i = 1, #surf.Origins do
-			local isdisp = surf.Indices[i] < 0
-			if isdisp and SplatoonSWEPs.Displacements.Mins[-surf.Indices[i]]
-			and SplatoonSWEPs.Displacements.Maxs[-surf.Indices[i]] then
-				surf.Mins[i] = SplatoonSWEPs.Displacements.Mins[-surf.Indices[i]]
-				surf.Maxs[i] = SplatoonSWEPs.Displacements.Maxs[-surf.Indices[i]]
-			end
-			
-			if surf.Normals[i]:Dot(normal) <= COS_MAX_DEG_DIFF * (isdisp and .5 or 1) then continue end
-			if not SplatoonSWEPs:CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
-			-- DebugBox(surf.Mins[i], surf.Maxs[i])
-			
+			if surf.Normals[i]:Dot(normal) <= COS_MAX_DEG_DIFF * (surf.Indices[i] < 0 and .5 or 1) or
+			not SplatoonSWEPs:CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
 			net.Start "SplatoonSWEPs: DrawInk"
-			net.WriteUInt(math.abs(surf.Indices[i]), 20)
+			net.WriteInt(surf.Indices[i], 20)
 			net.WriteUInt(color, SplatoonSWEPs.COLOR_BITS)
 			net.WriteVector(pos)
 			net.WriteFloat(radius)
@@ -98,7 +89,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 	end
-	print(inkqueue)
+	-- print(inkqueue)
 	coroutine.yield(true)
 end
 
@@ -163,8 +154,8 @@ function SplatoonSWEPs:GetSurfaceColor(tr)
 	for node in self:BSPPairs {tr.HitPos} do
 		local surf = node.Surfaces
 		for i = 1, #surf.Origins do
-			if surf.Normals[i]:Dot(tr.HitNormal) <= MAX_COS_GETSURF then continue end
-			if not self:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
+			if surf.Normals[i]:Dot(tr.HitNormal) <= COS_MAX_DEG_DIFF * (surf.Indices[i] < 0 and .5 or 1) or not
+			self:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
 			local p2d = self:To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
 			for r in SortedPairsByValue(surf.InkCircles[i], true) do
 				if p2d:DistToSqr(r.pos) < r.radiusSqr then
@@ -179,7 +170,6 @@ SplatoonSWEPs.InkManager = {
 	DoCoroutines = coroutine.create(DoCoroutines),
 	Threads = {
 		ProcessQueue = coroutine.create(ProcessQueue),
-		-- Think2 = nil,
 	},
 	Think = function()
 		local self = SplatoonSWEPs.InkManager
@@ -188,10 +178,6 @@ SplatoonSWEPs.InkManager = {
 		if not ok then ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n") end
 	end,
 	AddQueue = function(pos, normal, radius, color, polys)
-		-- print(coroutine.status(SplatoonSWEPs.InkManager.Threads.ProcessQueue))
-		-- if coroutine.status(SplatoonSWEPs.InkManager.Threads.ProcessQueue) == "running" then
-			-- SplatoonSWEPs.InkManager.Threads.ProcessQueue = coroutine.create(ProcessQueue)
-		-- end
 		table.insert(PaintQueue, {
 			pos = pos,
 			normal = normal,

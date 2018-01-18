@@ -150,9 +150,8 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		table.insert(sortedsurfs, k)
 		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2
 		
-		--Using next-fit approach
 		bu, bv = surf.Bounds[k].x / convertunit, surf.Bounds[k].y / convertunit
-		nv = math.max(nv, bv)
+		nv = math.max(nv, bv) --UV-coordinate placement, using next-fit approach
 		if u + bu > 1 then --Creating a new shelf
 			if v + nv + rtmergin > 1 then table.insert(movesurfs, {id = bk, v = v}) end
 			u, v, nv = 0, v + nv + rtmergin, bv
@@ -169,8 +168,9 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 			NumMeshTriangles = NumMeshTriangles + #self.Displacements[k].Triangles - 2
 			for i = 0, #self.Displacements[k].Positions do
 				local vertex = self.Displacements[k].Positions[i]
-				local meshvert = surf.Vertices[k][1].pos + vertex.origin
+				local meshvert = vertex.pos - surf.Normals[k] * surf.Normals[k]:Dot(vertex.vec * vertex.dist)
 				local UV = self:To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
+				-- if UV.x < 0 or UV.y < 0 or UV.x > bu or UV.y > bv then print(UV.x, UV.y, bu, bv) end
 				vertex.u, vertex.v = UV.x + u, UV.y + v
 			end
 		end
@@ -222,6 +222,8 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		surf.u[k], surf.v[k] = surf.u[k] / divuv, surf.v[k] / divuv
 		if self.Displacements[k] then
 			local verts = self.Displacements[k].Positions
+			for _, v in pairs(verts) do v.u, v.v = v.u / divuv, v.v / divuv end
+			for _, v in ipairs(surf.Vertices[k]) do v.u, v.v = v.u / divuv, v.v / divuv end
 			for _, t in ipairs(self.Displacements[k].Triangles) do
 				local tv = {verts[t[1]], verts[t[2]], verts[t[3]]}
 				local n = (tv[1].pos - tv[2].pos):Cross(tv[3].pos - tv[2].pos):GetNormalized()

@@ -9,23 +9,19 @@ local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 local inklightmaterial = Material "splatoonsweps/splatooninklight"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
 local WaterOverlap = Material "splatoonsweps/splatoonwater"
-local colormat = Material "color"
-local NumPoly = 16
-local Polysin, Polycos = {}, {}
-local LightmapSampleTable = {[7] = 1.3, [14] = 2.4, [18] = 3.6}
-local LightmapSampleTable = {[7] = 1.5}
-local Lightsin, Lightcos = {}, {}
+local wireframe = Material "color"
+local LightmapSampleTable = {[7] = .8}
+local NumPoly, Polysin, Polycos, Lightrad = 16, {}, {}, {}
 for i = 0, NumPoly do
 	local a = math.rad(i * -360 / NumPoly)
 	Polysin[i], Polycos[i] = math.sin(a), math.cos(a)
 end
 
 for n in pairs(LightmapSampleTable) do
-	Lightsin[n], Lightcos[n] = {}, {}
+	Lightrad[n] = {}
 	local frac = math.rad(360 / n)
-	for k = 1, n do
-		Lightsin[n][k] = math.sin(frac * k)
-		Lightcos[n][k] = math.cos(frac * k)
+	for i = 1, n do
+		Lightrad[n][i] = Vector(math.cos(frac * i), math.sin(frac * i))
 	end
 end
 
@@ -37,7 +33,6 @@ function SplatoonSWEPs:DrawMeshes(bDrawingSkybox, bDrawingDepth)
 	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
 	render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
 	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
-	
 	if LocalPlayer():FlashlightIsOn() or #ents.FindByClass "*projectedtexture*" > 0 then
 		render.PushFlashlightMode(true)
 		for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
@@ -72,15 +67,7 @@ local function ProcessQueue()
 			local radius = self:UnitsToPixels(q.r)
 			local size = radius * 2
 			local surf = self.SequentialSurfaces
-			-- q.angle = Angle(surf.Angles[q.facenumber])
-			-- q.normal = surf.Normals[q.facenumber]
-			-- q.origin = surf.Origins[q.facenumber]
 			if surf.Moved[q.facenumber] then q.angle:RotateAroundAxis(q.normal, -90) end
-			for i, v in ipairs(surf.Vertices[q.facenumber]) do
-				local w = surf.Vertices[q.facenumber][i % #surf.Vertices[q.facenumber] + 1]
-				-- DebugLine(Vector(v.u, v.v) * c, Vector(w.u, w.v) * c, true)
-				DebugLine(v.pos, w.pos, true)
-			end
 			local org = self:UVToPixels(Vector(surf.u[q.facenumber], surf.v[q.facenumber]))
 			local bound = self:UnitsToPixels(surf.Bounds[q.facenumber])
 			local center = self:UnitsToPixels(self:To2D(q.pos, q.origin, q.angle))
@@ -132,23 +119,24 @@ local function ProcessQueue()
 			render.PopRenderTarget()
 			
 			--Draw on lightmap
-			radius, size, bound = math.ceil(radius / 4), math.ceil(size / 4), bound / 2
-			center, org = center / 2, org / 2
-			s, b = s / 2, b / 2
-			-- s = Vector(math.floor(s.x / 2), math.floor(s.y / 2))
-			-- b = Vector(math.ceil(b.x / 2), math.ceil(b.y / 2))
+			local lightdiff = (center - org) * (q.isdisplacement and 0 or 1)
+			local lightorg = q.isdisplacement and q.pos or q.origin
+			radius, size, bound = radius / 2, size / 2, bound / 2
+			center, org, s, b = center / 2, org / 2, s / 2, b / 2
+			s.x, s.y, b.x, b.y = math.floor(s.x), math.floor(s.y), math.ceil(b.x), math.ceil(b.y)
 			render.PushRenderTarget(self.RenderTarget.Lightmap)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
 			surface.SetDrawColor(light:ToColor())
 			surface.SetMaterial(lightmapmaterial)
-			surface.DrawTexturedRect(math.floor(center.x - radius), math.floor(center.y - radius), size, size)
-			for i = 1, 7 do
-				local r = Vector(Lightcos[7][i], Lightsin[7][i]) * radius * 1.5 + center
-				lightmapmaterial:SetVector("$color", GetLight(self:To3D(
-					self:PixelsToUnits((r - org) * 2), q.origin, q.angle), q.normal))
-				r.x, r.y = r.x - radius * 2, r.y - radius * 2
-				surface.DrawTexturedRect(r.x, r.y, size * 2, size * 2)
+			surface.DrawTexturedRect(center.x - radius, center.y - radius, size, size)
+			for n, mul in pairs(LightmapSampleTable) do
+				for i = 1, n do
+					local r = Lightrad[n][i] * radius * mul
+					lightmapmaterial:SetVector("$color", GetLight(self:To3D(self:PixelsToUnits(r * 2 + lightdiff), lightorg, q.angle), q.normal))
+					r = r + center - self.vector_one * radius
+					surface.DrawTexturedRect(r.x, r.y, size, size)
+				end
 			end
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)

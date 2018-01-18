@@ -3,7 +3,6 @@
 --The core of new ink system.
 
 SplatoonSWEPs = SplatoonSWEPs or {
-	Displacements = {Maxs = {}, Mins = {}},
 	Models = {},
 	InkCounter = 0,
 }

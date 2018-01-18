@@ -147,7 +147,7 @@ function bsp:ReadHeader()
 	end
 end
 
-local function GetRotatedAABB(v2d, angle)
+local function GetRotatedAABB(v2d, angle, disp)
 	local mins = Vector(math.huge, math.huge)
 	local maxs = -mins
 	for k, v in ipairs(v2d) do
@@ -159,23 +159,35 @@ local function GetRotatedAABB(v2d, angle)
 		maxs.y = math.max(maxs.y, v.y)
 	end
 	
+	if disp then
+		for k = 0, #disp.Positions do
+			local v = Vector(disp.Positions[k].pos2d)
+			v:Rotate(angle)
+			mins.x = math.min(mins.x, v.x)
+			mins.y = math.min(mins.y, v.y)
+			maxs.x = math.max(maxs.x, v.x)
+			maxs.y = math.max(maxs.y, v.y)
+		end
+	end
+	
 	return mins, maxs
 end
 
-local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, isdisp)
+local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	if #v3d < 3 or bsp.FaceIndex > (600000 or 1247232) then return end
 	--TODO: if the face is underwater then return end
 	
+	bsp.FaceIndex = bsp.FaceIndex + 1
 	local area, bound, minangle, minmins = math.huge, nil, nil, nil
 	for i, v in ipairs(v2d) do --Get minimum AABB with O(n^2)
 		local seg = v2d[i % #v2d + 1] - v
 		local ang = Angle(0, 90 - math.deg(math.atan2(seg.y, seg.x)))
-		local mins, maxs = GetRotatedAABB(v2d, ang)
+		local mins, maxs = GetRotatedAABB(v2d, ang, disp)
 		local tmpbound = maxs - mins
 		if area > tmpbound.x * tmpbound.y then
 			if tmpbound.x < tmpbound.y then
 				ang.yaw = ang.yaw - 90
-				minmins, maxs = GetRotatedAABB(v2d, ang)
+				minmins, maxs = GetRotatedAABB(v2d, ang, disp)
 			else
 				minmins = mins
 			end
@@ -185,18 +197,11 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, isdisp)
 		end
 	end
 	
-	for i, v in ipairs(v2d) do
-		v:Rotate(minangle)
-		v:Sub(minmins)
-	end
-	
 	minmins:Rotate(-minangle)
 	origin = SplatoonSWEPs:To3D(minmins, origin, angle)
 	angle:RotateAroundAxis(normal, -minangle.yaw)
-	bsp.FaceIndex = bsp.FaceIndex + 1
 	if CLIENT then
 		SplatoonSWEPs.AreaBound = SplatoonSWEPs.AreaBound + area
-		SplatoonSWEPs.Displacements[bsp.FaceIndex] = isdisp or nil
 		local surf = SplatoonSWEPs.SequentialSurfaces
 		table.insert(surf.Angles, angle)
 		table.insert(surf.Areas, area)
@@ -205,10 +210,11 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, isdisp)
 		table.insert(surf.Origins, origin)
 		table.insert(surf.Vertices, v3d)
 	else
-		local leaf = SplatoonSWEPs:FindLeaf(v3d)
+		if disp then disp.Positions = nil end
+		local leaf = SplatoonSWEPs:FindLeaf(disp or v3d)
 		local surf = leaf.Surfaces
 		table.insert(surf.Angles, angle)
-		table.insert(surf.Indices, bsp.FaceIndex * (isdisp and -1 or 1))
+		table.insert(surf.Indices, bsp.FaceIndex * (disp and -1 or 1))
 		table.insert(surf.InkCircles, {})
 		table.insert(surf.Maxs, maxs)
 		table.insert(surf.Mins, mins)
@@ -225,12 +231,8 @@ local function MakeTriangle(vert)
 	local maxs = -mins
 	local v2d = {}
 	for i, v in ipairs(vert) do
-		maxs.x = math.max(maxs.x, v.x) --Calculate bounding box
-		maxs.y = math.max(maxs.y, v.y)
-		maxs.z = math.max(maxs.z, v.z)
-		mins.x = math.min(mins.x, v.x)
-		mins.y = math.min(mins.y, v.y)
-		mins.z = math.min(mins.z, v.z)
+		mins = SplatoonSWEPs:MinVector(mins, v) --Calculate bounding box
+		maxs = SplatoonSWEPs:MaxVector(maxs, v)
 		v2d[i] = SplatoonSWEPs:To2D(v, origin, angle)
 	end
 	
@@ -406,6 +408,8 @@ end,
 	local surfedges = bsp:GetLump(LUMP.SURFEDGES)
 	local texinfo = bsp:GetLump(LUMP.TEXINFO)
 	local lighting = bsp:GetLump(LUMP.LIGHTING)
+	local dispinfooffset = bsp:GetLump(LUMP.DISPINFO).offset
+	local dispvertsoffset = bsp:GetLump(LUMP.DISP_VERTS).offset
 	lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
 	for i = 0, lump.num do
 		local PlaneTable = planes.data[read "UShort"]
@@ -421,7 +425,8 @@ end,
 		if not (bsp.FirstFace < i and i < bsp.NumFaces) then continue end
 		
 		local texname = TexInfoTable.TexData.name:lower()
-		if texname:find "tools/" or texname:find "water" or bit.band(TexInfoTable.flags, TextureFilterBits) ~= 0 then
+		if texname:find "tools/" or texname:find "water" or
+			bit.band(TexInfoTable.flags, TextureFilterBits) ~= 0 then
 			continue
 		end
 
@@ -452,95 +457,72 @@ end,
 		end
 		
 		local isdisp = dispinfo >= 0
-		MakeSurface(mins, maxs, normal, angle, center, v2d, v3d, isdisp)
-		lump.data[i] = isdisp and {Vertices = v3d, Index = bsp.FaceIndex} or nil
-	end
-end,
-
-[LUMP.DISPINFO] = function(lump)
-	local size = 176
-	local faces = bsp:GetLump(LUMP.FACES)
-	local dispvertsoffset = bsp:GetLump(LUMP.DISP_VERTS).offset
-	lump.num = math.floor(lump.length / size) - 1
-	for i = 0, lump.num do
-		bsp.bsp:Seek(lump.offset + i * size)
-		local startPosition = read "Vector"
-		local DispVertStart = read "Long"
-		bsp.bsp:Skip(4) --DispTriStart
-		local power = 2^read "Long" + 1
-		bsp.bsp:Skip(4 * 3) --minTess, smoothingAngle, contents
-		
-		local face = faces.data[read "UShort"]
-		local verts = face.Vertices
-		if not verts or #verts ~= 4 then continue end
-		
-		local dispverts = {}
-		for k = 0, power^2 - 1 do
-			bsp.bsp:Seek(dispvertsoffset + 20 * (DispVertStart + k))
-			dispverts[k] = {}
-			dispverts[k].vec = read "Vector"
-			dispverts[k].dist = read "Float"
-		end
-		
-		--DispInfo.startPosition isn't always equal to verts[1] so let's find correct one
-		local indices, mindist, startedge = {}, math.huge, 0
-		local mins = Vector(math.huge, math.huge, math.huge)
-		local maxs = -mins
-		for k, v in ipairs(verts) do
-			mins = SplatoonSWEPs:MinVector(mins, v) --Calculate bounding box
-			maxs = SplatoonSWEPs:MaxVector(maxs, v)
-			local dist = startPosition:DistToSqr(v)
-			if dist > mindist then continue end
-			startedge = k
-			mindist = dist
-		end
-		
-		for k = 1, 4 do
-			indices[k] = (k + startedge - 2) % 4 + 1
-		end
-		
-		verts[1],
-		verts[2],
-		verts[3],
-		verts[4]
-		=	verts[indices[1]],
-			verts[indices[2]],
-			verts[indices[3]],
-			verts[indices[4]]
-		
-		local u1 = verts[4] - verts[1]
-		local u2 = verts[3] - verts[2]
-		local v1 = verts[2] - verts[1]
-		local v2 = verts[3] - verts[4]
-		local div1, div2 -- vector_origin, vector_origin
-		
-		for k, w in pairs(dispverts) do --Get the world positions of the displacements
-			x = k % power --0 <= x <= power
-			y = math.floor(k / power) --0 <= y <= power
-			div1, div2 = v1 * y / (power - 1), u1 + v2 * y / (power - 1)
-			div2 = div2 - div1
-			w.origin = div1 + div2 * x / (power - 1)
-			w.pos = startPosition + w.origin + w.vec * w.dist
-			w.vec, w.dist = nil
-			mins = SplatoonSWEPs:MinVector(mins, w.pos) --Calculate bounding box
-			maxs = SplatoonSWEPs:MaxVector(maxs, w.pos)
-		end
-		
-		if CLIENT then
-			--Generate triangles from displacement mesh.
-			local disp = {Positions = dispverts, Triangles = {}}
-			SplatoonSWEPs.Displacements[face.Index] = disp
-			for k = 0, #dispverts do
-				local tri_inv = k % 2 == 0
-				if k % power < power - 1 and math.floor(k / power) < power - 1 then
-					table.insert(disp.Triangles, {tri_inv and k + power + 1 or k + power, k + 1, k})
-					table.insert(disp.Triangles, {tri_inv and k or k + 1, k + power, k + power + 1})
+		if isdisp then
+			local here = bsp.bsp:Tell()
+			bsp.bsp:Seek(dispinfooffset + dispinfo * 176)
+			local startPosition = read "Vector"
+			local DispVertStart = read "Long"
+			bsp.bsp:Skip(4) --DispTriStart
+			local power = 2^read "Long" + 1
+			local numdists = power^2
+			local dispverts = {}
+			for k = 0, numdists - 1 do
+				bsp.bsp:Seek(dispvertsoffset + 20 * (DispVertStart + k))
+				dispverts[k] = {}
+				dispverts[k].vec = read "Vector"
+				dispverts[k].dist = read "Float"
+			end
+			
+			--DispInfo.startPosition isn't always equal to v3d[1] so let's find correct one
+			do local i, min, start = {}, math.huge, 0
+				for k, v in ipairs(v3d) do
+					mins = SplatoonSWEPs:MinVector(mins, v) --Calculate bounding box
+					maxs = SplatoonSWEPs:MaxVector(maxs, v)
+					local dist = startPosition:DistToSqr(v)
+					if dist > min then continue end
+					start, min = k, dist
+				end
+				
+				for k = 1, 4 do i[k] = (k + start - 2) % 4 + 1 end
+				v3d[1], v3d[2], v3d[3], v3d[4] = v3d[i[1]], v3d[i[2]], v3d[i[3]], v3d[i[4]]
+			end
+			
+			local div1, div2 -- vector_origin, vector_origin
+			local u1, u2 = v3d[4] - v3d[1], v3d[3] - v3d[2]
+			local v1, v2 = v3d[2] - v3d[1], v3d[3] - v3d[4]
+			for k, v in pairs(dispverts) do --Get the world positions of the displacements
+				x = k % power --0 <= x <= power
+				y = math.floor(k / power) --0 <= y <= power
+				div1, div2 = v1 * y / (power - 1), u1 + v2 * y / (power - 1)
+				div2 = div2 - div1
+				v.origin = div1 + div2 * x / (power - 1)
+				v.pos = startPosition + v.origin + v.vec * v.dist
+				v.pos2d = SplatoonSWEPs:To2D(v.pos - normal * normal:Dot(v.vec * v.dist), center, angle)
+				mins = SplatoonSWEPs:MinVector(mins, v.pos) --Calculate bounding box
+				maxs = SplatoonSWEPs:MaxVector(maxs, v.pos)
+			end
+			
+			if CLIENT then --Generate triangles from displacement mesh.
+				isdisp = {Positions = dispverts, Triangles = {}}
+				SplatoonSWEPs.Displacements[bsp.FaceIndex + 1] = isdisp
+				for k = 0, #dispverts do
+					local tri_inv = k % 2 == 0
+					if k % power < power - 1 and math.floor(k / power) < power - 1 then
+						table.insert(isdisp.Triangles, {tri_inv and k + power + 1 or k + power, k + 1, k})
+						table.insert(isdisp.Triangles, {tri_inv and k or k + 1, k + power, k + power + 1})
+					end
+				end
+			else
+				isdisp = {Positions = dispverts, v3d[1], v3d[2], v3d[3], v3d[4]}
+				for k = 0, #dispverts do
+					table.insert(isdisp, dispverts[k].pos)
 				end
 			end
-		else
-			SplatoonSWEPs.Displacements.Mins[face.Index] = mins
-			SplatoonSWEPs.Displacements.Maxs[face.Index] = maxs
+			
+			bsp.bsp:Seek(here)
 		end
+		
+		MakeSurface(mins, maxs, normal, angle, center, v2d, v3d, isdisp)
 	end
 end,
 
