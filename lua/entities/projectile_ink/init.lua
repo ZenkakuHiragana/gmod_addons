@@ -4,17 +4,9 @@
 AddCSLuaFile "shared.lua"
 include "shared.lua"
 
-local dropangle = Angle(0, 0, 90)
-local reference_polys = {}
-local reference_vert = Vector(1)
-local circle_polys = 360 / 12
-for i = 1, circle_polys do
-	table.insert(reference_polys, Vector(reference_vert))
-	reference_vert:Rotate(Angle(0, circle_polys, 0))
-end
-
 ENT.DisableDuplicator = true
 ENT.IsSplatoonProjectile = true
+local dropangle = Angle(0, 0, 90)
 function ENT:Initialize()
 	if not file.Exists(self.FlyingModel, "GAME") then
 		self:Remove()
@@ -129,7 +121,7 @@ function ENT:PhysicsCollide(coldata, collider)
 			SplatoonSWEPs.mPaintFarDistance, SplatoonSWEPs.mPaintNearDistance,
 			self.MinRadius, self.InkRadius),
 			self.ColorCode,
-			reference_polys
+			coldata.OurOldVelocity:Angle().yaw
 		)
 	elseif self.Damage > 0 then
 		local d, o = DamageInfo(), self:GetOwner()

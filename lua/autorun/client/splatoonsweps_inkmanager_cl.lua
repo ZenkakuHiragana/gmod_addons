@@ -5,6 +5,7 @@ SplatoonSWEPs.InkQueue = {}
 
 local MAX_PROCESS_QUEUE_AT_ONCE = 80
 local inkmaterial = Material "splatoonsweps/splatoonink"
+-- local inkmaterial = Material "vgui/cursors/up"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 local inklightmaterial = Material "splatoonsweps/splatooninklight"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
@@ -64,41 +65,21 @@ local function ProcessQueue()
 		for i, q in ipairs(self.InkQueue) do
 			q.done = true
 			local c = self:GetColor(q.c)
-			local radius = self:UnitsToPixels(q.r)
+			local radius = math.Round(self:UnitsToPixels(q.r))
 			local size = radius * 2
 			local surf = self.SequentialSurfaces
 			if surf.Moved[q.facenumber] then q.angle:RotateAroundAxis(q.normal, -90) end
 			local org = self:UVToPixels(Vector(surf.u[q.facenumber], surf.v[q.facenumber]))
 			local bound = self:UnitsToPixels(surf.Bounds[q.facenumber])
 			local center = self:UnitsToPixels(self:To2D(q.pos, q.origin, q.angle))
-			if surf.Moved[q.facenumber] then center.x = -center.x end center = center + org
+			if surf.Moved[q.facenumber] then center.x = -center.x end
+			center.x, center.y = math.Round(center.x + org.x), math.Round(center.y + org.y)
 			local s = Vector(math.floor(org.x) - 1, math.floor(org.y) - 1)
 			local b = Vector(math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1)
 			local light = GetLight(q.pos, q.normal)
-			local corner = center - Vector(radius, radius)
-			if not self:CollisionAABB2D(s, b, corner, corner + Vector(size, size)) then continue end
-			
-			inkmaterial:SetVector("$color", Vector(c.r, c.g, c.b) / 255)
-			inklightmaterial:SetFloat("$alpha", q.alpha)
-			lightmapmaterial:SetVector("$color", light)
-			render.PushRenderTarget(self.RenderTarget.BaseTexture)
-			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
-			cam.Start2D()
-			surface.SetDrawColor(color_white)
-			surface.SetMaterial(inkmaterial)
-			surface.DrawTexturedRect(corner.x, corner.y, size, size)
-			surface.SetMaterial(inklightmaterial)
-			surface.DrawTexturedRectRotated(center.x, center.y, size, size, q.rotate)
-			cam.End2D()
-			render.SetScissorRect(0, 0, 0, 0, false)
-			render.PopRenderTarget()
-			
-			--Draw on normal map
-			render.PushRenderTarget(self.RenderTarget.Normalmap)
-			render.OverrideBlendFunc(true, BLEND_ONE, BLEND_ZERO, BLEND_ONE, BLEND_ZERO)
-			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
-			cam.Start2D()
-			surface.SetMaterial(normalmaterial)
+			local corner = center - self.vector_one * radius
+			if not self:CollisionAABB2D(s, b, corner, corner + self.vector_one * size) then continue end
+			local _, roll = WorldToLocal(vector_origin, q.angle, vector_origin, q.normal:Angle())
 			local cr = radius * 1.01
 			local circle = {
 				{x = center.x, y = center.y, u = .5, v = .5},
@@ -112,6 +93,23 @@ local function ProcessQueue()
 					v = Polysin[i] / 2 + .5,
 				})
 			end
+			inkmaterial:SetVector("$color", Vector(c.r, c.g, c.b) / 255)
+			render.PushRenderTarget(self.RenderTarget.BaseTexture)
+			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
+			cam.Start2D()
+			surface.SetDrawColor(color_white)
+			surface.SetMaterial(inkmaterial)
+			surface.DrawTexturedRectRotated(center.x, center.y, size, size, roll.roll - q.inkangle)
+			cam.End2D()
+			render.SetScissorRect(0, 0, 0, 0, false)
+			render.PopRenderTarget()
+			
+			--Draw on normal map
+			render.PushRenderTarget(self.RenderTarget.Normalmap)
+			render.OverrideBlendFunc(true, BLEND_ONE, BLEND_ZERO, BLEND_ONE, BLEND_ZERO)
+			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
+			cam.Start2D()
+			surface.SetMaterial(normalmaterial)
 			surface.DrawPoly(circle)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)

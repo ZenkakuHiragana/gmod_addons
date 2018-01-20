@@ -11,6 +11,14 @@ local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surface
 local MAX_PROCESS_QUEUE_AT_ONCE = 4 --Running QueueCoroutine() at once
 local MAX_INKQUEUE_AT_ONCE = 50 --Processing new ink request at once
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
+local reference_polys = {}
+local reference_vert = Vector(1)
+local circle_polys = 360 / 12
+for i = 1, circle_polys do
+	table.insert(reference_polys, Vector(reference_vert))
+	reference_vert:Rotate(Angle(0, circle_polys))
+end
+
 local function MakeRect(tx, ty, x1, x2, y1, y2)
 	return {Vector(tx[x1], ty[y1]), Vector(tx[x2], ty[y2])}
 end
@@ -45,19 +53,20 @@ local function AddInkRectangle(ink, newink, sz)
 	ink[newink] = sz
 end
 
-local function QueueCoroutine(pos, normal, radius, color, polys)
+local function QueueCoroutine(pos, normal, radius, color, angle)
 	local ang = normal:Angle()
-	local reference_polys = {}
-	for i, v in ipairs(polys) do --Scaling
-		reference_polys[i] = SplatoonSWEPs:To3D(v * radius, pos, ang)
+	local polys = {}
+	for i, v in ipairs(reference_polys) do --Scaling
+		polys[i] = SplatoonSWEPs:To3D(v * radius, pos, ang)
 	end
 	
 	local inkqueue = 0
 	local rectsize = radius * rootpi
 	local sizevec = Vector(rectsize, rectsize)
 	local whitealpha, whiterotate = math.Rand(0, 63), math.Rand(0, 255)
-	local mins, maxs = SplatoonSWEPs:GetBoundingBox(reference_polys, MIN_BOUND)
-	for node in SplatoonSWEPs:BSPPairs(reference_polys) do
+	local mins, maxs = SplatoonSWEPs:GetBoundingBox(polys, MIN_BOUND)
+	if normal:Dot(vector_up) <= COS_MAX_DEG_DIFF then angle = 0 end
+	for node in SplatoonSWEPs:BSPPairs(polys) do
 		local surf = node.Surfaces
 		for i = 1, #surf.Origins do
 			if surf.Normals[i]:Dot(normal) <= COS_MAX_DEG_DIFF * (surf.Indices[i] < 0 and .5 or 1) or
@@ -67,8 +76,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			net.WriteUInt(color, SplatoonSWEPs.COLOR_BITS)
 			net.WriteVector(pos)
 			net.WriteFloat(radius)
-			net.WriteUInt(whitealpha, 6)
-			net.WriteUInt(whiterotate, 8)
+			net.WriteFloat(math.NormalizeAngle(angle))
 			net.WriteVector(surf.Origins[i])
 			net.WriteVector(surf.Normals[i])
 			net.WriteAngle(surf.Angles[i])
@@ -89,7 +97,7 @@ local function QueueCoroutine(pos, normal, radius, color, polys)
 			if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 	end
-	-- print(inkqueue)
+	
 	coroutine.yield(true)
 end
 
@@ -98,15 +106,13 @@ local function ProcessQueue()
 		local done = 0
 		for i, v in ipairs(PaintQueue) do
 			if coroutine.status(v.co) == "dead" then continue end
-			local ok, message = coroutine.resume(
-				v.co, v.pos, v.normal, v.radius, v.color, v.polys)
-			if ok and message then
-				v.done = true
-			elseif not ok then
-				print("coroutine end: ", message)
+			local ok, msg = coroutine.resume(v.co, v.pos, v.normal, v.radius, v.color, v.angle)
+			if not ok then
+				print("coroutine end: ", msg)
 				ErrorNoHalt(debug.traceback(v.co))
 			end
 
+			v.done = ok and msg
 			done = done + 1
 			-- if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
@@ -177,14 +183,14 @@ SplatoonSWEPs.InkManager = {
 		local ok, message = coroutine.resume(self.DoCoroutines)
 		if not ok then ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n") end
 	end,
-	AddQueue = function(pos, normal, radius, color, polys)
+	AddQueue = function(pos, normal, radius, color, angle)
 		table.insert(PaintQueue, {
-			pos = pos,
-			normal = normal,
-			radius = radius,
-			color = color,
-			polys = polys,
+			angle = angle,
 			co = coroutine.create(QueueCoroutine),
+			color = color,
+			normal = normal,
+			pos = pos,
+			radius = radius,
 		})
 	end,
 }

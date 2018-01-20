@@ -84,7 +84,6 @@ function SWEP:Deploy()
 		Color = self.Owner:GetColor(),
 		Flags = self.Owner:GetFlags(),
 		JumpPower = self.Owner:GetJumpPower(),
-		MoveType = self.Owner:GetMoveType(),
 		RenderMode = self:GetRenderMode(),
 		Speed = {
 			Crouched = self.Owner:GetCrouchedWalkSpeed(),
@@ -138,7 +137,6 @@ function SWEP:Holster()
 		self.Owner:SetJumpPower(self.BackupPlayerInfo.JumpPower)
 		self.Owner:DrawShadow(true)
 		self.Owner:SetMaterial ""
-		self.Owner:SetMoveType(self.BackupPlayerInfo.MoveType)
 		self.Owner:SetRenderMode(self.BackupPlayerInfo.RenderMode)
 		self.Owner:SetCrouchedWalkSpeed(self.BackupPlayerInfo.Speed.Crouched)
 		self.Owner:SetDuckSpeed(self.BackupPlayerInfo.Speed.Duck)
