@@ -111,6 +111,8 @@ function SWEP:SharedHolsterBase()
 		self.EnemyInkSound:Stop()
 	end
 	
+	self.Owner:DrawShadow(true)
+	self.Owner:SetMaterial ""
 	self.Holstering = true
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
 	return true

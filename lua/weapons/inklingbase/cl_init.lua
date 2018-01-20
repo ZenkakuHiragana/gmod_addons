@@ -38,13 +38,6 @@ local function FullCopy(t)
 	return res
 end
 
-local function Deploy(self)
-	self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
-	self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
-	self:SharedDeployBase()
-	return self:ChangeHullDuck()
-end
-
 function SWEP:Initialize()
 	--we build a render order because sprites need to be drawn after models
 	self.vRenderOrder = {}
@@ -97,11 +90,18 @@ function SWEP:Initialize()
 	
 	self:SharedInitBase()
 	if isfunction(self.ClientInit) then self:ClientInit() end
-	return Deploy(self)
+	return self:ClientDeployBase()
 end
 
 function SWEP:Deploy()
-	if self:IsFirstTimePredicted() then Deploy(self) end
+	if self:IsFirstTimePredicted() then return self:ClientDeployBase() end
+end
+
+function SWEP:ClientDeployBase()
+	self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
+	self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
+	self:ChangeHullDuck()
+	return self:SharedDeployBase()
 end
 
 function SWEP:Holster()
@@ -155,12 +155,14 @@ function SWEP:Think()
 		elseif self.SquidModelNumber ~= SplatoonSWEPs.SQUID.INKLING then
 			self.Squid:SetModel(SplatoonSWEPs.Squidmodel[SplatoonSWEPs.SQUID.INKLING])
 			self.SquidModelNumber = SplatoonSWEPs.SQUID.INKLING
-		end if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
-			self.Owner:SetMaterial(self.IsSquid and "color" or "")
-			self:DrawShadow(not self.IsSquid)
-		end
+		end 
 	else
 		self:MakeSquidModel()
+	end
+	
+	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
+		self.Owner:SetMaterial(self.IsSquid and "color" or "")
+		self:DrawShadow(not self.IsSquid)
 	end
 	
 	self:ProcessSchedules()

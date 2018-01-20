@@ -4,9 +4,10 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	Displacements = {},
 	IMesh = {},
 	RenderTarget = {
-		BaseTextureName = "splatoonsweps_rendertarget",
+		BaseTextureName = "splatoonsweps_basetexture",
 		NormalmapName = "splatoonsweps_normalmap",
 		LightmapName = "splatoonsweps_lightmap",
+		RenderTargetName = "splatoonsweps_rendertarget",
 		WaterMaterialName = "splatoonsweps_watermaterial",
 	},
 	SequentialSurfaces = {
@@ -92,6 +93,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		CREATERENDERTARGETFLAGS_HDR,
 		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
 	)
+	rtsize = math.min(self.RenderTarget.BaseTexture:Width(), self.RenderTarget.BaseTexture:Height())
 	self.RenderTarget.Normalmap = GetRenderTargetEx(
 		self.RenderTarget.NormalmapName,
 		rtsize, rtsize,
@@ -111,11 +113,11 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		IMAGE_FORMAT_RGBA8888 --IMAGE_FORMAT_BGRA5551, 4096x4096, 128MB
 	)
 	self.RenderTarget.Material = CreateMaterial(
-		self.RenderTarget.BaseTextureName,
+		self.RenderTarget.RenderTargetName,
 		"LightmappedGeneric",
 		{
-			["$basetexture"] = self.RenderTarget.BaseTexture:GetName(),
-			["$bumpmap"] = self.RenderTarget.Normalmap:GetName(),
+			["$basetexture"] = self.RenderTarget.RenderTargetName,
+			["$bumpmap"] = self.RenderTarget.NormalmapName,
 			["$ssbump"] = "1",
 			["$alphatest"] = "1",
 		}
@@ -125,17 +127,16 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		self.RenderTarget.WaterMaterialName,
 		"Refract",
 		{
-			["$normalmap"] = self.RenderTarget.Normalmap:GetName(),
+			["$normalmap"] = self.RenderTarget.NormalmapName,
 			["$bluramount"] = "2",
 			["$refractamount"] = "3.5",
 			["$refracttint"] = "[.9 .9 .9]",
 		}
 	)
 	
-	rtsize = self.RenderTarget.BaseTexture:Width()
 	local rtarea = rtsize^2
 	local rtmergin = 2 / rtsize
-	local arearatio = math.sqrt(self.AreaBound / rtarea) * 1.05 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	local arearatio = math.sqrt(self.AreaBound / rtarea) * 1.1 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
 	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
@@ -237,6 +238,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 				
 				ContinueMesh()
 			end
+			self.Displacements[k] = nil
 		else
 			for t, v in ipairs(surf.Vertices[k]) do
 				v.u, v.v = v.u / divuv, v.v / divuv
@@ -253,11 +255,15 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 				ContinueMesh()
 			end
 		end
-		-- surf.Angles[k], surf.Areas[k], surf.Normals[k], surf.Origins[k], surf.Vertices[k] = nil
+		-- surf.Areas[k], surf.Vertices[k] = nil
 	end
 	mesh.End()
 	
-	-- surf.Angles, surf.Areas, surf.Normals, surf.Origins, surf.Vertices, surf.AreaBound = nil
+	-- surf.Areas, self.Displacements, surf.Vertices, surf.AreaBound = nil
 	self:ClearAllInk()
 	collectgarbage "collect"
+end)
+
+hook.Add("PlayerPreDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
+	return SplatoonSWEPs:IsValidInkling(ply) and ply:Crouching()
 end)

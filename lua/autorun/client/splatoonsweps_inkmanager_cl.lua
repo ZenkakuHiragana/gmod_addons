@@ -30,7 +30,7 @@ function SplatoonSWEPs:DrawMeshes(bDrawingSkybox, bDrawingDepth)
 	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox or bDrawingDepth then return end
 	if not SplatoonSWEPs.RenderTarget.Ready then return end
 	local hdrscale = render.GetToneMappingScaleLinear()
-	render.SetToneMappingScaleLinear(hdrscale / 10)
+	render.SetToneMappingScaleLinear(hdrscale / 9)
 	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
 	render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
 	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
@@ -49,7 +49,6 @@ local amb
 local function GetLight(p, n)
 	local lightcolor = render.GetLightColor(p + n) / 2
 	local light = render.ComputeLighting(p + n, n) / 2
-	local tone = 2 - lightcolor:Length() * 2
 	if lightcolor:LengthSqr() > 1 then lightcolor:Normalize() end
 	if light:LengthSqr() > 1 then light:Normalize() end
 	return (light + lightcolor + amb) / 2.1
@@ -63,23 +62,23 @@ local function ProcessQueue()
 	while true do
 		local done = 0
 		for i, q in ipairs(self.InkQueue) do
-			q.done = true
 			local c = self:GetColor(q.c)
 			local radius = math.Round(self:UnitsToPixels(q.r))
 			local size = radius * 2
 			local surf = self.SequentialSurfaces
-			if surf.Moved[q.facenumber] then q.angle:RotateAroundAxis(q.normal, -90) end
-			local org = self:UVToPixels(Vector(surf.u[q.facenumber], surf.v[q.facenumber]))
-			local bound = self:UnitsToPixels(surf.Bounds[q.facenumber])
-			local center = self:UnitsToPixels(self:To2D(q.pos, q.origin, q.angle))
-			if surf.Moved[q.facenumber] then center.x = -center.x end
-			center.x, center.y = math.Round(center.x + org.x), math.Round(center.y + org.y)
-			local s = Vector(math.floor(org.x) - 1, math.floor(org.y) - 1)
-			local b = Vector(math.ceil(org.x + bound.x) + 1, math.ceil(org.y + bound.y) + 1)
-			local light = GetLight(q.pos, q.normal)
+			local bound = self:UnitsToPixels(surf.Bounds[q.n])
+			local uvorg = self:UVToPixels(Vector(surf.u[q.n], surf.v[q.n]))
+			local angle, origin, normal = Angle(surf.Angles[q.n]), surf.Origins[q.n], surf.Normals[q.n]
+			if surf.Moved[q.n] then angle:RotateAroundAxis(normal, -90) end
+			local light = GetLight(q.pos, normal)
+			local pos2d = self:UnitsToPixels(self:To2D(q.pos, origin, angle))
+			if surf.Moved[q.n] then pos2d.x = -pos2d.x end
+			local center = Vector(math.Round(pos2d.x + uvorg.x), math.Round(pos2d.y + uvorg.y))
 			local corner = center - self.vector_one * radius
+			local s = Vector(math.floor(uvorg.x) - 1, math.floor(uvorg.y) - 1)
+			local b = Vector(math.ceil(uvorg.x + bound.x) + 1, math.ceil(uvorg.y + bound.y) + 1)
 			if not self:CollisionAABB2D(s, b, corner, corner + self.vector_one * size) then continue end
-			local _, roll = WorldToLocal(vector_origin, q.angle, vector_origin, q.normal:Angle())
+			local _, roll = WorldToLocal(vector_origin, angle, vector_origin, normal:Angle())
 			local cr = radius * 1.01
 			local circle = {
 				{x = center.x, y = center.y, u = .5, v = .5},
@@ -104,6 +103,11 @@ local function ProcessQueue()
 			render.SetScissorRect(0, 0, 0, 0, false)
 			render.PopRenderTarget()
 			
+			for i, v in ipairs(surf.Vertices[q.n]) do
+				local w = surf.Vertices[q.n][i % #surf.Vertices[q.n] + 1]
+				DebugLine(Vector(v.u, v.v) * 1000, Vector(w.u, w.v) * 1000, true)
+				-- DebugLine(v.pos, w.pos, true)
+			end
 			--Draw on normal map
 			render.PushRenderTarget(self.RenderTarget.Normalmap)
 			render.OverrideBlendFunc(true, BLEND_ONE, BLEND_ZERO, BLEND_ONE, BLEND_ZERO)
@@ -117,10 +121,8 @@ local function ProcessQueue()
 			render.PopRenderTarget()
 			
 			--Draw on lightmap
-			local lightdiff = (center - org) * (q.isdisplacement and 0 or 1)
-			local lightorg = q.isdisplacement and q.pos or q.origin
 			radius, size, bound = radius / 2, size / 2, bound / 2
-			center, org, s, b = center / 2, org / 2, s / 2, b / 2
+			center, uvorg, s, b = center / 2, uvorg / 2, s / 2, b / 2
 			s.x, s.y, b.x, b.y = math.floor(s.x), math.floor(s.y), math.ceil(b.x), math.ceil(b.y)
 			render.PushRenderTarget(self.RenderTarget.Lightmap)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
@@ -131,7 +133,8 @@ local function ProcessQueue()
 			for n, mul in pairs(LightmapSampleTable) do
 				for i = 1, n do
 					local r = Lightrad[n][i] * radius * mul
-					lightmapmaterial:SetVector("$color", GetLight(self:To3D(self:PixelsToUnits(r * 2 + lightdiff), lightorg, q.angle), q.normal))
+					lightmapmaterial:SetVector("$color", GetLight(self:To3D(self:PixelsToUnits(
+					surf.Moved[q.n] and Vector(-r.x, r.y) or r) * 2, q.pos, angle), normal))
 					r = r + center - self.vector_one * radius
 					surface.DrawTexturedRect(r.x, r.y, size, size)
 				end
@@ -141,7 +144,7 @@ local function ProcessQueue()
 			render.OverrideAlphaWriteEnable(false)
 			render.PopRenderTarget()
 			
-			done = done + 1
+			q.done, done = true, done + 1
 			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 		

@@ -74,17 +74,16 @@ local function QueueCoroutine(pos, normal, radius, color, angle)
 			net.Start "SplatoonSWEPs: DrawInk"
 			net.WriteInt(surf.Indices[i], 20)
 			net.WriteUInt(color, SplatoonSWEPs.COLOR_BITS)
-			net.WriteVector(pos)
+			net.WriteVector(pos - surf.Normals[i] * (surf.Normals[i]:Dot(
+			pos - surf.Origins[i]) - 1) * (surf.Indices[i] < 0 and 0 or 1))
 			net.WriteFloat(radius)
-			net.WriteFloat(math.NormalizeAngle(angle))
-			net.WriteVector(surf.Origins[i])
-			net.WriteVector(surf.Normals[i])
-			net.WriteAngle(surf.Angles[i])
+			net.WriteFloat(angle)
 			net.Broadcast()
 			
 			local pos2d = SplatoonSWEPs:To2D(pos, surf.Origins[i], surf.Angles[i])
 			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
 			local inkdata = {
+				angle = angle,
 				color = color,
 				radiusSqr = radius * radius,
 				pos = pos2d,
@@ -185,7 +184,7 @@ SplatoonSWEPs.InkManager = {
 	end,
 	AddQueue = function(pos, normal, radius, color, angle)
 		table.insert(PaintQueue, {
-			angle = angle,
+			angle = math.NormalizeAngle(angle),
 			co = coroutine.create(QueueCoroutine),
 			color = color,
 			normal = normal,

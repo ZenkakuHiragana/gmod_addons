@@ -37,7 +37,6 @@ function SWEP:Initialize()
 		self:SetOnEnemyInk(self:GetGroundColor() >= 0 and not onourink)
 		self.OwnerVelocity = self.Owner:GetPhysicsObject():GetVelocity()
 	end)
-	
 	self:SharedInitBase()
 	if isfunction(self.ServerInit) then return self:ServerInit() end
 end
@@ -52,7 +51,7 @@ end
 
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer() and self.Owner:Alive()) then return true end
-	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "Deploy" end
+	self:CallOnClient "ClientDeployBase"
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
 	self:SetNextCrouchTime(CurTime())
@@ -135,8 +134,6 @@ function SWEP:Holster()
 	--	self.Owner:RemoveFlags(self.Owner:GetFlags()) --Restores no target flag and something.
 	--	self.Owner:AddFlags(self.BackupPlayerInfo.Flags)
 		self.Owner:SetJumpPower(self.BackupPlayerInfo.JumpPower)
-		self.Owner:DrawShadow(true)
-		self.Owner:SetMaterial ""
 		self.Owner:SetRenderMode(self.BackupPlayerInfo.RenderMode)
 		self.Owner:SetCrouchedWalkSpeed(self.BackupPlayerInfo.Speed.Crouched)
 		self.Owner:SetDuckSpeed(self.BackupPlayerInfo.Speed.Duck)
@@ -147,6 +144,7 @@ function SWEP:Holster()
 		self.Owner:SetHullDuck(self.BackupPlayerInfo.HullMins, self.BackupPlayerInfo.HullMaxs)
 		self.Owner:SetViewOffsetDucked(self.BackupPlayerInfo.ViewOffsetDucked)
 	end
+	
 	return self:SharedHolsterBase()
 end
 

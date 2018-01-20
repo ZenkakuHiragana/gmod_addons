@@ -8,17 +8,11 @@ net.Receive("SplatoonSWEPs: DrawInk", function(len, ply)
 	local pos = net.ReadVector()
 	local radius = net.ReadFloat()
 	local inkangle = net.ReadFloat()
-	local origin = net.ReadVector()
-	local normal = net.ReadVector()
-	local angle = net.ReadAngle()
 	table.insert(SplatoonSWEPs.InkQueue, {
-		angle = angle,
 		c = color,
-		facenumber = math.abs(facenumber),
 		inkangle = inkangle,
 		isdisplacement = facenumber < 0,
-		normal = normal,
-		origin = origin,
+		n = math.abs(facenumber),
 		pos = pos,
 		r = radius,
 	})

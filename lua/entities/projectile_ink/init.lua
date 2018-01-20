@@ -76,7 +76,7 @@ end
 
 local dropposdelta = 16
 function ENT:PhysicsUpdate(phys)
-	if not (IsValid(phys) and self:IsInWorld() and self:WaterLevel() < 1) then
+	if not (IsValid(phys) and self:IsInWorld()) then
 		return SafeRemoveEntityDelayed(self, 0)
 	end
 	phys:EnableGravity(math.max(0, CurTime() - self.InitTime) >= self.Straight)
