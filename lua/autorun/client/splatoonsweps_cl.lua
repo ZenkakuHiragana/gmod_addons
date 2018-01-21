@@ -116,7 +116,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		self.RenderTarget.RenderTargetName,
 		"LightmappedGeneric",
 		{
-			["$basetexture"] = self.RenderTarget.RenderTargetName,
+			["$basetexture"] = self.RenderTarget.BaseTextureName,
 			["$bumpmap"] = self.RenderTarget.NormalmapName,
 			["$ssbump"] = "1",
 			["$alphatest"] = "1",
