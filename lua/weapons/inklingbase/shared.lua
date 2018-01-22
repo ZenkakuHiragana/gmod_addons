@@ -1,45 +1,5 @@
 
 SplatoonSWEPs:AddTimerFramework(SWEP)
-function SWEP:ChangePlayermodel(data)
-	self.Owner:SetModel(data.Model)
-	self.Owner:SetSkin(data.Skin)
-	local bodygroups = ""
-	local numgroups = self.Owner:GetNumBodyGroups()
-	if isnumber(numgroups) then
-		for k = 0, self.Owner:GetNumBodyGroups() - 1 do
-			local v = data.BodyGroups[k + 1]
-			if istable(v) and isnumber(v.num) then v = v.num else v = 0 end
-			self.Owner:SetBodygroup(k, v)
-			bodygroups = bodygroups .. tostring(v) .. " "
-		end
-	end
-	if bodygroups == "" then bodygroups = "0" end
-	if data.SetOffsets then
-		self.Owner:SetNWInt("splt_isSet", 1)
-		self.Owner:SetNWInt("splt_SplatoonOffsets", 2)
-		if isfunction(self.Owner.SplatoonOffsets) then
-			self.Owner:SplatoonOffsets()
-		end
-	else
-		self.Owner:SetNWInt("splt_isSet", 0)
-		self.Owner:SetNWInt("splt_SplatoonOffsets", 1)
-		if isfunction(self.Owner.DefaultOffsets) then
-			self.Owner:DefaultOffsets()
-		end
-	end
-	self.Owner:SetSubMaterial()
-	self.Owner:SetPlayerColor(data.PlayerColor)
-	local hands = self.Owner:GetHands()
-	if IsValid(hands) then
-		local info = player_manager.TranslatePlayerHands(player_manager.TranslateToPlayerModelName(data.Model))
-		if info then
-			hands:SetModel(info.model)
-			hands:SetSkin(info.skin)
-			hands:SetBodyGroups(info.body)
-		end
-	end
-end
-
 function SWEP:ChangeHullDuck()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
 	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
@@ -139,10 +99,6 @@ function SWEP:SharedThinkBase()
 			self.ViewAnim = inklingVM
 		end
 		
-		if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
-			self:ChangePlayermodel(self.PMTable)
-		end
-		
 		if sq then
 			self.SwimSound:ChangeVolume(self:GetInInk() and self.Owner:GetVelocity():LengthSqr()
 				/ self.SquidSpeed / self.SquidSpeed or 0)
@@ -234,8 +190,10 @@ function SWEP:ChangeInInk(name, old, new)
 			if IsValid(self.Owner) then
 				self:CallOnClient("ChangeInInk", table.concat({name, tostring(old), tostring(new)}, " "))
 			end
-		elseif not self:IsFirstTimePredicted() then return else
-			old, new = tobool(old), tobool(new)
+		elseif self:IsFirstTimePredicted() then
+			old, new = select(2, unpack(string.Explode(" ", name)))
+		else
+			return
 		end
 	end
 	
@@ -246,6 +204,7 @@ function SWEP:ChangeInInk(name, old, new)
 	self.Owner:SetCrouchedWalkSpeed(intoink and 1 or 0.5)
 	self:SetPlayerSpeed(intoink and self.SquidSpeed or self.InklingSpeed)
 	if intoink and SERVER then
+		self.Owner:SetDSP(14)
 		local velocity = math.abs(self.OwnerVelocity.z)
 		if self.Owner:OnGround() and velocity > 400 then
 			local dp = math.Clamp(600 - velocity, 0, 200) / 2
@@ -255,6 +214,7 @@ function SWEP:ChangeInInk(name, old, new)
 			self.Owner:EmitSound("SplatoonSWEPs_Player.InkDiveShallow", 75, 100 + dp, .5, CHAN_BODY)
 		end
 	elseif outofink then
+		if SERVER then self.Owner:SetDSP(1) end
 		self.OnOutOfInk = true
 	end
 end
@@ -266,11 +226,14 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 			if IsValid(self.Owner) then
 				self:CallOnClient("ChangeOnEnemyInk", table.concat({name, tostring(old), tostring(new)}, " "))
 			end
-		elseif not self:IsFirstTimePredicted() then return else
-			old, new = tobool(old), tobool(new)
+		elseif self:IsFirstTimePredicted() then
+			old, new = select(2, unpack(string.Explode(" ", name)))
+		else
+			return
 		end
 	end
 	
+	old, new = tobool(old), tobool(new)
 	local outofink = old and not new
 	local intoink = not old and new
 	if outofink == intoink then return

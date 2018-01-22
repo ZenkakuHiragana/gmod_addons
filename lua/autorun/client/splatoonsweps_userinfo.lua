@@ -21,6 +21,7 @@ local CVAR_DEFAULT = {
 	1,
 	1,
 	1,
+	0,
 	SplatoonSWEPs.RTResID.MEDIUM,
 }
 local CVAR_DESC = {	[[
@@ -43,6 +44,7 @@ Your thirdperson model.  Available values are:
 	"1: You can heal yourself when you are in ink.\n0: You can not.",
 	"1: You can reload your ink when you are not in ink.\n0: You can not.",
 	"1: You can reload your ink when you are in ink.\n0: You can not.",
+	"1: Don't draw overlay when you are in ink and firstperson.\n0: Do draw.",
 	[[
 RenderTarget resolution used in ink system.
 To apply the change, restart your GMOD client.
@@ -183,18 +185,20 @@ function SplatoonSWEPs:ConfigMenu()
 	Options:Dock(RIGHT)
 	
 	local OptionsText = {
-		"Healing when stand",
-		"Healing when in ink",
-		"Reloading when stand",
-		"Reloading when in ink",
+		"Heal when stand",
+		"Heal when in ink",
+		"Reload when stand",
+		"Reload when in ink",
+		"Hide ink overlay",
 	}
 	local OptionsConVar = {
 		"CanHealStand",
 		"CanHealInk",
 		"CanReloadStand",
 		"CanReloadInk",
+		"HideInkOverlay",
 	}
-	for i = 0, 3 do
+	for i = 0, 4 do
 		local Check = vgui.Create("DCheckBoxLabel", Options)
 		Check:SetPos(4, 4 + 20 * i)
 		Check:SetText(OptionsText[i + 1])

@@ -3,9 +3,9 @@ if not SplatoonSWEPs then return end
 
 -- SplatoonSWEPs.BombAvailable
 -- SplatoonSWEPs_Ink.HitWorld
--- SplatoonSWEPs_Player.FootstepsInk
 -- SplatoonSWEPs_Player.InkDiveDeep
 -- SplatoonSWEPs_Player.InkDiveShallow
+-- SplatoonSWEPs_Player.InkFootstep
 -- SplatoonSWEPs_Player.ToHuman
 -- SplatoonSWEPs_Player.ToSquid
 -- SplatoonSWEPs_Player.SquidJump
@@ -84,7 +84,7 @@ for _, soundData in ipairs {
 	},
 	{
 		channel = CHAN_BODY,
-		name = "SplatoonSWEPs_Player.FootstepsInk",
+		name = "SplatoonSWEPs_Player.InkFootstep",
 		level = 75,
 		sound = "splatoonsweps/player/footsteps/slime",
 		volume = 1,

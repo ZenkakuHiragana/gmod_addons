@@ -46,6 +46,7 @@ SplatoonSWEPs.RenderTarget.LightmapFlags = bit.bor(
 )
 
 function SplatoonSWEPs:ClearAllInk()
+	SplatoonSWEPs.InkQueue = {}
 	render.PushRenderTarget(SplatoonSWEPs.RenderTarget.BaseTexture)
 	render.OverrideAlphaWriteEnable(true, true)
 	render.ClearDepth()
@@ -265,5 +266,18 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 end)
 
 hook.Add("PlayerPreDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
-	return SplatoonSWEPs:IsValidInkling(ply) and ply:Crouching()
+	return SplatoonSWEPs:IsValidInkling(ply) and ply:Crouching() or nil
+end)
+
+hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", function()
+	if LocalPlayer():ShouldDrawLocalPlayer()
+	or SplatoonSWEPs:GetConVarBool "HideInkOverlay" then return end
+	local weapon = SplatoonSWEPs:IsValidInkling(LocalPlayer())
+	if not (weapon and weapon:GetInInk()) then return end
+	local color = weapon:GetInkColorProxy()
+	DrawMaterialOverlay("effects/water_warp01", .1)
+	surface.SetDrawColor(ColorAlpha(color:ToColor(),
+	48 * (1.1 - math.sqrt(SplatoonSWEPs.GrayScaleFactor:Dot(color)))
+	/ SplatoonSWEPs.GrayScaleFactor:Dot(render.GetToneMappingScaleLinear())))
+	surface.DrawRect(0, 0, ScrW(), ScrH())
 end)

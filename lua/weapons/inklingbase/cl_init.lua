@@ -98,6 +98,7 @@ function SWEP:Deploy()
 end
 
 function SWEP:ClientDeployBase()
+	self.CanHealStand, self.CanHealInk, self.CanReloadStand,  self.CanReloadInk = false, false, false, false
 	self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 	self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 	self:ChangeHullDuck()

@@ -239,21 +239,41 @@ hook.Add("SetupMove", "SplatoonSWEPs: Prevent owner from crouch", function(ply, 
 	end
 end)
 
+--Overriding footstep sound stops calling other addons' PlayerFootstep hook.
+--I decide to replace one of their hook with my function built.
 local FootstepTrace = vector_up * -20
-hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", function(ply, pos, foot, sound, volume, filter)
-	if not (IsValid(ply) and isfunction(ply.GetActiveWeapon)) then return false end
+local hostkey, hostfunc, multisteps = hostkey, hostfunc, multisteps
+for k, v in pairs(hook.GetTable().PlayerFootstep or {}) do
+	if hostkey and hostfunc then multisteps = true break end
+	if isstring(k) then hostkey, hostfunc = k, v end
+end
+
+local function PlayerFootstep(ply, pos, foot, sound, volume, filter)
+	if not (IsValid(ply) and isfunction(ply.GetActiveWeapon)) then return end
 	local weapon = ply:GetActiveWeapon()
 	local IsSplatoonWeapon = IsValid(weapon) and weapon.IsSplatoonWeapon and not weapon.Holstering
 	if ((IsSplatoonWeapon and weapon:GetGroundColor() >= 0) or (SERVER and
 	SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(ply:GetPos(), FootstepTrace, ply)))) then
 		if not (IsSplatoonWeapon and weapon:GetInInk()) and (SERVER or ply ~= LocalPlayer()) then
-			ply:EmitSound "SplatoonSWEPs_Player.FootstepsInk"
+			ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		end
 		return true
 	end
-	
-	return false
-end)
+end
+
+if hostkey and hostfunc then
+	hook.GetTable().PlayerFootstep[hostkey] = function(ply, pos, foot, sound, volume, filter)
+		local mystep = PlayerFootstep(ply, pos, foot, sound, volume, filter)
+		local a, b, c, d, e, f = hostfunc(ply, pos, foot, sound, volume, filter)
+		if a == true then
+			return a, b, c, d, e, f
+		else
+			return mystep
+		end
+	end
+else
+	hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", PlayerFootstep)
+end
 
 local bound = SplatoonSWEPs.vector_one * 10
 hook.Add("ShouldCollide", "SplatoonSWEPs: Ink go through grates", function(ent1, ent2)

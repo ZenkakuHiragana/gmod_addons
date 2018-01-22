@@ -9,6 +9,7 @@ SplatoonSWEPs.ConVar = {
 	"cl_splatoonsweps_canhealink",
 	"cl_splatoonsweps_canreloadstand",
 	"cl_splatoonsweps_canreloadink",
+	"cl_splatoonsweps_hideinkoverlay",
 	"cl_splatoonsweps_rtresolution",
 }
 
@@ -19,7 +20,8 @@ SplatoonSWEPs.ConVarName = {
 	CanHealInk = 4,
 	CanReloadStand = 5,
 	CanReloadInk = 6,
-	RTResolution = 7,
+	HideInkOverlay = 7,
+	RTResolution = 8,
 }
 
 SplatoonSWEPs.RTResID = {
@@ -233,12 +235,11 @@ SplatoonSWEPs.TEXTUREFLAGS = {
 	UNUSED_80000000		= 0x80000000, --
 }
 
--- SplatoonSWEPs.MPdt = game.SinglePlayer() and 0 or FrameTime()
 SplatoonSWEPs.vector_one = Vector(1, 1, 1)
 SplatoonSWEPs.MaxInkAmount = 100
 SplatoonSWEPs.MaxVelocity = 32768 --physenv.GetPerformanceSettings().MaxVelocity, default is 3500
 SplatoonSWEPs.SquidBoundMins = -Vector(13, 13, 0)
-SplatoonSWEPs.SquidBoundMaxs = Vector(13, 13, 24)
+SplatoonSWEPs.SquidBoundMaxs = Vector(13, 13, 32)
 SplatoonSWEPs.SquidViewOffset = Vector(0, 0, 24)
 SplatoonSWEPs.InklingJumpPower = 250
 SplatoonSWEPs.OnEnemyInkJumpPower = SplatoonSWEPs.InklingJumpPower * .75

@@ -5,12 +5,8 @@ SplatoonSWEPs.InkQueue = {}
 
 local MAX_PROCESS_QUEUE_AT_ONCE = 80
 local inkmaterial = Material "splatoonsweps/splatoonink"
--- local inkmaterial = Material "vgui/cursors/up"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
-local inklightmaterial = Material "splatoonsweps/splatooninklight"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
-local WaterOverlap = Material "splatoonsweps/splatoonwater"
-local wireframe = Material "color"
 local LightmapSampleTable = {[7] = .8}
 local NumPoly, Polysin, Polycos, Lightrad = 16, {}, {}, {}
 for i = 0, NumPoly do
@@ -26,26 +22,32 @@ for n in pairs(LightmapSampleTable) do
 	end
 end
 
+local amb = render.GetAmbientLightColor() / 10
+local amblen = amb:Length() * 10
+if amblen > 1 then amb = amb / amblen end
+local ambscale = SplatoonSWEPs.GrayScaleFactor:Dot(amb) * 2
 function SplatoonSWEPs:DrawMeshes(bDrawingSkybox, bDrawingDepth)
-	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox or bDrawingDepth then return end
-	if not SplatoonSWEPs.RenderTarget.Ready then return end
+	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox
+	or bDrawingDepth or not SplatoonSWEPs.RenderTarget.Ready or GetConVar "mat_wireframe":GetBool() then return end
 	local hdrscale = render.GetToneMappingScaleLinear()
-	render.SetToneMappingScaleLinear(hdrscale / 9)
+	render.SetToneMappingScaleLinear(hdrscale * ambscale)
 	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
 	render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
 	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
 	if LocalPlayer():FlashlightIsOn() or #ents.FindByClass "*projectedtexture*" > 0 then
 		render.PushFlashlightMode(true)
+		render.SetToneMappingScaleLinear(hdrscale)
 		for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
+		render.SetToneMappingScaleLinear(hdrscale * ambscale)
 		render.PopFlashlightMode()
 	end
 	
+	render.UpdateRefractTexture()
 	render.SetMaterial(SplatoonSWEPs.RenderTarget.WaterMaterial)
 	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
 	render.SetToneMappingScaleLinear(hdrscale)
 end
 
-local amb
 local function GetLight(p, n)
 	local lightcolor = render.GetLightColor(p + n) / 2
 	local light = render.ComputeLighting(p + n, n) / 2
@@ -55,10 +57,7 @@ local function GetLight(p, n)
 end
 
 local function ProcessQueue()
-	amb = render.GetAmbientLightColor() / 10
 	local self = SplatoonSWEPs
-	local amblen = amb:Length() * 10
-	if amblen > 1 then amb = amb / amblen end
 	while true do
 		local done = 0
 		for i, q in ipairs(self.InkQueue) do

@@ -70,13 +70,58 @@ TODO
 	実はライトマップ、RGBA8888でも十分だったりしないかなあ……
 		→できた　もしかするとBGRA5551でも良いかもしれん
 	
+	The Apertureが入ってるとインクの足音が効かなくなる → あっち側の問題 issueを投げつけてやろう
+	Pull requestを投げつけてやった。直るといいな
 
 1/20
-	相手のイカ状態がしゃがみ高速移動になっている
+	相手のイカ状態がしゃがみ高速移動になっている 多分直ったけど、イカがまだ表示されないはず
 	プレイヤーモデルの表示/非表示の切り替え関係でバグがある 意図しない非表示が起きる
-	TFA武器 → スプラシューター でバグる
+	TFA武器 → スプラシューター でバグる 確か直した
 	Alphaさん視点
 		暗いところで必要以上に暗くなる
 		塗られない面がある
 		水感が得られていない → ビデオ設定によるものらしい
 	こちら視点
+
+	WaterMaterial
+$alpha	=	1
+$basetexturetransform	=	[1.00000,	0.00000,	0.00000,	0.00000]
+[0.00000,	1.00000,	0.00000,	0.00000]
+[0.00000,	0.00000,	1.00000,	0.00000]
+[0.00000,	0.00000,	0.00000,	1.00000]
+$bluramount	=	2
+$bumpframe	=	0
+$bumpframe2	=	0
+$bumptransform	=	[1.00000,	0.00000,	0.00000,	0.00000]
+[0.00000,	1.00000,	0.00000,	0.00000]
+[0.00000,	0.00000,	1.00000,	0.00000]
+[0.00000,	0.00000,	0.00000,	1.00000]
+$bumptransform2	=	[1.00000,	0.00000,	0.00000,	0.00000]
+[0.00000,	1.00000,	0.00000,	0.00000]
+[0.00000,	0.00000,	1.00000,	0.00000]
+[0.00000,	0.00000,	0.00000,	1.00000]
+$color	=	1.000000 1.000000 1.000000
+$color2	=	1.000000 1.000000 1.000000
+$envmapcontrast	=	0
+$envmapframe	=	0
+$envmapsaturation	=	1
+$envmaptint	=	1.000000 1.000000 1.000000
+$fadeoutonsilhouette	=	0
+$flags	=	2097152
+$flags2	=	16448
+$flags_defined	=	0
+$flags_defined2	=	0
+$flashlighttextureframe	=	0
+$forcealphawrite	=	0
+$frame	=	0
+$fresnelreflection	=	1
+$masked	=	0
+$normalmap	=	Texture [splatoonsweps_normalmap]
+$nowritez	=	0
+$refractamount	=	3.5
+$refracttint	=	0.796917 0.796917 0.796917
+$refracttinttextureframe	=	0
+$srgbtint	=	1.000000 1.000000 1.000000
+$time	=	0
+$vertexcolormodulate	=	0
+

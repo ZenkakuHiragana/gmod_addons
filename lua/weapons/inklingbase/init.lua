@@ -5,6 +5,47 @@ AddCSLuaFile "cl_draw.lua"
 include "shared.lua"
 include "baseinfo.lua"
 
+function SWEP:ChangePlayermodel(data)
+	self.Owner:SetModel(data.Model)
+	self.Owner:SetSkin(data.Skin)
+	local bodygroups = ""
+	local numgroups = self.Owner:GetNumBodyGroups()
+	if isnumber(numgroups) then
+		for k = 0, self.Owner:GetNumBodyGroups() - 1 do
+			local v = data.BodyGroups[k + 1]
+			if istable(v) and isnumber(v.num) then v = v.num else v = 0 end
+			self.Owner:SetBodygroup(k, v)
+			bodygroups = bodygroups .. tostring(v) .. " "
+		end
+	end
+	if bodygroups == "" then bodygroups = "0" end
+	if data.SetOffsets then
+		self.Owner:SetNWInt("splt_isSet", 1)
+		self.Owner:SetNWInt("splt_SplatoonOffsets", 2)
+		if isfunction(self.Owner.SplatoonOffsets) then
+			self.Owner:SplatoonOffsets()
+		end
+	else
+		self.Owner:SetNWInt("splt_isSet", 0)
+		self.Owner:SetNWInt("splt_SplatoonOffsets", 1)
+		if isfunction(self.Owner.DefaultOffsets) then
+			self.Owner:DefaultOffsets()
+		end
+	end
+	
+	self.Owner:SetSubMaterial()
+	self.Owner:SetPlayerColor(data.PlayerColor)
+	local hands = self.Owner:GetHands()
+	if IsValid(hands) then
+		local info = player_manager.TranslatePlayerHands(player_manager.TranslateToPlayerModelName(data.Model))
+		if info then
+			hands:SetModel(info.model)
+			hands:SetSkin(info.skin)
+			hands:SetBodyGroups(info.body)
+		end
+	end
+end
+
 local InkTraceLength = 20
 local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:Initialize()
@@ -75,10 +116,10 @@ function SWEP:Deploy()
 		and SplatoonSWEPs.SQUID.OCTO or SplatoonSWEPs.SQUID.INKLING], "GAME")
 	self.Color = SplatoonSWEPs:GetColor(self.ColorCode)
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
-	self.CanHealStand = self.Owner:GetInfoNum("CanHealStand", 1) ~= 0
-	self.CanHealInk = self.Owner:GetInfoNum("CanHealInk", 1) ~= 0
-	self.CanReloadStand = self.Owner:GetInfoNum("CanReloadStand", 1) ~= 0
-	self.CanReloadInk = self.Owner:GetInfoNum("CanReloadInk", 1) ~= 0
+	self.CanHealStand = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "CanHealStand", 1) ~= 0
+	self.CanHealInk = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "CanHealInk", 1) ~= 0
+	self.CanReloadStand = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "CanReloadStand", 1) ~= 0
+	self.CanReloadInk = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "CanReloadInk", 1) ~= 0
 	self.BackupPlayerInfo = {
 		Color = self.Owner:GetColor(),
 		Flags = self.Owner:GetFlags(),
@@ -128,6 +169,7 @@ function SWEP:Holster()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return true end
 	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "Holster" end
 	self.PMTable = nil
+	self.Owner:SetDSP(1)
 	if istable(self.BackupPlayerInfo) then --Restores owner's information.
 		self:ChangePlayermodel(self.BackupPlayerInfo.Playermodel)
 		self.Owner:SetColor(self.BackupPlayerInfo.Color)
@@ -151,6 +193,10 @@ end
 function SWEP:OnRemove() return self:Holster() end
 function SWEP:Think()
 	if not IsValid(self.Owner) or self.Holstering then return end
+	if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
+		self:ChangePlayermodel(self.PMTable)
+	end
+	
 	self:ProcessSchedules()
 	self:SharedThinkBase()
 	self:SetClip1(math.max(0, self:GetInk() / SplatoonSWEPs.MaxInkAmount * 100))

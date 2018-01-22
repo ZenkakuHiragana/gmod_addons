@@ -53,3 +53,5 @@ end
 	-- end
 -- end
 
+hook.Remove("PlayerFootsteps", "test")
+hook.Add("PlayerFootstep", "test", function() print "test footstep hook" end)
