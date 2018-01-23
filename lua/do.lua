@@ -52,6 +52,3 @@ end
 		-- DebugBox(max, min)
 	-- end
 -- end
-
-hook.Remove("PlayerFootsteps", "test")
-hook.Add("PlayerFootstep", "test", function() print "test footstep hook" end)

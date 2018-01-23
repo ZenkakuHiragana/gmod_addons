@@ -26,14 +26,17 @@ local amb = render.GetAmbientLightColor() / 10
 local amblen = amb:Length() * 10
 if amblen > 1 then amb = amb / amblen end
 local ambscale = SplatoonSWEPs.GrayScaleFactor:Dot(amb) * 2
-function SplatoonSWEPs:DrawMeshes(bDrawingSkybox, bDrawingDepth)
+local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
 	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox
 	or bDrawingDepth or not SplatoonSWEPs.RenderTarget.Ready or GetConVar "mat_wireframe":GetBool() then return end
 	local hdrscale = render.GetToneMappingScaleLinear()
 	render.SetToneMappingScaleLinear(hdrscale * ambscale)
 	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
 	render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
+	render.OverrideDepthEnable(true, true)
 	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
+	render.OverrideDepthEnable(false)
+	render.UpdateFullScreenDepthTexture()
 	if LocalPlayer():FlashlightIsOn() or #ents.FindByClass "*projectedtexture*" > 0 then
 		render.PushFlashlightMode(true)
 		render.SetToneMappingScaleLinear(hdrscale)
@@ -78,19 +81,7 @@ local function ProcessQueue()
 			local b = Vector(math.ceil(uvorg.x + bound.x) + 1, math.ceil(uvorg.y + bound.y) + 1)
 			if not self:CollisionAABB2D(s, b, corner, corner + self.vector_one * size) then continue end
 			local _, roll = WorldToLocal(vector_origin, angle, vector_origin, normal:Angle())
-			local cr = radius * 1.01
-			local circle = {
-				{x = center.x, y = center.y, u = .5, v = .5},
-				{x = center.x, y = center.y + cr, u = .5, v = 1},
-			}
-			for i = 0, NumPoly do
-				table.insert(circle, 2, {
-					x = center.x + cr * Polycos[i],
-					y = center.y + cr * Polysin[i],
-					u = Polycos[i] / 2 + .5,
-					v = Polysin[i] / 2 + .5,
-				})
-			end
+			
 			inkmaterial:SetVector("$color", Vector(c.r, c.g, c.b) / 255)
 			render.PushRenderTarget(self.RenderTarget.BaseTexture)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
@@ -102,21 +93,14 @@ local function ProcessQueue()
 			render.SetScissorRect(0, 0, 0, 0, false)
 			render.PopRenderTarget()
 			
-			for i, v in ipairs(surf.Vertices[q.n]) do
-				local w = surf.Vertices[q.n][i % #surf.Vertices[q.n] + 1]
-				DebugLine(Vector(v.u, v.v) * 1000, Vector(w.u, w.v) * 1000, true)
-				-- DebugLine(v.pos, w.pos, true)
-			end
 			--Draw on normal map
 			render.PushRenderTarget(self.RenderTarget.Normalmap)
-			render.OverrideBlendFunc(true, BLEND_ONE, BLEND_ZERO, BLEND_ONE, BLEND_ZERO)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
 			surface.SetMaterial(normalmaterial)
-			surface.DrawPoly(circle)
+			surface.DrawTexturedRectRotated(center.x, center.y, size, size, roll.roll - q.inkangle)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
-			render.OverrideBlendFunc(false)
 			render.PopRenderTarget()
 			
 			--Draw on lightmap
@@ -167,7 +151,7 @@ local function GMTick()
 	end
 end
 
-hook.Add("PostDrawOpaqueRenderables", "SplatoonSWEPsDrawInk", SplatoonSWEPs.DrawMeshes)
+hook.Add("PreDrawTranslucentRenderables", "SplatoonSWEPsDrawInk", DrawMeshes)
 hook.Add("Tick", "SplatoonSWEPsRegisterInk_cl", GMTick)
 hook.Add("PostDrawSkyBox", "SplatoonSWEPsTestIfMapHas3DSkyBox", function()
 	SplatoonSWEPs.Has3DSkyBox = true

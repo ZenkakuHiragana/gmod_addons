@@ -29,7 +29,6 @@ include "splatoonsweps_inkmanager_cl.lua"
 include "splatoonsweps_network_cl.lua"
 SplatoonSWEPs.RenderTarget.BaseTextureFlags = bit.bor(
 	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
-	SplatoonSWEPs.TEXTUREFLAGS.EIGHTBITALPHA,
 	SplatoonSWEPs.TEXTUREFLAGS.RENDERTARGET,
 	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER
 )
@@ -37,7 +36,8 @@ SplatoonSWEPs.RenderTarget.NormalmapFlags = bit.bor(
 	SplatoonSWEPs.TEXTUREFLAGS.NORMAL,
 	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
 	SplatoonSWEPs.TEXTUREFLAGS.RENDERTARGET,
-	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER
+	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER,
+	SplatoonSWEPs.TEXTUREFLAGS.SSBUMP
 )
 SplatoonSWEPs.RenderTarget.LightmapFlags = bit.bor(
 	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
@@ -102,7 +102,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.NormalmapFlags,
 		CREATERENDERTARGETFLAGS_HDR,
-		IMAGE_FORMAT_BGRA8888 --8192x8192, 256MB
+		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
 	)
 	self.RenderTarget.Lightmap = GetRenderTargetEx(
 		self.RenderTarget.LightmapName,
@@ -111,7 +111,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		MATERIAL_RT_DEPTH_NONE,
 		self.RenderTarget.LightmapFlags,
 		CREATERENDERTARGETFLAGS_HDR,
-		IMAGE_FORMAT_RGBA8888 --IMAGE_FORMAT_BGRA5551, 4096x4096, 128MB
+		IMAGE_FORMAT_RGBA8888 --4096x4096, 64MB
 	)
 	self.RenderTarget.Material = CreateMaterial(
 		self.RenderTarget.RenderTargetName,
@@ -120,7 +120,10 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 			["$basetexture"] = self.RenderTarget.BaseTextureName,
 			["$bumpmap"] = self.RenderTarget.NormalmapName,
 			["$ssbump"] = "1",
+			["$alpha"] = ".95",
 			["$alphatest"] = "1",
+			["$alphatestreference"] = ".5",
+			["$allowalphatocoverage"] = "1",
 		}
 	)
 	self.IMesh[1] = Mesh(self.RenderTarget.Material)
@@ -130,7 +133,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		{
 			["$normalmap"] = self.RenderTarget.NormalmapName,
 			["$bluramount"] = "2",
-			["$refractamount"] = "3.5",
+			["$refractamount"] = "1.1",
 			["$refracttint"] = "[.9 .9 .9]",
 		}
 	)
@@ -172,7 +175,6 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 				local vertex = self.Displacements[k].Positions[i]
 				local meshvert = vertex.pos - surf.Normals[k] * surf.Normals[k]:Dot(vertex.vec * vertex.dist)
 				local UV = self:To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
-				-- if UV.x < 0 or UV.y < 0 or UV.x > bu or UV.y > bv then print(UV.x, UV.y, bu, bv) end
 				vertex.u, vertex.v = UV.x + u, UV.y + v
 			end
 		end
@@ -266,7 +268,8 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 end)
 
 hook.Add("PlayerPreDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
-	return SplatoonSWEPs:IsValidInkling(ply) and ply:Crouching() or nil
+	local weapon = SplatoonSWEPs:IsValidInkling(ply)
+	return weapon and weapon:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID and ply:Crouching() or nil
 end)
 
 hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", function()

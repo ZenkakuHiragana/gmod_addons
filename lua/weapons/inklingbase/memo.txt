@@ -71,7 +71,13 @@ TODO
 		→できた　もしかするとBGRA5551でも良いかもしれん
 	
 	The Apertureが入ってるとインクの足音が効かなくなる → あっち側の問題 issueを投げつけてやろう
-	Pull requestを投げつけてやった。直るといいな
+		Pull requestを投げつけてやった。直るといいな → 無理だって(´・ω・｀)
+		Paint Gun → スプラシューター 装備でバグる
+	
+	$alphatestは透明度を2値化してしまうので半透明にできないらしい
+		$alphatestreferenceは非表示にいたるアルファ値の閾値
+		$alphaと併用することで表示部分の半透明化が可能
+	$translucentは半透明面の描画がバグる
 
 1/20
 	相手のイカ状態がしゃがみ高速移動になっている 多分直ったけど、イカがまだ表示されないはず
@@ -82,46 +88,4 @@ TODO
 		塗られない面がある
 		水感が得られていない → ビデオ設定によるものらしい
 	こちら視点
-
-	WaterMaterial
-$alpha	=	1
-$basetexturetransform	=	[1.00000,	0.00000,	0.00000,	0.00000]
-[0.00000,	1.00000,	0.00000,	0.00000]
-[0.00000,	0.00000,	1.00000,	0.00000]
-[0.00000,	0.00000,	0.00000,	1.00000]
-$bluramount	=	2
-$bumpframe	=	0
-$bumpframe2	=	0
-$bumptransform	=	[1.00000,	0.00000,	0.00000,	0.00000]
-[0.00000,	1.00000,	0.00000,	0.00000]
-[0.00000,	0.00000,	1.00000,	0.00000]
-[0.00000,	0.00000,	0.00000,	1.00000]
-$bumptransform2	=	[1.00000,	0.00000,	0.00000,	0.00000]
-[0.00000,	1.00000,	0.00000,	0.00000]
-[0.00000,	0.00000,	1.00000,	0.00000]
-[0.00000,	0.00000,	0.00000,	1.00000]
-$color	=	1.000000 1.000000 1.000000
-$color2	=	1.000000 1.000000 1.000000
-$envmapcontrast	=	0
-$envmapframe	=	0
-$envmapsaturation	=	1
-$envmaptint	=	1.000000 1.000000 1.000000
-$fadeoutonsilhouette	=	0
-$flags	=	2097152
-$flags2	=	16448
-$flags_defined	=	0
-$flags_defined2	=	0
-$flashlighttextureframe	=	0
-$forcealphawrite	=	0
-$frame	=	0
-$fresnelreflection	=	1
-$masked	=	0
-$normalmap	=	Texture [splatoonsweps_normalmap]
-$nowritez	=	0
-$refractamount	=	3.5
-$refracttint	=	0.796917 0.796917 0.796917
-$refracttinttextureframe	=	0
-$srgbtint	=	1.000000 1.000000 1.000000
-$time	=	0
-$vertexcolormodulate	=	0
 
