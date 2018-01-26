@@ -107,3 +107,10 @@ hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, 
 	net.WriteString("DealDamage" .. (dmg:GetDamage() >= 100 and "Critical" or ""))
 	net.Send(atk)
 end)
+
+hook.Add("Tick", "SplatoonSWEPsDoInkCoroutines", function()
+	local self = SplatoonSWEPs.InkManager
+	if coroutine.status(self.DoCoroutines) == "dead" then return end
+	local ok, message = coroutine.resume(self.DoCoroutines)
+	if not ok then ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n") end
+end)

@@ -247,7 +247,7 @@ SplatoonSWEPs.ToHammerUnits = 0.1 * 3.28084 * 16
 for key, value in pairs {
 	InklingBaseSpeed = .96 * 60, --Walking speed [Splatoon units/frame]
 	SquidBaseSpeed = 1.923 * 60, --Swimming speed [Splatoon units/frame]
-	OnEnemyInkSpeed = .96 * 60 / 3, --On enemy ink speed[Splatoon units/frame]
+	OnEnemyInkSpeed = .96 * 60 / 4, --On enemy ink speed[Splatoon units/frame]
 	mColRadius = 2, --Shooter's ink collision radius
 	mPaintNearDistance = 11, --Start decreasing distance
 	mPaintFarDistance = 200, --Minimum radius after distance

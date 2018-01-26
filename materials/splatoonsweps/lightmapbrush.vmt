@@ -2,4 +2,5 @@
 {
 	"$basetexture" "splatoonsweps/lightmapbrush"
 	"$translucent" "1"
+	"$vertexcolor" "1"
 }

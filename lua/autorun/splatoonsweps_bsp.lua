@@ -148,6 +148,7 @@ function bsp:ReadHeader()
 end
 
 local function GetRotatedAABB(v2d, angle, disp)
+	angle = -angle
 	local mins = Vector(math.huge, math.huge)
 	local maxs = -mins
 	for k, v in ipairs(v2d) do
@@ -181,12 +182,12 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	local area, bound, minangle, minmins = math.huge, nil, nil, nil
 	for i, v in ipairs(v2d) do --Get minimum AABB with O(n^2)
 		local seg = v2d[i % #v2d + 1] - v
-		local ang = Angle(0, 90 - math.deg(math.atan2(seg.y, seg.x)))
+		local ang = Angle(0, math.deg(math.atan2(seg.y, seg.x)) - 90)
 		local mins, maxs = GetRotatedAABB(v2d, ang, disp)
 		local tmpbound = maxs - mins
 		if area > tmpbound.x * tmpbound.y then
 			if tmpbound.x < tmpbound.y then
-				ang.yaw = ang.yaw - 90
+				ang.yaw = ang.yaw + 90
 				minmins, maxs = GetRotatedAABB(v2d, ang, disp)
 			else
 				minmins = mins
@@ -197,10 +198,11 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 		end
 	end
 	
-	minmins:Rotate(-minangle)
+	minmins:Rotate(minangle)
 	origin = SplatoonSWEPs:To3D(minmins, origin, angle)
-	angle:RotateAroundAxis(normal, -minangle.yaw)
+	angle:RotateAroundAxis(normal, minangle.yaw)
 	if CLIENT then
+		bound.z = minangle.yaw
 		SplatoonSWEPs.AreaBound = SplatoonSWEPs.AreaBound + area
 		local surf = SplatoonSWEPs.SequentialSurfaces
 		table.insert(surf.Angles, angle)
@@ -214,6 +216,7 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 		local leaf = SplatoonSWEPs:FindLeaf(disp or v3d)
 		local surf = leaf.Surfaces
 		table.insert(surf.Angles, angle)
+		table.insert(surf.DefaultAngles, minangle.yaw)
 		table.insert(surf.Indices, bsp.FaceIndex * (disp and -1 or 1))
 		table.insert(surf.InkCircles, {})
 		table.insert(surf.Maxs, maxs)
@@ -242,6 +245,7 @@ end
 local function SurfaceStructure()
 	return {
 		Angles = {},
+		DefaultAngles = {},
 		Indices = {},
 		InkCircles = {},
 		Maxs = {},

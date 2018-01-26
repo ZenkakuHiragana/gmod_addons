@@ -15,12 +15,11 @@ function ENT:Initialize()
 	
 	self.Hit = false
 	self:SharedInit()
-	-- self:PhysicsInitSphere(self.ColRadius or SplatoonSWEPs.mColRadius, "watermelon")
-	self:PhysicsInit(SOLID_BBOX)
+	self:PhysicsInitSphere(self.ColRadius or SplatoonSWEPs.mColRadius, "watermelon")
 	self:StartMotionController()
 	local ph = self:GetPhysicsObject()
 	if not IsValid(ph) then return end
-	ph:SetMaterial "watermelon"
+	ph:ApplyForceCenter(vector_origin)
 	ph:EnableGravity(false)
 	self.InitTime = CurTime()
 	self.InitPos = self:GetPos()

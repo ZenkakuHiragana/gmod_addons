@@ -139,8 +139,8 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	)
 	
 	local rtarea = rtsize^2
-	local rtmergin = 2 / rtsize
-	local arearatio = math.sqrt(self.AreaBound / rtarea) * 1.1 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	local rtmergin = 4 / rtsize
+	local arearatio = math.sqrt(self.AreaBound / rtarea) * 1.18 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
 	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
@@ -209,6 +209,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	
 	for sortedID, k in ipairs(sortedsurfs) do
 		if half and sortedID >= half.id then
+			surf.Angles[k]:RotateAroundAxis(surf.Normals[k], -90)
 			surf.Bounds[k].x, surf.Bounds[k].y, surf.u[k], surf.v[k], surf.Moved[k]
 				= surf.Bounds[k].y, surf.Bounds[k].x, surf.v[k] - dv, surf.u[k], true
 			for _, vertex in ipairs(surf.Vertices[k]) do

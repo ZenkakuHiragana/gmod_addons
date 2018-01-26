@@ -8,10 +8,10 @@ net.Receive("SplatoonSWEPs: DrawInk", function(len, ply)
 	local pos = net.ReadVector()
 	local radius = net.ReadFloat()
 	local inkangle = net.ReadFloat()
-	table.insert(SplatoonSWEPs.InkQueue, {
+	return table.insert(SplatoonSWEPs.InkQueue, {
 		c = color,
+		dispflag = facenumber < 0 and 0 or 1,
 		inkangle = inkangle,
-		isdisplacement = facenumber < 0,
 		n = math.abs(facenumber),
 		pos = pos,
 		r = radius,

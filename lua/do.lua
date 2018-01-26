@@ -34,6 +34,11 @@ if CLIENT then
 			DebugLine(Vector(v.u, v.v) * c, Vector(w.u, w.v) * c, true)
 			-- DebugLine(v.pos, w.pos, true)
 		end
+		-- for k, v in ipairs(surf.Vertices[q.n]) do
+			-- local w = surf.Vertices[q.n][k % #surf.Vertices[q.n] + 1]
+			-- DebugLine(v.pos, w.pos, true)
+			-- DebugLine(Vector(v.u,v.v)*1000, Vector(w.u,w.v)*1000, true)
+		-- end
 	end
 
 	-- for k, u in pairs(surf.u) do

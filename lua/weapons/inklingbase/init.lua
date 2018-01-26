@@ -59,8 +59,7 @@ function SWEP:Initialize()
 	self:SetInkColorProxy(SplatoonSWEPs.vector_one)
 	self:ChangeHullDuck()
 	self:AddSchedule(SplatoonSWEPs:FrameToSec(3),
-	function(self, schedule)
-		--Set whether player is in ink or not
+	function(self, schedule) --Set if player is in ink
 		local ang = Angle(0, self.Owner:GetAngles().yaw, 0)
 		local p = self.Owner:WorldSpaceCenter()
 		local fw, right = ang:Forward(), ang:Right()

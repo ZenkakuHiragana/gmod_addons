@@ -6,6 +6,8 @@ SplatoonSWEPs.InkQueue = {}
 local MAX_PROCESS_QUEUE_AT_ONCE = 80
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
+-- local inkmaterial = Material "vgui/gmod_tool"
+-- local normalmaterial = Material "vgui/gmod_tool"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
 local LightmapSampleTable = {[7] = .8}
 local NumPoly, Polysin, Polycos, Lightrad = 16, {}, {}, {}
@@ -22,41 +24,37 @@ for n in pairs(LightmapSampleTable) do
 	end
 end
 
-local amb = render.GetAmbientLightColor() / 10
-local amblen = amb:Length() * 10
+local amb = render.GetAmbientLightColor() / 2
+local amblen = amb:Length() / 2
 if amblen > 1 then amb = amb / amblen end
-local ambscale = SplatoonSWEPs.GrayScaleFactor:Dot(amb) * 2
-local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
+local ambscale = SplatoonSWEPs.GrayScaleFactor:Dot(amb)
+local function DrawMeshes(bDrawingDepth, bDrawingSkybox, ...)
 	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox
 	or bDrawingDepth or not SplatoonSWEPs.RenderTarget.Ready or GetConVar "mat_wireframe":GetBool() then return end
 	local hdrscale = render.GetToneMappingScaleLinear()
-	render.SetToneMappingScaleLinear(hdrscale * ambscale)
-	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material)
-	render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap)
-	render.OverrideDepthEnable(true, true)
-	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
-	render.OverrideDepthEnable(false)
-	render.UpdateFullScreenDepthTexture()
-	if LocalPlayer():FlashlightIsOn() or #ents.FindByClass "*projectedtexture*" > 0 then
-		render.PushFlashlightMode(true)
-		render.SetToneMappingScaleLinear(hdrscale)
-		for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
-		render.SetToneMappingScaleLinear(hdrscale * ambscale)
-		render.PopFlashlightMode()
-	end
-	
-	render.UpdateRefractTexture()
-	render.SetMaterial(SplatoonSWEPs.RenderTarget.WaterMaterial)
-	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end
-	render.SetToneMappingScaleLinear(hdrscale)
+	render.SetToneMappingScaleLinear(hdrscale * ambscale) --Set HDR scale for custom lightmap
+	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material) --Ink base texture
+	render.SetLightmapTexture(SplatoonSWEPs.RenderTarget.Lightmap) --Set custom lightmap
+	render.OverrideDepthEnable(true, true) --Write to depth buffer for translucent surface culling
+	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end --Draw whole ink surface
+	render.OverrideDepthEnable(false) --Back to default
+	render.SetToneMappingScaleLinear(hdrscale) --Back to default
+	render.UpdateRefractTexture() --Make the ink "watery"
+	render.SetMaterial(SplatoonSWEPs.RenderTarget.WaterMaterial) --Set water texture for ink
+	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end --Draw ink again
+	if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then return end
+	render.PushFlashlightMode(true) --Ink lit by player's flashlight or projected texture
+	render.SetMaterial(SplatoonSWEPs.RenderTarget.Material) --Ink base texture
+	for i, m in ipairs(SplatoonSWEPs.IMesh) do m:Draw() end --Draw once again
+	render.PopFlashlightMode() --Back to default
 end
 
 local function GetLight(p, n)
-	local lightcolor = render.GetLightColor(p + n) / 2
-	local light = render.ComputeLighting(p + n, n) / 2
+	local lightcolor = render.GetLightColor(p + n)
+	local light = render.ComputeLighting(p + n, n)
 	if lightcolor:LengthSqr() > 1 then lightcolor:Normalize() end
 	if light:LengthSqr() > 1 then light:Normalize() end
-	return (light + lightcolor + amb) / 2.1
+	return (light + lightcolor + amb) / 2.5
 end
 
 local function ProcessQueue()
@@ -64,31 +62,30 @@ local function ProcessQueue()
 	while true do
 		local done = 0
 		for i, q in ipairs(self.InkQueue) do
+			q.done = true
 			local c = self:GetColor(q.c)
 			local radius = math.Round(self:UnitsToPixels(q.r))
 			local size = radius * 2
 			local surf = self.SequentialSurfaces
 			local bound = self:UnitsToPixels(surf.Bounds[q.n])
 			local uvorg = self:UVToPixels(Vector(surf.u[q.n], surf.v[q.n]))
-			local angle, origin, normal = Angle(surf.Angles[q.n]), surf.Origins[q.n], surf.Normals[q.n]
-			if surf.Moved[q.n] then angle:RotateAroundAxis(normal, -90) end
-			local light = GetLight(q.pos, normal)
+			local angle, origin, normal, moved = Angle(surf.Angles[q.n]), surf.Origins[q.n], surf.Normals[q.n], surf.Moved[q.n]
 			local pos2d = self:UnitsToPixels(self:To2D(q.pos, origin, angle))
-			if surf.Moved[q.n] then pos2d.x = -pos2d.x end
+			if moved then pos2d.x, q.inkangle = -pos2d.x, -(q.inkangle + 90) end
+			local lightorg = q.pos - normal * (normal:Dot(q.pos - origin) - 1) * q.dispflag
+			local light = GetLight(lightorg, normal)
 			local center = Vector(math.Round(pos2d.x + uvorg.x), math.Round(pos2d.y + uvorg.y))
 			local corner = center - self.vector_one * radius
 			local s = Vector(math.floor(uvorg.x) - 1, math.floor(uvorg.y) - 1)
 			local b = Vector(math.ceil(uvorg.x + bound.x) + 1, math.ceil(uvorg.y + bound.y) + 1)
 			if not self:CollisionAABB2D(s, b, corner, corner + self.vector_one * size) then continue end
-			local _, roll = WorldToLocal(vector_origin, angle, vector_origin, normal:Angle())
 			
-			inkmaterial:SetVector("$color", Vector(c.r, c.g, c.b) / 255)
 			render.PushRenderTarget(self.RenderTarget.BaseTexture)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
-			surface.SetDrawColor(color_white)
+			surface.SetDrawColor(c)
 			surface.SetMaterial(inkmaterial)
-			surface.DrawTexturedRectRotated(center.x, center.y, size, size, roll.roll - q.inkangle)
+			surface.DrawTexturedRectRotated(center.x, center.y, size, size, q.inkangle)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
 			render.PopRenderTarget()
@@ -97,14 +94,15 @@ local function ProcessQueue()
 			render.PushRenderTarget(self.RenderTarget.Normalmap)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
+			surface.SetDrawColor(color_white)
 			surface.SetMaterial(normalmaterial)
-			surface.DrawTexturedRectRotated(center.x, center.y, size, size, roll.roll - q.inkangle)
+			surface.DrawTexturedRectRotated(center.x, center.y, size, size, q.inkangle)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
 			render.PopRenderTarget()
 			
 			--Draw on lightmap
-			radius, size, bound = radius / 2, size / 2, bound / 2
+			radius, size = radius / 2, size / 2
 			center, uvorg, s, b = center / 2, uvorg / 2, s / 2, b / 2
 			s.x, s.y, b.x, b.y = math.floor(s.x), math.floor(s.y), math.ceil(b.x), math.ceil(b.y)
 			render.PushRenderTarget(self.RenderTarget.Lightmap)
@@ -116,8 +114,8 @@ local function ProcessQueue()
 			for n, mul in pairs(LightmapSampleTable) do
 				for i = 1, n do
 					local r = Lightrad[n][i] * radius * mul
-					lightmapmaterial:SetVector("$color", GetLight(self:To3D(self:PixelsToUnits(
-					surf.Moved[q.n] and Vector(-r.x, r.y) or r) * 2, q.pos, angle), normal))
+					surface.SetDrawColor(GetLight(self:To3D(self:PixelsToUnits(
+					surf.Moved[q.n] and Vector(-r.x, r.y) or r) * 2, lightorg, angle), normal):ToColor())
 					r = r + center - self.vector_one * radius
 					surface.DrawTexturedRect(r.x, r.y, size, size)
 				end
@@ -127,7 +125,7 @@ local function ProcessQueue()
 			render.OverrideAlphaWriteEnable(false)
 			render.PopRenderTarget()
 			
-			q.done, done = true, done + 1
+			done = done + 1
 			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 		

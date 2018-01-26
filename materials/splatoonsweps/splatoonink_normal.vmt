@@ -1,5 +1,5 @@
 "UnlitGeneric"
 {
 	"$basetexture" "splatoonsweps/splatoonink_normal"
-	"$alpha" ".4"
+	"$translucent" "1"
 }
