@@ -5,7 +5,13 @@
 SplatoonSWEPs = SplatoonSWEPs or {
 	Models = {},
 	InkCounter = 0,
+	InkShotMaterials = {},
 }
+
+for i = 1, 9 do
+	table.insert(SplatoonSWEPs.InkShotMaterials, (Material("splatoonsweps/inkshot/mask/shot" .. tostring(i) .. ".png")))
+end
+
 include "autorun/splatoonsweps_shared.lua"
 include "splatoonsweps_inkmanager.lua"
 include "splatoonsweps_network.lua"

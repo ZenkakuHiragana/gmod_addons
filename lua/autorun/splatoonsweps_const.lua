@@ -175,7 +175,7 @@ local InkColors = {
 	},
 	
 	{Name = "Black",
-		HSVToColor(0, 0, .05)
+		HSVToColor(0, 0, .03)
 	},
 	{Name = "Gray",
 		HSVToColor(0, 0, .5)
@@ -244,6 +244,7 @@ SplatoonSWEPs.SquidViewOffset = Vector(0, 0, 24)
 SplatoonSWEPs.InklingJumpPower = 250
 SplatoonSWEPs.OnEnemyInkJumpPower = SplatoonSWEPs.InklingJumpPower * .75
 SplatoonSWEPs.ToHammerUnits = 0.1 * 3.28084 * 16
+SplatoonSWEPs.mDegRandomY = 1.5 --Crosshair ratio in Splattershot Pro is 2:1, mDegRandom of that is 3.00.
 for key, value in pairs {
 	InklingBaseSpeed = .96 * 60, --Walking speed [Splatoon units/frame]
 	SquidBaseSpeed = 1.923 * 60, --Swimming speed [Splatoon units/frame]

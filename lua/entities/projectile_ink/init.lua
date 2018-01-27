@@ -29,6 +29,7 @@ function ENT:Initialize()
 	self.SplashPatterns = self.SplashPatterns or 1
 	self.SplashInterval = self.SplashInterval or 0
 	self.SplashInitMul = self.SplashInitMul or 0
+	self.SplashRandom = self.SplashRandom or 0
 	self.SplashCount = 0
 	self.Damage = self.Damage or 0
 	self.DecreaseDamage = self.DecreaseDamage or 0
@@ -59,7 +60,7 @@ function ENT:Initialize()
 	1 / ((self.TrailWidth or 8) + (self.TrailEnd or 2)), "effects/beam_generic01.vmt")
 end
 
-local dampXY, dampZ = 5, 2
+local dampXY, dampZ = 6, 2
 function ENT:PhysicsSimulate(phys, dt)
 	local vel = phys:GetVelocity()
 	if math.max(0, CurTime() - self.InitTime) >= self.Straight then
@@ -73,7 +74,8 @@ function ENT:PhysicsSimulate(phys, dt)
 	return vector_origin, vector_origin, SIM_GLOBAL_ACCELERATION
 end
 
-local dropposdelta = 16
+local dropposdelta = -vector_up * 6
+local splashrandom = {-1, 0, 1}
 function ENT:PhysicsUpdate(phys)
 	if not (IsValid(phys) and self:IsInWorld()) then
 		return SafeRemoveEntityDelayed(self, 0)
@@ -86,8 +88,8 @@ function ENT:PhysicsUpdate(phys)
 	if len > nextlen * nextlen then
 		local splash = ents.Create "projectile_ink"
 		if not IsValid(splash) then return end
-		nextlen = nextlen + math.random(-1, 1) * SplatoonSWEPs.mSplashDrawRadius
-		splash:SetPos(self.InitPos + self.InitVelocity:GetNormalized() * nextlen - vector_up * 6)
+		nextlen = nextlen + splashrandom[(self.SplashCount + self.SplashRandom) % 3 + 1] * SplatoonSWEPs.mSplashDrawRadius
+		splash:SetPos(self.InitPos + self.InitVelocity:GetNormalized() * nextlen + dropposdelta)
 		splash:SetAngles(dropangle)
 		splash:SetOwner(self:GetOwner())
 		splash:SetInkColorProxy(self:GetInkColorProxy())
@@ -98,33 +100,41 @@ function ENT:PhysicsUpdate(phys)
 		splash.TrailWidth = 4
 		splash.TrailEnd = 1
 		splash.TrailLife = .1
+		splash.InkYaw = self.InkYaw
+		splash.InkType = math.random(1, 3)
 		splash:Spawn()
 		splash:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-		splash:SetModelScale(0.5)
+		splash:SetModelScale(.5)
 		splash.InitPos = self.InitPos
 		self.SplashCount = self.SplashCount + 1
 	end
 end
 
+local MAX_SLOPE = math.cos(math.rad(45))
 function ENT:PhysicsCollide(coldata, collider)
 	SafeRemoveEntityDelayed(self, 0)
+	local ss = SplatoonSWEPs
+	local t = math.max(0, CurTime() - self.InitTime)
 	if coldata.HitEntity:IsWorld() then
 		local tr = util.QuickTrace(coldata.HitPos, coldata.HitNormal, self)
 		if tr.HitSky then return end
 		self:EmitSound "SplatoonSWEPs_Ink.HitWorld"
-		return SplatoonSWEPs.InkManager.AddQueue(
-			tr.HitPos,
-			tr.HitNormal,
-			math.Remap(math.Clamp(self.InitPos.z - self:GetPos().z,
-			SplatoonSWEPs.mPaintNearDistance, SplatoonSWEPs.mPaintFarDistance),
-			SplatoonSWEPs.mPaintFarDistance, SplatoonSWEPs.mPaintNearDistance,
-			self.MinRadius, self.InkRadius),
-			self.ColorCode,
-			coldata.OurOldVelocity:Angle().yaw
-		)
+		local radius = math.Remap(math.Clamp(self.InitPos.z - self:GetPos().z,
+			ss.mPaintNearDistance, ss.mPaintFarDistance),
+			ss.mPaintFarDistance, ss.mPaintNearDistance,
+			self.MinRadius, self.InkRadius)
+		if self.InkType > 3 and tr.HitNormal.z > MAX_SLOPE and collider:IsGravityEnabled() then
+			local min, max, actual = self.InitVelocity * self.Straight, nil, tr.HitPos - self.InitPos
+			max, actual = min:Length(), actual:Length2D() min = max / 3
+			radius = radius * math.Remap(math.Clamp(actual, min, max), min, max, 1, 1.6)
+		else
+			self.InkType = math.random(1, 3)
+		end
+		
+		return ss.InkManager.AddQueue(tr.HitPos, tr.HitNormal, radius, self.ColorCode, self.InkYaw, self.InkType)
 	elseif self.Damage > 0 then
 		local d, o = DamageInfo(), self:GetOwner()
-		local t = math.max(0, CurTime() - self.InitTime) - self.DecreaseDamage
+		t = t - self.DecreaseDamage
 		d:SetDamage(math.Remap(-math.Clamp(t, 0, self.MinDamageTime), -self.MinDamageTime, 0, self.MinDamage, self.Damage))
 		d:SetDamageForce(-coldata.HitNormal)
 		d:SetDamagePosition(coldata.HitPos)

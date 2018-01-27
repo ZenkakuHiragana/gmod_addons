@@ -19,8 +19,9 @@ net.Receive("SplatoonSWEPs: Fetch ink information", function(length, sender)
 						net.WriteUInt(surf.Indices[i], 20)
 						net.WriteUInt(info.color, SplatoonSWEPs.COLOR_BITS)
 						net.WriteVector(SplatoonSWEPs:To3D(info.pos, surf.Origins[i], surf.Angles[i]))
-						net.WriteFloat(math.sqrt(info.radiusSqr))
+						net.WriteFloat(info.radius)
 						net.WriteFloat(info.angle)
+						net.WriteUInt(info.texid, 4)
 						net.Send(sender)
 						count = count + 1
 						if count > 10 then coroutine.yield() count = 0 end

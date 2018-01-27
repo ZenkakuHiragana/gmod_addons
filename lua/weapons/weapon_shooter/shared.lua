@@ -29,12 +29,12 @@ SplatoonSWEPs.SetPrimary(SWEP, {
 	FirePosition		= Vector(0, -6, -9),	--Ink spawn position
 	Damage				= 36,					--Maximum damage[units]
 	MinDamage			= 18,					--Minimum damage[units]
-	InkRadius			= 100.8,				--Painting radius[units]
+	InkRadius			= 100.7874,				--Painting radius[units]
 	MinRadius			= 94.5,					--Minimum painting radius[units]
-	SplashRadius		= 68.25,				--Painting radius[units]
+	SplashRadius		= 68.24147,				--Painting radius[units]
 	SplashPatterns		= 5,					--Paint patterns
 	SplashNum			= 2,					--Number of splashes
-	SplashInterval		= 393.75,				--Make an interval on each splash
+	SplashInterval		= 393.7008,				--Make an interval on each splash
 	Spread				= 6,					--Aim cone[deg]
 	SpreadJump			= 15,					--Aim cone while jumping[deg]
 	SpreadBias			= .25,					--Aim cone random component[deg]

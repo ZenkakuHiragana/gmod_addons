@@ -28,18 +28,24 @@ include "splatoonsweps_userinfo.lua"
 include "splatoonsweps_inkmanager_cl.lua"
 include "splatoonsweps_network_cl.lua"
 SplatoonSWEPs.RenderTarget.BaseTextureFlags = bit.bor(
+	SplatoonSWEPs.TEXTUREFLAGS.NOMIP,
+	SplatoonSWEPs.TEXTUREFLAGS.NOLOD,
 	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
 	SplatoonSWEPs.TEXTUREFLAGS.RENDERTARGET,
 	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER
 )
 SplatoonSWEPs.RenderTarget.NormalmapFlags = bit.bor(
 	SplatoonSWEPs.TEXTUREFLAGS.NORMAL,
+	SplatoonSWEPs.TEXTUREFLAGS.NOMIP,
+	SplatoonSWEPs.TEXTUREFLAGS.NOLOD,
 	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
 	SplatoonSWEPs.TEXTUREFLAGS.RENDERTARGET,
 	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER,
 	SplatoonSWEPs.TEXTUREFLAGS.SSBUMP
 )
 SplatoonSWEPs.RenderTarget.LightmapFlags = bit.bor(
+	SplatoonSWEPs.TEXTUREFLAGS.NOMIP,
+	SplatoonSWEPs.TEXTUREFLAGS.NOLOD,
 	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
 	SplatoonSWEPs.TEXTUREFLAGS.RENDERTARGET,
 	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER
@@ -120,6 +126,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 			["$basetexture"] = self.RenderTarget.BaseTextureName,
 			["$bumpmap"] = self.RenderTarget.NormalmapName,
 			["$ssbump"] = "1",
+			["$nolod"] = "1",
 			["$alpha"] = ".95",
 			["$alphatest"] = "1",
 			["$alphatestreference"] = ".5",
@@ -132,9 +139,10 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		"Refract",
 		{
 			["$normalmap"] = self.RenderTarget.NormalmapName,
+			["$nolod"] = "1",
 			["$bluramount"] = "2",
-			["$refractamount"] = "1.1",
-			["$refracttint"] = "[.9 .9 .9]",
+			["$refractamount"] = ".1",
+			["$refracttint"] = "[1 1 1]",
 		}
 	)
 	

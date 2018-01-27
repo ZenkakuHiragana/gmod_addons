@@ -49,9 +49,9 @@ local function AddInkRectangle(ink, newink, sz)
 	ink[newink] = sz
 end
 
-local function QueueCoroutine(pos, normal, radius, color, angle)
+local function QueueCoroutine(pos, normal, radius, color, angle, inktype)
 	local ang = normal:Angle()
-	ang.roll = math.abs(normal.z) > COS_MAX_DEG_DIFF and angle * normal.z + 180 or ang.yaw
+	ang.roll = math.abs(normal.z) > COS_MAX_DEG_DIFF and angle * normal.z or ang.yaw
 	local polys = {}
 	for i, v in ipairs(reference_polys) do --Scaling
 		polys[i] = SplatoonSWEPs:To3D(v * radius, pos, ang)
@@ -74,16 +74,18 @@ local function QueueCoroutine(pos, normal, radius, color, angle)
 			net.WriteVector(pos)
 			net.WriteFloat(radius)
 			net.WriteFloat(localang)
+			net.WriteUInt(inktype, 4)
 			net.Broadcast()
 			
 			local pos2d = SplatoonSWEPs:To2D(pos, surf.Origins[i], surf.Angles[i])
 			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
 			local inkdata = {
 				angle = localang,
-				color = color,
-				radiusSqr = radius * radius,
-				pos = pos2d,
 				bounds = {bmins.x, bmins.y, bmaxs.x, bmaxs.y},
+				color = color,
+				pos = pos2d,
+				radius = radius,
+				texid = inktype,
 			}
 			AddInkRectangle(surf.InkCircles[i], inkdata, SplatoonSWEPs.InkCounter)
 			SplatoonSWEPs.InkCounter = SplatoonSWEPs.InkCounter + 1
@@ -101,7 +103,7 @@ local function ProcessQueue()
 		local done = 0
 		for i, v in ipairs(PaintQueue) do
 			if coroutine.status(v.co) == "dead" then continue end
-			local ok, msg = coroutine.resume(v.co, v.pos, v.normal, v.radius, v.color, v.angle)
+			local ok, msg = coroutine.resume(v.co, v.pos, v.normal, v.radius, v.color, v.angle, v.inktype)
 			if not ok then
 				print("coroutine end: ", msg)
 				ErrorNoHalt(debug.traceback(v.co))
@@ -159,8 +161,15 @@ function SplatoonSWEPs:GetSurfaceColor(tr)
 			self:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
 			local p2d = self:To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
 			for r in SortedPairsByValue(surf.InkCircles[i], true) do
-				if p2d:DistToSqr(r.pos) < r.radiusSqr then
+				if r.texid < 4 and p2d:DistToSqr(r.pos) < r.radius * r.radius * .6 then
 					return r.color
+				else
+					local texpos = (p2d - r.pos) / r.radius
+					texpos:Rotate(Angle(0, r.angle))
+					texpos = texpos * 32 + Vector(16, 32)
+					if 0 < texpos.x and texpos.x < 32 and 0 < texpos.y and texpos.y < 64 and self.InkShotMaterials[r.texid]:GetColor(texpos.x, texpos.y).r > 127 then
+						return r.color
+					end
 				end
 			end
 		end
@@ -170,7 +179,7 @@ end
 SplatoonSWEPs.InkManager = {
 	DoCoroutines = coroutine.create(DoCoroutines),
 	Threads = {ProcessQueue = coroutine.create(ProcessQueue)},
-	AddQueue = function(pos, normal, radius, color, angle)
+	AddQueue = function(pos, normal, radius, color, angle, inktype)
 		table.insert(PaintQueue, {
 			angle = math.NormalizeAngle(angle),
 			co = coroutine.create(QueueCoroutine),
@@ -178,6 +187,7 @@ SplatoonSWEPs.InkManager = {
 			normal = normal,
 			pos = pos,
 			radius = radius,
+			inktype = inktype,
 		})
 	end,
 }

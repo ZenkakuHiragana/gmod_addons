@@ -24,10 +24,10 @@ for n in pairs(LightmapSampleTable) do
 	end
 end
 
-local amb = render.GetAmbientLightColor() / 2
-local amblen = amb:Length() / 2
+local amb = render.GetAmbientLightColor() * .3
+local amblen = amb:Length() * .3
 if amblen > 1 then amb = amb / amblen end
-local ambscale = SplatoonSWEPs.GrayScaleFactor:Dot(amb)
+local ambscale = SplatoonSWEPs.GrayScaleFactor:Dot(amb) / 2
 local function DrawMeshes(bDrawingDepth, bDrawingSkybox, ...)
 	if (GetConVar "r_3dsky":GetBool() and SplatoonSWEPs.Has3DSkyBox or false) == bDrawingSkybox
 	or bDrawingDepth or not SplatoonSWEPs.RenderTarget.Ready or GetConVar "mat_wireframe":GetBool() then return end
@@ -54,7 +54,7 @@ local function GetLight(p, n)
 	local light = render.ComputeLighting(p + n, n)
 	if lightcolor:LengthSqr() > 1 then lightcolor:Normalize() end
 	if light:LengthSqr() > 1 then light:Normalize() end
-	return (light + lightcolor + amb) / 2.5
+	return (light + lightcolor + amb) / 2.3
 end
 
 local function ProcessQueue()
@@ -62,10 +62,9 @@ local function ProcessQueue()
 	while true do
 		local done = 0
 		for i, q in ipairs(self.InkQueue) do
-			q.done = true
 			local c = self:GetColor(q.c)
 			local radius = math.Round(self:UnitsToPixels(q.r))
-			local size = radius * 2
+			local size, vrad = radius * 2, self.vector_one * radius
 			local surf = self.SequentialSurfaces
 			local bound = self:UnitsToPixels(surf.Bounds[q.n])
 			local uvorg = self:UVToPixels(Vector(surf.u[q.n], surf.v[q.n]))
@@ -75,17 +74,20 @@ local function ProcessQueue()
 			local lightorg = q.pos - normal * (normal:Dot(q.pos - origin) - 1) * q.dispflag
 			local light = GetLight(lightorg, normal)
 			local center = Vector(math.Round(pos2d.x + uvorg.x), math.Round(pos2d.y + uvorg.y))
-			local corner = center - self.vector_one * radius
 			local s = Vector(math.floor(uvorg.x) - 1, math.floor(uvorg.y) - 1)
 			local b = Vector(math.ceil(uvorg.x + bound.x) + 1, math.ceil(uvorg.y + bound.y) + 1)
-			if not self:CollisionAABB2D(s, b, corner, corner + self.vector_one * size) then continue end
+			if not self:CollisionAABB2D(s, b, center - vrad, center + vrad) then q.done = math.huge continue end
+			local settexture = "splatoonsweps/inkshot/shot" .. tostring(q.t)
+			local sizeres = q.t < 4 and 1 or .5
 			
+			inkmaterial:SetTexture("$basetexture", settexture)
+			normalmaterial:SetTexture("$basetexture", settexture .. "n")
 			render.PushRenderTarget(self.RenderTarget.BaseTexture)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
 			surface.SetDrawColor(c)
 			surface.SetMaterial(inkmaterial)
-			surface.DrawTexturedRectRotated(center.x, center.y, size, size, q.inkangle)
+			surface.DrawTexturedRectRotated(center.x, center.y, size * sizeres, size, q.inkangle)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
 			render.PopRenderTarget()
@@ -96,7 +98,7 @@ local function ProcessQueue()
 			cam.Start2D()
 			surface.SetDrawColor(color_white)
 			surface.SetMaterial(normalmaterial)
-			surface.DrawTexturedRectRotated(center.x, center.y, size, size, q.inkangle)
+			surface.DrawTexturedRectRotated(center.x , center.y, size * sizeres, size, q.inkangle)
 			cam.End2D()
 			render.SetScissorRect(0, 0, 0, 0, false)
 			render.PopRenderTarget()
@@ -125,13 +127,13 @@ local function ProcessQueue()
 			render.OverrideAlphaWriteEnable(false)
 			render.PopRenderTarget()
 			
-			done = done + 1
+			q.done, done = q.done + 1, done + 1
 			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 		
 		local newqueue = {}
 		for i, v in ipairs(SplatoonSWEPs.InkQueue) do
-			if not v.done then newqueue[#newqueue + 1] = v end
+			if not v.done or v.done < 8 then newqueue[#newqueue + 1] = v end
 		end
 		SplatoonSWEPs.InkQueue = newqueue
 		coroutine.yield()
