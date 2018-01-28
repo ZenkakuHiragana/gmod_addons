@@ -99,6 +99,7 @@ end
 
 function SWEP:ClientDeployBase()
 	self.CanHealStand, self.CanHealInk, self.CanReloadStand,  self.CanReloadInk = false, false, false, false
+	if not IsValid(self.Owner) then return end
 	self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 	self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 	self:ChangeHullDuck()
@@ -109,7 +110,7 @@ function SWEP:Holster()
 	if not (IsValid(self.Owner) and self:IsFirstTimePredicted()) then return end
 	local vm = self.Owner:GetViewModel()
 	if IsValid(vm) then self:ResetBonePositions(vm) end
-	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
+	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID and self.HullDuckMins then
 		self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 		self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 	end

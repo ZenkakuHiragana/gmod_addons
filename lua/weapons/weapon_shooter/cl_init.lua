@@ -71,11 +71,11 @@ SWEP.WElements = {
 --  matrix | VMatrix for scaling
 --When the weapon is fired, it slightly expands.  This is maximum time to get back to normal size.
 local FireWeaponCooldown = 0.1
-local FireWeaponMultiplier = 1.5
+local FireWeaponMultiplier = 1
 local function ExpandModel(self, model, bone_ent, pos, ang, v, matrix)
 	if v.inktank then return end
-	local fraction = (self.WeaponSize - CurTime() + FireWeaponCooldown) * FireWeaponMultiplier
-	if fraction > 0 then matrix:Scale(SplatoonSWEPs.vector_one * (1 + fraction)) end
+	local fraction = (FireWeaponCooldown - CurTime() + self.WeaponSize) * FireWeaponMultiplier
+	matrix:Scale(SplatoonSWEPs.vector_one * math.max(1, fraction + 1))
 end
 SWEP.PreDrawWorldModel, SWEP.PreViewModelDrawn = ExpandModel, ExpandModel
 

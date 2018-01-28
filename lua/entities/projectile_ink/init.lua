@@ -18,7 +18,6 @@ function ENT:Initialize()
 	if not IsValid(ph) then return end
 	ph:ApplyForceCenter(vector_origin)
 	ph:EnableGravity(false)
-	self.InitTime = CurTime()
 	self.InitPos = self:GetPos()
 	self.Straight = self.Straight or 0
 	self.ColorCode = self.ColorCode or 0
@@ -60,7 +59,7 @@ end
 
 function ENT:PhysicsSimulate(phys, dt)
 	local vel = phys:GetVelocity()
-	if math.max(0, CurTime() - self.InitTime) >= self.Straight then
+	if math.max(0, CurTime() - (self.InitTime or CurTime())) >= self.Straight then
 		local accel = (math.NormalizeAngle(vel:Angle().pitch - phys:GetAngles().roll) / dt - phys:GetAngleVelocity().x) / dt
 		vel.z = vel.z > 0 and vel.z * 2 or 0
 		return Vector(accel), -vel / (dt * self.InitVelocityLength / 4.5) + physenv.GetGravity() * 5, SIM_GLOBAL_ACCELERATION
@@ -76,6 +75,7 @@ function ENT:PhysicsUpdate(phys)
 	if not (IsValid(phys) and self:IsInWorld()) then
 		return SafeRemoveEntityDelayed(self, 0)
 	end
+	self.InitTime = self.InitTime or CurTime()
 	phys:EnableGravity(math.max(0, CurTime() - self.InitTime) >= self.Straight)
 	if self.SplashCount > self.SplashNum then return end
 	local len = (self:GetPos() - self.InitPos):Length2DSqr()
@@ -108,7 +108,7 @@ end
 local MAX_SLOPE = math.cos(math.rad(45))
 function ENT:PhysicsCollide(coldata, collider)
 	SafeRemoveEntityDelayed(self, 0)
-	local t = math.max(0, CurTime() - self.InitTime)
+	local t = math.max(0, CurTime() - (self.InitTime or CurTime()))
 	if coldata.HitEntity:IsWorld() then
 		local tr = util.QuickTrace(coldata.HitPos, coldata.HitNormal, self)
 		if tr.HitSky then return end

@@ -2,9 +2,12 @@
 --Weapon information in default SWEP structure.
 if CLIENT then
 	SWEP.Author = "GreatZenkakuMan"
+	SWEP.BobScale = 1
+	SWEP.BounceWeaponIcon = true
 	SWEP.Category = "Splatoon SWEPs"
 	SWEP.DrawAmmo = false
 	SWEP.DrawCrosshair = false
+	SWEP.DrawWeaponInfoBox = true
 	SWEP.Instructions = 
 	[[Primary: Shoot ink.
 Secondary: Use sub weapon.
@@ -15,12 +18,14 @@ Crouch: Become squid.
 	SWEP.PrintName = "Inkling base"
 	SWEP.Purpose = "Splat ink!"
 	SWEP.RenderGroup = RENDERGROUP_TRANSLUCENT
-	-- SWEP.SpeechBubbleLid = surface.GetTextureID "gui/speech_lid"
+	SWEP.SpeechBubbleLid = surface.GetTextureID "gui/speech_lid"
+	SWEP.SwayScale = 1
 	SWEP.UseHands = true
 	SWEP.ViewModelFOV = 62
 else
 	SWEP.AutoSwitchFrom = false
 	SWEP.AutoSwitchTo = false
+	SWEP.Weight = 1
 end
 
 SWEP.HoldType = "crossbow"
