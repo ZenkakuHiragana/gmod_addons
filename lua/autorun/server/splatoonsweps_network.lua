@@ -22,6 +22,7 @@ net.Receive("SplatoonSWEPs: Fetch ink information", function(length, sender)
 						net.WriteFloat(info.radius)
 						net.WriteFloat(info.angle)
 						net.WriteUInt(info.texid, 4)
+						net.WriteFloat(info.ratio)
 						net.Send(sender)
 						count = count + 1
 						if count > 10 then coroutine.yield() count = 0 end

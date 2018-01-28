@@ -1,4 +1,5 @@
 
+--Sound script registrations
 if not SplatoonSWEPs then return end
 
 -- SplatoonSWEPs.BombAvailable

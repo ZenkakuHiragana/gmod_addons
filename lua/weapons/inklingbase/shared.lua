@@ -1,11 +1,18 @@
 
-SplatoonSWEPs:AddTimerFramework(SWEP)
+local ss = SplatoonSWEPs
+ss:AddTimerFramework(SWEP)
 function SWEP:ChangeHullDuck()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
-	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
-		self.Owner:SetHullDuck(SplatoonSWEPs.SquidBoundMins, SplatoonSWEPs.SquidBoundMaxs)
-		self.Owner:SetViewOffsetDucked(SplatoonSWEPs.SquidViewOffset)
+	if self:GetPMID() ~= ss.PLAYER.NOSQUID then
+		self.Owner:SetHullDuck(ss.SquidBoundMins, ss.SquidBoundMaxs)
+		self.Owner:SetViewOffsetDucked(ss.SquidViewOffset)
 	end
+end
+
+function SWEP:ChangeViewModel(act)
+	if self.ViewAnim == act then return end
+	self.ViewAnim = act
+	self:SendWeaponAnim(act)
 end
 
 function SWEP:SetPlayerSpeed(spd)
@@ -15,12 +22,14 @@ function SWEP:SetPlayerSpeed(spd)
 	self.Owner:SetWalkSpeed(self.MaxSpeed)
 end
 
+--Speed on humanoid form = base speed * ability factor
 function SWEP:GetInklingSpeed()
-	return SplatoonSWEPs.InklingBaseSpeed
+	return ss.InklingBaseSpeed
 end
 
+--Speed on squid form = base speed * ability factor
 function SWEP:GetSquidSpeed()
-	return SplatoonSWEPs.SquidBaseSpeed
+	return ss.SquidBaseSpeed
 end
 
 --When NPC weapon is picked up by player.
@@ -29,8 +38,8 @@ function SWEP:OwnerChanged()
 end
 
 function SWEP:SharedInitBase()
-	self.SwimSound = CreateSound(self, SplatoonSWEPs.SwimSound)
-	self.EnemyInkSound = CreateSound(self, SplatoonSWEPs.EnemyInkSound)
+	self.SwimSound = CreateSound(self, ss.SwimSound)
+	self.EnemyInkSound = CreateSound(self, ss.EnemyInkSound)
 	if isfunction(self.SharedInit) then return self:SharedInit() end
 end
 
@@ -49,13 +58,14 @@ function SWEP:SharedDeployBase()
 	self.Holstering = false
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
-	self.OnEnemyInkSpeed = SplatoonSWEPs.OnEnemyInkSpeed
-	self.JumpPower = SplatoonSWEPs.InklingJumpPower
-	self.OnEnemyInkJumpPower = SplatoonSWEPs.OnEnemyInkJumpPower
+	self.SquidSpeedSqr = self.SquidSpeed^2
+	self.OnEnemyInkSpeed = ss.OnEnemyInkSpeed --Validate: Is it correct?
+	self.JumpPower = ss.InklingJumpPower
+	self.OnEnemyInkJumpPower = ss.OnEnemyInkJumpPower
 	self:SetPlayerSpeed(self.InklingSpeed)
 	self.Owner:SetJumpPower(self.JumpPower)
 	self.Owner:SetColor(color_white)
-	self.Owner:SetCrouchedWalkSpeed(0.5)
+	self.Owner:SetCrouchedWalkSpeed(.5)
 	if isfunction(self.SharedDeploy) then self:SharedDeploy() end
 	return true
 end
@@ -71,14 +81,12 @@ function SWEP:SharedHolsterBase()
 		self.EnemyInkSound:Stop()
 	end
 	
-	self.Owner:DrawShadow(true)
-	self.Owner:SetMaterial ""
-	self.Holstering = true
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
+	self.Holstering = true
 	return true
 end
 
-local inklingVM = ACT_VM_IDLE --Viewmodel animation(inkling)
+local inklingVM = ACT_VM_IDLE --Viewmodel animation(humanoid)
 local squidVM = ACT_VM_HOLSTER --Viewmodel animation(squid)
 local throwingVM = ACT_VM_IDLE_LOWERED --Viewmodel animation(throwing sub weapon)
 function SWEP:SharedThinkBase()
@@ -91,24 +99,17 @@ function SWEP:SharedThinkBase()
 		end
 	
 		--Send viewmodel animation.
-		if self.IsSquid and self.ViewAnim ~= squidVM then
-			self:SendWeaponAnim(squidVM)
-			self.ViewAnim = squidVM
-		elseif not self.IsSquid and self.ViewAnim ~= inklingVM then
-			self:SendWeaponAnim(inklingVM)
-			self.ViewAnim = inklingVM
-		end
-		
+		self:ChangeViewModel(self.IsSquid and squidVM or inklingVM)
 		if sq then
-			self.SwimSound:ChangeVolume(self:GetInInk() and self.Owner:GetVelocity():LengthSqr()
-				/ self.SquidSpeed / self.SquidSpeed or 0)
+			self.SwimSound:ChangeVolume(not self:GetInInk() and 0 or
+			self.Owner:GetVelocity():LengthSqr() / self.SquidSpeedSqr)
 			if not self.IsSquid then
 				self.Owner:RemoveAllDecals()
 				if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToSquid" end
 			end
 			
 			if self:GetOnEnemyInk() then
-				self:AddSchedule(SplatoonSWEPs:FrameToSec(20), 1, function(self, schedule)
+				self:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)
 					self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
 				end)
 			end
@@ -130,7 +131,14 @@ function SWEP:Reload()
 end
 
 function SWEP:CommonFire(isprimary)
-	if self.CrouchPriority then return false end
+	local plmins, plmaxs = self.Owner:GetHull()
+	self.CannotStandup = self.Owner:Crouching() and util.TraceHull {
+		start = self.Owner:GetPos(),
+		endpos = self.Owner:GetPos(),
+		mins = plmins, maxs = plmaxs,
+		filter = {self, self.Owner}
+	} .Hit
+	if self.CannotStandup or self.CrouchPriority then return false end
 	local Weapon = isprimary and self.Primary or self.Secondary
 	local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
 	self.ReloadSchedule:SetDelay(Weapon.ReloadDelay * laggedvalue)
@@ -160,6 +168,7 @@ function SWEP:PrimaryAttack()
 	if self.Holstering then return end
 	local canattack = self:CommonFire(true)
 	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "PrimaryAttack" end
+	if self.CannotStandup then return end
 	if isfunction(self.SharedPrimaryAttack) then self:SharedPrimaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerPrimaryAttack) then
 		return self:ServerPrimaryAttack(canattack)
@@ -173,6 +182,7 @@ function SWEP:SecondaryAttack()
 	if self.Holstering then return end
 	local canattack = self:CommonFire(false)
 	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "SecondaryAttack" end
+	if self.CannotStandup then return end
 	if isfunction(self.SharedSecondaryAttack) then self:SharedSecondaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerSecondaryAttack) then
 		return self:ServerSecondaryAttack(canattack)
@@ -201,7 +211,7 @@ function SWEP:ChangeInInk(name, old, new)
 	local outofink = old and not new
 	local intoink = not old and new
 	if outofink == intoink then return end
-	self.Owner:SetCrouchedWalkSpeed(intoink and 1 or 0.5)
+	self.Owner:SetCrouchedWalkSpeed(intoink and 1 or .5)
 	self:SetPlayerSpeed(intoink and self.SquidSpeed or self.InklingSpeed)
 	if intoink and SERVER then
 		self.Owner:SetDSP(14)
@@ -240,65 +250,53 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	elseif intoink then
 		self:SetPlayerSpeed(self.OnEnemyInkSpeed) --Hard to move
 		self.Owner:SetJumpPower(self.OnEnemyInkJumpPower) --Reduce jump power
-		self.EnemyInkSound:ChangeVolume(1, 0.5)
+		self.EnemyInkSound:ChangeVolume(1, .5)
 		
 		if CLIENT then return end
-		self:AddSchedule(SplatoonSWEPs:FrameToSec(2), function(self, schedule)
+		self:AddSchedule(200 / ss.ToHammerHealth * ss.FrameToSec, function(self, schedule)
 			if not self:GetOnEnemyInk() then return true end --Enemy ink damage
 			if self.Owner:Health() > self.Owner:GetMaxHealth() / 2 then
 				self.Owner:SetHealth(self.Owner:Health() - 1)
 			end
 		end)
 		
-		self:AddSchedule(SplatoonSWEPs:FrameToSec(20), 1, function(self, schedule)
+		self:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)
 			self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
 		end)
 	else
 		self:SetPlayerSpeed(self:GetInInk() and self.SquidSpeed or self.InklingSpeed)
 		self.Owner:SetJumpPower(self.JumpPower) --Restore
-		self.EnemyInkSound:ChangeVolume(0, 0.5)
+		self.EnemyInkSound:ChangeVolume(0, .5)
 	end
 end
 
-local ReloadMultiply = 1 / 0.12 --Reloading rate(inkling)
-local HealingDelay = 0.1 --Healing rate(inkling)
-function SWEP:GetLastSlot(typeof) return self.NetworkSlot[typeof] end
-function SWEP:AddNetworkVar(typeof, name)
-	if self.NetworkSlot[typeof] >= 31 then error "SplatoonSWEPs: Tried to use too many network vars!" end
-	self.NetworkSlot[typeof] = self.NetworkSlot[typeof] + 1
-	self:NetworkVar(typeof, self.NetworkSlot[typeof], name)
-	return self.NetworkSlot[typeof]
-end
-
+local ReloadMultiply = ss.MaxInkAmount / 10 --Reloading rate(inkling)
+local HealingDelay = 10 / ss.ToHammerHealth --Healing rate(inkling)
 function SWEP:SetupDataTables()
+	ss:AddNetworkVar(self)
 	self.FunctionQueue = {}
-	self.NetworkSlot = {
-		String = -1, Bool = -1, Float = -1, Int = -1,
-		Vector = -1, Angle = -1, Entity = -1,
-	}
 	self:AddNetworkVar("Bool", "InInk") --If owner is in ink.
 	self:AddNetworkVar("Bool", "InWallInk") --If owner is on wall.
 	self:AddNetworkVar("Bool", "OnEnemyInk") --If owner is on enemy ink.
-	self:AddNetworkVar("Float", "Ink") --Ink remainig. 0 ~ SplatoonSWEPs.MaxInkAmount
+	self:AddNetworkVar("Float", "Ink") --Ink remainig. 0 ~ ss.MaxInkAmount
 	self:AddNetworkVar("Vector", "InkColorProxy") --For material proxy.
 	self:AddNetworkVar("Float", "NextCrouchTime") --Shooting cooldown.
 	self:AddNetworkVar("Int", "GroundColor") --Surface ink color.
 	self:AddNetworkVar("Int", "PMID") --Playermodel ID
-	self:AddNetworkSchedule(HealingDelay, function(self, schedule) --Gradually heals the owner
-		local canheal = self.CanHealInk and self:GetInInk()
+	self.HealSchedule = self:AddNetworkSchedule(HealingDelay, function(self, schedule)
+		local canheal = self.CanHealInk and self:GetInInk() --Gradually heals the owner
 		schedule:SetDelay(HealingDelay / (canheal and 8 or 1))
 		if not self:GetOnEnemyInk() and (self.CanHealStand or canheal) then
 			self.Owner:SetHealth(math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth()))
 		end
 	end)
 	
-	self.ReloadSchedule = self:AddNetworkSchedule(0,
-	function(self, schedule) --Recharging ink
-		local reloadamount = math.max(0, schedule:SinceLastCalled())
-		local canreload = self.CanReloadInk and self:GetInInk()
-		local mul = ReloadMultiply * (canreload and 4 or 1)
-		if self.CanReloadStand or canreload then
-			self:SetInk(math.Clamp(self:GetInk() + reloadamount * mul, 0, SplatoonSWEPs.MaxInkAmount))
+	self.ReloadSchedule = self:AddNetworkSchedule(0, function(self, schedule)
+		local reloadamount = math.max(0, schedule:SinceLastCalled()) --Recharging ink
+		local fastreload = self.CanReloadInk and self:GetInInk()
+		local mul = ReloadMultiply * (fastreload and 10/3 or 1)
+		if self.CanReloadStand or fastreload then
+			self:SetInk(math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.MaxInkAmount))
 		end
 		
 		schedule:SetDelay(0)
@@ -306,5 +304,5 @@ function SWEP:SetupDataTables()
 	
 	self:NetworkVarNotify("InInk", self.ChangeInInk)
 	self:NetworkVarNotify("OnEnemyInk", self.ChangeOnEnemyInk)
-	if isfunction(self.CustomDataTables) then self:CustomDataTables() end
+	if isfunction(self.CustomDataTables) then return self:CustomDataTables() end
 end

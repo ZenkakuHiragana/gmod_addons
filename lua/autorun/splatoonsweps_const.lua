@@ -1,8 +1,9 @@
 
 --Constant values
-if not SplatoonSWEPs then return end
+local ss = SplatoonSWEPs
+if not ss then return end
 
-SplatoonSWEPs.ConVar = {
+ss.ConVar = {
 	"cl_splatoonsweps_inkcolor",
 	"cl_splatoonsweps_playermodel",
 	"cl_splatoonsweps_canhealstand",
@@ -13,7 +14,7 @@ SplatoonSWEPs.ConVar = {
 	"cl_splatoonsweps_rtresolution",
 }
 
-SplatoonSWEPs.ConVarName = {
+ss.ConVarName = {
 	InkColor = 1,
 	Playermodel = 2,
 	CanHealStand = 3,
@@ -24,7 +25,7 @@ SplatoonSWEPs.ConVarName = {
 	RTResolution = 8,
 }
 
-SplatoonSWEPs.RTResID = {
+ss.RTResID = {
 	SMALL	= 1, --	4096x4096,		128MB
 	DSMALL	= 2, --	2x4096x4096,	256MB
 	MEDIUM	= 3, --	8192x8192,		512MB
@@ -35,39 +36,50 @@ SplatoonSWEPs.RTResID = {
 	DULTRA	= 8, --	2x32768x32768,	16GB
 }
 
-SplatoonSWEPs.RTSize = {
-	[SplatoonSWEPs.RTResID.SMALL	] = 4096,
-	[SplatoonSWEPs.RTResID.DSMALL	] = 5792,
-	[SplatoonSWEPs.RTResID.MEDIUM	] = 8192,
-	[SplatoonSWEPs.RTResID.DMEDIUM	] = 11585,
-	[SplatoonSWEPs.RTResID.LARGE	] = 16384,
-	[SplatoonSWEPs.RTResID.DLARGE	] = 23170,
-	[SplatoonSWEPs.RTResID.ULTRA	] = 32768,
-	[SplatoonSWEPs.RTResID.DULTRA	] = 40132,
+ss.ConVarDefaults = {
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	0,
+	ss.RTResID.MEDIUM,
 }
 
-function SplatoonSWEPs:GetConVarName(name)
-	return SplatoonSWEPs.ConVar[SplatoonSWEPs.ConVarName[name]]
+ss.RTSize = {
+	[ss.RTResID.SMALL	] = 4096,
+	[ss.RTResID.DSMALL	] = 5792,
+	[ss.RTResID.MEDIUM	] = 8192,
+	[ss.RTResID.DMEDIUM	] = 11585,
+	[ss.RTResID.LARGE	] = 16384,
+	[ss.RTResID.DLARGE	] = 23170,
+	[ss.RTResID.ULTRA	] = 32768,
+	[ss.RTResID.DULTRA	] = 40132,
+}
+
+function ss:GetConVarName(name)
+	return self.ConVar[self.ConVarName[name]]
 end
 
-function SplatoonSWEPs:GetConVar(name)
-	return GetConVar(SplatoonSWEPs:GetConVarName(name))
+function ss:GetConVar(name)
+	return GetConVar(self:GetConVarName(name))
 end
 
-function SplatoonSWEPs:GetConVarInt(name)
-	local cvar = SplatoonSWEPs:GetConVar(name)
+function ss:GetConVarInt(name)
+	local cvar = self:GetConVar(name)
 	if cvar then
 		return cvar:GetInt()
 	else
-		return CVAR_DEFAULT[SplatoonSWEPs.ConVarName[name]]
+		return self.ConVarDefaults[self.ConVarName[name]]
 	end
 end
 
-function SplatoonSWEPs:GetConVarBool(name)
-	return SplatoonSWEPs:GetConVarInt(name) ~= 0
+function ss:GetConVarBool(name)
+	return ss:GetConVarInt(name) ~= 0
 end
 
-SplatoonSWEPs.PlayermodelName = {
+ss.PlayermodelName = {
 	"Inkling Girl",
 	"Inkling Boy",
 	"Octoling",
@@ -76,7 +88,7 @@ SplatoonSWEPs.PlayermodelName = {
 	"Don't change playermodel",
 	"Don't change playermodel and don't become squid",
 }
-SplatoonSWEPs.PLAYER = {
+ss.PLAYER = {
 	GIRL = 1,
 	BOY = 2,
 	OCTO = 3,
@@ -85,7 +97,7 @@ SplatoonSWEPs.PLAYER = {
 	NOCHANGE = 6,
 	NOSQUID = 7,
 }
-SplatoonSWEPs.Playermodel = {
+ss.Playermodel = {
 	Model "models/drlilrobot/splatoon/ply/inkling_girl.mdl",
 	Model "models/drlilrobot/splatoon/ply/inkling_boy.mdl",
 	Model "models/drlilrobot/splatoon/ply/octoling.mdl",
@@ -95,16 +107,22 @@ SplatoonSWEPs.Playermodel = {
 	nil,
 }
 
-SplatoonSWEPs.SQUID = {
+ss.SQUID = {
 	INKLING = 1,
 	KRAKEN = 2,
 	OCTO = 3,
 }
-SplatoonSWEPs.Squidmodel = {
+ss.Squidmodel = {
 	Model "models/props_splatoon/squids/squid_beta.mdl",
 	Model "models/props_splatoon/squids/kraken_beta.mdl",
 	Model "models/props_splatoon/squids/octopus_beta.mdl",
 }
+
+function ss:GetSquidmodel(pmid)
+	if pmid == self.PLAYER.NOSQUID or pmid == self.PLAYER.NOCHANGE then return end
+	local squid = self.Squidmodel[pmid == self.PLAYER.OCTO and self.SQUID.OCTO or self.SQUID.INKLING]
+	return file.Exists(squid, "GAME") and squid or nil
+end
 
 --List of available ink colors(25 colors)
 local InkColors = {
@@ -188,19 +206,19 @@ local InkColors = {
 	},
 }
 
-function SplatoonSWEPs:GetColorName(colorid)
-	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)].Name
+function ss:GetColorName(colorid)
+	return InkColors[colorid or math.random(self.MAX_COLORS)].Name
 end
-function SplatoonSWEPs:GetColor(colorid)
-	return InkColors[colorid or math.random(SplatoonSWEPs.MAX_COLORS)][1]
+function ss:GetColor(colorid)
+	return InkColors[colorid or math.random(self.MAX_COLORS)][1]
 end
 
-SplatoonSWEPs.GrayScaleFactor = Vector(.298912, .586611, .114478)
-SplatoonSWEPs.MAX_COLORS = #InkColors
-SplatoonSWEPs.COLOR_BITS = 6
-SplatoonSWEPs.SEND_ERROR_DURATION_BITS = 4
-SplatoonSWEPs.SEND_ERROR_NOTIFY_BITS = 3
-SplatoonSWEPs.TEXTUREFLAGS = {
+ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
+ss.MAX_COLORS = #InkColors
+ss.COLOR_BITS = 6
+ss.SEND_ERROR_DURATION_BITS = 4
+ss.SEND_ERROR_NOTIFY_BITS = 3
+ss.TEXTUREFLAGS = {
 	POINTSAMPLE			= 0x00000001, --Low quality, "pixel art" texture filtering.
 	TRILINEAR			= 0x00000002, --Medium quality texture filtering.
 	CLAMPS				= 0x00000004, --Clamp S coordinates.
@@ -235,25 +253,31 @@ SplatoonSWEPs.TEXTUREFLAGS = {
 	UNUSED_80000000		= 0x80000000, --
 }
 
-SplatoonSWEPs.vector_one = Vector(1, 1, 1)
-SplatoonSWEPs.MaxInkAmount = 100
-SplatoonSWEPs.MaxVelocity = 32768 --physenv.GetPerformanceSettings().MaxVelocity, default is 3500
-SplatoonSWEPs.SquidBoundMins = -Vector(13, 13, 0)
-SplatoonSWEPs.SquidBoundMaxs = Vector(13, 13, 32)
-SplatoonSWEPs.SquidViewOffset = Vector(0, 0, 24)
-SplatoonSWEPs.InklingJumpPower = 250
-SplatoonSWEPs.OnEnemyInkJumpPower = SplatoonSWEPs.InklingJumpPower * .75
-SplatoonSWEPs.ToHammerUnits = 0.1 * 3.28084 * 16
-SplatoonSWEPs.mDegRandomY = 1.5 --Crosshair ratio in Splattershot Pro is 2:1, mDegRandom of that is 3.00.
+local framepersec = 60
+local inklingspeed = .96 * framepersec
+ss.vector_one = Vector(1, 1, 1)
+ss.MaxInkAmount = 100
+ss.SquidBoundMins = -Vector(13, 13, 0)
+ss.SquidBoundMaxs = Vector(13, 13, 32)
+ss.SquidViewOffset = Vector(0, 0, 24)
+ss.InklingJumpPower = 250
+ss.DisruptoredSpeed = .45 --Disruptor's debuff factor
+ss.OnEnemyInkJumpPower = ss.InklingJumpPower * .75
+ss.ToHammerUnits = 2.88 --.1 * 3.28084 * 16 * (1.00965 / 1.5)
+ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec
+ss.ToHammerHealth = 100
+ss.FrameToSec = 1 / framepersec
+ss.SecToFrame = framepersec
+ss.mDegRandomY = 1.5 --Crosshair ratio in Splattershot Pro is 2:1, mDegRandom of that is 3.00.
 for key, value in pairs {
-	InklingBaseSpeed = .96 * 60, --Walking speed [Splatoon units/frame]
-	SquidBaseSpeed = 1.923 * 60, --Swimming speed [Splatoon units/frame]
-	OnEnemyInkSpeed = .96 * 60 / 4, --On enemy ink speed[Splatoon units/frame]
-	mColRadius = 2, --Shooter's ink collision radius
-	mPaintNearDistance = 11, --Start decreasing distance
-	mPaintFarDistance = 200, --Minimum radius after distance
-	mSplashDrawRadius = 3, --Ink drop position random spread value
-	mSplashColRadius = 1.5, --Ink drop collision radius
+	InklingBaseSpeed = inklingspeed, --Walking speed [Splatoon units/60frame]
+	SquidBaseSpeed = 1.923 * framepersec, --Swimming speed [Splatoon units/60frame]
+	OnEnemyInkSpeed = inklingspeed / 4, --On enemy ink speed[Splatoon units/60frame]
+	mColRadius = 2, --Shooter's ink collision radius[Splatoon units]
+	mPaintNearDistance = 11, --Start decreasing distance[Splatoon units]
+	mPaintFarDistance = 200, --Minimum radius distance[Splatoon units]
+	mSplashDrawRadius = 3, --Ink drop position random spread value[Splatoon units]
+	mSplashColRadius = 1.5, --Ink drop collision radius[Splatoon units]
 } do
-	SplatoonSWEPs[key] = value * SplatoonSWEPs.ToHammerUnits
+	ss[key] = value * ss.ToHammerUnits
 end

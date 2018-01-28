@@ -1,7 +1,7 @@
 
 --This lua parses current map.
-if not SplatoonSWEPs then return end
-SplatoonSWEPs.BSP = SplatoonSWEPs.BSP or {}
+local ss = SplatoonSWEPs
+if not (ss and ss.BSP) then return end
 local LUMP = { --Lump names. most of these are unused in SplatoonSWEPs.
 	ENTITIES						=  0,
 	PLANES							=  1,
@@ -69,7 +69,7 @@ local LUMP = { --Lump names. most of these are unused in SplatoonSWEPs.
 	DISP_MULTIBLEND					= 63,
 }
 
-local bsp = SplatoonSWEPs.BSP
+local bsp = ss.BSP
 local TextureFilterBits = bit.bor(SURF_SKY, SURF_WARP, SURF_NOPORTAL, SURF_TRIGGER, SURF_NODRAW, SURF_HINT, SURF_SKIP)
 local function read(arg)
 	if isstring(arg) then
@@ -199,12 +199,12 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	end
 	
 	minmins:Rotate(minangle)
-	origin = SplatoonSWEPs:To3D(minmins, origin, angle)
+	origin = ss:To3D(minmins, origin, angle)
 	angle:RotateAroundAxis(normal, minangle.yaw)
 	if CLIENT then
 		bound.z = minangle.yaw
-		SplatoonSWEPs.AreaBound = SplatoonSWEPs.AreaBound + area
-		local surf = SplatoonSWEPs.SequentialSurfaces
+		ss.AreaBound = ss.AreaBound + area
+		local surf = ss.SequentialSurfaces
 		table.insert(surf.Angles, angle)
 		table.insert(surf.Areas, area)
 		table.insert(surf.Bounds, bound)
@@ -213,7 +213,7 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 		table.insert(surf.Vertices, v3d)
 	else
 		if disp then disp.Positions = nil end
-		local leaf = SplatoonSWEPs:FindLeaf(disp or v3d)
+		local leaf = ss:FindLeaf(disp or v3d)
 		local surf = leaf.Surfaces
 		table.insert(surf.Angles, angle)
 		table.insert(surf.DefaultAngles, minangle.yaw)
@@ -234,9 +234,9 @@ local function MakeTriangle(vert)
 	local maxs = -mins
 	local v2d = {}
 	for i, v in ipairs(vert) do
-		mins = SplatoonSWEPs:MinVector(mins, v) --Calculate bounding box
-		maxs = SplatoonSWEPs:MaxVector(maxs, v)
-		v2d[i] = SplatoonSWEPs:To2D(v, origin, angle)
+		mins = ss:MinVector(mins, v) --Calculate bounding box
+		maxs = ss:MaxVector(maxs, v)
+		v2d[i] = ss:To2D(v, origin, angle)
 	end
 	
 	return MakeSurface(mins, maxs, normal, angle, origin, v2d, vert)
@@ -395,7 +395,7 @@ end,
 	for i = 0, lump.num do
 		bsp.bsp:Skip(12 * 3)
 		local headnode = read "Long"
-		if SERVER then table.insert(SplatoonSWEPs.Models, nodes.data[headnode]) end
+		if SERVER then table.insert(ss.Models, nodes.data[headnode]) end
 		if i == 0 then
 			bsp.FirstFace = read "Long"
 			bsp.NumFaces = read "Long"
@@ -443,7 +443,7 @@ end,
 		
 		if bit.band(util.PointContents(center - normal * .01), CONTENTS_GRATE) ~= 0 then continue end
 		for k, v in pairs(fullverts) do
-			full2d[k] = SplatoonSWEPs:To2D(v, center, angle)
+			full2d[k] = ss:To2D(v, center, angle)
 		end
 		
 		local v3d, v2d = {}, {} --Vector3D, 2D
@@ -454,8 +454,8 @@ end,
 			local v2, v3 = full2d[k], fullverts[k]
 			local _next, prev = full2d[(k + 1) % nf], full2d[(k + nf - 1) % nf]
 			local sin = (prev - v2):GetNormalized():Cross((_next - v2):GetNormalized()).z
-			mins = SplatoonSWEPs:MinVector(mins, v3) --Calculate bounding box
-			maxs = SplatoonSWEPs:MaxVector(maxs, v3)
+			mins = ss:MinVector(mins, v3) --Calculate bounding box
+			maxs = ss:MaxVector(maxs, v3)
 			table.insert(v2d, v2)
 			table.insert(v3d, v3)
 		end
@@ -480,8 +480,8 @@ end,
 			--DispInfo.startPosition isn't always equal to v3d[1] so let's find correct one
 			do local i, min, start = {}, math.huge, 0
 				for k, v in ipairs(v3d) do
-					mins = SplatoonSWEPs:MinVector(mins, v) --Calculate bounding box
-					maxs = SplatoonSWEPs:MaxVector(maxs, v)
+					mins = ss:MinVector(mins, v) --Calculate bounding box
+					maxs = ss:MaxVector(maxs, v)
 					local dist = startPosition:DistToSqr(v)
 					if dist > min then continue end
 					start, min = k, dist
@@ -501,14 +501,14 @@ end,
 				div2 = div2 - div1
 				v.origin = div1 + div2 * x / (power - 1)
 				v.pos = startPosition + v.origin + v.vec * v.dist
-				v.pos2d = SplatoonSWEPs:To2D(v.pos - normal * normal:Dot(v.vec * v.dist), center, angle)
-				mins = SplatoonSWEPs:MinVector(mins, v.pos) --Calculate bounding box
-				maxs = SplatoonSWEPs:MaxVector(maxs, v.pos)
+				v.pos2d = ss:To2D(v.pos - normal * normal:Dot(v.vec * v.dist), center, angle)
+				mins = ss:MinVector(mins, v.pos) --Calculate bounding box
+				maxs = ss:MaxVector(maxs, v.pos)
 			end
 			
 			if CLIENT then --Generate triangles from displacement mesh.
 				isdisp = {Positions = dispverts, Triangles = {}}
-				SplatoonSWEPs.Displacements[bsp.FaceIndex + 1] = isdisp
+				ss.Displacements[bsp.FaceIndex + 1] = isdisp
 				for k = 0, #dispverts do
 					local tri_inv = k % 2 == 0
 					if k % power < power - 1 and math.floor(k / power) < power - 1 then

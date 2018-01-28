@@ -30,9 +30,9 @@ SWEP.IsSplatoonWeapon = true
 SWEP.Slot = 1
 SWEP.SlotPos = 2
 SWEP.m_WeaponDeploySpeed = 5
-SplatoonSWEPs.SetPrimary(SWEP, {
+SplatoonSWEPs:SetPrimary(SWEP, {
 	Recoil				= .2,	--Viewmodel recoil intensity
-	TakeAmmo			= 1,	--Ink consumption per fire[%].
+	TakeAmmo			= .01,	--Ink consumption per fire[-].
 	PlayAnimPercent		= 0,	--Play PLAYER_ATTACK1 animation frequency[%].
 	Delay = {
 		Fire			= 6,	--Fire rate in frames.
@@ -41,9 +41,9 @@ SplatoonSWEPs.SetPrimary(SWEP, {
 	},
 })
 
-SplatoonSWEPs.SetSecondary(SWEP, {
+SplatoonSWEPs:SetSecondary(SWEP, {
 	Recoil				= .2,
-	TakeAmmo			= 70,	 --Sub weapon consumption[%].
+	TakeAmmo			= .7,	 --Sub weapon consumption[-].
 	PlayAnimPercent		= 30,
 	Delay = {
 		Fire			= 30,

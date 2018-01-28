@@ -9,6 +9,7 @@ net.Receive("SplatoonSWEPs: DrawInk", function(len, ply)
 	local radius = net.ReadFloat()
 	local inkangle = net.ReadFloat()
 	local inktype = net.ReadUInt(4)
+	local ratio = net.ReadFloat()
 	return table.insert(SplatoonSWEPs.InkQueue, {
 		c = color,
 		dispflag = facenumber < 0 and 0 or 1,
@@ -17,6 +18,7 @@ net.Receive("SplatoonSWEPs: DrawInk", function(len, ply)
 		n = math.abs(facenumber),
 		pos = pos,
 		r = radius,
+		ratio = ratio,
 		t = inktype,
 	})
 end)
@@ -28,6 +30,7 @@ net.Receive("SplatoonSWEPs: Send error message from server", function(...)
 	notification.AddLegacy(msg, icon, duration)
 end)
 
+local DamageSounds = {"TakeDamage", "DealDamage", "DealDamageCritical"}
 net.Receive("SplatoonSWEPs: Play damage sound", function(...)
-	surface.PlaySound(SplatoonSWEPs[net.ReadString()])
+	surface.PlaySound(SplatoonSWEPs[DamageSounds[net.ReadUInt(2)]])
 end)

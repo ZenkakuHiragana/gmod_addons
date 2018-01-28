@@ -1,12 +1,13 @@
 
 --This lua manages whole ink in map.
-if not SplatoonSWEPs then return end
+local ss = SplatoonSWEPs
+if not ss then return end
 
 local PaintQueue = {}
 local InkGroup = {}
 local rootpi = math.sqrt(math.pi) / 2
 local MIN_BOUND = 20 --Ink minimum bounding box scale
-local MIN_BOUND_AREA = 10 --minimum ink bounding box area
+local MIN_BOUND_AREA = 6 --minimum ink bounding box area
 local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surfaces
 local MAX_PROCESS_QUEUE_AT_ONCE = 4 --Running QueueCoroutine() at once
 local MAX_INKQUEUE_AT_ONCE = 50 --Processing new ink request at once
@@ -49,35 +50,36 @@ local function AddInkRectangle(ink, newink, sz)
 	ink[newink] = sz
 end
 
-local function QueueCoroutine(pos, normal, radius, color, angle, inktype)
+local function QueueCoroutine(pos, normal, radius, color, angle, inktype, ratio)
 	local ang = normal:Angle()
 	ang.roll = math.abs(normal.z) > COS_MAX_DEG_DIFF and angle * normal.z or ang.yaw
 	local polys = {}
 	for i, v in ipairs(reference_polys) do --Scaling
-		polys[i] = SplatoonSWEPs:To3D(v * radius, pos, ang)
+		polys[i] = ss:To3D(v * radius, pos, ang)
 	end
 	
 	local inkqueue = 0
 	local rectsize = radius * rootpi
 	local sizevec = Vector(rectsize, rectsize)
-	local mins, maxs = SplatoonSWEPs:GetBoundingBox(polys, MIN_BOUND)
-	for node in SplatoonSWEPs:BSPPairs(polys) do
+	local mins, maxs = ss:GetBoundingBox(polys, MIN_BOUND)
+	for node in ss:BSPPairs(polys) do
 		local surf = node.Surfaces
 		for i, index in ipairs(surf.Indices) do
 			if surf.Normals[i]:Dot(normal) <= COS_MAX_DEG_DIFF * (index < 0 and .5 or 1) or
-			not SplatoonSWEPs:CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
+			not ss:CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
 			local _, localang = WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle())
 			localang = surf.DefaultAngles[i] + ang.yaw - localang.roll
 			net.Start "SplatoonSWEPs: DrawInk"
 			net.WriteInt(index, 20)
-			net.WriteUInt(color, SplatoonSWEPs.COLOR_BITS)
+			net.WriteUInt(color, ss.COLOR_BITS)
 			net.WriteVector(pos)
 			net.WriteFloat(radius)
 			net.WriteFloat(localang)
 			net.WriteUInt(inktype, 4)
+			net.WriteFloat(ratio)
 			net.Broadcast()
 			
-			local pos2d = SplatoonSWEPs:To2D(pos, surf.Origins[i], surf.Angles[i])
+			local pos2d = ss:To2D(pos, surf.Origins[i], surf.Angles[i])
 			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
 			local inkdata = {
 				angle = localang,
@@ -85,10 +87,11 @@ local function QueueCoroutine(pos, normal, radius, color, angle, inktype)
 				color = color,
 				pos = pos2d,
 				radius = radius,
+				ratio = ratio,
 				texid = inktype,
 			}
-			AddInkRectangle(surf.InkCircles[i], inkdata, SplatoonSWEPs.InkCounter)
-			SplatoonSWEPs.InkCounter = SplatoonSWEPs.InkCounter + 1
+			AddInkRectangle(surf.InkCircles[i], inkdata, ss.InkCounter)
+			ss.InkCounter = ss.InkCounter + 1
 			
 			inkqueue = inkqueue + 1
 			if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then coroutine.yield() end
@@ -103,7 +106,7 @@ local function ProcessQueue()
 		local done = 0
 		for i, v in ipairs(PaintQueue) do
 			if coroutine.status(v.co) == "dead" then continue end
-			local ok, msg = coroutine.resume(v.co, v.pos, v.normal, v.radius, v.color, v.angle, v.inktype)
+			local ok, msg = coroutine.resume(v.co, v.pos, v.normal, v.radius, v.color, v.angle, v.inktype, v.ratio)
 			if not ok then
 				print("coroutine end: ", msg)
 				ErrorNoHalt(debug.traceback(v.co))
@@ -126,7 +129,7 @@ end
 --Do a list of coroutines.
 local function DoCoroutines()
 	while true do
-		local self = SplatoonSWEPs.InkManager
+		local self = ss.InkManager
 		local threads = self.Threads
 		local done = 0
 		for i, co in pairs(threads) do
@@ -151,8 +154,8 @@ end
 
 local MAX_DEG_GETSURF = 30
 local MAX_COS_GETSURF = math.cos(math.rad(MAX_DEG_GETSURF))
-local POINT_BOUND = SplatoonSWEPs.vector_one * .1
-function SplatoonSWEPs:GetSurfaceColor(tr)
+local POINT_BOUND = ss.vector_one * .1
+function ss:GetSurfaceColor(tr)
 	if not tr.Hit then return end
 	for node in self:BSPPairs {tr.HitPos} do
 		local surf = node.Surfaces
@@ -161,33 +164,37 @@ function SplatoonSWEPs:GetSurfaceColor(tr)
 			self:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
 			local p2d = self:To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
 			for r in SortedPairsByValue(surf.InkCircles[i], true) do
-				if r.texid < 4 and p2d:DistToSqr(r.pos) < r.radius * r.radius * .6 then
+				local t = self.InkShotMaterials[r.texid]
+				local w, h = t:Width(), t:Height()
+				local p = (p2d - r.pos) / r.radius
+				p:Rotate(Angle(0, r.angle)) --(-1, -1) <= (x, y) <= (1, 1)
+				if -1 > p.x or p.x > 1 or -1 > p.y or p.y > 1 then continue end
+				p = (p + self.vector_one) / 2 --(0, 0) <= (x, y) <= (1, 1)
+				p.y = p.y * h --0 <= y <= h
+				p.x = p.x - (1 - r.ratio) / 2 --0 <= x <= r.ratio
+				p.x = p.x / r.ratio * w --0 <= x <= w
+				p.x, p.y = math.Round(p.x), math.Round(p.y)
+				if 0 < p.x and p.x < w and 0 < p.y and p.y < h and t:GetColor(p.x, p.y).r > 127 then
 					return r.color
-				else
-					local texpos = (p2d - r.pos) / r.radius
-					texpos:Rotate(Angle(0, r.angle))
-					texpos = texpos * 32 + Vector(16, 32)
-					if 0 < texpos.x and texpos.x < 32 and 0 < texpos.y and texpos.y < 64 and self.InkShotMaterials[r.texid]:GetColor(texpos.x, texpos.y).r > 127 then
-						return r.color
-					end
 				end
 			end
 		end
 	end
 end
 
-SplatoonSWEPs.InkManager = {
+ss.InkManager = {
 	DoCoroutines = coroutine.create(DoCoroutines),
 	Threads = {ProcessQueue = coroutine.create(ProcessQueue)},
-	AddQueue = function(pos, normal, radius, color, angle, inktype)
+	AddQueue = function(pos, normal, radius, color, angle, inktype, ratio)
 		table.insert(PaintQueue, {
-			angle = math.NormalizeAngle(angle),
-			co = coroutine.create(QueueCoroutine),
-			color = color,
-			normal = normal,
-			pos = pos,
-			radius = radius,
-			inktype = inktype,
+			angle = math.NormalizeAngle(angle), --Rotation
+			co = coroutine.create(QueueCoroutine), --Coroutine
+			color = color, --Ink color
+			normal = normal, --Normal vector
+			pos = pos, --Origin
+			radius = radius, --Size
+			ratio = ratio, --Stretch ink, x/y
+			inktype = inktype, --Texture type
 		})
 	end,
 }

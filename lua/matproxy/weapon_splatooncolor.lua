@@ -7,8 +7,8 @@ end
 
 if steamworks.ShouldMountAddon "135491961" then
 	include "matproxy/tf2itempaint.lua"
-	ItemTintInit = matproxy.ProxyList["ItemTintColor"].init
-	OldItemTintBind = matproxy.ProxyList["ItemTintColor"].bind
+	ItemTintInit = matproxy.ProxyList.ItemTintColor.init
+	OldItemTintBind = matproxy.ProxyList.ItemTintColor.bind
 end
 
 local function ItemTintBind(self, mat, ent)
@@ -24,9 +24,8 @@ local function ItemTintBind(self, mat, ent)
 	end
 end
 
-matproxy.Add(
-{
+matproxy.Add {
 	name = "ItemTintColor", 
 	init = ItemTintInit,
 	bind = ItemTintBind,
-})
+}

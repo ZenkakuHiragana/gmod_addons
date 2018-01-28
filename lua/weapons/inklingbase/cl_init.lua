@@ -162,7 +162,6 @@ function SWEP:Think()
 	end
 	
 	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
-		self.Owner:SetMaterial(self.IsSquid and "color" or "")
 		self:DrawShadow(not self.IsSquid)
 	end
 	

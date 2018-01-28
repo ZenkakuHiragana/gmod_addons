@@ -1,8 +1,12 @@
 
 --Clientside ink manager
-SplatoonSWEPs = SplatoonSWEPs or {
+local ss = SplatoonSWEPs
+SplatoonSWEPs = ss or {
+	AreaBound = 0,
+	BSP = {},
 	Displacements = {},
 	IMesh = {},
+	InkQueue = {},
 	RenderTarget = {
 		BaseTextureName = "splatoonsweps_basetexture",
 		NormalmapName = "splatoonsweps_normalmap",
@@ -20,40 +24,41 @@ SplatoonSWEPs = SplatoonSWEPs or {
 		u = {}, v = {},
 		Vertices = {},
 	},
-	AreaBound = 0,
 }
 
+ss = SplatoonSWEPs
 include "autorun/splatoonsweps_shared.lua"
 include "splatoonsweps_userinfo.lua"
 include "splatoonsweps_inkmanager_cl.lua"
 include "splatoonsweps_network_cl.lua"
-SplatoonSWEPs.RenderTarget.BaseTextureFlags = bit.bor(
-	SplatoonSWEPs.TEXTUREFLAGS.NOMIP,
-	SplatoonSWEPs.TEXTUREFLAGS.NOLOD,
-	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
-	SplatoonSWEPs.TEXTUREFLAGS.RENDERTARGET,
-	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER
+local rt = ss.RenderTarget
+rt.BaseTextureFlags = bit.bor(
+	ss.TEXTUREFLAGS.NOMIP,
+	ss.TEXTUREFLAGS.NOLOD,
+	ss.TEXTUREFLAGS.PROCEDURAL,
+	ss.TEXTUREFLAGS.RENDERTARGET,
+	ss.TEXTUREFLAGS.NODEPTHBUFFER
 )
-SplatoonSWEPs.RenderTarget.NormalmapFlags = bit.bor(
-	SplatoonSWEPs.TEXTUREFLAGS.NORMAL,
-	SplatoonSWEPs.TEXTUREFLAGS.NOMIP,
-	SplatoonSWEPs.TEXTUREFLAGS.NOLOD,
-	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
-	SplatoonSWEPs.TEXTUREFLAGS.RENDERTARGET,
-	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER,
-	SplatoonSWEPs.TEXTUREFLAGS.SSBUMP
+rt.NormalmapFlags = bit.bor(
+	ss.TEXTUREFLAGS.NORMAL,
+	ss.TEXTUREFLAGS.NOMIP,
+	ss.TEXTUREFLAGS.NOLOD,
+	ss.TEXTUREFLAGS.PROCEDURAL,
+	ss.TEXTUREFLAGS.RENDERTARGET,
+	ss.TEXTUREFLAGS.NODEPTHBUFFER,
+	ss.TEXTUREFLAGS.SSBUMP
 )
-SplatoonSWEPs.RenderTarget.LightmapFlags = bit.bor(
-	SplatoonSWEPs.TEXTUREFLAGS.NOMIP,
-	SplatoonSWEPs.TEXTUREFLAGS.NOLOD,
-	SplatoonSWEPs.TEXTUREFLAGS.PROCEDURAL,
-	SplatoonSWEPs.TEXTUREFLAGS.RENDERTARGET,
-	SplatoonSWEPs.TEXTUREFLAGS.NODEPTHBUFFER
+rt.LightmapFlags = bit.bor(
+	ss.TEXTUREFLAGS.NOMIP,
+	ss.TEXTUREFLAGS.NOLOD,
+	ss.TEXTUREFLAGS.PROCEDURAL,
+	ss.TEXTUREFLAGS.RENDERTARGET,
+	ss.TEXTUREFLAGS.NODEPTHBUFFER
 )
 
-function SplatoonSWEPs:ClearAllInk()
-	SplatoonSWEPs.InkQueue = {}
-	render.PushRenderTarget(SplatoonSWEPs.RenderTarget.BaseTexture)
+function ss:ClearAllInk()
+	self.InkQueue = {}
+	render.PushRenderTarget(self.RenderTarget.BaseTexture)
 	render.OverrideAlphaWriteEnable(true, true)
 	render.ClearDepth()
 	render.ClearStencil()
@@ -61,7 +66,7 @@ function SplatoonSWEPs:ClearAllInk()
 	render.OverrideColorWriteEnable(false)
 	render.PopRenderTarget()
 	
-	render.PushRenderTarget(SplatoonSWEPs.RenderTarget.Normalmap)
+	render.PushRenderTarget(self.RenderTarget.Normalmap)
 	render.OverrideAlphaWriteEnable(true, true)
 	render.ClearDepth()
 	render.ClearStencil()
@@ -69,7 +74,7 @@ function SplatoonSWEPs:ClearAllInk()
 	render.OverrideAlphaWriteEnable(false)
 	render.PopRenderTarget()
 	
-	render.PushRenderTarget(SplatoonSWEPs.RenderTarget.Lightmap)
+	render.PushRenderTarget(self.RenderTarget.Lightmap)
 	render.ClearDepth()
 	render.ClearStencil()
 	local amb = render.GetAmbientLightColor():ToColor()
@@ -84,47 +89,46 @@ end
 local MAX_TRIANGLES = math.floor(32768 / 3)
 local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
 hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function()
-	SplatoonSWEPs.BSP:Init() --Parsing BSP file
-	SplatoonSWEPs.BSP = nil
-	local self = SplatoonSWEPs
-	local surf = self.SequentialSurfaces
-	local rtsize = math.min(self.RTSize[self:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
+	ss.BSP:Init() --Parsing BSP file
+	ss.BSP = nil
+	local surf = ss.SequentialSurfaces
+	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
 	
 	--21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
-	self.RenderTarget.BaseTexture = GetRenderTargetEx(
-		self.RenderTarget.BaseTextureName,
+	rt.BaseTexture = GetRenderTargetEx(
+		rt.BaseTextureName,
 		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
-		self.RenderTarget.BaseTextureFlags,
+		rt.BaseTextureFlags,
 		CREATERENDERTARGETFLAGS_HDR,
 		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
 	)
-	rtsize = math.min(self.RenderTarget.BaseTexture:Width(), self.RenderTarget.BaseTexture:Height())
-	self.RenderTarget.Normalmap = GetRenderTargetEx(
-		self.RenderTarget.NormalmapName,
+	rtsize = math.min(rt.BaseTexture:Width(), rt.BaseTexture:Height())
+	rt.Normalmap = GetRenderTargetEx(
+		rt.NormalmapName,
 		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
-		self.RenderTarget.NormalmapFlags,
+		rt.NormalmapFlags,
 		CREATERENDERTARGETFLAGS_HDR,
 		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
 	)
-	self.RenderTarget.Lightmap = GetRenderTargetEx(
-		self.RenderTarget.LightmapName,
+	rt.Lightmap = GetRenderTargetEx(
+		rt.LightmapName,
 		rtsize / 2, rtsize / 2,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
-		self.RenderTarget.LightmapFlags,
+		rt.LightmapFlags,
 		CREATERENDERTARGETFLAGS_HDR,
 		IMAGE_FORMAT_RGBA8888 --4096x4096, 64MB
 	)
-	self.RenderTarget.Material = CreateMaterial(
-		self.RenderTarget.RenderTargetName,
+	rt.Material = CreateMaterial(
+		rt.RenderTargetName,
 		"LightmappedGeneric",
 		{
-			["$basetexture"] = self.RenderTarget.BaseTextureName,
-			["$bumpmap"] = self.RenderTarget.NormalmapName,
+			["$basetexture"] = rt.BaseTextureName,
+			["$bumpmap"] = rt.NormalmapName,
 			["$ssbump"] = "1",
 			["$nolod"] = "1",
 			["$alpha"] = ".95",
@@ -133,12 +137,12 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 			["$allowalphatocoverage"] = "1",
 		}
 	)
-	self.IMesh[1] = Mesh(self.RenderTarget.Material)
-	self.RenderTarget.WaterMaterial = CreateMaterial(
-		self.RenderTarget.WaterMaterialName,
+	ss.IMesh[1] = Mesh(rt.Material)
+	rt.WaterMaterial = CreateMaterial(
+		rt.WaterMaterialName,
 		"Refract",
 		{
-			["$normalmap"] = self.RenderTarget.NormalmapName,
+			["$normalmap"] = rt.NormalmapName,
 			["$nolod"] = "1",
 			["$bluramount"] = "2",
 			["$refractamount"] = ".1",
@@ -148,17 +152,17 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	
 	local rtarea = rtsize^2
 	local rtmergin = 4 / rtsize
-	local arearatio = math.sqrt(self.AreaBound / rtarea) * 1.18 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	local arearatio = math.sqrt(ss.AreaBound / rtarea) * 1.18 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
 	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
 	local u, v, nv, bu, bv, bk = 0, 0, 0 --cursor(u, v), shelf height, rectangle size(u, v), beginning of k
-	function self:PixelsToUnits(pixels) return pixels * arearatio end
-	function self:PixelsToUV(pixels) return pixels / rtsize end
-	function self:UnitsToPixels(units) return units / arearatio end
-	function self:UnitsToUV(units) return units / convertunit end
-	function self:UVToPixels(uv) return uv * rtsize end
-	function self:UVToUnits(uv) return uv * convertunit end
+	function ss:PixelsToUnits(pixels) return pixels * arearatio end
+	function ss:PixelsToUV(pixels) return pixels / rtsize end
+	function ss:UnitsToPixels(units) return units / arearatio end
+	function ss:UnitsToUV(units) return units / convertunit end
+	function ss:UVToPixels(uv) return uv * rtsize end
+	function ss:UVToUnits(uv) return uv * convertunit end
 	for k in SortedPairsByValue(surf.Areas, true) do
 		table.insert(sortedsurfs, k)
 		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2
@@ -173,16 +177,16 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		if u == 0 then bk = #sortedsurfs end --The first element of the current shelf
 		for i, vertex in ipairs(surf.Vertices[k]) do --Get UV coordinates
 			local meshvert = vertex + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL
-			local UV = self:To2D(vertex, surf.Origins[k], surf.Angles[k]) / convertunit
+			local UV = ss:To2D(vertex, surf.Origins[k], surf.Angles[k]) / convertunit
 			surf.Vertices[k][i] = {pos = meshvert, u = UV.x + u, v = UV.y + v}
 		end
 		
-		if self.Displacements[k] then
-			NumMeshTriangles = NumMeshTriangles + #self.Displacements[k].Triangles - 2
-			for i = 0, #self.Displacements[k].Positions do
-				local vertex = self.Displacements[k].Positions[i]
+		if ss.Displacements[k] then
+			NumMeshTriangles = NumMeshTriangles + #ss.Displacements[k].Triangles - 2
+			for i = 0, #ss.Displacements[k].Positions do
+				local vertex = ss.Displacements[k].Positions[i]
 				local meshvert = vertex.pos - surf.Normals[k] * surf.Normals[k]:Dot(vertex.vec * vertex.dist)
-				local UV = self:To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
+				local UV = ss:To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
 				vertex.u, vertex.v = UV.x + u, UV.y + v
 			end
 		end
@@ -205,13 +209,13 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	end
 	
 	--Building MeshVertex
-	mesh.Begin(self.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
+	mesh.Begin(ss.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
 	local function ContinueMesh()
 		if mesh.VertexCount() >= MAX_TRIANGLES * 3 then
 			mesh.End()
 			nummeshes, NumMeshTriangles = nummeshes + 1, NumMeshTriangles - MAX_TRIANGLES
-			self.IMesh[nummeshes] = Mesh(self.RenderTarget.Material)
-			mesh.Begin(self.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
+			ss.IMesh[nummeshes] = Mesh(rt.Material)
+			mesh.Begin(ss.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
 		end
 	end
 	
@@ -224,20 +228,20 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 				vertex.u, vertex.v = vertex.v - dv, vertex.u
 			end
 			
-			if self.Displacements[k] then
-				for i = 0, #self.Displacements[k].Positions do
-					local vertex = self.Displacements[k].Positions[i]
+			if ss.Displacements[k] then
+				for i = 0, #ss.Displacements[k].Positions do
+					local vertex = ss.Displacements[k].Positions[i]
 					vertex.u, vertex.v = vertex.v - dv, vertex.u
 				end
 			end
 		end
 		
 		surf.u[k], surf.v[k] = surf.u[k] / divuv, surf.v[k] / divuv
-		if self.Displacements[k] then
-			local verts = self.Displacements[k].Positions
+		if ss.Displacements[k] then
+			local verts = ss.Displacements[k].Positions
 			for _, v in pairs(verts) do v.u, v.v = v.u / divuv, v.v / divuv end
 			for _, v in ipairs(surf.Vertices[k]) do v.u, v.v = v.u / divuv, v.v / divuv end
-			for _, t in ipairs(self.Displacements[k].Triangles) do
+			for _, t in ipairs(ss.Displacements[k].Triangles) do
 				local tv = {verts[t[1]], verts[t[2]], verts[t[3]]}
 				local n = (tv[1].pos - tv[2].pos):Cross(tv[3].pos - tv[2].pos):GetNormalized()
 				for _, p in ipairs(tv) do
@@ -250,7 +254,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 				
 				ContinueMesh()
 			end
-			self.Displacements[k] = nil
+			ss.Displacements[k] = nil
 		else
 			for t, v in ipairs(surf.Vertices[k]) do
 				v.u, v.v = v.u / divuv, v.v / divuv
@@ -271,25 +275,30 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	end
 	mesh.End()
 	
-	-- surf.Areas, self.Displacements, surf.Vertices, surf.AreaBound = nil
-	self:ClearAllInk()
+	-- surf.Areas, ss.Displacements, surf.Vertices, surf.AreaBound = nil
+	ss:ClearAllInk()
 	collectgarbage "collect"
 end)
 
-hook.Add("PlayerPreDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
-	local weapon = SplatoonSWEPs:IsValidInkling(ply)
-	return weapon and weapon:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID and ply:Crouching() or nil
+hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
+	local weapon = ss:IsValidInkling(ply)
+	if not weapon then return end
+	if weapon:GetPMID() == ss.PLAYER.NOSQUID then
+		return weapon:GetInInk() or nil
+	else
+		return ply:Crouching() or nil
+	end
 end)
 
 hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", function()
 	if LocalPlayer():ShouldDrawLocalPlayer()
-	or SplatoonSWEPs:GetConVarBool "HideInkOverlay" then return end
-	local weapon = SplatoonSWEPs:IsValidInkling(LocalPlayer())
+	or ss:GetConVarBool "HideInkOverlay" then return end
+	local weapon = ss:IsValidInkling(LocalPlayer())
 	if not (weapon and weapon:GetInInk()) then return end
 	local color = weapon:GetInkColorProxy()
 	DrawMaterialOverlay("effects/water_warp01", .1)
 	surface.SetDrawColor(ColorAlpha(color:ToColor(),
-	48 * (1.1 - math.sqrt(SplatoonSWEPs.GrayScaleFactor:Dot(color)))
-	/ SplatoonSWEPs.GrayScaleFactor:Dot(render.GetToneMappingScaleLinear())))
+	48 * (1.1 - math.sqrt(ss.GrayScaleFactor:Dot(color)))
+	/ ss.GrayScaleFactor:Dot(render.GetToneMappingScaleLinear())))
 	surface.DrawRect(0, 0, ScrW(), ScrH())
 end)

@@ -15,15 +15,20 @@ function SWEP:ServerPrimaryAttack(canattack)
 	local ang = aim:Angle()
 	local angle_initvelocity = Angle(ang)
 	local delta_position = Vector(self.Primary.FirePosition)
-	local sbias = self.Primary.SpreadBias
-	local spreadx = self.Primary[self.Owner:GetVelocity().z > 32 and "SpreadJump" or "Spread"] + math.Rand(-sbias, sbias)
+	local spreadx = math.Rand(-self.Primary.SpreadBias, self.Primary.SpreadBias)
+	if self.Owner:GetVelocity().z > 32 then
+		spreadx = spreadx + self.Primary.SpreadJump
+	else
+		spreadx = spreadx + self.Primary.Spread
+	end
+	
 	delta_position:Rotate(self.Owner:EyeAngles())
 	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
 	angle_initvelocity:RotateAroundAxis(self.Owner:GetRight():Cross(aim), math.Rand(-spreadx, spreadx))
 	angle_initvelocity:RotateAroundAxis(self.Owner:GetRight(), math.Rand(-SplatoonSWEPs.mDegRandomY, SplatoonSWEPs.mDegRandomY))
 	local InitVelocity = angle_initvelocity:Forward() * self.Primary.InitVelocity
 	local SplashInitMul = self.SplashInitMul % self.Primary.SplashPatterns
-	local SplashNumRounded = math[math.random() < 0.5 and "floor" or "ceil"](self.Primary.SplashNum)
+	local SplashNumRounded = math[math.random() < .5 and "floor" or "ceil"](self.Primary.SplashNum)
 	local p = ents.Create "projectile_ink"
 	if not IsValid(p) then return end
 	p:SetPos(self.Owner:GetShootPos() + delta_position)
@@ -46,6 +51,7 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p.SplashRandom = self.SplashInitRandom
 	p.Straight = self.Primary.Straight
 	p.InitVelocity = InitVelocity
+	p.InitVelocityLength = self.Primary.InitVelocity / SplatoonSWEPs.ToHammerUnitsPerSec
 	p.InkType = math.random(4, 9)
 	p:Spawn()
 	
@@ -68,5 +74,5 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p.InkType = math.random(1, 3)
 	p:Spawn()
 	p:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-	p:SetModelScale(0.5)
+	p:SetModelScale(.5)
 end

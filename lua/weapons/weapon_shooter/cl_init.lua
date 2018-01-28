@@ -30,7 +30,7 @@ SWEP.ViewModelBoneMods = {
 }
 
 SWEP.VElements = {
-	["weapon"] = {
+	weapon = {
 		type = "Model",
 		model = "models/props_splatoon/weapons/primaries/splattershot/splattershot.mdl",
 		bone = "ValveBiped.Bip01_Spine4",
@@ -47,7 +47,7 @@ SWEP.VElements = {
 }
 
 SWEP.WElements = {
-	["weapon"] = {
+	weapon = {
 		type = "Model",
 		model = "models/props_splatoon/weapons/primaries/splattershot/splattershot.mdl",
 		bone = "ValveBiped.Bip01_R_Hand",
@@ -84,6 +84,6 @@ function SWEP:ClientInit()
 end
 
 function SWEP:ClientPrimaryAttack(canattack)
-	if not canattack then return end
+	if not (canattack and self:IsFirstTimePredicted()) then return end
 	self.WeaponSize = CurTime() --Expand weapon model
 end

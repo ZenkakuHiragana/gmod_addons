@@ -1,45 +1,47 @@
 
+local ss = SplatoonSWEPs
 function SWEP:CustomPrimary(p, info)
-	p.Straight = SplatoonSWEPs:FrameToSec(info.Delay.Straight)
-	p.Damage = info.Damage
-	p.MinDamage = info.MinDamage
-	p.InkRadius = info.InkRadius / 2
-	p.MinRadius = info.MinRadius / 2
-	p.SplashRadius = info.SplashRadius / 2
+	p.Straight = info.Delay.Straight * ss.FrameToSec
+	p.Damage = info.Damage * ss.ToHammerHealth
+	p.MinDamage = info.MinDamage * ss.ToHammerHealth
+	p.InkRadius = info.InkRadius * ss.ToHammerUnits
+	p.MinRadius = info.MinRadius * ss.ToHammerUnits
+	p.SplashRadius = info.SplashRadius * ss.ToHammerUnits
 	p.SplashPatterns = info.SplashPatterns
 	p.SplashNum = info.SplashNum
-	p.SplashInterval = info.SplashInterval
+	p.SplashInterval = info.SplashInterval * ss.ToHammerUnits
 	p.Spread = info.Spread
 	p.SpreadJump = info.SpreadJump
 	p.SpreadBias = info.SpreadBias
-	p.MoveSpeed = SplatoonSWEPs.ToHammerUnits * info.MoveSpeed * 60
-	p.MinDamageTime = SplatoonSWEPs:FrameToSec(info.Delay.MinDamage)
-	p.DecreaseDamage = SplatoonSWEPs:FrameToSec(info.Delay.DecreaseDamage)
-	p.InitVelocity = info.InitVelocity
+	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
+	p.MinDamageTime = info.Delay.MinDamage * ss.FrameToSec
+	p.DecreaseDamage = info.Delay.DecreaseDamage * ss.FrameToSec
+	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
 	p.FirePosition = info.FirePosition
-	p.AimDuration = SplatoonSWEPs:FrameToSec(info.Delay.Aim)
+	p.AimDuration = info.Delay.Aim * ss.FrameToSec
 end
 
 SWEP.Spawnable = true
 SWEP.Base = "inklingbase"
-SplatoonSWEPs.SetPrimary(SWEP, {
+ss:SetPrimary(SWEP, {
+	IsAutomatic			= true,					--false to semi-automatic
 	Recoil				= .2,					--Viewmodel recoil intensity
-	TakeAmmo			= .9,					--Ink consumption per fire[%]
+	TakeAmmo			= .009,					--Ink consumption per fire[-]
 	PlayAnimPercent		= 0,					--Play PLAYER_ATTACK1 animation frequency[%]
 	FirePosition		= Vector(0, -6, -9),	--Ink spawn position
-	Damage				= 36,					--Maximum damage[units]
-	MinDamage			= 18,					--Minimum damage[units]
-	InkRadius			= 100.7874,				--Painting radius[units]
-	MinRadius			= 94.5,					--Minimum painting radius[units]
-	SplashRadius		= 68.24147,				--Painting radius[units]
+	Damage				= .36,					--Maximum damage[-]
+	MinDamage			= .18,					--Minimum damage[-]
+	InkRadius			= 19.20000076,			--Painting radius[Splatoon units]
+	MinRadius			= 18,					--Minimum painting radius[Splatoon units]
+	SplashRadius		= 13,					--Painting radius[Splatoon units]
 	SplashPatterns		= 5,					--Paint patterns
 	SplashNum			= 2,					--Number of splashes
-	SplashInterval		= 393.7008,				--Make an interval on each splash
+	SplashInterval		= 75,					--Make an interval on each splash[Splatoon units]
 	Spread				= 6,					--Aim cone[deg]
 	SpreadJump			= 15,					--Aim cone while jumping[deg]
 	SpreadBias			= .25,					--Aim cone random component[deg]
 	MoveSpeed			= .72,					--Walk speed while shooting[Splatoon units/frame]
-	InitVelocity		= 6929.13408,			--Ink initial velocity[units/s]	
+	InitVelocity		= 22,					--Ink initial velocity[Splatoon units/frame]	
 	Delay = {
 		Aim				= 20,					--Change hold type[frames]
 		Fire			= 6,					--Fire rate[frames]
@@ -77,7 +79,7 @@ function SWEP:SharedPrimaryAttack(canattack)
 	
 	if self:GetInk() <= 0 then
 		if CLIENT and self.PreviousInk then
-			surface.PlaySound(SplatoonSWEPs.TankEmpty)
+			surface.PlaySound(ss.TankEmpty)
 			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
 			self.PreviousInk = false
 		elseif CurTime() > self.NextPlayEmpty then
@@ -91,7 +93,7 @@ function SWEP:SharedPrimaryAttack(canattack)
 end
 
 function SWEP:SharedSecondaryAttack(canattack)
-	SplatoonSWEPs:ClearAllInk()
+	ss:ClearAllInk()
 end
 
 function SWEP:CustomDataTables()

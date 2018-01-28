@@ -1,7 +1,8 @@
 
 --The way to draw weapon models comes from SWEP Construction Kit.
+local ss = SplatoonSWEPs
 SWEP.WElements = {
-	["inktank"] = {
+	inktank = {
 		type = "Model",
 		model = "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl",
 		bone = "ValveBiped.Bip01_Spine4",
@@ -16,7 +17,7 @@ SWEP.WElements = {
 		bodygroup = {},
 		inktank = true,
 	},
-	["subweaponusable"] = {
+	subweaponusable = {
 		type = "Sprite",
 		sprite = "sprites/flare1",
 		bone = "ValveBiped.Bip01_Spine4",
@@ -33,7 +34,7 @@ SWEP.WElements = {
 function SWEP:ResetBonePositions(vm)
 	if not vm:GetBoneCount() then return end
 	for i = 0, vm:GetBoneCount() do
-		vm:ManipulateBoneScale(i, SplatoonSWEPs.vector_one)
+		vm:ManipulateBoneScale(i, ss.vector_one)
 		vm:ManipulateBonePosition(i, vector_origin)
 		vm:ManipulateBoneAngles(i, angle_zero)
 	end
@@ -55,7 +56,7 @@ function SWEP:UpdateBonePositions(vm)
 					allbones[bonename] = self.ViewModelBoneMods[bonename]
 				else
 					allbones[bonename] = { 
-						scale = SplatoonSWEPs.vector_one,
+						scale = ss.vector_one,
 						pos = vector_origin,
 						angle = angle_zero
 					}
@@ -72,7 +73,7 @@ function SWEP:UpdateBonePositions(vm)
 			// !! WORKAROUND !! //
 			local s = Vector(v.scale)
 			local p = Vector(v.pos)
-			local ms = SplatoonSWEPs.vector_one
+			local ms = ss.vector_one
 			if not hasGarryFixedBoneScalingYet then
 				local cur = vm:GetBoneParent(bone)
 				while cur >= 0 do
@@ -156,7 +157,7 @@ function SWEP:CreateModels(t)
 						if IsValid(self) then
 							return self:GetInkColorProxy()
 						else
-							return SplatoonSWEPs.vector_one
+							return ss.vector_one
 						end
 					end
 				else
@@ -198,9 +199,9 @@ function SWEP:CreateModels(t)
 end
 
 function SWEP:MakeSquidModel(id)
-	self.SquidModelNumber = self:GetPMID() == SplatoonSWEPs.PLAYER.OCTO
-		and SplatoonSWEPs.SQUID.OCTO or SplatoonSWEPs.SQUID.INKLING
-	local modelpath = SplatoonSWEPs.Squidmodel[self.SquidModelNumber] --Octopus or squid?
+	self.SquidModelNumber = self:GetPMID() == ss.PLAYER.OCTO
+		and ss.SQUID.OCTO or ss.SQUID.INKLING
+	local modelpath = ss.Squidmodel[self.SquidModelNumber] --Octopus or squid?
 	if IsValid(self.Squid) then self.Squid:Remove() end
 	if file.Exists(modelpath, "GAME") then
 		self.Squid = ClientsideModel(modelpath, RENDERGROUP_BOTH)
@@ -213,7 +214,7 @@ function SWEP:MakeSquidModel(id)
 				if IsValid(self) then
 					return self:GetInkColorProxy()
 				else
-					return SplatoonSWEPs.vector_one
+					return ss.vector_one
 				end
 			end
 		else
@@ -222,7 +223,7 @@ function SWEP:MakeSquidModel(id)
 	elseif not self.ErrorSquidModel then
 		print "SplatoonSWEPs: Squid model is not found!  Check your subscription!"
 		self.ErrorSquidModel = true
-		if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
+		if self:GetPMID() ~= ss.PLAYER.NOSQUID then
 			self:PopupError "SplatoonSWEPs: Squid model is not found!  You cannot become squid!"
 		end
 	end
@@ -313,7 +314,7 @@ end
 
 function SWEP:GetBombMeterPosition(inkconsumption)
 	local ink = isnumber(inkconsumption) and inkconsumption or 70
-	local x = -11.9 + ink * 17 / SplatoonSWEPs.MaxInkAmount
+	local x = -11.9 + ink * 17 / ss.MaxInkAmount
 	self.BombMeterPosition = Vector(x)
 	return self.BombMeterPosition
 end
@@ -323,32 +324,36 @@ function SWEP:DrawWorldModel()
 	local bone_ent = self // when the weapon is dropped
 	if IsValid(self.Owner) and self.Owner:IsPlayer() then
 		bone_ent = self.Owner
-		if IsValid(self.Squid) and self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID and self.IsSquid then
-			if not self:GetInInk() then
-				--It seems changing eye position doesn't work.
-				self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
-				 --Move clientside model to player's position.
-				local v = self.Owner:GetVelocity()
-				local a = v:Angle()
-				a.yaw = a.yaw + self.Owner:GetAimVector():Angle().yaw
-				if v:LengthSqr() < 16 then --Speed limit: 
-					a.p = 0
-				elseif a.p > 45 and a.p <= 90 then --Angle limit: up and down
-					a.p = 45
-				elseif a.p >= 270 and a.p < 300 then
-					a.p = 300
-				else
-					a.r = a.p
+		if self.IsSquid then
+			if self:GetPMID() ~= ss.PLAYER.NOSQUID then
+				if IsValid(self.Squid) and not self:GetInInk() then
+					--It seems changing eye position doesn't work.
+					self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
+					 --Move clientside model to player's position.
+					local v = self.Owner:GetVelocity()
+					local a = v:Angle()
+					a.yaw = a.yaw + self.Owner:GetAimVector():Angle().yaw
+					if v:LengthSqr() < 16 then --Speed limit: 
+						a.p = 0
+					elseif a.p > 45 and a.p <= 90 then --Angle limit: up and down
+						a.p = 45
+					elseif a.p >= 270 and a.p < 300 then
+						a.p = 300
+					else
+						a.r = a.p
+					end
+					a.p, a.y, a.r = a.p - 90, self.Owner:GetAngles().y, 180
+					self.Squid:SetAngles(a)
+					self.Squid:SetPos(self.Owner:GetPos())
+					self.Squid:DrawModel()
+					self.Squid:DrawShadow(true)
+					self.Squid:CreateShadow()
 				end
-				a.p, a.y, a.r = a.p - 90, self.Owner:GetAngles().y, 180
-				self.Squid:SetAngles(a)
-				self.Squid:SetPos(self.Owner:GetPos())
-				self.Squid:DrawModel()
-				self.Squid:DrawShadow(true)
-				self.Squid:CreateShadow()
+				
+				return
+			elseif self:GetInInk() then
+				return
 			end
-			
-			return
 		end
 	end
 	
@@ -406,7 +411,7 @@ function SWEP:DrawWorldModel()
 				--Sub weapon usable meter
 				model:ManipulateBonePosition(model:LookupBone "bip_inktank_bombmeter", self.BombMeterPosition)
 				--Ink remaining
-				local ink = -17 + 17 * self:GetInk() / SplatoonSWEPs.MaxInkAmount
+				local ink = -17 + 17 * self:GetInk() / ss.MaxInkAmount
 				model:ManipulateBonePosition(model:LookupBone "bip_inktank_ink_core", Vector(ink, 0, 0))
 				--Ink visiblity
 				model:SetBodygroup(model:FindBodygroupByName "Ink", ink < -16.5 and 1 or 0)
@@ -466,7 +471,7 @@ function SWEP:CustomAmmoDisplay()
 	self.AmmoDisplay.Draw = true
 	
 	if self.Primary.ClipSize > 0 then
-		self.AmmoDisplay.PrimaryClip = self:GetInk() / SplatoonSWEPs.MaxInkAmount * 100
+		self.AmmoDisplay.PrimaryClip = self:GetInk() / ss.MaxInkAmount * 100
 		self.AmmoDisplay.PrimaryAmmo = 100
 	end
 	

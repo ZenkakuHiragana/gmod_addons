@@ -5,20 +5,19 @@ AddCSLuaFile "cl_draw.lua"
 include "shared.lua"
 include "baseinfo.lua"
 
+local ss = SplatoonSWEPs
 function SWEP:ChangePlayermodel(data)
 	self.Owner:SetModel(data.Model)
 	self.Owner:SetSkin(data.Skin)
-	local bodygroups = ""
 	local numgroups = self.Owner:GetNumBodyGroups()
 	if isnumber(numgroups) then
-		for k = 0, self.Owner:GetNumBodyGroups() - 1 do
+		for k = 0, numgroups - 1 do
 			local v = data.BodyGroups[k + 1]
-			if istable(v) and isnumber(v.num) then v = v.num else v = 0 end
+			v = istable(v) and isnumber(v.num) and v.num or 0
 			self.Owner:SetBodygroup(k, v)
-			bodygroups = bodygroups .. tostring(v) .. " "
 		end
 	end
-	if bodygroups == "" then bodygroups = "0" end
+	
 	if data.SetOffsets then
 		self.Owner:SetNWInt("splt_isSet", 1)
 		self.Owner:SetNWInt("splt_SplatoonOffsets", 2)
@@ -55,28 +54,29 @@ function SWEP:Initialize()
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
 	self:SetNextCrouchTime(CurTime())
-	self:SetInk(SplatoonSWEPs.MaxInkAmount)
-	self:SetInkColorProxy(SplatoonSWEPs.vector_one)
+	self:SetInk(ss.MaxInkAmount)
+	self:SetInkColorProxy(ss.vector_one)
 	self:ChangeHullDuck()
-	self:AddSchedule(SplatoonSWEPs:FrameToSec(5),
+	self:AddSchedule(5 * ss.FrameToSec,
 	function(self, schedule) --Set if player is in ink
-		local ang = Angle(0, self.Owner:GetAngles().yaw, 0)
+		local ang = Angle(0, self.Owner:GetAngles().yaw)
 		local p = self.Owner:WorldSpaceCenter()
-		local fw, right = ang:Forward(), ang:Right()
-		self:SetGroundColor(SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner)) or -1)
-		local onourink = self:GetGroundColor() >= 0 and self:GetGroundColor() == self.ColorCode
-		self:SetInWallInk(self.IsSquid and (SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
-			(fw - right) * InkTraceLength, self.Owner)) == self.ColorCode
-		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
-			(fw + right) * InkTraceLength, self.Owner)) == self.ColorCode
-		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
-			(right + fw) * -InkTraceLength, self.Owner)) == self.ColorCode
-		or SplatoonSWEPs:GetSurfaceColor(util.QuickTrace(p,
-			(right - fw) * InkTraceLength, self.Owner)) == self.ColorCode))
-		self:SetInInk(self.IsSquid and onourink or self:GetInWallInk())
-		self:SetOnEnemyInk(self:GetGroundColor() >= 0 and not onourink)
-		self.OwnerVelocity = self.Owner:GetPhysicsObject():GetVelocity()
+		local fw, right = ang:Forward() * InkTraceLength, ang:Right() * InkTraceLength
+		self:SetGroundColor(ss:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner)) or -1)
+		local onink = self:GetGroundColor() >= 0
+		local onourink = self:GetGroundColor() == self.ColorCode
+		
+		self:SetInWallInk(self.IsSquid and (
+		ss:GetSurfaceColor(util.QuickTrace(p, fw - right, self.Owner)) == self.ColorCode or
+		ss:GetSurfaceColor(util.QuickTrace(p, fw + right, self.Owner)) == self.ColorCode or
+		ss:GetSurfaceColor(util.QuickTrace(p,-fw - right, self.Owner)) == self.ColorCode or
+		ss:GetSurfaceColor(util.QuickTrace(p,-fw + right, self.Owner)) == self.ColorCode))
+		
+		self:SetInInk(self.IsSquid and onink and onourink or self:GetInWallInk())
+		self:SetOnEnemyInk(onink and not onourink)
+		self.OwnerVelocity = self.Owner:GetVelocity()
 	end)
+	
 	self:SharedInitBase()
 	if isfunction(self.ServerInit) then return self:ServerInit() end
 end
@@ -97,32 +97,17 @@ function SWEP:Deploy()
 	self:SetNextCrouchTime(CurTime())
 	self.OwnerVelocity = self.Owner:GetVelocity()
 	self.ViewAnim = ACT_VM_IDLE
-	self:SetPMID(self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "Playermodel", 1))
-	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
-		self.Owner:SetMaterial(self.Owner:Crouching() and "color" or "")
-	end
-	
-	if self.Owner:IsPlayer() then
-		self.ColorCode = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "InkColor", 1)
-		self:SetHoldType "passive"
-	end
-	
-	if self.ColorCode == 0 then 
-		self.ColorCode = math.random(SplatoonSWEPs.MAX_COLORS)
-	end
-	
-	self.SquidAvailable = file.Exists(SplatoonSWEPs.Squidmodel[self:GetPMID() == SplatoonSWEPs.PLAYER.OCTO
-		and SplatoonSWEPs.SQUID.OCTO or SplatoonSWEPs.SQUID.INKLING], "GAME")
-	self.Color = SplatoonSWEPs:GetColor(self.ColorCode)
-	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
-	self.CanHealStand = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "CanHealStand", 1) ~= 0
-	self.CanHealInk = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "CanHealInk", 1) ~= 0
-	self.CanReloadStand = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "CanReloadStand", 1) ~= 0
-	self.CanReloadInk = self.Owner:GetInfoNum(SplatoonSWEPs:GetConVarName "CanReloadInk", 1) ~= 0
+	self:SetPMID(self.Owner:GetInfoNum(ss:GetConVarName "Playermodel", 1))
+	self.SquidAvailable = tobool(ss:GetSquidmodel(self:GetPMID()))
+	self.CanHealStand = self.Owner:GetInfoNum(ss:GetConVarName "CanHealStand", 1) ~= 0
+	self.CanHealInk = self.Owner:GetInfoNum(ss:GetConVarName "CanHealInk", 1) ~= 0
+	self.CanReloadStand = self.Owner:GetInfoNum(ss:GetConVarName "CanReloadStand", 1) ~= 0
+	self.CanReloadInk = self.Owner:GetInfoNum(ss:GetConVarName "CanReloadInk", 1) ~= 0
 	self.BackupPlayerInfo = {
 		Color = self.Owner:GetColor(),
 		Flags = self.Owner:GetFlags(),
 		JumpPower = self.Owner:GetJumpPower(),
+		Material = self.Owner:GetMaterial(),
 		RenderMode = self:GetRenderMode(),
 		Speed = {
 			Crouched = self.Owner:GetCrouchedWalkSpeed(),
@@ -132,6 +117,7 @@ function SWEP:Deploy()
 			Walk = self.Owner:GetWalkSpeed(),
 			UnDuck = self.Owner:GetUnDuckSpeed(),
 		},
+		SubMaterial = {},
 		Playermodel = {
 			Model = self.Owner:GetModel(),
 			Skin = self.Owner:GetSkin(),
@@ -145,7 +131,26 @@ function SWEP:Deploy()
 	for k, v in pairs(self.BackupPlayerInfo.Playermodel.BodyGroups) do
 		v.num = self.Owner:GetBodygroup(v.id)
 	end
-	local PMPath = SplatoonSWEPs.Playermodel[self:GetPMID()]
+	
+	for i = 0, 31 do
+		local submat = self.Owner:GetSubMaterial(i)
+		if submat == "" then submat = nil end
+		self.BackupPlayerInfo.SubMaterial[i] = submat
+	end
+	
+	if self.Owner:IsPlayer() then
+		self.ColorCode = self.Owner:GetInfoNum(ss:GetConVarName "InkColor", 1)
+		self:SetHoldType "passive"
+	end
+	
+	if self.ColorCode == 0 then 
+		self.ColorCode = math.random(ss.MAX_COLORS)
+	end
+	
+	self.Color = ss:GetColor(self.ColorCode)
+	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
+	
+	local PMPath = ss.Playermodel[self:GetPMID()]
 	if PMPath then
 		if file.Exists(PMPath, "GAME") then
 			self.PMTable = {
@@ -157,10 +162,11 @@ function SWEP:Deploy()
 			}
 			self:ChangePlayermodel(self.PMTable)
 			self:ChangeHullDuck()
-		elseif SERVER then
-			SplatoonSWEPs:SendError("SplatoonSWEPs: Required playermodel is not found!", 1, 10, self.Owner)
+		else
+			ss:SendError("SplatoonSWEPs: Required playermodel is not found!", 1, 10, self.Owner)
 		end
 	end
+	
 	return self:SharedDeployBase()
 end
 
@@ -184,6 +190,10 @@ function SWEP:Holster()
 		self.Owner:SetUnDuckSpeed(self.BackupPlayerInfo.Speed.UnDuck)
 		self.Owner:SetHullDuck(self.BackupPlayerInfo.HullMins, self.BackupPlayerInfo.HullMaxs)
 		self.Owner:SetViewOffsetDucked(self.BackupPlayerInfo.ViewOffsetDucked)
+		self.Owner:SetMaterial(self.BackupPlayerInfo.Material)
+		for i = 0, 31 do
+			self.Owner:SetSubMaterial(i, self.BackupPlayerInfo.SubMaterial[i])
+		end
 	end
 	
 	return self:SharedHolsterBase()
@@ -198,6 +208,6 @@ function SWEP:Think()
 	
 	self:ProcessSchedules()
 	self:SharedThinkBase()
-	self:SetClip1(math.max(0, self:GetInk() / SplatoonSWEPs.MaxInkAmount * 100))
+	self:SetClip1(math.max(0, self:GetInk() / ss.MaxInkAmount * 100))
 	if isfunction(self.ServerThink) then return self:ServerThink() end
 end
