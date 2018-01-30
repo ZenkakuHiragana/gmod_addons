@@ -1,7 +1,10 @@
 
+function ENT:GetEnemy()
+	return self:GetNetworkedEnemy()
+end
+
 include('shared.lua')
 language.Add("npc_supermetropolice", "Super Metropolice")
-
 hook.Add("EntityEmitSound", "SuperMetropoliceHearSound", function(t)
 	if not IsValid(t.Entity) then return end
 	for k, v in pairs(ents.FindByClass("npc_supermetropolice")) do
@@ -14,10 +17,6 @@ hook.Add("EntityEmitSound", "SuperMetropoliceHearSound", function(t)
 		end
 	end
 end)
-
-function ENT:GetEnemy()
-	return self:GetNetworkedEnemy()
-end
 
 function ENT:SetupDataTables()
 	self:NetworkVar("Bool", 0, "Look")

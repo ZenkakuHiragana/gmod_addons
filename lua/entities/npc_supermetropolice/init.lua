@@ -1,4 +1,10 @@
 
+function ENT:GetEnemy()
+	if self:Validate(self.Enemy) ~= 0 then return nil end
+	return self.Enemy
+end
+
+AddCSLuaFile("cl_init.lua")
 AddCSLuaFile("shared.lua")
 include('shared.lua')
 
@@ -236,11 +242,6 @@ function ENT:GetMuzzle()
 	self:GetAttachment(self:LookupAttachment("anim_attachment_RH"))
 end
 
-function ENT:GetEnemy()
-	if self:Validate(self.Enemy) ~= 0 then return nil end
-	return self.Enemy
-end
-
 function ENT:SetEnemy( ent )
 	self.Enemy = ent
 	self:SetNetworkedEnemy(ent)
@@ -335,11 +336,6 @@ function ENT:Initialize()
 	self:ClearUserStuck()
 	
 	self:XorInit(CurTime())
-end
-
-function ENT:SetupDataTables()
-	self:NetworkVar("Bool", 0, "Look")
-	self:NetworkVar("Entity", 0, "NetworkedEnemy")
 end
 
 function ENT:FireWeapon(smg)
@@ -527,7 +523,7 @@ function ENT:OnContact(v)
 	local e = p:GetEnergy()
 	local division = 2.0 * 10^6
 	
-	if v:IsVehicle() then
+	if v:IsVehicle() and isfunction(v.GetSpeed) and isnumber(v:GetSpeed()) then
 		e = v:GetSpeed() * division
 	end
 	

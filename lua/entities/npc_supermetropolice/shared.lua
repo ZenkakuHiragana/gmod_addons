@@ -341,6 +341,11 @@ function ENT:XorRand(min, max)
 	return math.Remap(w, -(2^31), 2^31 - 1, min, max)
 end
 
+function ENT:SetupDataTables()
+	self:NetworkVar("Bool", 0, "Look")
+	self:NetworkVar("Entity", 0, "NetworkedEnemy")
+end
+
 list.Set("NPC", "npc_supermetropolice", {
 	Name = "Super Metropolice",
 	Class = "npc_supermetropolice",
