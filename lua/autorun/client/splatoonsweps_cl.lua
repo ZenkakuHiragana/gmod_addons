@@ -151,8 +151,8 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	)
 	
 	local rtarea = rtsize^2
-	local rtmergin = 4 / rtsize
-	local arearatio = math.sqrt(ss.AreaBound / rtarea) * 1.18 --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	local rtmergin = 4 / rtsize --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
+	local arearatio = math.sqrt(ss.AreaBound / rtarea) * 1.31332517601404 - .07288467521373
 	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
