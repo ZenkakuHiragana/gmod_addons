@@ -1,11 +1,12 @@
 
+local ss = SplatoonSWEPs
+if not ss then return end
 AddCSLuaFile "shared.lua"
 AddCSLuaFile "baseinfo.lua"
 AddCSLuaFile "cl_draw.lua"
 include "shared.lua"
 include "baseinfo.lua"
 
-local ss = SplatoonSWEPs
 function SWEP:ChangePlayermodel(data)
 	self.Owner:SetModel(data.Model)
 	self.Owner:SetSkin(data.Skin)

@@ -1,4 +1,6 @@
 
+local ss = SplatoonSWEPs
+if not ss then return end
 include "shared.lua"
 include "baseinfo.lua"
 include "cl_draw.lua"
@@ -110,7 +112,7 @@ function SWEP:Holster()
 	if not (IsValid(self.Owner) and self:IsFirstTimePredicted()) then return end
 	local vm = self.Owner:GetViewModel()
 	if IsValid(vm) then self:ResetBonePositions(vm) end
-	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID and self.HullDuckMins then
+	if self:GetPMID() ~= ss.PLAYER.NOSQUID and self.HullDuckMins then
 		self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 		self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 	end
@@ -143,26 +145,26 @@ function SWEP:Think()
 		local enough = self:GetInk() > self.Secondary.TakeAmmo
 		if not self.EnoughSubWeapon and enough then
 			self.JustUsableTime = CurTime()
-			surface.PlaySound(SplatoonSWEPs.BombAvailable)
+			surface.PlaySound(ss.BombAvailable)
 		end
 		self.EnoughSubWeapon = enough
 	end
 	
 	if IsValid(self.Squid) then
-		if self:GetPMID() == SplatoonSWEPs.PLAYER.OCTO then
-			if self.SquidModelNumber ~= SplatoonSWEPs.SQUID.OCTO then
-				self.Squid:SetModel(SplatoonSWEPs.Squidmodel[SplatoonSWEPs.SQUID.OCTO])
-				self.SquidModelNumber = SplatoonSWEPs.SQUID.OCTO
+		if self:GetPMID() == ss.PLAYER.OCTO then
+			if self.SquidModelNumber ~= ss.SQUID.OCTO then
+				self.Squid:SetModel(ss.Squidmodel[ss.SQUID.OCTO])
+				self.SquidModelNumber = ss.SQUID.OCTO
 			end
-		elseif self.SquidModelNumber ~= SplatoonSWEPs.SQUID.INKLING then
-			self.Squid:SetModel(SplatoonSWEPs.Squidmodel[SplatoonSWEPs.SQUID.INKLING])
-			self.SquidModelNumber = SplatoonSWEPs.SQUID.INKLING
+		elseif self.SquidModelNumber ~= ss.SQUID.INKLING then
+			self.Squid:SetModel(ss.Squidmodel[ss.SQUID.INKLING])
+			self.SquidModelNumber = ss.SQUID.INKLING
 		end 
 	else
 		self:MakeSquidModel()
 	end
 	
-	if self:GetPMID() ~= SplatoonSWEPs.PLAYER.NOSQUID then
+	if self:GetPMID() ~= ss.PLAYER.NOSQUID then
 		self:DrawShadow(not self.IsSquid)
 	end
 	

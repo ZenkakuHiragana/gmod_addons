@@ -1,5 +1,6 @@
 
 local ss = SplatoonSWEPs
+if not ss then return end
 function SWEP:CustomPrimary(p, info)
 	p.Straight = info.Delay.Straight * ss.FrameToSec
 	p.Damage = info.Damage * ss.ToHammerHealth
