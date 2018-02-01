@@ -47,6 +47,20 @@ if CLIENT then
 		-- local start = Vector(u, v) * c
 		-- DebugBox(start, start + sp:UnitsToUV(bound) * c)
 	-- end
+	
+	local n, b, m = #surf.Areas, sp.AreaBound, 0
+	local xy, yx, x, y = 0, 0, 0, 0
+	for k, v in SortedPairsByValue(surf.Areas, true) do m = v break end
+	for k, v in ipairs(surf.Bounds) do
+		if math.abs(v.y) < 1e-10 then print(v.y) end
+		xy = xy + v.x / v.y
+		yx = yx + v.y / v.x
+		x = x + v.x
+		y = y + v.y
+	end
+	xy, yx, x, y = xy / #surf.Bounds, yx / #surf.Bounds, x / #surf.Bounds, y / #surf.Bounds
+	SetClipboardText(table.concat({n, b, m, xy, yx, x, y}, "\t"))
+	print(xy, yx, x, y)
 	return
 end
 

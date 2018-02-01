@@ -1,7 +1,7 @@
 
 --SplatoonSWEPs structure
 --The core of new ink system.
-
+if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
 local ss = SplatoonSWEPs
 SplatoonSWEPs = ss or {
 	BSP = {},
@@ -13,6 +13,7 @@ SplatoonSWEPs = ss or {
 include "autorun/splatoonsweps_shared.lua"
 include "splatoonsweps_inkmanager.lua"
 include "splatoonsweps_network.lua"
+CreateConVar("sv_splatoonsweps_enabled", "1", FCVAR_ARCHIVE, "Enables or disables SplatoonSWEPs.")
 
 ss = SplatoonSWEPs
 for i = 1, 9 do

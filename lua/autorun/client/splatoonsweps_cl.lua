@@ -1,8 +1,12 @@
 
 --Clientside ink manager
+if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
 local ss = SplatoonSWEPs
 SplatoonSWEPs = ss or {
 	AreaBound = 0,
+	AspectSum = 0,
+	AspectSumX = 0,
+	AspectSumY = 0,
 	BSP = {},
 	Displacements = {},
 	IMesh = {},
@@ -88,10 +92,11 @@ end
 -- 21845 = 65535 / 3 with BuildFromTriangles()
 local MAX_TRIANGLES = math.floor(32768 / 3)
 local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
-hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function()
+hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function()
 	ss.BSP:Init() --Parsing BSP file
 	ss.BSP = nil
 	local surf = ss.SequentialSurfaces
+	local numareas = #surf.Areas
 	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
 	
 	--21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
@@ -137,7 +142,6 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 			["$allowalphatocoverage"] = "1",
 		}
 	)
-	ss.IMesh[1] = Mesh(rt.Material)
 	rt.WaterMaterial = CreateMaterial(
 		rt.WaterMaterialName,
 		"Refract",
@@ -151,8 +155,8 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 	)
 	
 	local rtarea = rtsize^2
-	local rtmergin = 4 / rtsize --arearatio[(units^2 / pixel^2)^1/2 -> units/pixel]
-	local arearatio = math.sqrt(ss.AreaBound / rtarea) * 1.31332517601404 - .07288467521373
+	local rtmergin = 4 / rtsize --arearatio[units/pixel]
+	local arearatio = .0050455266963 * (ss.AreaBound * ss.AspectSum * ss.AspectSumX / ss.AspectSumY / numareas / 2500 + numareas)^.523795515713613
 	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
@@ -175,19 +179,19 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		end
 		
 		if u == 0 then bk = #sortedsurfs end --The first element of the current shelf
-		for i, vertex in ipairs(surf.Vertices[k]) do --Get UV coordinates
-			local meshvert = vertex + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL
-			local UV = ss:To2D(vertex, surf.Origins[k], surf.Angles[k]) / convertunit
+		for i, vt in ipairs(surf.Vertices[k]) do --Get UV coordinates
+			local meshvert = vt + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL
+			local UV = ss:To2D(vt, surf.Origins[k], surf.Angles[k]) / convertunit
 			surf.Vertices[k][i] = {pos = meshvert, u = UV.x + u, v = UV.y + v}
 		end
 		
 		if ss.Displacements[k] then
 			NumMeshTriangles = NumMeshTriangles + #ss.Displacements[k].Triangles - 2
 			for i = 0, #ss.Displacements[k].Positions do
-				local vertex = ss.Displacements[k].Positions[i]
-				local meshvert = vertex.pos - surf.Normals[k] * surf.Normals[k]:Dot(vertex.vec * vertex.dist)
+				local vt = ss.Displacements[k].Positions[i]
+				local meshvert = vt.pos - surf.Normals[k] * surf.Normals[k]:Dot(vt.vec * vt.dist)
 				local UV = ss:To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
-				vertex.u, vertex.v = UV.x + u, UV.y + v
+				vt.u, vt.v = UV.x + u, UV.y + v
 			end
 		end
 		
@@ -208,15 +212,20 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside Initialization", function(
 		convertunit = convertunit * divuv
 	end
 	
+	print("Total mesh triangles: ", NumMeshTriangles)
+	
+	for i = 1, math.ceil(NumMeshTriangles / MAX_TRIANGLES) do
+		table.insert(ss.IMesh, Mesh(rt.Material))
+	end
+	
 	--Building MeshVertex
 	mesh.Begin(ss.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
 	local function ContinueMesh()
-		if mesh.VertexCount() >= MAX_TRIANGLES * 3 then
-			mesh.End()
-			nummeshes, NumMeshTriangles = nummeshes + 1, NumMeshTriangles - MAX_TRIANGLES
-			ss.IMesh[nummeshes] = Mesh(rt.Material)
-			mesh.Begin(ss.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
-		end
+		if mesh.VertexCount() < MAX_TRIANGLES * 3 then return end
+		mesh.End()
+		mesh.Begin(ss.IMesh[nummeshes + 1], MATERIAL_TRIANGLES,
+		math.min(NumMeshTriangles - MAX_TRIANGLES * nummeshes, MAX_TRIANGLES))
+		nummeshes = nummeshes + 1
 	end
 	
 	for sortedID, k in ipairs(sortedsurfs) do

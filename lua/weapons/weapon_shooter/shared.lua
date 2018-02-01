@@ -21,7 +21,6 @@ function SWEP:CustomPrimary(p, info)
 	p.AimDuration = info.Delay.Aim * ss.FrameToSec
 end
 
-SWEP.Spawnable = true
 SWEP.Base = "inklingbase"
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					--false to semi-automatic

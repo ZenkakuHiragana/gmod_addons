@@ -126,3 +126,5 @@ gm_flounder_heights 1.398
 numareas 11227
 areabound 40480978.612694
 avgarea 3605.6808241466108488465306849559
+
+gm_marsh total mesh triangles 810933

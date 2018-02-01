@@ -175,7 +175,7 @@ local function GetRotatedAABB(v2d, angle, disp)
 end
 
 local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
-	if #v3d < 3 or bsp.FaceIndex > (600000 or 1247232) then return end
+	if #v3d < 3 or bsp.FaceIndex > (1247232 or 600000) then return end
 	--TODO: if the face is underwater then return end
 	
 	bsp.FaceIndex = bsp.FaceIndex + 1
@@ -204,6 +204,9 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	if CLIENT then
 		bound.z = minangle.yaw
 		ss.AreaBound = ss.AreaBound + area
+		ss.AspectSum = ss.AspectSum + bound.y / bound.x
+		ss.AspectSumX = ss.AspectSumX + bound.x
+		ss.AspectSumY = ss.AspectSumY + bound.y
 		local surf = ss.SequentialSurfaces
 		table.insert(surf.Angles, angle)
 		table.insert(surf.Areas, area)

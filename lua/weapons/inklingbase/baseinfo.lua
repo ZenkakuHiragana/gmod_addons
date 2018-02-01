@@ -18,6 +18,7 @@ Crouch: Become squid.
 	SWEP.PrintName = "Inkling base"
 	SWEP.Purpose = "Splat ink!"
 	SWEP.RenderGroup = RENDERGROUP_TRANSLUCENT
+	SWEP.Spawnable = GetConVar "sv_splatoonsweps_enabled":GetBool()
 	SWEP.SpeechBubbleLid = surface.GetTextureID "gui/speech_lid"
 	SWEP.SwayScale = 1
 	SWEP.UseHands = true
