@@ -89,7 +89,7 @@ function ENT:Speak(sentence, alone, can)
 	(not (sentence.squad or alone) and self:XorRand() > (sentence.probability or 0.7)) then return end
 	
 	EmitSentence(sentence.name .. 
-		math.random(0, sentence.patterns), self:GetPos(), self:EntIndex(), 
+		math.random(0, sentence.patterns or 1), self:GetPos(), self:EntIndex(), 
 		CHAN_AUTO, 1, sentence.vol or 100)
 	local _next = self.SentenceLength[math.random(1, #self.SentenceLength)]
 	if sentence.squad then _next = _next * 0.8 end
