@@ -120,10 +120,8 @@ function bsp:Init()
 	self:Parse(LUMP.TEXDATA)
 	self:Parse(LUMP.TEXINFO)
 	
-	if SERVER then
-		self:Parse(LUMP.LEAFS)
-		self:Parse(LUMP.NODES)
-	end
+	self:Parse(LUMP.LEAFS)
+	self:Parse(LUMP.NODES)
 	
 	self:Parse(LUMP.MODELS)
 	self:Parse(LUMP.FACES)
@@ -132,6 +130,7 @@ function bsp:Init()
 	
 	self.bsp:Close()
 	self.bsp = nil
+	ss.NumSurfaces = self.FaceIndex
 end
 
 function bsp:ReadHeader()
@@ -161,8 +160,8 @@ local function GetRotatedAABB(v2d, angle, disp)
 	end
 	
 	if disp then
-		for k = 0, #disp.Positions do
-			local v = Vector(disp.Positions[k].pos2d)
+		for k, v in ipairs(disp.Positions2D) do
+			v = Vector(v)
 			v:Rotate(angle)
 			mins.x = math.min(mins.x, v.x)
 			mins.y = math.min(mins.y, v.y)
@@ -174,24 +173,25 @@ local function GetRotatedAABB(v2d, angle, disp)
 	return mins, maxs
 end
 
+--TODO: if the face is underwater then return end
 local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	if #v3d < 3 or bsp.FaceIndex > (1247232 or 600000) then return end
-	--TODO: if the face is underwater then return end
 	
-	bsp.FaceIndex = bsp.FaceIndex + 1
+	local surf = ss:FindLeaf(disp or v3d).Surfaces
 	local area, bound, minangle, minmins = math.huge, nil, nil, nil
 	for i, v in ipairs(v2d) do --Get minimum AABB with O(n^2)
 		local seg = v2d[i % #v2d + 1] - v
 		local ang = Angle(0, math.deg(math.atan2(seg.y, seg.x)) - 90)
 		local mins, maxs = GetRotatedAABB(v2d, ang, disp)
-		local tmpbound = maxs - mins
-		if area > tmpbound.x * tmpbound.y then
-			if tmpbound.x < tmpbound.y then
+		local tb = maxs - mins
+		if area > tb.x * tb.y then
+			if tb.x < tb.y then
 				ang.yaw = ang.yaw + 90
 				minmins, maxs = GetRotatedAABB(v2d, ang, disp)
 			else
 				minmins = mins
 			end
+			
 			minangle = ang
 			bound = maxs - minmins
 			area = bound.x * bound.y
@@ -201,32 +201,23 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	minmins:Rotate(minangle)
 	origin = ss:To3D(minmins, origin, angle)
 	angle:RotateAroundAxis(normal, minangle.yaw)
-	if CLIENT then
-		bound.z = minangle.yaw
-		ss.AreaBound = ss.AreaBound + area
-		ss.AspectSum = ss.AspectSum + bound.y / bound.x
-		ss.AspectSumX = ss.AspectSumX + bound.x
-		ss.AspectSumY = ss.AspectSumY + bound.y
-		local surf = ss.SequentialSurfaces
-		table.insert(surf.Angles, angle)
-		table.insert(surf.Areas, area)
-		table.insert(surf.Bounds, bound)
-		table.insert(surf.Normals, normal)
-		table.insert(surf.Origins, origin)
-		table.insert(surf.Vertices, v3d)
-	else
-		if disp then disp.Positions = nil end
-		local leaf = ss:FindLeaf(disp or v3d)
-		local surf = leaf.Surfaces
-		table.insert(surf.Angles, angle)
-		table.insert(surf.DefaultAngles, minangle.yaw)
-		table.insert(surf.Indices, bsp.FaceIndex * (disp and -1 or 1))
-		table.insert(surf.InkCircles, {})
-		table.insert(surf.Maxs, maxs)
-		table.insert(surf.Mins, mins)
-		table.insert(surf.Normals, normal)
-		table.insert(surf.Origins, origin)
-	end
+	bound.z = minangle.yaw
+	bsp.FaceIndex = bsp.FaceIndex + 1
+	ss.AreaBound = ss.AreaBound + area
+	ss.AspectSum = ss.AspectSum + bound.y / bound.x
+	ss.AspectSumX = ss.AspectSumX + bound.x
+	ss.AspectSumY = ss.AspectSumY + bound.y
+	table.insert(surf.Angles, angle)
+	table.insert(surf.Areas, area)
+	table.insert(surf.Bounds, bound)
+	table.insert(surf.DefaultAngles, minangle.yaw)
+	table.insert(surf.Indices, bsp.FaceIndex * (disp and -1 or 1))
+	table.insert(surf.InkCircles, {})
+	table.insert(surf.Maxs, maxs)
+	table.insert(surf.Mins, mins)
+	table.insert(surf.Normals, normal)
+	table.insert(surf.Origins, origin)
+	table.insert(surf.Vertices, v3d)
 end
 
 local function MakeTriangle(vert)
@@ -248,6 +239,8 @@ end
 local function SurfaceStructure()
 	return {
 		Angles = {},
+		Areas = {},
+		Bounds = {},
 		DefaultAngles = {},
 		Indices = {},
 		InkCircles = {},
@@ -255,6 +248,7 @@ local function SurfaceStructure()
 		Mins = {},
 		Normals = {},
 		Origins = {},
+		Vertices = {},
 	}
 end
 
@@ -355,7 +349,6 @@ end,
 	lump.num = math.floor(lump.length / size) - 1
 	for i = 0, lump.num do
 		lump.data[i] = {}
-		lump.data[i].Displacements = {}
 		lump.data[i].Surfaces = SurfaceStructure()
 	end
 end,
@@ -369,7 +362,6 @@ end,
 	for i = 0, lump.num do
 		lump.data[i] = {}
 		lump.data[i].ChildNodes = {}
-		lump.data[i].Displacements = {}
 		lump.data[i].Surfaces = SurfaceStructure()
 		lump.data[i].Separator = planes.data[read "Long"]
 		children[i] = {}
@@ -397,12 +389,10 @@ end,
 	lump.num = math.floor(lump.length / size) - 1
 	for i = 0, lump.num do
 		bsp.bsp:Skip(12 * 3)
-		local headnode = read "Long"
-		if SERVER then table.insert(ss.Models, nodes.data[headnode]) end
+		table.insert(ss.Models, nodes.data[read "Long"])
 		if i == 0 then
 			bsp.FirstFace = read "Long"
 			bsp.NumFaces = read "Long"
-			if CLIENT then return end
 		else
 			bsp.bsp:Skip(8)
 		end
@@ -479,6 +469,7 @@ end,
 				dispverts[k].vec = read "Vector"
 				dispverts[k].dist = read "Float"
 			end
+			bsp.bsp:Seek(here)
 			
 			--DispInfo.startPosition isn't always equal to v3d[1] so let's find correct one
 			do local i, min, start = {}, math.huge, 0
@@ -494,6 +485,8 @@ end,
 				v3d[1], v3d[2], v3d[3], v3d[4] = v3d[i[1]], v3d[i[2]], v3d[i[3]], v3d[i[4]]
 			end
 			
+			isdisp = {Positions2D = {}}
+			ss.Displacements[bsp.FaceIndex + 1] = dispverts
 			local div1, div2 -- vector_origin, vector_origin
 			local u1, u2 = v3d[4] - v3d[1], v3d[3] - v3d[2]
 			local v1, v2 = v3d[2] - v3d[1], v3d[3] - v3d[4]
@@ -507,26 +500,10 @@ end,
 				v.pos2d = ss:To2D(v.pos - normal * normal:Dot(v.vec * v.dist), center, angle)
 				mins = ss:MinVector(mins, v.pos) --Calculate bounding box
 				maxs = ss:MaxVector(maxs, v.pos)
+				table.insert(isdisp, v.pos)
+				table.insert(isdisp.Positions2D, v.pos2d)
 			end
 			
-			if CLIENT then --Generate triangles from displacement mesh.
-				isdisp = {Positions = dispverts, Triangles = {}}
-				ss.Displacements[bsp.FaceIndex + 1] = isdisp
-				for k = 0, #dispverts do
-					local tri_inv = k % 2 == 0
-					if k % power < power - 1 and math.floor(k / power) < power - 1 then
-						table.insert(isdisp.Triangles, {tri_inv and k + power + 1 or k + power, k + 1, k})
-						table.insert(isdisp.Triangles, {tri_inv and k or k + 1, k + power, k + power + 1})
-					end
-				end
-			else
-				isdisp = {Positions = dispverts, v3d[1], v3d[2], v3d[3], v3d[4]}
-				for k = 0, #dispverts do
-					table.insert(isdisp, dispverts[k].pos)
-				end
-			end
-			
-			bsp.bsp:Seek(here)
 		end
 		
 		MakeSurface(mins, maxs, normal, angle, center, v2d, v3d, isdisp)
@@ -580,34 +557,33 @@ end,
 			p.Solid = read "Byte"
 			p.ModelName = Model(modelnames[p.PropType + 1])
 			if p.Solid ~= SOLID_VPHYSICS or not file.Exists(p.ModelName or "/", "GAME") then continue end
-			local mdl = SERVER and ents.Create "prop_physics" or ClientsideModel(p.ModelName)
-			if mdl and IsValid(mdl) then
-				mdl:SetModel(p.ModelName)
-				mdl:Spawn()
-				
-				if mdl:PhysicsInit(p.Solid) then
-					local ph = mdl:GetPhysicsObject()
-					local mat = ph:GetMaterial()
-					if not (mat:find "chain" or mat:find "grate") then
-						local physmesh = ph:GetMesh()
-						props = props + #physmesh / 3
-						for i = 1, #physmesh, 3 do
-							local t = {physmesh[i].pos, physmesh[i + 1].pos, physmesh[i + 2].pos}
-							if (t[2] - t[1]):Cross(t[3] - t[1]):LengthSqr() > 4000 then
-								for _, v in ipairs(t) do
-									v:Rotate(p.Angles)
-									v:Add(p.Origin)
-								end
-								MakeTriangle(t)
+			
+			local mdl = ents.Create "prop_physics"
+			if not (mdl and IsValid(mdl)) then continue end
+			mdl:SetModel(p.ModelName)
+			mdl:Spawn()
+			
+			if mdl:PhysicsInit(p.Solid) then
+				local ph = mdl:GetPhysicsObject()
+				local mat = ph:GetMaterial()
+				if not (mat:find "chain" or mat:find "grate") then
+					local physmesh = ph:GetMesh()
+					props = props + #physmesh / 3
+					for i = 1, #physmesh, 3 do
+						local t = {physmesh[i].pos, physmesh[i + 1].pos, physmesh[i + 2].pos}
+						if (t[2] - t[1]):Cross(t[3] - t[1]):LengthSqr() > 4000 then
+							for _, v in ipairs(t) do
+								v:Rotate(p.Angles)
+								v:Add(p.Origin)
 							end
+							MakeTriangle(t)
 						end
 					end
 				end
-				mdl:PhysicsDestroy()
-				mdl:Remove()
-			elseif CLIENT then
-				mdl:Remove()
 			end
+			
+			mdl:PhysicsDestroy()
+			mdl:Remove()
 		end
 		
 		break

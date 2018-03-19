@@ -1,6 +1,7 @@
 
 include "shared.lua"
 SWEP.PrintName = "Shooter base"
+SWEP.Spawnable = true
 SWEP.ViewModelBoneMods = {
 	["Base"] = {
 		scale = Vector(1, 1, 1),

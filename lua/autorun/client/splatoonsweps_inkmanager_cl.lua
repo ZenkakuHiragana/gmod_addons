@@ -30,6 +30,7 @@ local amblen = amb:Length() * .3
 if amblen > 1 then amb = amb / amblen end
 local ambscale = ss.GrayScaleFactor:Dot(amb) / 2
 local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
+	-- print(bDrawingSkybox)
 	if (GetConVar "r_3dsky":GetBool() and ss.Has3DSkyBox or false) == bDrawingSkybox
 	or bDrawingDepth or not rt.Ready or GetConVar "mat_wireframe":GetBool() then return end
 	local hdrscale = render.GetToneMappingScaleLinear()
@@ -141,13 +142,9 @@ end
 
 local DoCoroutine = coroutine.create(ProcessQueue)
 local function GMTick()
-	if coroutine.status(DoCoroutine) == "dead" then return end
+	if not rt.Ready or coroutine.status(DoCoroutine) == "dead" then return end
 	local ok, message = coroutine.resume(DoCoroutine)
-	if not ok then ErrorNoHalt(ss, "SplatoonSWEPs Error: ", message, "\n") end
-	if not rt.Ready then
-		net.Start "SplatoonSWEPs: Fetch ink information"
-		net.SendToServer()
-	end
+	if not ok then ErrorNoHalt(message) end
 end
 
 hook.Add("PreDrawTranslucentRenderables", "SplatoonSWEPs: Draw ink", DrawMeshes)

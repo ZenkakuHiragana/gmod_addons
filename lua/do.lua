@@ -40,6 +40,12 @@ if CLIENT then
 			-- DebugLine(Vector(v.u,v.v)*1000, Vector(w.u,w.v)*1000, true)
 		-- end
 	end
+	
+	for k, d in pairs(sp.Displacements) do
+		for _, v in pairs(d.Positions) do
+			DebugText(v.pos, _)
+		end
+	end
 
 	-- for k, u in pairs(surf.u) do
 		-- local v = surf.v[k]

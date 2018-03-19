@@ -5,13 +5,19 @@ CreateConVar("sv_splatoonsweps_enabled", "1", FCVAR_ARCHIVE, "Enables or disable
 if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
 local ss = SplatoonSWEPs
 SplatoonSWEPs = ss or {
+	AreaBound = 0,
+	AspectSum = 0,
+	AspectSumX = 0,
+	AspectSumY = 0,
 	BSP = {},
+	Displacements = {},
 	Models = {},
 	InkCounter = 0,
 	InkShotMaterials = {},
 }
 
 include "autorun/splatoonsweps_shared.lua"
+include "splatoonsweps_bsp.lua"
 include "splatoonsweps_inkmanager.lua"
 include "splatoonsweps_network.lua"
 

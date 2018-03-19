@@ -126,84 +126,34 @@ end
 
 --List of available ink colors(25 colors)
 local InkColors = {
-	{Name = "Red",
-		HSVToColor(0, 1, 1)
-	},
-	{Name = "Orange",
-		HSVToColor(30, 1, 1)
-	},
-	{Name = "Yellow",
-		HSVToColor(60, 1, 1)
-	},
-	{Name = "Yellowish green",
-		HSVToColor(90, 1, 1)
-	},
-	{Name = "Lime",
-		HSVToColor(120, 1, 1)
-	},
-	{Name = "Spring green",
-		HSVToColor(150, 1, 1)
-	},
-	{Name = "Cyan",
-		HSVToColor(180, 1, 1)
-	},
-	{Name = "Azure blue",
-		HSVToColor(210, 1, 1)
-	},
-	{Name = "Blue",
-		HSVToColor(240, 1, 1)
-	},
-	{Name = "Light indigo",
-		HSVToColor(270, 1, 1)
-	},
-	{Name = "Magenta",
-		HSVToColor(300, 1, 1)
-	},
-	{Name = "Deep pink",
-		HSVToColor(330, 1, 1)
-	},
+	{Name = "Red",				HSVToColor(0,	1,	1)},
+	{Name = "Orange",			HSVToColor(30,	1,	1)},
+	{Name = "Yellow",			HSVToColor(60,	1,	1)},
+	{Name = "Yellowish green",	HSVToColor(90,	1,	1)},
+	{Name = "Lime",				HSVToColor(120,	1,	1)},
+	{Name = "Spring green",		HSVToColor(150,	1,	1)},
+	{Name = "Cyan",				HSVToColor(180,	1,	1)},
+	{Name = "Azure blue",		HSVToColor(210,	1,	1)},
+	{Name = "Blue",				HSVToColor(240,	1,	1)},
+	{Name = "Light indigo",		HSVToColor(270,	1,	1)},
+	{Name = "Magenta",			HSVToColor(300,	1,	1)},
+	{Name = "Deep pink",		HSVToColor(330,	1,	1)},
 	
-	{Name = "Maroon",
-		HSVToColor(0, 1, .5)
-	},
-	{Name = "Olive",
-		HSVToColor(60, 1, .5)
-	},
-	{Name = "Green",
-		HSVToColor(120, 1, .5)
-	},
-	{Name = "Dark cyan",
-		HSVToColor(180, 1, .5)
-	},
-	{Name = "Navy",
-		HSVToColor(240, 1, .5)
-	},
-	{Name = "Purple",
-		HSVToColor(300, 1, .5)
-	},
+	{Name = "Maroon",			HSVToColor(0,	1,	.5)},
+	{Name = "Olive",			HSVToColor(60,	1,	.5)},
+	{Name = "Green",			HSVToColor(120,	1,	.5)},
+	{Name = "Dark cyan",		HSVToColor(180,	1,	.5)},
+	{Name = "Navy",				HSVToColor(240,	1,	.5)},
+	{Name = "Purple",			HSVToColor(300,	1,	.5)},
 	
-	{Name = "Light green",
-		HSVToColor(105, .5, 1)
-	},
-	{Name = "Light blue",
-		HSVToColor(210, .5, 1)
-	},
-	{Name = "Pink",
-		HSVToColor(315, .5, 1)
-	},
+	{Name = "Light green",		HSVToColor(105,	.5,	1)},
+	{Name = "Light blue",		HSVToColor(210,	.5,	1)},
+	{Name = "Pink",				HSVToColor(315,	.5,	1)},
 	
-	{Name = "Black",
-		HSVToColor(0, 0, .03)
-	},
-	{Name = "Gray",
-		HSVToColor(0, 0, .5)
-	},
-	{Name = "Light gray",
-		HSVToColor(0, 0, .75)
-	},
-	{Name = "White",
-		HSVToColor(0, 0, 1)
-	},
+	{Name = "Black",			HSVToColor(0,	0,	.03)},
+	{Name = "Gray",				HSVToColor(0,	0,	.5)},
+	{Name = "Light gray",		HSVToColor(0,	0,	.75)},
+	{Name = "White",			HSVToColor(0,	0,	1)},
 }
 
 function ss:GetColorName(colorid)
@@ -216,6 +166,7 @@ end
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
 ss.MAX_COLORS = #InkColors
 ss.COLOR_BITS = 6
+ss.SURFACE_INDEX_BITS = 20
 ss.SEND_ERROR_DURATION_BITS = 4
 ss.SEND_ERROR_NOTIFY_BITS = 3
 ss.TEXTUREFLAGS = {
@@ -251,6 +202,15 @@ ss.TEXTUREFLAGS = {
 	BORDER				= 0x20000000, --Clamp to border colour on all texture coordinates.
 	UNUSED_40000000		= 0x40000000, --
 	UNUSED_80000000		= 0x80000000, --
+}
+
+ss.FACEVERT_BITS = 7
+ss.SETUP_BITS = 2
+ss.SETUPMODE = {
+	BEGIN = 0,
+	SURFACE = 1,
+	DISPLACEMENT = 2,
+	INKDATA = 3,
 }
 
 local framepersec = 60

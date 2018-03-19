@@ -2,7 +2,6 @@
 --Shared library
 local ss = SplatoonSWEPs
 if not ss then return end
-include "splatoonsweps_bsp.lua"
 include "splatoonsweps_const.lua"
 include "splatoonsweps_sound.lua"
 

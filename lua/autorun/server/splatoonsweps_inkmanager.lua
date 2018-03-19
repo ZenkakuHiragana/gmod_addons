@@ -23,25 +23,24 @@ end
 --[1] = minimum bound, [2] = maximum bound
 local function AddInkRectangle(ink, newink, sz)
 	local nb = newink.bounds
+	local n1, n2, n3, n4 = nb[1], nb[2], nb[3], nb[4]
 	for r, z in pairs(ink) do
-		if not next(r.bounds) then ink[r] = nil else
-			for b in pairs(r.bounds) do
-				if (b[3] - b[1]) * (b[4] - b[2]) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
-				if nb[1] > b[3] or nb[3] < b[1] or nb[2] > b[4] or nb[4] < b[2] then continue end
-				
-				r.bounds[b] = nil
-				local x, y = {nb[1], nb[3], b[1], b[3]}, {nb[2], nb[4], b[2], b[4]}
-				table.sort(x) table.sort(y) --sorted X, sorted Y
-				for _, c in ipairs {
-					{x[1], y[1], x[2], y[2]}, {x[2], y[1], x[3], y[2]}, {x[3], y[1], x[4], y[2]},
-					{x[1], y[2], x[2], y[3]}, {x[2], y[2], x[3], y[3]}, {x[3], y[2], x[4], y[3]},
-					{x[1], y[3], x[2], y[4]}, {x[2], y[3], x[3], y[4]}, {x[3], y[3], x[4], y[4]},
-				} do
-					if b[1] < c[3] and b[3] > c[1] and b[2] < c[4] and b[4] > c[2] and
-						(nb[1] >= c[3] or nb[3] <= c[1] or nb[2] >= c[4] or nb[4] <= c[2]) then
-						r.bounds[c] = true
-					end
-				end
+		if not next(r.bounds) then ink[r] = nil continue end
+		for b in pairs(r.bounds) do
+			local b1, b2, b3, b4 = b[1], b[2], b[3], b[4]
+			if (b3 - b1) * (b4 - b2) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
+			if n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2 then continue end
+			
+			r.bounds[b] = nil
+			local x, y = {n1, n3, b1, b3}, {n2, n4, b2, b4} table.sort(x) table.sort(y)
+			local x1, x2, x3, x4, y1, y2, y3, y4 = x[1], x[2], x[3], x[4], y[1], y[2], y[3], y[4]
+			for _, c in ipairs {
+				{x1, y1, x2, y2}, {x2, y1, x3, y2}, {x3, y1, x4, y2},
+				{x1, y2, x2, y3}, {x2, y2, x3, y3}, {x3, y2, x4, y3},
+				{x1, y3, x2, y4}, {x2, y3, x3, y4}, {x3, y3, x4, y4},
+			} do
+				local c1, c2, c3, c4 = c[1], c[2], c[3], c[4]
+				r.bounds[c] = b1 < c3 and b3 > c1 and b2 < c4 and b4 > c2 and (n1 >= c3 or n3 <= c1 or n2 >= c4 or n4 <= c2) or nil
 			end
 		end
 	end
@@ -51,9 +50,8 @@ local function AddInkRectangle(ink, newink, sz)
 end
 
 local function QueueCoroutine(pos, normal, radius, color, angle, inktype, ratio)
-	local ang = normal:Angle()
+	local ang, polys = normal:Angle(), {}
 	ang.roll = math.abs(normal.z) > COS_MAX_DEG_DIFF and angle * normal.z or ang.yaw
-	local polys = {}
 	for i, v in ipairs(reference_polys) do --Scaling
 		polys[i] = ss:To3D(v * radius, pos, ang)
 	end
@@ -70,14 +68,18 @@ local function QueueCoroutine(pos, normal, radius, color, angle, inktype, ratio)
 			local _, localang = WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle())
 			localang = surf.DefaultAngles[i] + ang.yaw - localang.roll
 			net.Start "SplatoonSWEPs: DrawInk"
-			net.WriteInt(index, 20)
+			net.WriteInt(index, ss.SURFACE_INDEX_BITS)
 			net.WriteUInt(color, ss.COLOR_BITS)
 			net.WriteVector(pos)
 			net.WriteFloat(radius)
 			net.WriteFloat(localang)
 			net.WriteUInt(inktype, 4)
 			net.WriteFloat(ratio)
-			net.Broadcast()
+			local omit = {}
+			for _, ply in pairs(player.GetAll()) do
+				if not ply.Ready then table.insert(omit, ply) end
+			end
+			net.SendOmit(omit)
 			
 			local pos2d = ss:To2D(pos, surf.Origins[i], surf.Angles[i])
 			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
