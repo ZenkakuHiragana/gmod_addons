@@ -23,6 +23,7 @@ function SWEP:CustomPrimary(p, info)
 end
 
 SWEP.Base = "inklingbase"
+SWEP.Spawnable = true
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					--false to semi-automatic
 	Recoil				= .2,					--Viewmodel recoil intensity

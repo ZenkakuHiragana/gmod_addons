@@ -64,19 +64,22 @@ net.Receive("SplatoonSWEPs: Receive ink surface", function(...)
 		end
 		
 		net.WriteUInt(ss.SETUPMODE.SURFACE, ss.SETUP_BITS)
-		local i = net.ReadInt(ss.SURFACE_INDEX_BITS)
-		surf.Angles[i] = net.ReadAngle()
-		surf.Areas[i] = net.ReadFloat()
-		surf.Bounds[i] = net.ReadVector()
-		surf.Normals[i] = net.ReadVector()
-		surf.Origins[i] = net.ReadVector()
-		surf.Vertices[i] = {}
-		local n = net.ReadUInt(ss.FACEVERT_BITS)
-		for k = 1, n do
-			table.insert(surf.Vertices[i], net.ReadVector())
+		for loop = 1, 100 do
+			local i = net.ReadInt(ss.SURFACE_INDEX_BITS)
+			if i == 0 then break end
+			surf.Angles[i] = net.ReadAngle()
+			surf.Areas[i] = net.ReadFloat()
+			surf.Bounds[i] = net.ReadVector()
+			surf.Normals[i] = net.ReadVector()
+			surf.Origins[i] = net.ReadVector()
+			surf.Vertices[i] = {}
+			local n = net.ReadUInt(ss.FACEVERT_BITS)
+			for k = 1, n do
+				table.insert(surf.Vertices[i], net.ReadVector())
+			end
+			
+			ss.SetupProgress = ss.SetupProgress + ss.AdvanceProgress
 		end
-		
-		ss.SetupProgress = ss.SetupProgress + ss.AdvanceProgress
 		net.SendToServer()
 		return
 	elseif mode == ss.SETUPMODE.DISPLACEMENT then
@@ -237,7 +240,6 @@ net.Receive("SplatoonSWEPs: Receive ink surface", function(...)
 			
 			local tri_inv = k % 2 == 0 --Generate triangles from displacement mesh.
 			if k % power < power - 1 and math.floor(k / power) < power - 1 then
-				print(tri_inv and k + power + 1 or k + power, k + 1, k)
 				table.insert(ss.Displacements[i].Triangles, {tri_inv and k + power + 1 or k + power, k + 1, k})
 				table.insert(ss.Displacements[i].Triangles, {tri_inv and k or k + 1, k + power, k + power + 1})
 			end

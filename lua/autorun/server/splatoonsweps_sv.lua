@@ -1,10 +1,11 @@
 
 --SplatoonSWEPs structure
 --The core of new ink system.
-CreateConVar("sv_splatoonsweps_enabled", "1", FCVAR_ARCHIVE, "Enables or disables SplatoonSWEPs.")
+CreateConVar("sv_splatoonsweps_enabled", "1",
+{FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE},
+"Enables or disables SplatoonSWEPs.")
 if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
-local ss = SplatoonSWEPs
-SplatoonSWEPs = ss or {
+SplatoonSWEPs = SplatoonSWEPs or {
 	AreaBound = 0,
 	AspectSum = 0,
 	AspectSumX = 0,
@@ -21,7 +22,7 @@ include "splatoonsweps_bsp.lua"
 include "splatoonsweps_inkmanager.lua"
 include "splatoonsweps_network.lua"
 
-ss = SplatoonSWEPs
+local ss = SplatoonSWEPs
 for i = 1, 9 do
 	table.insert(ss.InkShotMaterials, (Material("splatoonsweps/inkshot/mask/shot" .. tostring(i) .. ".png")))
 end

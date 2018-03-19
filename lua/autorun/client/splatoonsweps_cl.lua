@@ -1,8 +1,10 @@
 
 --Clientside ink manager
+CreateConVar("sv_splatoonsweps_enabled", "1",
+{FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE},
+"Enables or disables SplatoonSWEPs.")
 if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
-local ss = SplatoonSWEPs
-SplatoonSWEPs = ss or {
+SplatoonSWEPs = SplatoonSWEPs or {
 	AmbientColor = color_white,
 	AreaBound = 0,
 	AspectSum = 0,
@@ -31,7 +33,7 @@ SplatoonSWEPs = ss or {
 	},
 }
 
-ss = SplatoonSWEPs
+local ss = SplatoonSWEPs
 include "autorun/splatoonsweps_shared.lua"
 include "splatoonsweps_userinfo.lua"
 include "splatoonsweps_inkmanager_cl.lua"

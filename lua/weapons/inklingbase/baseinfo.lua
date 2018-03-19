@@ -18,7 +18,6 @@ Crouch: Become squid.
 	SWEP.PrintName = "Inkling base"
 	SWEP.Purpose = "Splat ink!"
 	SWEP.RenderGroup = RENDERGROUP_TRANSLUCENT
-	SWEP.Spawnable = false
 	SWEP.SpeechBubbleLid = surface.GetTextureID "gui/speech_lid"
 	SWEP.SwayScale = 1
 	SWEP.UseHands = true
@@ -29,6 +28,7 @@ else
 	SWEP.Weight = 1
 end
 
+SWEP.Spawnable = false
 SWEP.HoldType = "crossbow"
 SWEP.ViewModel = "models/weapons/c_irifle.mdl"
 SWEP.WorldModel = "models/weapons/w_irifle.mdl"
