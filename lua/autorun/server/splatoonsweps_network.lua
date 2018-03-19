@@ -19,7 +19,6 @@ net.Receive("SplatoonSWEPs: Setup ink surface", function(length, sender)
 		net.WriteFloat(ss.AspectSumY)
 		net.WriteUInt(ss.NumSurfaces + table.Count(ss.Displacements), 32)
 		sender.SendSurfaces = coroutine.create(function()
-			local count = 0
 			for node in ss:BSPPairsAll() do
 				local surf = node.Surfaces
 				for i, index in ipairs(surf.Indices) do
@@ -34,11 +33,10 @@ net.Receive("SplatoonSWEPs: Setup ink surface", function(length, sender)
 					for k, v in ipairs(surf.Vertices[i]) do
 						net.WriteVector(v)
 					end
-					count = count + 1
-					if count % 100 == 0 then coroutine.yield() end
+					coroutine.yield()
 				end
 			end
-			if count % 100 ~= 0 then coroutine.yield() end
+			
 			net.WriteBool(true)
 			coroutine.yield(true)
 		end)

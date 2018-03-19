@@ -64,22 +64,19 @@ net.Receive("SplatoonSWEPs: Receive ink surface", function(...)
 		end
 		
 		net.WriteUInt(ss.SETUPMODE.SURFACE, ss.SETUP_BITS)
-		for loop = 1, 100 do
-			local i = net.ReadInt(ss.SURFACE_INDEX_BITS)
-			if i == 0 then break end
-			surf.Angles[i] = net.ReadAngle()
-			surf.Areas[i] = net.ReadFloat()
-			surf.Bounds[i] = net.ReadVector()
-			surf.Normals[i] = net.ReadVector()
-			surf.Origins[i] = net.ReadVector()
-			surf.Vertices[i] = {}
-			local n = net.ReadUInt(ss.FACEVERT_BITS)
-			for k = 1, n do
-				table.insert(surf.Vertices[i], net.ReadVector())
-			end
-			
-			ss.SetupProgress = ss.SetupProgress + ss.AdvanceProgress
+		local i = net.ReadInt(ss.SURFACE_INDEX_BITS)
+		surf.Angles[i] = net.ReadAngle()
+		surf.Areas[i] = net.ReadFloat()
+		surf.Bounds[i] = net.ReadVector()
+		surf.Normals[i] = net.ReadVector()
+		surf.Origins[i] = net.ReadVector()
+		surf.Vertices[i] = {}
+		local n = net.ReadUInt(ss.FACEVERT_BITS)
+		for k = 1, n do
+			table.insert(surf.Vertices[i], net.ReadVector())
 		end
+		
+		ss.SetupProgress = ss.SetupProgress + ss.AdvanceProgress
 		net.SendToServer()
 		return
 	elseif mode == ss.SETUPMODE.DISPLACEMENT then
