@@ -167,7 +167,7 @@ function ss:GetSurfaceColor(tr)
 			local p2d = self:To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
 			for r in SortedPairsByValue(surf.InkCircles[i], true) do
 				local t = self.InkShotMaterials[r.texid]
-				local w, h = t:Width(), t:Height()
+				local w, h = t.width, t.height
 				local p = (p2d - r.pos) / r.radius
 				p:Rotate(Angle(0, r.angle)) --(-1, -1) <= (x, y) <= (1, 1)
 				if -1 > p.x or p.x > 1 or -1 > p.y or p.y > 1 then continue end
@@ -176,7 +176,8 @@ function ss:GetSurfaceColor(tr)
 				p.x = p.x - (1 - r.ratio) / 2 --0 <= x <= r.ratio
 				p.x = p.x / r.ratio * w --0 <= x <= w
 				p.x, p.y = math.Round(p.x), math.Round(p.y)
-				if 0 < p.x and p.x < w and 0 < p.y and p.y < h and t:GetColor(p.x, p.y).r > 127 then
+				-- print(p.x, p.y, r.texid, (p.y - 1) * w + p.x, t[(p.y - 1) * w + p.x])
+				if 0 < p.x and p.x < w and 0 < p.y and p.y < h and t[(p.y - 1) * w + p.x] then
 					return r.color
 				end
 			end

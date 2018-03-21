@@ -24,7 +24,16 @@ include "splatoonsweps_network.lua"
 
 local ss = SplatoonSWEPs
 for i = 1, 9 do
-	table.insert(ss.InkShotMaterials, (Material("splatoonsweps/inkshot/mask/shot" .. tostring(i) .. ".png")))
+	local mask = {}
+	local masktxt = file.Open("data/splatoonsweps/shot" .. tostring(i) .. ".txt", "rb", "GAME")
+	mask.width = masktxt:ReadByte()
+	mask.height = masktxt:ReadByte()
+	for p = 1, mask.width * mask.height do
+		mask[p] = masktxt:Read(1) == "1"
+	end
+	
+	ss.InkShotMaterials[i] = mask
+	masktxt:Close()
 end
 
 function ss:ClearAllInk()

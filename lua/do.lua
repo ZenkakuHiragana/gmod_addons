@@ -77,3 +77,16 @@ end
 		-- DebugBox(max, min)
 	-- end
 -- end
+
+
+-- local mat = Material("splatoonsweps/inkshot/mask/shot" .. tostring(i) .. ".png")
+-- local width, height = mat:Width(), mat:Height()
+-- local write = string.char(width, height)
+-- for h = 1, height do
+	-- for w = 1, width do
+		-- local isink = mat:GetColor(w - 1, h - 1).r > 127
+		-- write = write .. (isink and "1" or "0")
+	-- end
+-- end
+
+-- file.Write("shot" .. tostring(i) .. ".txt", write)
