@@ -60,18 +60,19 @@ function SWEP:Initialize()
 	self:ChangeHullDuck()
 	self:AddSchedule(5 * ss.FrameToSec,
 	function(self, schedule) --Set if player is in ink
+		local filter = {self, self.Owner}
 		local ang = Angle(0, self.Owner:GetAngles().yaw)
 		local p = self.Owner:WorldSpaceCenter()
 		local fw, right = ang:Forward() * InkTraceLength, ang:Right() * InkTraceLength
-		self:SetGroundColor(ss:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, self.Owner)) or -1)
+		self:SetGroundColor(ss:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, filter)) or -1)
 		local onink = self:GetGroundColor() >= 0
 		local onourink = self:GetGroundColor() == self.ColorCode
 		
 		self:SetInWallInk(self.IsSquid and (
-		ss:GetSurfaceColor(util.QuickTrace(p, fw - right, self.Owner)) == self.ColorCode or
-		ss:GetSurfaceColor(util.QuickTrace(p, fw + right, self.Owner)) == self.ColorCode or
-		ss:GetSurfaceColor(util.QuickTrace(p,-fw - right, self.Owner)) == self.ColorCode or
-		ss:GetSurfaceColor(util.QuickTrace(p,-fw + right, self.Owner)) == self.ColorCode))
+		ss:GetSurfaceColor(util.QuickTrace(p, fw - right, filter)) == self.ColorCode or
+		ss:GetSurfaceColor(util.QuickTrace(p, fw + right, filter)) == self.ColorCode or
+		ss:GetSurfaceColor(util.QuickTrace(p,-fw - right, filter)) == self.ColorCode or
+		ss:GetSurfaceColor(util.QuickTrace(p,-fw + right, filter)) == self.ColorCode))
 		
 		self:SetInInk(self.IsSquid and onink and onourink or self:GetInWallInk())
 		self:SetOnEnemyInk(onink and not onourink)
