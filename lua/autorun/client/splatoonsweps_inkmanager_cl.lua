@@ -4,7 +4,7 @@ local ss = SplatoonSWEPs
 if not ss then return end
 
 local rt = ss.RenderTarget
-local MAX_PROCESS_QUEUE_AT_ONCE = 80
+local MAX_PROCESS_QUEUE_AT_ONCE = 1000
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 -- local inkmaterial = Material "vgui/gmod_tool"

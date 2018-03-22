@@ -232,7 +232,7 @@ end
 function SWEP:PreDrawViewModel() render.SetBlend(0) end
 function SWEP:PostDrawViewModel() render.SetBlend(1) end
 function SWEP:ViewModelDrawn()
-	if not (IsValid(self) and IsValid(self.Owner) and self.VElements) or self.Holstering then return end	
+	if not (IsValid(self) and IsValid(self.Owner) and self.VElements) or self.Holstering then return end
 	local bone_ent, vm = self.Owner, self.Owner:GetViewModel()
 	self:UpdateBonePositions(vm)
 	
@@ -321,6 +321,7 @@ end
 
 function SWEP:DrawWorldModel()
 	if self.Holstering then return end
+	if self.Owner ~= LocalPlayer() then self:Think() end
 	local bone_ent = self // when the weapon is dropped
 	if IsValid(self.Owner) and self.Owner:IsPlayer() then
 		bone_ent = self.Owner
@@ -332,7 +333,6 @@ function SWEP:DrawWorldModel()
 					 --Move clientside model to player's position.
 					local v = self.Owner:GetVelocity()
 					local a = v:Angle()
-					a.yaw = a.yaw + self.Owner:GetAimVector():Angle().yaw
 					if v:LengthSqr() < 16 then --Speed limit: 
 						a.p = 0
 					elseif a.p > 45 and a.p <= 90 then --Angle limit: up and down
@@ -342,7 +342,7 @@ function SWEP:DrawWorldModel()
 					else
 						a.r = a.p
 					end
-					a.p, a.y, a.r = a.p - 90, self.Owner:GetAngles().y, 180
+					a.p, a.y, a.r = a.p - 90, self.Owner:GetAimVector():Angle().yaw, 180
 					self.Squid:SetAngles(a)
 					self.Squid:SetPos(self.Owner:GetPos())
 					self.Squid:DrawModel()

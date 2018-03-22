@@ -11,7 +11,7 @@ function SWEP:PopupError(msg)
 end
 
 function SWEP:IsFirstTimePredicted()
-	return game.SinglePlayer() or IsFirstTimePredicted()
+	return game.SinglePlayer() or IsFirstTimePredicted() or self.Owner ~= LocalPlayer()
 end
 
 --Fully copies the table, meaning all tables inside this table are copied too and so on
@@ -145,7 +145,9 @@ function SWEP:Think()
 		local enough = self:GetInk() > self.Secondary.TakeAmmo
 		if not self.EnoughSubWeapon and enough then
 			self.JustUsableTime = CurTime()
-			surface.PlaySound(ss.BombAvailable)
+			if self.Owner == LocalPlayer() then
+				surface.PlaySound(ss.BombAvailable)
+			end
 		end
 		self.EnoughSubWeapon = enough
 	end

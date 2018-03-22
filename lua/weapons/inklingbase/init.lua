@@ -99,12 +99,21 @@ function SWEP:Deploy()
 	self:SetNextCrouchTime(CurTime())
 	self.OwnerVelocity = self.Owner:GetVelocity()
 	self.ViewAnim = ACT_VM_IDLE
-	self:SetPMID(self.Owner:GetInfoNum(ss:GetConVarName "Playermodel", 1))
+	if self.Owner:IsBot() then
+		self:SetPMID(table.Random(ss.PLAYER))
+		self.CanHealStand = true
+		self.CanHealInk = true
+		self.CanReloadStand = true
+		self.CanReloadInk = true
+	else
+		self:SetPMID(self.Owner:GetInfoNum(ss:GetConVarName "Playermodel", 1))
+		self.CanHealStand = self.Owner:GetInfoNum(ss:GetConVarName "CanHealStand", 1) ~= 0
+		self.CanHealInk = self.Owner:GetInfoNum(ss:GetConVarName "CanHealInk", 1) ~= 0
+		self.CanReloadStand = self.Owner:GetInfoNum(ss:GetConVarName "CanReloadStand", 1) ~= 0
+		self.CanReloadInk = self.Owner:GetInfoNum(ss:GetConVarName "CanReloadInk", 1) ~= 0
+	end
+	
 	self.SquidAvailable = tobool(ss:GetSquidmodel(self:GetPMID()))
-	self.CanHealStand = self.Owner:GetInfoNum(ss:GetConVarName "CanHealStand", 1) ~= 0
-	self.CanHealInk = self.Owner:GetInfoNum(ss:GetConVarName "CanHealInk", 1) ~= 0
-	self.CanReloadStand = self.Owner:GetInfoNum(ss:GetConVarName "CanReloadStand", 1) ~= 0
-	self.CanReloadInk = self.Owner:GetInfoNum(ss:GetConVarName "CanReloadInk", 1) ~= 0
 	self.BackupPlayerInfo = {
 		Color = self.Owner:GetColor(),
 		Flags = self.Owner:GetFlags(),

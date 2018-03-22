@@ -22,6 +22,7 @@ if CLIENT then
 	-- end
 	debugoverlay.Line(vector_origin, Vector(c), 5, Color(255, 255, 0), true)
 	debugoverlay.Line(vector_origin, Vector(0, c), 5, Color(255, 255, 0), true)
+	debugoverlay.Line(vector_origin, Vector(c, 0, c), 5, Color(255, 255, 0), true)
 	debugoverlay.Line(Vector(c, c), Vector(c), 5, Color(255, 255, 0), true)
 	debugoverlay.Line(Vector(c, c), Vector(0, c), 5, Color(255, 255, 0), true)
 	for k, p in ipairs(surf.Vertices) do
@@ -31,6 +32,7 @@ if CLIENT then
 		for i, v in ipairs(p) do
 			local v = p[i]
 			local w = p[i % #p + 1]
+			print(v.u, v.v)
 			DebugLine(Vector(v.u, v.v) * c, Vector(w.u, w.v) * c, true)
 			-- DebugLine(v.pos, w.pos, true)
 		end
@@ -90,3 +92,4 @@ end
 -- end
 
 -- file.Write("shot" .. tostring(i) .. ".txt", write)
+-- lua_run for _, p in ipairs(player.GetAll()) do if not p:IsBot() then continue end p:StripWeapons() p:Give "weapon_shooter" end

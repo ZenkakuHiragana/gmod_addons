@@ -15,6 +15,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	Models = {},
 	InkCounter = 0,
 	InkShotMaterials = {},
+	PlayersReady = {},
 }
 
 include "autorun/splatoonsweps_shared.lua"
@@ -44,6 +45,7 @@ function ss:ClearAllInk()
 			node.Surfaces.InkCircles[i] = {}
 		end
 	end
+	collectgarbage "collect"
 end
 
 --table vertices of face, Vector normal of plane, number distance from plane to origin
@@ -111,9 +113,87 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 	ss.BSP:Init()
 	ss.BSP = nil
 	collectgarbage "collect"
+	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
+	local data = file.Open(path, "rb", "DATA")
+	local mapCRC = util.CRC(file.Read("maps/" .. game.GetMap() .. ".bsp", "rb", true) or "")
+	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
+	if not data or data:Size() < 4 or data:ReadULong() ~= mapCRC then
+		file.Write(path, "")
+		if data then data:Close() end
+		data = file.Open(path, "wb", "DATA")
+		data:WriteULong(ss.NumSurfaces)
+		data:WriteUShort(table.Count(ss.Displacements))
+		data:WriteFloat(ss.AreaBound)
+		data:WriteFloat(ss.AspectSum)
+		data:WriteFloat(ss.AspectSumX)
+		data:WriteFloat(ss.AspectSumY)
+		for node in ss:BSPPairsAll() do
+			local surf = node.Surfaces
+			for i, index in ipairs(surf.Indices) do
+				data:WriteULong(math.abs(index))
+				data:WriteFloat(surf.Angles[i].pitch)
+				data:WriteFloat(surf.Angles[i].yaw)
+				data:WriteFloat(surf.Angles[i].roll)
+				data:WriteFloat(surf.Areas[i])
+				data:WriteFloat(surf.Bounds[i].x)
+				data:WriteFloat(surf.Bounds[i].y)
+				data:WriteFloat(surf.Bounds[i].z)
+				data:WriteFloat(surf.Normals[i].x)
+				data:WriteFloat(surf.Normals[i].y)
+				data:WriteFloat(surf.Normals[i].z)
+				data:WriteFloat(surf.Origins[i].x)
+				data:WriteFloat(surf.Origins[i].y)
+				data:WriteFloat(surf.Origins[i].z)
+				data:WriteUShort(#surf.Vertices[i])
+				for k, v in ipairs(surf.Vertices[i]) do
+					data:WriteFloat(v.x)
+					data:WriteFloat(v.y)
+					data:WriteFloat(v.z)
+				end
+			end
+		end
+		
+		for i, disp in pairs(ss.Displacements) do
+			local power = math.log(math.sqrt(#disp + 1) - 1, 2) - 1 --1, 2, 3
+			assert(power % 1 == 0)
+			data:WriteUShort(i)
+			data:WriteByte(power)
+			data:WriteUShort(#disp)
+			for k = 0, #disp do
+				local v = disp[k]
+				data:WriteFloat(v.pos.x)
+				data:WriteFloat(v.pos.y)
+				data:WriteFloat(v.pos.z)
+				data:WriteFloat(v.vec.x)
+				data:WriteFloat(v.vec.y)
+				data:WriteFloat(v.vec.z)
+				data:WriteFloat(v.dist)
+			end
+		end
+		
+		data:Close()
+		local write = util.Compress(file.Read(path))
+		file.Delete(path)
+		file.Write(path, "")
+		data = file.Open(path, "wb", "DATA")
+		data:WriteULong(mapCRC)
+		data:Close()
+		file.Append(path, write)
+	end
+	
+	resource.AddSingleFile("data/" .. path)
 end)
 
-hook.Add("GetFallDamage", "Inklings don't take fall damage.", function(ply, speed)
+hook.Add("PlayerInitialSpawn", "SplatoonSWEPs: Joining players make ink vanish", function(ply)
+	if ply:IsBot() then return end
+	ss:ClearAllInk()
+end)
+
+hook.Add("PlayerDisconnected", "SplatoonSWEPs: Reset player's readiness", function(ply)
+	table.RemoveByValue(ss.PlayersReady, ply)
+end)
+
+hook.Add("GetFallDamage", "SplatoonSWEPs: Inklings don't take fall damage.", function(ply, speed)
 	if ss:IsValidInkling(ply) then return 0 end
 end)
 
@@ -135,7 +215,7 @@ hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, 
 	net.Send(atk)
 end)
 
-hook.Add("Tick", "SplatoonSWEPsDoInkCoroutines", function()
+hook.Add("Tick", "SplatoonSWEPs: Do ink coroutines", function()
 	local self = ss.InkManager
 	if coroutine.status(self.DoCoroutines) == "dead" then return end
 	local ok, message = coroutine.resume(self.DoCoroutines)

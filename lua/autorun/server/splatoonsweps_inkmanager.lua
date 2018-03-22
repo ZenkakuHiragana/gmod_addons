@@ -70,16 +70,10 @@ local function QueueCoroutine(pos, normal, radius, color, angle, inktype, ratio)
 			net.Start "SplatoonSWEPs: DrawInk"
 			net.WriteInt(index, ss.SURFACE_INDEX_BITS)
 			net.WriteUInt(color, ss.COLOR_BITS)
-			net.WriteVector(pos)
-			net.WriteFloat(radius)
-			net.WriteFloat(localang)
 			net.WriteUInt(inktype, 4)
-			net.WriteFloat(ratio)
-			local omit = {}
-			for _, ply in pairs(player.GetAll()) do
-				if not ply.Ready then table.insert(omit, ply) end
-			end
-			net.SendOmit(omit)
+			net.WriteVector(pos)
+			net.WriteVector(Vector(radius, localang, ratio))
+			net.Send(ss.PlayersReady)
 			
 			local pos2d = ss:To2D(pos, surf.Origins[i], surf.Angles[i])
 			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
@@ -176,7 +170,6 @@ function ss:GetSurfaceColor(tr)
 				p.x = p.x - (1 - r.ratio) / 2 --0 <= x <= r.ratio
 				p.x = p.x / r.ratio * w --0 <= x <= w
 				p.x, p.y = math.Round(p.x), math.Round(p.y)
-				-- print(p.x, p.y, r.texid, (p.y - 1) * w + p.x, t[(p.y - 1) * w + p.x])
 				if 0 < p.x and p.x < w and 0 < p.y and p.y < h and t[(p.y - 1) * w + p.x] then
 					return r.color
 				end
