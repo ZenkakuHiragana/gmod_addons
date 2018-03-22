@@ -4,7 +4,7 @@ local ss = SplatoonSWEPs
 if not ss then return end
 
 local rt = ss.RenderTarget
-local MAX_PROCESS_QUEUE_AT_ONCE = 1000
+local MAX_PROCESS_QUEUE_AT_ONCE = 100
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 -- local inkmaterial = Material "vgui/gmod_tool"
@@ -33,7 +33,7 @@ local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
 	if (GetConVar "r_3dsky":GetBool() and ss.Has3DSkyBox or false) == bDrawingSkybox
 	or bDrawingDepth or not rt.Ready or GetConVar "mat_wireframe":GetBool() then return end
 	local hdrscale = render.GetToneMappingScaleLinear()
-	render.SetToneMappingScaleLinear(ss.vector_one * .1) --Set HDR scale for custom lightmap
+	render.SetToneMappingScaleLinear(ss.vector_one * .05) --Set HDR scale for custom lightmap
 	render.SetMaterial(rt.Material) --Ink base texture
 	render.SetLightmapTexture(rt.Lightmap) --Set custom lightmap
 	render.OverrideDepthEnable(true, true) --Write to depth buffer for translucent surface culling

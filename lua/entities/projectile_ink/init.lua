@@ -88,7 +88,9 @@ function ENT:PhysicsUpdate(phys)
 	local len = (phys:GetPos() - self.InitPos):Length2DSqr()
 	local nextlen = self.SplashCount * self.SplashInterval + self.SplashInit
 	if len < nextlen * nextlen then return end
-	local tr = util.QuickTrace(phys:GetPos(), vector_up * -32768, self)
+	local tr = util.QuickTrace(self.InitPos
+		+ self.InitVelocity:GetNormalized() * nextlen
+		- vector_up * 6, vector_up * -32768, self)
 	local radius = self.SplashRadius or self.InkRadius
 	radius = self:GetRadius(radius * self.MinRadius / self.InkRadius, radius)
 	nextlen = nextlen + math.random(-1, 1) * ss.mSplashDrawRadius
