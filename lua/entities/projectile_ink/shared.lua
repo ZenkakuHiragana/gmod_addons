@@ -4,7 +4,7 @@
 
 ENT.Type = "anim"
 ENT.FlyingModel = Model "models/blooryevan/ink/inkprojectile.mdl"
-
+ENT.IsSplatoonProjectile = true
 function ENT:SharedInit(mdl)
 	self:SetModel(mdl or self.FlyingModel)
 	self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)

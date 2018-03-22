@@ -5,7 +5,6 @@ AddCSLuaFile "shared.lua"
 include "shared.lua"
 
 ENT.DisableDuplicator = true
-ENT.IsSplatoonProjectile = true
 local ss = SplatoonSWEPs
 local dropangle = Angle(0, 0, 90)
 function ENT:Initialize()
@@ -13,11 +12,11 @@ function ENT:Initialize()
 	self.Hit = false
 	self:SharedInit()
 	self:PhysicsInitSphere(self.ColRadius or ss.mColRadius, "watermelon")
-	self:StartMotionController()
+	if not self.IsDrop then self:StartMotionController() end
 	local ph = self:GetPhysicsObject()
 	if not IsValid(ph) then return end
 	ph:ApplyForceCenter(vector_origin)
-	ph:EnableGravity(false)
+	ph:EnableGravity(self.IsDrop or false)
 	self.InitPos = self:GetPos()
 	self.Straight = self.Straight or 0
 	self.ColorCode = self.ColorCode or 0
@@ -37,7 +36,7 @@ function ENT:Initialize()
 	self.MinRadiusTime = self.MinRadiusTime or 0
 	self.SplashInit = self.SplashInterval / self.SplashPatterns * self.SplashInitMul
 	self.InitVelocity = self.InitVelocity or vector_origin
-	self.InitVelocityLength = self.InitVelocityLength or 1
+	self.InitVelocityLength = (self.InitVelocityLength or 1) / 4.5
 	self.ShadowParams = {
 		secondstoarrive = self.Straight,
 		pos = self.InitPos + self.InitVelocity * self.Straight,
@@ -62,7 +61,7 @@ function ENT:PhysicsSimulate(phys, dt)
 	if math.max(0, CurTime() - (self.InitTime or CurTime())) >= self.Straight then
 		local accel = (math.NormalizeAngle(vel:Angle().pitch - phys:GetAngles().roll) / dt - phys:GetAngleVelocity().x) / dt
 		vel.z = vel.z > 0 and vel.z * 2 or 0
-		return Vector(accel), -vel / (dt * self.InitVelocityLength / 4.5) + physenv.GetGravity() * 5, SIM_GLOBAL_ACCELERATION
+		return Vector(accel), -vel / (dt * self.InitVelocityLength) + physenv.GetGravity() * 5, SIM_GLOBAL_ACCELERATION
 	else
 		self.ShadowParams.deltatime = dt
 		phys:ComputeShadowControl(self.ShadowParams)
@@ -75,34 +74,36 @@ function ENT:PhysicsUpdate(phys)
 	if not (IsValid(phys) and self:IsInWorld()) then
 		return SafeRemoveEntityDelayed(self, 0)
 	end
-	self.InitTime = self.InitTime or CurTime()
-	phys:EnableGravity(math.max(0, CurTime() - self.InitTime) >= self.Straight)
+	
+	if self.IsDrop then return end
+	if not self.InitTime then self.InitTime = CurTime() end
+	if not phys:IsGravityEnabled() then phys:EnableGravity(math.max(0, CurTime() - self.InitTime) >= self.Straight) end
 	if self.SplashCount > self.SplashNum then return end
 	local len = (self:GetPos() - self.InitPos):Length2DSqr()
 	local nextlen = self.SplashCount * self.SplashInterval + self.SplashInit
-	if len > nextlen * nextlen then
-		local splash = ents.Create "projectile_ink"
-		if not IsValid(splash) then return end
-		nextlen = nextlen + math.random(-1, 1) * ss.mSplashDrawRadius
-		splash:SetPos(self.InitPos + self.InitVelocity:GetNormalized() * nextlen - vector_up * 6)
-		splash:SetAngles(dropangle)
-		splash:SetOwner(self:GetOwner())
-		splash:SetInkColorProxy(self:GetInkColorProxy())
-		splash.ColRadius = ss.mSplashColRadius
-		splash.InkRadius = self.SplashRadius or self.InkRadius
-		splash.MinRadius = splash.InkRadius * self.MinRadius / self.InkRadius
-		splash.ColorCode = self.ColorCode
-		splash.TrailWidth = 4
-		splash.TrailEnd = 1
-		splash.TrailLife = .1
-		splash.InkYaw = self.InkYaw
-		splash.InkType = math.random(1, 3)
-		splash:Spawn()
-		splash:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-		splash:SetModelScale(.5)
-		splash.InitPos = self.InitPos
-		self.SplashCount = self.SplashCount + 1
-	end
+	if len < nextlen * nextlen then return end
+	local splash = ents.Create "projectile_ink"
+	if not IsValid(splash) then return end
+	nextlen = nextlen + math.random(-1, 1) * ss.mSplashDrawRadius
+	splash:SetPos(self.InitPos + self.InitVelocity:GetNormalized() * nextlen - vector_up * 6)
+	splash:SetAngles(dropangle)
+	splash:SetOwner(self:GetOwner())
+	splash:SetInkColorProxy(self:GetInkColorProxy())
+	splash.ColRadius = ss.mSplashColRadius
+	splash.InkRadius = self.SplashRadius or self.InkRadius
+	splash.MinRadius = splash.InkRadius * self.MinRadius / self.InkRadius
+	splash.ColorCode = self.ColorCode
+	splash.TrailWidth = 4
+	splash.TrailEnd = 1
+	splash.TrailLife = .1
+	splash.InkYaw = self.InkYaw
+	splash.InkType = math.random(1, 3)
+	splash:Spawn()
+	splash:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+	splash:SetModelScale(.5)
+	splash.InitPos = self.InitPos
+	splash.IsDrop = true
+	self.SplashCount = self.SplashCount + 1
 end
 
 local MAX_SLOPE = math.cos(math.rad(45))

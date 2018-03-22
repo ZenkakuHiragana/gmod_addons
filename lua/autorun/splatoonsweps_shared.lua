@@ -317,3 +317,7 @@ hook.Add("ShouldCollide", "SplatoonSWEPs: Ink go through grates", function(ent1,
 	})
 	return tr.MatType ~= MAT_GRATE
 end)
+
+hook.Add("PhysgunPickup", "SplatoonSWEPs: Ink cannot be grabbed", function(ply, ent)
+	if ent.IsSplatoonProjectile then return false end
+end)
