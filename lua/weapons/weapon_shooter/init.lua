@@ -63,8 +63,8 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p:SetAngles(ang)
 	p:SetOwner(self.Owner)
 	p:SetInkColorProxy(self:GetInkColorProxy())
-	p.InkRadius = self.Primary.SplashRadius
-	p.MinRadius = p.InkRadius * self.Primary.MinRadius / self.Primary.InkRadius
+	p.InkRadius = self.Primary.InkRadius
+	p.MinRadius = self.Primary.MinRadius
 	p.InitVelocity = -vector_up * 100
 	p.ColorCode = self.ColorCode
 	p.TrailWidth = 4

@@ -1,22 +1,18 @@
 
 --Weapon information in default SWEP structure.
+local ss = SplatoonSWEPs
+if not ss then return end
+
 if CLIENT then
-	SWEP.Author = "GreatZenkakuMan"
+	SWEP.Author = ss.AuthorName
 	SWEP.BobScale = 1
 	SWEP.BounceWeaponIcon = true
-	SWEP.Category = "Splatoon SWEPs"
 	SWEP.DrawAmmo = false
 	SWEP.DrawCrosshair = false
 	SWEP.DrawWeaponInfoBox = true
-	SWEP.Instructions = 
-	[[Primary: Shoot ink.
-Secondary: Use sub weapon.
-Reload: Use special weapon.
-Shift: Squid Beakon menu.
-Crouch: Become squid.
-	]]
+	SWEP.Instructions = ss.Instructions
 	SWEP.PrintName = "Inkling base"
-	SWEP.Purpose = "Splat ink!"
+	SWEP.Purpose = ss.Purpose
 	SWEP.RenderGroup = RENDERGROUP_TRANSLUCENT
 	SWEP.SpeechBubbleLid = surface.GetTextureID "gui/speech_lid"
 	SWEP.SwayScale = 1
@@ -36,7 +32,7 @@ SWEP.IsSplatoonWeapon = true
 SWEP.Slot = 1
 SWEP.SlotPos = 2
 SWEP.m_WeaponDeploySpeed = 5
-SplatoonSWEPs:SetPrimary(SWEP, {
+ss:SetPrimary(SWEP, {
 	Recoil				= .2,	--Viewmodel recoil intensity
 	TakeAmmo			= .01,	--Ink consumption per fire[-].
 	PlayAnimPercent		= 0,	--Play PLAYER_ATTACK1 animation frequency[%].
@@ -47,7 +43,7 @@ SplatoonSWEPs:SetPrimary(SWEP, {
 	},
 })
 
-SplatoonSWEPs:SetSecondary(SWEP, {
+ss:SetSecondary(SWEP, {
 	Recoil				= .2,
 	TakeAmmo			= .7,	 --Sub weapon consumption[-].
 	PlayAnimPercent		= 30,

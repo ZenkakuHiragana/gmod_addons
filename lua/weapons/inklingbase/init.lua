@@ -131,6 +131,10 @@ function SWEP:Deploy()
 		self.ColorCode = math.random(ss.MAX_COLORS)
 	end
 	
+	self.Color = ss:GetColor(self.ColorCode)
+	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
+	self.SquidAvailable = tobool(ss:GetSquidmodel(self:GetPMID()))
+	
 	if self.Owner:IsPlayer() then
 		self.BackupPlayerInfo = {
 			Color = self.Owner:GetColor(),
@@ -185,9 +189,6 @@ function SWEP:Deploy()
 		end
 	end
 	
-	self.Color = ss:GetColor(self.ColorCode)
-	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
-	self.SquidAvailable = tobool(ss:GetSquidmodel(self:GetPMID()))
 	return self:SharedDeployBase()
 end
 
