@@ -61,7 +61,7 @@ end
 local function ProcessQueue()
 	while true do
 		local done = 0
-		for i, q in ipairs(ss.InkQueue) do
+		for q in pairs(ss.InkQueue) do
 			local c = ss:GetColor(q.c)
 			local radius = math.Round(ss:UnitsToPixels(q.r))
 			local size, vrad = radius * 2, ss.vector_one * radius
@@ -128,13 +128,9 @@ local function ProcessQueue()
 			
 			q.done, done = q.done + 1, done + 1
 			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
+			if q.done > 5 then ss.InkQueue[q] = nil end
 		end
 		
-		local newqueue = {}
-		for i, v in ipairs(ss.InkQueue) do
-			if not v.done or v.done < 8 then newqueue[#newqueue + 1] = v end
-		end
-		ss.InkQueue = newqueue
 		coroutine.yield()
 	end
 end

@@ -10,7 +10,7 @@ local MIN_BOUND = 20 --Ink minimum bounding box scale
 local MIN_BOUND_AREA = 6 --minimum ink bounding box area
 local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surfaces
 local MAX_PROCESS_QUEUE_AT_ONCE = 4 --Running QueueCoroutine() at once
-local MAX_INKQUEUE_AT_ONCE = 50 --Processing new ink request at once
+local MAX_INKQUEUE_AT_ONCE = 500 --Processing new ink request at once
 local COS_MAX_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) --Used by filtering process
 local reference_polys = {}
 local reference_vert = Vector(1)
@@ -100,24 +100,19 @@ end
 local function ProcessQueue()
 	while true do
 		local done = 0
-		for i, v in ipairs(PaintQueue) do
-			if coroutine.status(v.co) == "dead" then continue end
-			local ok, msg = coroutine.resume(v.co, v.pos, v.normal, v.radius, v.color, v.angle, v.inktype, v.ratio)
+		for q in pairs(PaintQueue) do
+			if coroutine.status(q.co) == "dead" then continue end
+			local ok, msg = coroutine.resume(q.co, q.pos, q.normal, q.radius, q.color, q.angle, q.inktype, q.ratio)
 			if not ok then
 				print("coroutine end: ", msg)
-				ErrorNoHalt(debug.traceback(v.co))
+				ErrorNoHalt(debug.traceback(q.co))
 			end
 
-			v.done = ok and msg
+			if ok and msg then PaintQueue[q] = nil end
 			done = done + 1
 			-- if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
 		end
 		
-		local newqueue = {}
-		for i, v in ipairs(PaintQueue) do
-			if not v.done then table.insert(newqueue, v) end
-		end
-		PaintQueue = newqueue
 		coroutine.yield()
 	end
 end
@@ -182,7 +177,7 @@ ss.InkManager = {
 	DoCoroutines = coroutine.create(DoCoroutines),
 	Threads = {ProcessQueue = coroutine.create(ProcessQueue)},
 	AddQueue = function(pos, normal, radius, color, angle, inktype, ratio)
-		table.insert(PaintQueue, {
+		PaintQueue[{
 			angle = math.NormalizeAngle(angle), --Rotation
 			co = coroutine.create(QueueCoroutine), --Coroutine
 			color = color, --Ink color
@@ -191,6 +186,6 @@ ss.InkManager = {
 			radius = radius, --Size
 			ratio = ratio, --Stretch ink, x/y
 			inktype = inktype, --Texture type
-		})
+		}] = true
 	end,
 }

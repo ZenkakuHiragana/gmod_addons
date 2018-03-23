@@ -12,8 +12,7 @@ net.Receive("SplatoonSWEPs: DrawInk", function(...)
 	local inkangle = radius.y
 	local ratio = radius.z
 	radius = radius.x
-	
-	return table.insert(ss.InkQueue, {
+	ss.InkQueue[{
 		c = color,
 		dispflag = facenumber < 0 and 0 or 1,
 		done = 0,
@@ -23,7 +22,7 @@ net.Receive("SplatoonSWEPs: DrawInk", function(...)
 		r = radius,
 		ratio = ratio,
 		t = inktype,
-	})
+	}] = true
 end)
 
 net.Receive("SplatoonSWEPs: Send error message from server", function(...)
