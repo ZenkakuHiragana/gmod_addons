@@ -4,6 +4,7 @@ if not ss then return end
 include "shared.lua"
 include "baseinfo.lua"
 include "cl_draw.lua"
+include "ai_translations.lua"
 
 local errorduration = 10
 function SWEP:PopupError(msg)
@@ -82,14 +83,7 @@ function SWEP:Initialize()
 	self.Holstering = false
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:MakeSquidModel()
-	self:ChangeHullDuck()
-	
 	self.JustUsableTime = CurTime() - 1 --For animation of ink tank light
-	if IsValid(self.Owner) and self.Owner:IsPlayer() then
-		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
-		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
-	end
-	
 	self:SharedInitBase()
 	if isfunction(self.ClientInit) then self:ClientInit() end
 	return self:ClientDeployBase()
@@ -102,19 +96,24 @@ end
 function SWEP:ClientDeployBase()
 	self.CanHealStand, self.CanHealInk, self.CanReloadStand,  self.CanReloadInk = false, false, false, false
 	if not IsValid(self.Owner) then return end
-	self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
-	self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
-	self:ChangeHullDuck()
+	if self.Owner:IsPlayer() then
+		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
+		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
+		self:ChangeHullDuck()
+	end
+	
 	return self:SharedDeployBase()
 end
 
 function SWEP:Holster()
 	if not (IsValid(self.Owner) and self:IsFirstTimePredicted()) then return end
-	local vm = self.Owner:GetViewModel()
-	if IsValid(vm) then self:ResetBonePositions(vm) end
-	if self:GetPMID() ~= ss.PLAYER.NOSQUID and self.HullDuckMins then
-		self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
-		self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
+	if self.Owner:IsPlayer() then
+		local vm = self.Owner:GetViewModel()
+		if IsValid(vm) then self:ResetBonePositions(vm) end
+		if self:GetPMID() ~= ss.PLAYER.NOSQUID and self.HullDuckMins then
+			self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
+			self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
+		end
 	end
 	
 	return self:SharedHolsterBase()

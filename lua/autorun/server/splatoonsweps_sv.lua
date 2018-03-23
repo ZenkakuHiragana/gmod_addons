@@ -22,6 +22,7 @@ include "autorun/splatoonsweps_shared.lua"
 include "splatoonsweps_bsp.lua"
 include "splatoonsweps_inkmanager.lua"
 include "splatoonsweps_network.lua"
+include "splatoonsweps_npcusableweapons.lua"
 
 local ss = SplatoonSWEPs
 for i = 1, 9 do
@@ -98,6 +99,7 @@ function ss:BSPPairsAll(modelindex)
 end
 
 function ss:SendError(msg, icon, duration, user)
+	if not user:IsPlayer() then return end
 	net.Start "SplatoonSWEPs: Send an error message"
 	net.WriteString(msg)
 	net.WriteUInt(icon, self.SEND_ERROR_NOTIFY_BITS)
@@ -210,6 +212,7 @@ hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, 
 		net.Send(ent)
 	end
 	
+	if not atk:IsPlayer() then return end
 	net.Start "SplatoonSWEPs: Play damage sound"
 	net.WriteUInt(dmg:GetDamage() < ss.ToHammerHealth and 2 or 3, 2)
 	net.Send(atk)

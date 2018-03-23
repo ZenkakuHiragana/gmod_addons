@@ -17,6 +17,7 @@ end
 
 function SWEP:SetPlayerSpeed(spd)
 	self.MaxSpeed = spd
+	if not self.Owner:IsPlayer() then return end
 	self.Owner:SetMaxSpeed(self.MaxSpeed)
 	self.Owner:SetRunSpeed(self.MaxSpeed)
 	self.Owner:SetWalkSpeed(self.MaxSpeed)
@@ -59,13 +60,16 @@ function SWEP:SharedDeployBase()
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
 	self.SquidSpeedSqr = self.SquidSpeed^2
-	self.OnEnemyInkSpeed = ss.OnEnemyInkSpeed --Validate: Is it correct?
+	self.OnEnemyInkSpeed = ss.OnEnemyInkSpeed
 	self.JumpPower = ss.InklingJumpPower
 	self.OnEnemyInkJumpPower = ss.OnEnemyInkJumpPower
-	self:SetPlayerSpeed(self.InklingSpeed)
-	self.Owner:SetJumpPower(self.JumpPower)
-	self.Owner:SetColor(color_white)
-	self.Owner:SetCrouchedWalkSpeed(.5)
+	if self.Owner:IsPlayer() then
+		self:SetPlayerSpeed(self.InklingSpeed)
+		self.Owner:SetJumpPower(self.JumpPower)
+		self.Owner:SetColor(color_white)
+		self.Owner:SetCrouchedWalkSpeed(.5)
+	end
+	
 	if isfunction(self.SharedDeploy) then self:SharedDeploy() end
 	return true
 end
@@ -131,13 +135,16 @@ function SWEP:Reload()
 end
 
 function SWEP:CommonFire(isprimary)
-	local plmins, plmaxs = self.Owner:GetHull()
-	self.CannotStandup = self.Owner:Crouching() and util.TraceHull {
-		start = self.Owner:GetPos(),
-		endpos = self.Owner:GetPos(),
-		mins = plmins, maxs = plmaxs,
-		filter = {self, self.Owner}
-	} .Hit
+	if self.Owner:IsPlayer() then
+		local plmins, plmaxs = self.Owner:GetHull()
+		self.CannotStandup = self.Owner:Crouching() and util.TraceHull {
+			start = self.Owner:GetPos(),
+			endpos = self.Owner:GetPos(),
+			mins = plmins, maxs = plmaxs,
+			filter = {self, self.Owner}
+		} .Hit
+	end
+	
 	if self.CannotStandup or self.CrouchPriority then return false end
 	local Weapon = isprimary and self.Primary or self.Secondary
 	local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
@@ -149,15 +156,15 @@ function SWEP:CommonFire(isprimary)
 	self:SetNextPrimaryFire(CurTime() + Weapon.Delay * laggedvalue)
 	self:MuzzleFlash()
 	
-	if math.random() < Weapon.PlayAnimPercent then
-		self.Owner:SetAnimation(PLAYER_ATTACK1)
-	end
 	
 	if self.Owner:IsPlayer() then
 		local rnda = Weapon.Recoil * -1
 		local rndb = Weapon.Recoil * util.SharedRandom(
 		"SplatoonSWEPs: Weapon base recoil" .. self:EntIndex(), -1, 1)
 		self.Owner:ViewPunch(Angle(rnda, rndb, rnda)) --Apply viewmodel punch
+		if math.random() < Weapon.PlayAnimPercent then
+			self.Owner:SetAnimation(PLAYER_ATTACK1)
+		end
 	end
 	
 	return true
@@ -167,7 +174,7 @@ end
 function SWEP:PrimaryAttack()
 	if self.Holstering then return end
 	local canattack = self:CommonFire(true)
-	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "PrimaryAttack" end
+	if game.SinglePlayer() then self:CallOnClient "PrimaryAttack" end
 	if self.CannotStandup then return end
 	if isfunction(self.SharedPrimaryAttack) then self:SharedPrimaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerPrimaryAttack) then
@@ -181,7 +188,7 @@ end
 function SWEP:SecondaryAttack()
 	if self.Holstering then return end
 	local canattack = self:CommonFire(false)
-	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "SecondaryAttack" end
+	if game.SinglePlayer() then self:CallOnClient "SecondaryAttack" end
 	if self.CannotStandup then return end
 	if isfunction(self.SharedSecondaryAttack) then self:SharedSecondaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerSecondaryAttack) then

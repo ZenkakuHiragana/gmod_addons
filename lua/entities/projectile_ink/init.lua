@@ -60,6 +60,8 @@ function ENT:Initialize()
 	util.SpriteTrail(self, 0, ss:GetColor(self.ColorCode), false,
 	self.TrailWidth or 8, self.TrailEnd or 2, self.TrailLife or .15,
 	1 / ((self.TrailWidth or 8) + (self.TrailEnd or 2)), "effects/beam_generic01.vmt")
+	
+	self.emulatedelay = math.sqrt(2 / physenv.GetGravity():Length())
 end
 
 function ENT:PhysicsSimulate(phys, dt)
@@ -75,13 +77,11 @@ function ENT:PhysicsSimulate(phys, dt)
 	return vector_origin, vector_origin, SIM_GLOBAL_ACCELERATION
 end
 
-local emulatedelay = math.sqrt(2 / physenv.GetGravity():Length())
 local splashrandom = {-1, 0, 1}
 function ENT:PhysicsUpdate(phys)
-	if self.IsDrop then return end
 	if not (IsValid(phys) and self:IsInWorld()) then
 		return SafeRemoveEntityDelayed(self, 0)
-	end
+	elseif self.IsDrop then return end
 	
 	self.InitTime = self.InitTime or CurTime()
 	phys:EnableGravity(math.max(0, CurTime() - self.InitTime) >= self.Straight)
@@ -89,10 +89,11 @@ function ENT:PhysicsUpdate(phys)
 	local len = (phys:GetPos() - self.InitPos):Length2DSqr()
 	local nextlen = self.SplashCount * self.SplashInterval + self.SplashInit
 	if len < nextlen * nextlen then return end
-	local splash = ents.Create "projectile_ink"
-	if not IsValid(splash) then return end
 	self.SplashCount = self.SplashCount + 1
 	nextlen = nextlen + math.random(-1, 1) * ss.mSplashDrawRadius
+	
+	local splash = ents.Create "projectile_ink"
+	if not IsValid(splash) then return end
 	splash:SetPos(self.InitPos + self.InitVelocity:GetNormalized() * nextlen - vector_up * 6)
 	splash:SetAngles(dropangle)
 	splash:SetOwner(self:GetOwner())
@@ -117,7 +118,7 @@ function ENT:PhysicsUpdate(phys)
 	-- local radius = self.SplashRadius or self.InkRadius
 	-- local color, yaw = self.ColorCode, self.InkYaw
 	-- radius = self:GetRadius(radius * self.MinRadius / self.InkRadius, radius)
-	-- timer.Simple(math.sqrt(phys:GetPos().z - tr.HitPos.z) * emulatedelay, function()
+	-- timer.Simple(math.sqrt(phys:GetPos().z - tr.HitPos.z) * self.emulatedelay, function()
 		-- ss.InkManager.AddQueue(tr.HitPos, tr.HitNormal, radius, color, yaw, math.random(1, 3), 1)
 	-- end)
 end

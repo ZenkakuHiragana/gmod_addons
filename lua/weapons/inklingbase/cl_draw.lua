@@ -323,9 +323,9 @@ function SWEP:DrawWorldModel()
 	if self.Holstering then return end
 	if self.Owner ~= LocalPlayer() then self:Think() end
 	local bone_ent = self // when the weapon is dropped
-	if IsValid(self.Owner) and self.Owner:IsPlayer() then
+	if IsValid(self.Owner) then
 		bone_ent = self.Owner
-		if self.IsSquid then
+		if self.IsSquid and self.Owner:IsPlayer() then
 			if self:GetPMID() ~= ss.PLAYER.NOSQUID then
 				if IsValid(self.Squid) and not self:GetInInk() then
 					--It seems changing eye position doesn't work.
