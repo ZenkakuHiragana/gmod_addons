@@ -1,6 +1,30 @@
 
 local ss = SplatoonSWEPs
 ss:AddTimerFramework(SWEP)
+local function PlayLoopSound(self)
+	if not self.SwimSound:IsPlaying() then
+		self.SwimSound:Play()
+		self.SwimSound:ChangeVolume(0)
+	end
+	
+	if not self.EnemyInkSound:IsPlaying() then
+		self.EnemyInkSound:Play()
+		self.EnemyInkSound:ChangeVolume(0)
+	end
+end
+
+local function StopLoopSound(self)
+	if self.SwimSound:IsPlaying() then
+		self.SwimSound:ChangeVolume(0)
+		self.SwimSound:Stop()
+	end
+	
+	if self.EnemyInkSound:IsPlaying() then
+		self.EnemyInkSound:ChangeVolume(0)
+		self.EnemyInkSound:Stop()
+	end
+end
+
 function SWEP:ChangeHullDuck()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
 	if self:GetPMID() ~= ss.PLAYER.NOSQUID then
@@ -35,7 +59,12 @@ end
 
 --When NPC weapon is picked up by player.
 function SWEP:OwnerChanged()
-	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return true end
+	print("Owner changed", self, self.Owner)
+	if not IsValid(self.Owner) then
+		return StopLoopSound(self)
+	else
+		return PlayLoopSound(self)
+	end
 end
 
 function SWEP:SharedInitBase()
@@ -46,16 +75,7 @@ end
 
 --Predicted hooks
 function SWEP:SharedDeployBase()
-	if not self.SwimSound:IsPlaying() then
-		self.SwimSound:Play()
-		self.SwimSound:ChangeVolume(0)
-	end
-	
-	if not self.EnemyInkSound:IsPlaying() then
-		self.EnemyInkSound:Play()
-		self.EnemyInkSound:ChangeVolume(0)
-	end
-	
+	PlayLoopSound(self)
 	self:SetHolstering(false)
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
@@ -75,16 +95,7 @@ function SWEP:SharedDeployBase()
 end
 
 function SWEP:SharedHolsterBase()
-	if self.SwimSound:IsPlaying() then
-		self.SwimSound:ChangeVolume(0)
-		self.SwimSound:Stop()
-	end
-	
-	if self.EnemyInkSound:IsPlaying() then
-		self.EnemyInkSound:ChangeVolume(0)
-		self.EnemyInkSound:Stop()
-	end
-	
+	StopLoopSound(self)
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
 	self:SetHolstering(true)
 	return true
@@ -130,7 +141,7 @@ end
 --Begin to use special weapon.
 function SWEP:Reload()
 	if self:GetHolstering() then return end
-	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "Reload" end
+	if game.SinglePlayer() and self.Owner:IsPlayer() and IsValid(self.Owner) then self:CallOnClient "Reload" end
 	
 end
 
@@ -173,7 +184,7 @@ end
 function SWEP:PrimaryAttack()
 	if self:GetHolstering() then return end
 	local canattack = self:CommonFire(true)
-	if game.SinglePlayer() then self:CallOnClient "PrimaryAttack" end
+	if game.SinglePlayer() and self.Owner:IsPlayer() then self:CallOnClient "PrimaryAttack" end
 	if self.CannotStandup then return end
 	if isfunction(self.SharedPrimaryAttack) then self:SharedPrimaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerPrimaryAttack) then
@@ -187,7 +198,7 @@ end
 function SWEP:SecondaryAttack()
 	if self:GetHolstering() then return end
 	local canattack = self:CommonFire(false)
-	if game.SinglePlayer() then self:CallOnClient "SecondaryAttack" end
+	if game.SinglePlayer() and self.Owner:IsPlayer() then self:CallOnClient "SecondaryAttack" end
 	if self.CannotStandup then return end
 	if isfunction(self.SharedSecondaryAttack) then self:SharedSecondaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerSecondaryAttack) then
@@ -203,7 +214,7 @@ function SWEP:ChangeInInk(name, old, new)
 	if self:GetHolstering() then return end
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
-			if IsValid(self.Owner) then
+			if IsValid(self.Owner) and self.Owner:IsPlayer() then
 				self:CallOnClient("ChangeInInk", table.concat({name, tostring(old), tostring(new)}, " "))
 			end
 		elseif self:IsFirstTimePredicted() then
@@ -242,7 +253,7 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	if self:GetHolstering() then return end
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
-			if IsValid(self.Owner) then
+			if IsValid(self.Owner) and self.Owner:IsPlayer() then
 				self:CallOnClient("ChangeOnEnemyInk", table.concat({name, tostring(old), tostring(new)}, " "))
 			end
 		elseif self:IsFirstTimePredicted() then
@@ -267,7 +278,9 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 		self:AddSchedule(200 / ss.ToHammerHealth * ss.FrameToSec, function(self, schedule)
 			if not self:GetOnEnemyInk() then return true end --Enemy ink damage
 			if self.Owner:Health() > self.Owner:GetMaxHealth() / 2 then
-				self.Owner:SetHealth(self.Owner:Health() - 1)
+				local d = DamageInfo()
+				d:SetDamage(1)
+				self.Owner:TakeDamageInfo(d)
 			end
 		end)
 		

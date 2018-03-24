@@ -31,16 +31,16 @@ end
 
 --[1] = minimum bound, [2] = maximum bound
 local function AddInkRectangle(ink, newink, sz)
-	local nb = newink.bounds
+	local nb, nr = newink.bounds, newink.ratio
 	local n1, n2, n3, n4 = nb[1], nb[2], nb[3], nb[4]
 	for r, z in pairs(ink) do
-		if not next(r.bounds) then ink[r] = nil continue end
-		for b in pairs(r.bounds) do
+		local bounds = r.bounds
+		if not next(bounds) and r.lastratio > .6 then ink[r] = nil continue end
+		for b in pairs(bounds) do
 			local b1, b2, b3, b4 = b[1], b[2], b[3], b[4]
 			if (b3 - b1) * (b4 - b2) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
 			if n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2 then continue end
-			
-			r.bounds[b] = nil
+			r.lastratio, r.bounds[b] = nr
 			local x, y = {n1, n3, b1, b3}, {n2, n4, b2, b4} sort(x) sort(y)
 			local x1, x2, x3, x4, y1, y2, y3, y4 = x[1], x[2], x[3], x[4], y[1], y[2], y[3], y[4]
 			for _, c in ipairs {

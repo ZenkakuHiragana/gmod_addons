@@ -124,6 +124,11 @@ function SWEP:GetBoneOrientation(basetab, tab, ent, bone_override)
 		local m = ent:GetBoneMatrix(bone)
 		if m then
 			pos, ang = m:GetTranslation(), m:GetAngles()
+		else
+			-- for i = 0, ent:GetBoneCount() do
+				-- print(ent:GetBoneName(i))
+			-- end
+			-- print(ent:GetBoneCount(), bone, ent:GetBoneName(bone), tab.bone)
 		end
 		
 		if IsValid(self.Owner) and self.Owner:IsPlayer() and 
@@ -320,11 +325,8 @@ function SWEP:GetBombMeterPosition(inkconsumption)
 end
 
 function SWEP:DrawWorldModel()
-	if self:GetHolstering() then return end
-	if self.Owner ~= LocalPlayer() then self:Think() end
-	local bone_ent = self // when the weapon is dropped
 	if IsValid(self.Owner) then
-		bone_ent = self.Owner
+		if self:GetHolstering() then return end
 		if self.IsSquid and self.Owner:IsPlayer() then
 			if self:GetPMID() ~= ss.PLAYER.NOSQUID then
 				if IsValid(self.Squid) and not self:GetInInk() then
@@ -357,6 +359,9 @@ function SWEP:DrawWorldModel()
 		end
 	end
 	
+	self:SetupBones()
+	local bone_ent = self // when the weapon is dropped
+	if self.Owner ~= LocalPlayer() then self:Think() end
 	if not self.WElements then return end
 	for k, name in pairs(self.wRenderOrder) do
 		local v = self.WElements[name]
@@ -366,6 +371,8 @@ function SWEP:DrawWorldModel()
 			local size = -1600 * (fraction - 0.075)^2 + 20
 			v.size = {x = size, y = size}
 			v.hide = not self.WElements["inktank"].modelEnt or self:GetInk() < self.Secondary.TakeAmmo
+		elseif name == "inktank" and IsValid(self.Owner) then
+			bone_ent = self.Owner
 		end
 		if v.hide then continue end
 		

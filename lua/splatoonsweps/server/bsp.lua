@@ -73,13 +73,7 @@ local bsp = ss.BSP
 local TextureFilterBits = bit.bor(SURF_SKY, SURF_WARP, SURF_NOPORTAL, SURF_TRIGGER, SURF_NODRAW, SURF_HINT, SURF_SKIP)
 local function read(arg)
 	if isstring(arg) then
-		if arg == "UShort" then
-			local n = bsp.bsp:ReadShort()
-			return n + (n < 0 and 65536 or 0)
-		elseif arg == "ULong" then
-			local n = bsp.bsp:ReadLong()
-			return n + (n < 0 and 4294967296 or 0)
-		elseif arg == "SignedByte" then
+		if arg == "SignedByte" then
 			local n = bsp.bsp:ReadByte()
 			return n - (n > 127 and 256 or 0)
 		elseif arg == "ShortVector" then

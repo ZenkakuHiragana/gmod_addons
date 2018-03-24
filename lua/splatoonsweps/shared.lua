@@ -302,7 +302,7 @@ local weaponslot = {
 	weapon_scope = 4,
 	weapon_slosher = 5,
 }
-hook.Add("OnGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
+hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 	local weaponlist = list.GetForEdit "Weapon"
 	for i, c in ipairs(ss.WeaponClassNames) do
 		for _, weapon in ipairs {weapons.GetStored(c), weaponlist[c]} do

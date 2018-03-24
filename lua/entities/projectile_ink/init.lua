@@ -153,12 +153,9 @@ function ENT:PhysicsCollide(coldata, collider)
 		d:SetMaxDamage(self.Damage)
 		d:SetReportedPosition(self:GetPos())
 		d:SetAttacker(o)
-		d:SetInflictor(IsValid(o) and isfunction(o.GetActiveWeapon) and o:GetActiveWeapon() or NULL)
+		if IsValid(o) and isfunction(o.GetActiveWeapon) and IsValid(o:GetActiveWeapon()) then
+			d:SetInflictor(o:GetActiveWeapon())
+		end
 		return coldata.HitEntity:TakeDamageInfo(d)
 	end
 end
-
--- function ENT:Think()
-	-- if self.Hit then return self:Remove() end
-	-- if Entity(1):KeyDown(IN_ATTACK2) then return self:Remove() end
--- end

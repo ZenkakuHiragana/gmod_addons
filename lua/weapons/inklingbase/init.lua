@@ -83,9 +83,10 @@ function SWEP:Initialize()
 	
 	self:SharedInitBase()
 	if isfunction(self.ServerInit) then self:ServerInit() end
-	if IsValid(self.Owner) then
-		self.HoldType = "ar2"
-		local npcrange = self.Primary.InitVelocity * (self.Primary.Straight + 4.5 * ss.FrameToSec)
+	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
+		self.HoldType = "smg"
+		self:SetHoldType(self.HoldType)
+		local npcrange = self.Primary.InitVelocity * (self.Primary.Straight + 4.5 * ss.FrameToSec) * 2
 		self:SetSaveValue("m_fMaxRange1", npcrange)
 		self:SetSaveValue("m_fMaxRange2", npcrange)
 		self:SetSaveValue("m_fMinRange1", 0)
@@ -116,7 +117,7 @@ end
 
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
-	self:CallOnClient "ClientDeployBase"
+	if self.Owner:IsPlayer() then self:CallOnClient "ClientDeployBase" end
 	self:SetHoldType "passive"
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
@@ -202,7 +203,7 @@ end
 
 function SWEP:Holster()
 	if not IsValid(self.Owner) then return true end
-	if game.SinglePlayer() then self:CallOnClient "Holster" end
+	if game.SinglePlayer() and self.Owner:IsPlayer() then self:CallOnClient "Holster" end
 	self.PMTable = nil
 	if self.Owner:IsPlayer() then
 		self.Owner:SetDSP(1)
@@ -237,6 +238,7 @@ function SWEP:Think()
 	if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
 		self:ChangePlayermodel(self.PMTable)
 	end
+	
 	
 	self:ProcessSchedules()
 	self:SharedThinkBase()

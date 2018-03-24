@@ -44,10 +44,6 @@ function SWEP:SharedPrimaryAttack(canattack)
 	end
 end
 
-function SWEP:SharedSecondaryAttack(canattack)
-	ss:ClearAllInk()
-end
-
 function SWEP:CustomDataTables()
 	self:AddNetworkVar("Float", "ModifyWeaponSize") --Shooter expands its model when firing.
 end

@@ -37,8 +37,8 @@ end
 
 function ss:ClearAllInk()
 	BroadcastLua "SplatoonSWEPs:ClearAllInk()"
-	self.InkCounter = 0
-	for node in self:BSPPairsAll() do
+	ss.InkCounter = 0
+	for node in ss:BSPPairsAll() do
 		for i = 1, #node.Surfaces.InkCircles do
 			node.Surfaces.InkCircles[i] = {}
 		end
@@ -229,3 +229,5 @@ hook.Add("Tick", "SplatoonSWEPs: Do ink coroutines", function()
 	local ok, message = coroutine.resume(self.DoCoroutines)
 	if not ok then ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n") end
 end)
+
+hook.Add("PostCleanupMap", "SplatoonSWEPs: Cleanup all ink", ss.ClearAllInk)

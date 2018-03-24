@@ -80,5 +80,8 @@ end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
 	self:PrimaryAttack()
-	self:AddSchedule(self.Primary.Delay, 3, function() self:PrimaryAttack() end)
+	self:AddSchedule(self.Primary.Delay, 1, function()
+		if not IsValid(self.Owner) or self.Owner:IsPlayer() then return end
+		self:PrimaryAttack()
+	end)
 end
