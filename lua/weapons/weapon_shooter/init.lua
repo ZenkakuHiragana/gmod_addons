@@ -77,3 +77,8 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
 	p:SetModelScale(.5)
 end
+
+function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
+	self:PrimaryAttack()
+	self:AddSchedule(self.Primary.Delay, 3, function() self:PrimaryAttack() end)
+end

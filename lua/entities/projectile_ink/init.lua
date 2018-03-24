@@ -58,7 +58,7 @@ function ENT:Initialize()
 	
 	self.ColRadius = nil
 	util.SpriteTrail(self, 0, ss:GetColor(self.ColorCode), false,
-	self.TrailWidth or 8, self.TrailEnd or 2, self.TrailLife or .15,
+	self.TrailWidth or 8, self.TrailEnd or 2, self.TrailLife or .08,
 	1 / ((self.TrailWidth or 8) + (self.TrailEnd or 2)), "effects/beam_generic01.vmt")
 	
 	self.emulatedelay = math.sqrt(2 / physenv.GetGravity():Length())

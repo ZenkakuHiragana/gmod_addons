@@ -95,6 +95,14 @@ function SWEP:Initialize()
 		self:SetNPCMinRest(self.Primary.Delay)
 		self:SetNPCMaxRest(self.Primary.Delay)
 		self:Deploy()
+		local timername = "SplatoonSWEPs: NPC Think function" .. self:EntIndex()
+		timer.Create(timername, 0, 0, function()
+			if not (IsValid(self) and IsValid(self.Owner)) or self.Owner:IsPlayer() then
+				return timer.Remove(timername)
+			end
+			
+			self:Think()
+		end)
 	end
 end
 

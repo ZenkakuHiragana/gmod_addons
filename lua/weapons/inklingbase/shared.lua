@@ -217,10 +217,13 @@ function SWEP:ChangeInInk(name, old, new)
 	local outofink = old and not new
 	local intoink = not old and new
 	if outofink == intoink then return end
-	self.Owner:SetCrouchedWalkSpeed(intoink and 1 or .5)
-	self:SetPlayerSpeed(intoink and self.SquidSpeed or self.InklingSpeed)
+	if self.Owner:IsPlayer() then
+		self.Owner:SetCrouchedWalkSpeed(intoink and 1 or .5)
+		self:SetPlayerSpeed(intoink and self.SquidSpeed or self.InklingSpeed)
+	end
+	
 	if intoink and SERVER then
-		self.Owner:SetDSP(14)
+		if self.Owner:IsPlayer() then self.Owner:SetDSP(14) end
 		local velocity = math.abs(self.OwnerVelocity.z)
 		if self.Owner:OnGround() and velocity > 400 then
 			local dp = math.Clamp(600 - velocity, 0, 200) / 2
@@ -230,7 +233,7 @@ function SWEP:ChangeInInk(name, old, new)
 			self.Owner:EmitSound("SplatoonSWEPs_Player.InkDiveShallow", 75, 100 + dp, .5, CHAN_BODY)
 		end
 	elseif outofink then
-		if SERVER then self.Owner:SetDSP(1) end
+		if SERVER and self.Owner:IsPlayer() then self.Owner:SetDSP(1) end
 		self.OnOutOfInk = true
 	end
 end
@@ -254,9 +257,11 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	local intoink = not old and new
 	if outofink == intoink then return
 	elseif intoink then
-		self:SetPlayerSpeed(self.OnEnemyInkSpeed) --Hard to move
-		self.Owner:SetJumpPower(self.OnEnemyInkJumpPower) --Reduce jump power
 		self.EnemyInkSound:ChangeVolume(1, .5)
+		if self.Owner:IsPlayer() then
+			self:SetPlayerSpeed(self.OnEnemyInkSpeed) --Hard to move
+			self.Owner:SetJumpPower(self.OnEnemyInkJumpPower) --Reduce jump power
+		end
 		
 		if CLIENT then return end
 		self:AddSchedule(200 / ss.ToHammerHealth * ss.FrameToSec, function(self, schedule)
@@ -270,9 +275,11 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 			self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
 		end)
 	else
-		self:SetPlayerSpeed(self:GetInInk() and self.SquidSpeed or self.InklingSpeed)
-		self.Owner:SetJumpPower(self.JumpPower) --Restore
 		self.EnemyInkSound:ChangeVolume(0, .5)
+		if self.Owner:IsPlayer() then
+			self:SetPlayerSpeed(self:GetInInk() and self.SquidSpeed or self.InklingSpeed)
+			self.Owner:SetJumpPower(self.JumpPower) --Restore
+		end
 	end
 end
 
