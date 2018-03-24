@@ -3,10 +3,6 @@ AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_shooter"
-SWEP.Category = "Splatoon SWEPs"
-SWEP.PrintName = ss.PrintName.weapon_aerospray_pg
-SWEP.Spawnable = true
-
 SWEP.ShootSound = "SplatoonSWEPs.Aerospray"
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					--false to semi-automatic
@@ -39,7 +35,6 @@ ss:SetPrimary(SWEP, {
 })
 
 if SERVER then return end
-
 SWEP.ViewModelBoneMods = {
 	["Base"] = {
 		scale = Vector(1, 1, 1),

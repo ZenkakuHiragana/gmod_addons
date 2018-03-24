@@ -75,9 +75,6 @@ function SWEP:Initialize()
 	end
 	
 	--Our initialize code
-	local icon = "vgui/entities/" .. self:GetClass()
-	if not file.Exists(icon .. ".vmt", "GAME") then icon = "weapons/swep" end
-	self.WepSelectIcon = surface.GetTextureID(icon)
 	self.EnoughSubWeapon = true
 	self.PreviousInk = true
 	self.Holstering = false

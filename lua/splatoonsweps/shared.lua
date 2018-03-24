@@ -291,3 +291,30 @@ end)
 hook.Add("PhysgunPickup", "SplatoonSWEPs: Ink cannot be grabbed", function(ply, ent)
 	if ent.IsSplatoonProjectile then return false end
 end)
+
+local weaponslot = {
+	weapon_roller = 0,
+	weapon_shooter = 1,
+	weapon_blaster = 2,
+	weapon_splatling = 3,
+	weapon_charger = 4,
+	weapon_scope = 4,
+	weapon_slosher = 5,
+}
+hook.Add("OnGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
+	local weaponlist = list.GetForEdit "Weapon"
+	for i, c in ipairs(ss.WeaponClassNames) do
+		for _, weapon in ipairs {weapons.GetStored(c), weaponlist[c]} do
+			weapon.Category = ss.Text.Category
+			weapon.PrintName = ss.Text.PrintNames[c]
+			weapon.Spawnable = true
+			weapon.Slot = weaponslot[weapon.Base] or 0
+			weapon.SlotPos = i
+			if CLIENT then
+				local icon = "vgui/entities/" .. c
+				if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then icon = "weapons/swep" end
+				weapon.WepSelectIcon = surface.GetTextureID(icon)
+			end
+		end
+	end
+end)

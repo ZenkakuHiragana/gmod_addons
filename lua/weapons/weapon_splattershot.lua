@@ -3,10 +3,6 @@ AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_shooter"
-SWEP.Category = "Splatoon SWEPs"
-SWEP.PrintName = ss.PrintName.weapon_splattershot
-SWEP.Spawnable = true
-
 SWEP.ShootSound = "SplatoonSWEPs.Splattershot"
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					--false to semi-automatic

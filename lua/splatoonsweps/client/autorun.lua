@@ -37,7 +37,6 @@ include "splatoonsweps/shared.lua"
 include "userinfo.lua"
 include "inkmanager.lua"
 include "network.lua"
-include "text.lua"
 
 --Mesh limitation is
 -- 10922 = 32767 / 3 with mesh.Begin(),
@@ -126,12 +125,12 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	)
 	rt.Lightmap = GetRenderTargetEx(
 		rt.LightmapName,
-		rtsize / 2, rtsize / 2,
+		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
 		rt.LightmapFlags,
 		CREATERENDERTARGETFLAGS_HDR,
-		IMAGE_FORMAT_RGBA8888 --4096x4096, 64MB
+		IMAGE_FORMAT_RGBA8888 --8192x8192, 256MB
 	)
 	rt.Material = CreateMaterial(
 		rt.RenderTargetName,
@@ -383,7 +382,7 @@ hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
 end)
 
 hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", function()
-	if LocalPlayer():ShouldDrawLocalPlayer() or ss:GetConVarBool "HideInkOverlay" then return end
+	if LocalPlayer():ShouldDrawLocalPlayer() or not ss:GetConVarBool "DrawInkOverlay" then return end
 	local weapon = ss:IsValidInkling(LocalPlayer())
 	if not (weapon and weapon:GetInInk()) then return end
 	local color = weapon:GetInkColorProxy()

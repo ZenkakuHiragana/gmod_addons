@@ -7,10 +7,8 @@ local rt = ss.RenderTarget
 local MAX_PROCESS_QUEUE_AT_ONCE = 100
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
--- local inkmaterial = Material "vgui/gmod_tool"
--- local normalmaterial = Material "vgui/gmod_tool"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
-local LightmapSampleTable = {[7] = .8}
+local LightmapSampleTable = {[7] = 1.2}
 local NumPoly, Polysin, Polycos, Lightrad = 16, {}, {}, {}
 for i = 0, NumPoly do
 	local a = math.rad(i * -360 / NumPoly)
@@ -104,8 +102,8 @@ local function ProcessQueue()
 			
 			--Draw on lightmap
 			radius, size = radius / 2, size / 2
-			center, uvorg, s, b = center / 2, uvorg / 2, s / 2, b / 2
-			s.x, s.y, b.x, b.y = math.floor(s.x), math.floor(s.y), math.ceil(b.x), math.ceil(b.y)
+			-- center, uvorg, s, b = center / 2, uvorg / 2, s / 2, b / 2
+			-- s.x, s.y, b.x, b.y = math.floor(s.x), math.floor(s.y), math.ceil(b.x), math.ceil(b.y)
 			render.PushRenderTarget(rt.Lightmap)
 			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
 			cam.Start2D()
@@ -116,7 +114,7 @@ local function ProcessQueue()
 				for i = 1, n do
 					local r = Lightrad[n][i] * radius * mul
 					surface.SetDrawColor(GetLight(ss:To3D(ss:PixelsToUnits(
-					surf.Moved[q.n] and Vector(-r.x, r.y) or r) * 2, lightorg, angle), normal):ToColor())
+					surf.Moved[q.n] and Vector(-r.x, r.y) or r), lightorg, angle), normal):ToColor())
 					r = r + center - ss.vector_one * radius
 					surface.DrawTexturedRect(r.x, r.y, size, size)
 				end

@@ -36,6 +36,7 @@ SWEP.Secondary.Automatic = true
 SWEP.Secondary.Ammo = "none"
 
 function SWEP:Initialize()
+	if SERVER then return end
 	self.WepSelectIcon = surface.GetTextureID("weapons/swep")
 end
 

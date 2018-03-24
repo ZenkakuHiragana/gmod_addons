@@ -477,3 +477,21 @@ function SWEP:CustomAmmoDisplay()
 	
 	return self.AmmoDisplay
 end
+
+function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
+	-- Set us up the texture
+	surface.SetDrawColor(255, 255, 255, alpha)
+	surface.SetTexture(self.WepSelectIcon)
+	
+	-- Lets get a sin wave to make it bounce
+	local fsin = math.sin(CurTime() * 10) * (self.BounceWeaponIcon and 5 or 0)
+	
+	-- Borders
+	x, y, wide = x + 10, y + 10, wide - 20
+	
+	-- Draw that mother
+	surface.DrawTexturedRect(x + fsin, y - fsin, wide - fsin * 2, tall + fsin * 2)
+	
+	-- Draw weapon info box
+	self:PrintWeaponInfo(x + wide + 20, y + tall, alpha)
+end

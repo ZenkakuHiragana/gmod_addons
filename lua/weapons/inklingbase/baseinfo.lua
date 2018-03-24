@@ -4,15 +4,14 @@ local ss = SplatoonSWEPs
 if not ss then return end
 
 if CLIENT then
-	SWEP.Author = ss.AuthorName
+	SWEP.Author = ss.Text.AuthorName
 	SWEP.BobScale = 1
 	SWEP.BounceWeaponIcon = true
 	SWEP.DrawAmmo = false
 	SWEP.DrawCrosshair = false
 	SWEP.DrawWeaponInfoBox = true
-	SWEP.Instructions = ss.Instructions
-	SWEP.PrintName = "Inkling base"
-	SWEP.Purpose = ss.Purpose
+	SWEP.Instructions = ss.Text.Instructions
+	SWEP.Purpose = ss.Text.Purpose
 	SWEP.RenderGroup = RENDERGROUP_TRANSLUCENT
 	SWEP.SpeechBubbleLid = surface.GetTextureID "gui/speech_lid"
 	SWEP.SwayScale = 1
@@ -24,13 +23,14 @@ else
 	SWEP.Weight = 1
 end
 
+SWEP.PrintName = "Inkling base"
 SWEP.Spawnable = false
 SWEP.HoldType = "crossbow"
 SWEP.ViewModel = "models/weapons/c_irifle.mdl"
 SWEP.WorldModel = "models/weapons/w_irifle.mdl"
-SWEP.IsSplatoonWeapon = true
 SWEP.Slot = 1
 SWEP.SlotPos = 2
+SWEP.IsSplatoonWeapon = true
 SWEP.m_WeaponDeploySpeed = 5
 ss:SetPrimary(SWEP, {
 	Recoil				= .2,	--Viewmodel recoil intensity

@@ -1,6 +1,5 @@
 
 include "shared.lua"
-SWEP.PrintName = "Shooter base"
 
 --Custom functions executed before weapon model is drawn.
 --  model | Weapon model(Clientside Entity)

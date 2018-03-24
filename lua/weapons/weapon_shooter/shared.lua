@@ -3,6 +3,7 @@ local ss = SplatoonSWEPs
 if not ss then return end
 
 SWEP.Base = "inklingbase"
+SWEP.PrintName = "Shooter base"
 function SWEP:SharedInit()
 	self.NextPlayEmpty = CurTime()
 	self.AimTimer = self:AddSchedule(math.huge, function(self, schedule)

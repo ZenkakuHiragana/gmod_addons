@@ -15,46 +15,8 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 	end,
 })
 
-local ColorNameTable = ""
-for i = 1, ss.MAX_COLORS do
-	ColorNameTable = ColorNameTable .. tostring(i) .. ": " .. ss:GetColorName(i) .. "\n"
-end
-
-local PMNameTable = ""
-for i, name in ipairs(ss.PlayermodelName) do
-	PMNameTable = PMNameTable .. tostring(i) .. ": " .. name .. "\n"
-end
-
-local CVAR_DESC = {	[[
-Your ink color.  Available values are:
-]] .. ColorNameTable, [[
-Your thirdperson model.  Available values are:
-]] .. PMNameTable,
-	"1: You can heal yourself when you are not in ink.\n0: You can not.",
-	"1: You can heal yourself when you are in ink.\n0: You can not.",
-	"1: You can reload your ink when you are not in ink.\n0: You can not.",
-	"1: You can reload your ink when you are in ink.\n0: You can not.",
-	"1: Don't draw overlay when you are in ink and firstperson.\n0: Do draw.",
-	[[
-RenderTarget resolution used in ink system.
-To apply the change, restart your GMOD client.
-Higher option needs more VRAM.
-Make sure your graphics card has enough space of video memory.
-1: RT has 4096x4096 resolution.
-    This option uses 128MB of your VRAM.
-2: RT has 2x4096x4096 resolution.
-    The resolution is twice as large as option 1.
-    This option uses 256MB of your VRAM.
-3: 8192x8192, using 512MB.
-4: 2x8192x8192, 1GB.
-5: 16384x16384, 2GB.
-6: 2x16384x16384, 4GB.
-7: 32768x32768, 8GB.
-8: 2x32768x32768, 16GB.
-]]}
-
 for i, c in ipairs(ss.ConVar) do
-	CreateClientConVar(c, tostring(ss.ConVarDefaults[i]), true, true, CVAR_DESC[i])
+	CreateClientConVar(c, tostring(ss.ConVarDefaults[i]), true, true, ss.Text.CVarDescription[i])
 end
 
 function ss:ConfigMenu()
@@ -64,7 +26,7 @@ function ss:ConfigMenu()
 	Window:SetSize(ScrW() / division, ScrH() / division)
 	Window:SetMinWidth(ScrW() / 3)
 	Window:SetMinHeight(ScrH() / 3)
-	Window:SetTitle "SplatoonSWEPs Configuration"
+	Window:SetTitle(ss.Text.ConfigTitle)
 	Window:Center()
 	Window:SetDraggable(true)
 	Window:ShowCloseButton(true)
@@ -72,7 +34,7 @@ function ss:ConfigMenu()
 	Window:NoClipping(false)
 	Window:MakePopup()
 	
-	local LabelError = Label("ERROR: Playermodel is not found!\nCheck if you have required addons!", Window)
+	local LabelError = Label(ss.Text.Error.NotFoundPlayermodel, Window)
 	LabelError:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2 + 30)
 	LabelError:SetFont "DermaDefaultBold"
 	LabelError:SetTextColor(Color(255, 128, 128))
@@ -86,7 +48,7 @@ function ss:ConfigMenu()
 	
 	local function SetPlayerModel(DModelPanel) --Apply changes to preview model
 		local model = self.Playermodel[self:GetConVarInt "Playermodel"] or LocalPlayer():GetModel()
-		local bone = table.HasValue(self.PlayermodelName, model) and "ValveBiped.Bip01_Pelvis" or "ValveBiped.Bip01_Spine4"
+		local bone = table.HasValue(self.Text.PlayermodelNames, model) and "ValveBiped.Bip01_Pelvis" or "ValveBiped.Bip01_Spine4"
 		
 		if not file.Exists(model, "GAME") then
 			model = LocalPlayer():GetModel()
@@ -106,7 +68,7 @@ function ss:ConfigMenu()
 	end
 	
 	if not file.Exists(previewmodel, "GAME") then --If weapon model is not found
-		local ErrorLabel = Label("Weapon model was not found!\nMake sure you have subscribed all required addons!", Window)
+		local ErrorLabel = Label(ss.Text.Error.NotFoundWeaponModel, Window)
 		ErrorLabel:SizeToContents()
 		ErrorLabel:Dock(FILL) --Bring it to center
 		ErrorLabel:SetContentAlignment(5)
@@ -117,7 +79,7 @@ function ss:ConfigMenu()
 	Preview:SetDirectionalLight(BOX_RIGHT, color_white)
 	Preview:SetContentAlignment(5)
 	Preview:SetSize(Window:GetWide() * 0.4, Window:GetTall() / 2)
-	Preview:SetPos(-(Window:GetWide() / 30), 24)
+	Preview:SetPos(Window:GetWide() / -30, 24)
 	Preview:SetModel(previewmodel)
 	local center = Preview.Entity:WorldSpaceCenter()
 	Preview:SetLookAt(center)
@@ -147,7 +109,7 @@ function ss:ConfigMenu()
 		if cvar then cvar:SetInt(index) end
 	end
 	
-	local LabelColor = Label("Ink color:", Window)
+	local LabelColor = Label(ss.Text.InkColor, Window)
 	LabelColor:SizeToContents()
 	LabelColor:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 4 - 24)
 	
@@ -155,8 +117,8 @@ function ss:ConfigMenu()
 	ComboModel:SetSortItems(false)
 	ComboModel:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2)
 	ComboModel:SetSize(Window:GetWide() * 0.31, 24)
-	ComboModel:SetValue(self.PlayermodelName[self:GetConVarInt "Playermodel"])
-	for i, c in ipairs(self.PlayermodelName) do
+	ComboModel:SetValue(self.Text.PlayermodelNames[self:GetConVarInt "Playermodel"])
+	for i, c in ipairs(self.Text.PlayermodelNames) do
 		ComboModel:AddChoice(c)
 	end
 	
@@ -166,7 +128,7 @@ function ss:ConfigMenu()
 		SetPlayerModel(Playermodel)
 	end
 	
-	local LabelModel = Label("Playermodel:", Window)
+	local LabelModel = Label(ss.Text.Playermodel, Window)
 	LabelModel:SizeToContents()
 	LabelModel:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2 - 24)
 	
@@ -174,24 +136,17 @@ function ss:ConfigMenu()
 	Options:SetWide(Window:GetWide() / 4)
 	Options:Dock(RIGHT)
 	
-	local OptionsText = {
-		"Heal when stand",
-		"Heal when in ink",
-		"Reload when stand",
-		"Reload when in ink",
-		"Hide ink overlay",
-	}
 	local OptionsConVar = {
 		"CanHealStand",
 		"CanHealInk",
 		"CanReloadStand",
 		"CanReloadInk",
-		"HideInkOverlay",
+		"DrawInkOverlay",
 	}
 	for i = 0, 4 do
 		local Check = vgui.Create("DCheckBoxLabel", Options)
 		Check:SetPos(4, 4 + 20 * i)
-		Check:SetText(OptionsText[i + 1])
+		Check:SetText(ss.Text.Options[i + 1])
 		Check:SetConVar(self:GetConVarName(OptionsConVar[i + 1]))
 		Check:SetValue(self:GetConVarInt(OptionsConVar[i + 1]))
 		Check:SetDark(true)
