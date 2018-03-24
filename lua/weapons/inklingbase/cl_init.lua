@@ -77,7 +77,6 @@ function SWEP:Initialize()
 	--Our initialize code
 	self.EnoughSubWeapon = true
 	self.PreviousInk = true
-	self.Holstering = false
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:MakeSquidModel()
 	self.JustUsableTime = CurTime() - 1 --For animation of ink tank light
@@ -136,7 +135,7 @@ function SWEP:OnRemove()
 end
 
 function SWEP:Think()
-	if not IsValid(self.Owner) or self.Holstering then return end
+	if not IsValid(self.Owner) or self:GetHolstering() then return end
 	if self:IsFirstTimePredicted() then
 		local enough = self:GetInk() > self.Secondary.TakeAmmo
 		if not self.EnoughSubWeapon and enough then

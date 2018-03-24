@@ -6,6 +6,7 @@ if SERVER then
 		"client/network",
 		"client/userinfo",
 		"const",
+		"npcusableweapons",
 		"shared",
 		"sound",
 		"text",

@@ -6,6 +6,7 @@ include "const.lua"
 include "sound.lua"
 include "text.lua"
 include "weapons.lua"
+include "npcusableweapons.lua"
 
 function ss:MinVector(a, b)
 	local c = Vector()
@@ -155,7 +156,7 @@ end
 function ss:IsValidInkling(ply)
 	if not (IsValid(ply) and isfunction(ply.GetActiveWeapon)) then return end
 	local weapon = ply:GetActiveWeapon()
-	return IsValid(weapon) and weapon.IsSplatoonWeapon and not weapon.Holstering and weapon or nil
+	return IsValid(weapon) and weapon.IsSplatoonWeapon and not weapon:GetHolstering() and weapon or nil
 end
 
 --Squids have a limited movement speed.
@@ -235,7 +236,7 @@ end
 local function PlayerFootstep(ply, pos, foot, sound, volume, filter)
 	if not (IsValid(ply) and isfunction(ply.GetActiveWeapon)) then return end
 	local weapon = ply:GetActiveWeapon()
-	local IsSplatoonWeapon = IsValid(weapon) and weapon.IsSplatoonWeapon and not weapon.Holstering
+	local IsSplatoonWeapon = IsValid(weapon) and weapon.IsSplatoonWeapon and not weapon:GetHolstering()
 	if ((IsSplatoonWeapon and weapon:GetGroundColor() >= 0) or (SERVER and
 	ss:GetSurfaceColor(util.QuickTrace(ply:GetPos(), FootstepTrace, ply)))) then
 		if not (IsSplatoonWeapon and weapon:GetInInk()) and (SERVER or ply ~= LocalPlayer()) then
@@ -315,6 +316,10 @@ hook.Add("OnGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 				if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then icon = "weapons/swep" end
 				weapon.WepSelectIcon = surface.GetTextureID(icon)
 			end
+		end
+		
+		if weapons.Get(c) then
+			list.Add("NPCUsableWeapons", {class = c, title = ss.Text.PrintNames[c]})
 		end
 	end
 end)

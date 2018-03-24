@@ -113,7 +113,6 @@ include "splatoonsweps/shared.lua"
 include "bsp.lua"
 include "inkmanager.lua"
 include "network.lua"
-include "npcusableweapons.lua"
 
 hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function()
 	ss.BSP:Init()
@@ -129,10 +128,10 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 		data = file.Open(path, "wb", "DATA")
 		data:WriteULong(ss.NumSurfaces)
 		data:WriteUShort(table.Count(ss.Displacements))
-		data:WriteFloat(ss.AreaBound)
-		data:WriteFloat(ss.AspectSum)
-		data:WriteFloat(ss.AspectSumX)
-		data:WriteFloat(ss.AspectSumY)
+		data:WriteDouble(ss.AreaBound)
+		data:WriteDouble(ss.AspectSum)
+		data:WriteDouble(ss.AspectSumX)
+		data:WriteDouble(ss.AspectSumY)
 		for node in ss:BSPPairsAll() do
 			local surf = node.Surfaces
 			for i, index in ipairs(surf.Indices) do

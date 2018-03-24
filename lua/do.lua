@@ -32,7 +32,6 @@ if CLIENT then
 		for i, v in ipairs(p) do
 			local v = p[i]
 			local w = p[i % #p + 1]
-			print(v.u, v.v)
 			DebugLine(Vector(v.u, v.v) * c, Vector(w.u, w.v) * c, true)
 			-- DebugLine(v.pos, w.pos, true)
 		end
@@ -43,11 +42,11 @@ if CLIENT then
 		-- end
 	end
 	
-	for k, d in pairs(sp.Displacements) do
-		for _, v in pairs(d.Positions) do
-			DebugText(v.pos, _)
-		end
-	end
+	-- for k, d in pairs(sp.Displacements) do
+		-- for _, v in pairs(d.Positions) do
+			-- DebugText(v.pos, _)
+		-- end
+	-- end
 
 	-- for k, u in pairs(surf.u) do
 		-- local v = surf.v[k]
@@ -68,7 +67,7 @@ if CLIENT then
 	end
 	xy, yx, x, y = xy / #surf.Bounds, yx / #surf.Bounds, x / #surf.Bounds, y / #surf.Bounds
 	SetClipboardText(table.concat({n, b, m, xy, yx, x, y}, "\t"))
-	print(xy, yx, x, y)
+	-- print(xy, yx, x, y)
 	return
 end
 
@@ -92,4 +91,4 @@ end
 -- end
 
 -- file.Write("shot" .. tostring(i) .. ".txt", write)
--- lua_run for _, p in ipairs(player.GetAll()) do if not p:IsBot() then continue end p:StripWeapons() p:Give "weapon_shooter" end
+-- lua_run for _, p in ipairs(player.GetAll()) do if not p:IsBot() then continue end p:StripWeapons() p:Give "weapon_splattershot" end

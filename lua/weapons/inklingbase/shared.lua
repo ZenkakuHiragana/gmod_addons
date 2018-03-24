@@ -56,7 +56,7 @@ function SWEP:SharedDeployBase()
 		self.EnemyInkSound:ChangeVolume(0)
 	end
 	
-	self.Holstering = false
+	self:SetHolstering(false)
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
 	self.SquidSpeedSqr = self.SquidSpeed^2
@@ -86,7 +86,7 @@ function SWEP:SharedHolsterBase()
 	end
 	
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
-	self.Holstering = true
+	self:SetHolstering(true)
 	return true
 end
 
@@ -129,7 +129,7 @@ end
 
 --Begin to use special weapon.
 function SWEP:Reload()
-	if self.Holstering then return end
+	if self:GetHolstering() then return end
 	if game.SinglePlayer() and IsValid(self.Owner) then self:CallOnClient "Reload" end
 	
 end
@@ -171,7 +171,7 @@ end
 
 --Shoot ink.
 function SWEP:PrimaryAttack()
-	if self.Holstering then return end
+	if self:GetHolstering() then return end
 	local canattack = self:CommonFire(true)
 	if game.SinglePlayer() then self:CallOnClient "PrimaryAttack" end
 	if self.CannotStandup then return end
@@ -185,7 +185,7 @@ end
 
 --Use sub weapon
 function SWEP:SecondaryAttack()
-	if self.Holstering then return end
+	if self:GetHolstering() then return end
 	local canattack = self:CommonFire(false)
 	if game.SinglePlayer() then self:CallOnClient "SecondaryAttack" end
 	if self.CannotStandup then return end
@@ -200,7 +200,7 @@ end
 
 local NetworkVarNotifyCallsOnClient = false
 function SWEP:ChangeInInk(name, old, new)
-	if self.Holstering then return end
+	if self:GetHolstering() then return end
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
 			if IsValid(self.Owner) then
@@ -239,7 +239,7 @@ function SWEP:ChangeInInk(name, old, new)
 end
 
 function SWEP:ChangeOnEnemyInk(name, old, new)
-	if self.Holstering then return end
+	if self:GetHolstering() then return end
 	if not NetworkVarNotifyCallsOnClient then
 		if SERVER then
 			if IsValid(self.Owner) then
@@ -291,6 +291,7 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Bool", "InInk") --If owner is in ink.
 	self:AddNetworkVar("Bool", "InWallInk") --If owner is on wall.
 	self:AddNetworkVar("Bool", "OnEnemyInk") --If owner is on enemy ink.
+	self:AddNetworkVar("Bool", "Holstering") --The weapon is being holstered.
 	self:AddNetworkVar("Float", "Ink") --Ink remainig. 0 ~ ss.MaxInkAmount
 	self:AddNetworkVar("Vector", "InkColorProxy") --For material proxy.
 	self:AddNetworkVar("Float", "NextCrouchTime") --Shooting cooldown.

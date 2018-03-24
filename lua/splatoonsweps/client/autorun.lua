@@ -159,21 +159,22 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	)
 	
 	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
-	local CRC = file.Open(path, "rb", "DATA")
+	local CRC = file.Open("data/" .. path, "rb", "GAME")
 	
 	CRC:ReadULong()
 	local write = util.Decompress(CRC:Read(CRC:Size() - CRC:Tell()))
+	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
 	CRC:Close()
 	
 	path = path .. ".txt"
 	file.Write(path, write)
-	local data = file.Open(path, "rb", "DATA")
+	local data = file.Open("data/" .. path, "rb", "GAME")
 	local numsurfs = data:ReadULong()
 	local numdisps = data:ReadUShort()
-	ss.AreaBound = data:ReadFloat()
-	ss.AspectSum = data:ReadFloat()
-	ss.AspectSumX = data:ReadFloat()
-	ss.AspectSumY = data:ReadFloat()
+	ss.AreaBound = data:ReadDouble()
+	ss.AspectSum = data:ReadDouble()
+	ss.AspectSumX = data:ReadDouble()
+	ss.AspectSumY = data:ReadDouble()
 	for _ = 1, numsurfs do
 		local i = data:ReadULong()
 		local p = data:ReadFloat()
@@ -232,7 +233,8 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
 	local rtmergin = 4 / rtsize --arearatio[units/pixel]
-	local arearatio = .0050455266963 * (ss.AreaBound * ss.AspectSum * ss.AspectSumX / ss.AspectSumY / numsurfs / 2500 + numsurfs)^.523795515713613
+	local arearatio = 41.3329546960896 / rtsize * (ss.AreaBound * ss.AspectSum / numsurfs
+		* ss.AspectSumX / ss.AspectSumY / 2500 + numsurfs)^.523795515713613
 	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1

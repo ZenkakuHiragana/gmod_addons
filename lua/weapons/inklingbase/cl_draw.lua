@@ -232,7 +232,7 @@ end
 function SWEP:PreDrawViewModel() render.SetBlend(0) end
 function SWEP:PostDrawViewModel() render.SetBlend(1) end
 function SWEP:ViewModelDrawn()
-	if not (IsValid(self) and IsValid(self.Owner) and self.VElements) or self.Holstering then return end
+	if not (IsValid(self) and IsValid(self.Owner) and self.VElements) or self:GetHolstering() then return end
 	local bone_ent, vm = self.Owner, self.Owner:GetViewModel()
 	self:UpdateBonePositions(vm)
 	
@@ -320,7 +320,7 @@ function SWEP:GetBombMeterPosition(inkconsumption)
 end
 
 function SWEP:DrawWorldModel()
-	if self.Holstering then return end
+	if self:GetHolstering() then return end
 	if self.Owner ~= LocalPlayer() then self:Think() end
 	local bone_ent = self // when the weapon is dropped
 	if IsValid(self.Owner) then

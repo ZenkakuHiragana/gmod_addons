@@ -233,7 +233,7 @@ end
 
 function SWEP:OnRemove() return self:Holster() end
 function SWEP:Think()
-	if not IsValid(self.Owner) or self.Holstering then return end
+	if not IsValid(self.Owner) or self:GetHolstering() then return end
 	if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
 		self:ChangePlayermodel(self.PMTable)
 	end
