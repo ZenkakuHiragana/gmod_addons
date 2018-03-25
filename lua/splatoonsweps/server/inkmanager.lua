@@ -34,22 +34,33 @@ local function AddInkRectangle(ink, newink, sz)
 	local nb, nr = newink.bounds, newink.ratio
 	local n1, n2, n3, n4 = nb[1], nb[2], nb[3], nb[4]
 	for r, z in pairs(ink) do
-		local bounds = r.bounds
-		if not next(bounds) and r.lastratio > .6 then ink[r] = nil continue end
-		for b in pairs(bounds) do
-			local b1, b2, b3, b4 = b[1], b[2], b[3], b[4]
-			if (b3 - b1) * (b4 - b2) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
-			if n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2 then continue end
-			r.lastratio, r.bounds[b] = nr
-			local x, y = {n1, n3, b1, b3}, {n2, n4, b2, b4} sort(x) sort(y)
-			local x1, x2, x3, x4, y1, y2, y3, y4 = x[1], x[2], x[3], x[4], y[1], y[2], y[3], y[4]
-			for _, c in ipairs {
-				{x1, y1, x2, y2}, {x2, y1, x3, y2}, {x3, y1, x4, y2},
-				{x1, y2, x2, y3}, {x2, y2, x3, y3}, {x3, y2, x4, y3},
-				{x1, y3, x2, y4}, {x2, y3, x3, y4}, {x3, y3, x4, y4},
-			} do
-				local c1, c2, c3, c4 = c[1], c[2], c[3], c[4]
-				r.bounds[c] = b1 < c3 and b3 > c1 and b2 < c4 and b4 > c2 and (n1 >= c3 or n3 <= c1 or n2 >= c4 or n4 <= c2) or nil
+		local bounds, lr = r.bounds, r.lastratio
+		if not next(bounds) then
+			if lr > .6 then
+				ink[r] = nil
+			else
+				r.lastratio = lr + 1e-4
+			end
+		else
+			for b in pairs(bounds) do
+				local b1, b2, b3, b4 = b[1], b[2], b[3], b[4]
+				if (b3 - b1) * (b4 - b2) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
+				if n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2 then continue end
+				r.lastratio, r.bounds[b] = nr
+				local x, y = {n1, n3, b1, b3}, {n2, n4, b2, b4} sort(x) sort(y)
+				local x1, x2, x3, x4, y1, y2, y3, y4
+					= x[1], x[2], x[3], x[4], y[1], y[2], y[3], y[4]
+				local t = {
+					{x1, y1, x2, y2}, {x2, y1, x3, y2}, {x3, y1, x4, y2},
+					{x1, y2, x2, y3}, {x2, y2, x3, y3}, {x3, y2, x4, y3},
+					{x1, y3, x2, y4}, {x2, y3, x3, y4}, {x3, y3, x4, y4},
+				}
+				for i = 1, 9 do
+					local ti = t[i]
+					local c1, c2, c3, c4 = ti[1], ti[2], ti[3], ti[4]
+					r.bounds[c] = b1 < c3 and b3 > c1 and b2 < c4 and b4 > c2 and
+						(n1 >= c3 or n3 <= c1 or n2 >= c4 or n4 <= c2) or nil
+				end
 			end
 		end
 	end
@@ -108,12 +119,12 @@ end
 
 local function ProcessQueue()
 	while true do
-		local done = 0
+		-- local done = 0
 		for q in pairs(PaintQueue) do
 			if status(q.co) == "dead" then continue end
 			local ok, msg = resume(q.co, q.pos, q.normal, q.radius, q.color, q.angle, q.inktype, q.ratio)
 			if ok and msg then PaintQueue[q] = nil end
-			done = done + 1
+			-- done = done + 1
 			-- if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then yield() end
 		end
 		
