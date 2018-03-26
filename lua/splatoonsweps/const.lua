@@ -317,15 +317,6 @@ ss.TEXTUREFLAGS = {
 	UNUSED_80000000		= 0x80000000, --
 }
 
-ss.FACEVERT_BITS = 7
-ss.SETUP_BITS = 2
-ss.SETUPMODE = {
-	BEGIN = 0,
-	SURFACE = 1,
-	DISPLACEMENT = 2,
-	INKDATA = 3,
-}
-
 local framepersec = 60
 local inklingspeed = .96 * framepersec
 ss.vector_one = Vector(1, 1, 1)

@@ -1,18 +1,9 @@
 --Splatoon SWEPs library includes
 if SERVER then
-	for _, f in ipairs {
-		"client/autorun",
-		"client/inkmanager",
-		"client/network",
-		"client/userinfo",
-		"const",
-		"npcusableweapons",
-		"shared",
-		"sound",
-		"text",
-		"weapons"
-	} do
-		AddCSLuaFile("splatoonsweps/" .. f .. ".lua")
+	for _, folder in ipairs {"splatoonsweps/", "splatoonsweps/client"} do
+		for _, f in ipairs(file.Find(folder .. "*.lua", "LUA")) do
+			AddCSLuaFile(folder .. f)
+		end
 	end
 end
 

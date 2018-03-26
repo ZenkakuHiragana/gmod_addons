@@ -56,8 +56,8 @@ local function AddInkRectangle(ink, newink, sz)
 					{x1, y3, x2, y4}, {x2, y3, x3, y4}, {x3, y3, x4, y4},
 				}
 				for i = 1, 9 do
-					local ti = t[i]
-					local c1, c2, c3, c4 = ti[1], ti[2], ti[3], ti[4]
+					local c = t[i]
+					local c1, c2, c3, c4 = c[1], c[2], c[3], c[4]
 					r.bounds[c] = b1 < c3 and b3 > c1 and b2 < c4 and b4 > c2 and
 						(n1 >= c3 or n3 <= c1 or n2 >= c4 or n4 <= c2) or nil
 				end

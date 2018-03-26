@@ -99,75 +99,10 @@ function ss:ClearAllInk()
 	game.GetWorld():RemoveAllDecals()
 end
 
-hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function()
-	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
-	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
-	
-	--21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
-	rt.BaseTexture = GetRenderTargetEx(
-		rt.BaseTextureName,
-		rtsize, rtsize,
-		RT_SIZE_NO_CHANGE,
-		MATERIAL_RT_DEPTH_NONE,
-		rt.BaseTextureFlags,
-		CREATERENDERTARGETFLAGS_HDR,
-		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
-	)
-	rtsize = math.min(rt.BaseTexture:Width(), rt.BaseTexture:Height())
-	rt.Normalmap = GetRenderTargetEx(
-		rt.NormalmapName,
-		rtsize, rtsize,
-		RT_SIZE_NO_CHANGE,
-		MATERIAL_RT_DEPTH_NONE,
-		rt.NormalmapFlags,
-		CREATERENDERTARGETFLAGS_HDR,
-		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
-	)
-	rt.Lightmap = GetRenderTargetEx(
-		rt.LightmapName,
-		rtsize, rtsize,
-		RT_SIZE_NO_CHANGE,
-		MATERIAL_RT_DEPTH_NONE,
-		rt.LightmapFlags,
-		CREATERENDERTARGETFLAGS_HDR,
-		IMAGE_FORMAT_RGBA8888 --8192x8192, 256MB
-	)
-	rt.Material = CreateMaterial(
-		rt.RenderTargetName,
-		"LightmappedGeneric",
-		{
-			["$basetexture"] = rt.BaseTextureName,
-			["$bumpmap"] = rt.NormalmapName,
-			["$ssbump"] = "1",
-			["$nolod"] = "1",
-			["$alpha"] = ".95",
-			["$alphatest"] = "1",
-			["$alphatestreference"] = ".5",
-			["$allowalphatocoverage"] = "1",
-		}
-	)
-	rt.WaterMaterial = CreateMaterial(
-		rt.WaterMaterialName,
-		"Refract",
-		{
-			["$normalmap"] = rt.NormalmapName,
-			["$nolod"] = "1",
-			["$bluramount"] = "2",
-			["$refractamount"] = ".1",
-			["$refracttint"] = "[1 1 1]",
-		}
-	)
-	
-	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
-	local CRC = file.Open("data/" .. path, "rb", "GAME")
-	
-	CRC:ReadULong()
-	local write = util.Decompress(CRC:Read(CRC:Size() - CRC:Tell()))
+function ss:PrepareInkSurface(write)
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
-	CRC:Close()
-	
-	path = path .. ".txt"
-	file.Write(path, write)
+	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
+	file.Write(path, util.Decompress(write:sub(5)))
 	local data = file.Open("data/" .. path, "rb", "GAME")
 	local numsurfs = data:ReadULong()
 	local numdisps = data:ReadUShort()
@@ -369,6 +304,80 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	ss.RenderTarget.Ready = true
 	net.Start "SplatoonSWEPs: Ready to splat"
 	net.SendToServer()
+end
+
+hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function()
+	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
+	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
+	
+	--21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
+	rt.BaseTexture = GetRenderTargetEx(
+		rt.BaseTextureName,
+		rtsize, rtsize,
+		RT_SIZE_NO_CHANGE,
+		MATERIAL_RT_DEPTH_NONE,
+		rt.BaseTextureFlags,
+		CREATERENDERTARGETFLAGS_HDR,
+		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
+	)
+	rtsize = math.min(rt.BaseTexture:Width(), rt.BaseTexture:Height())
+	rt.Normalmap = GetRenderTargetEx(
+		rt.NormalmapName,
+		rtsize, rtsize,
+		RT_SIZE_NO_CHANGE,
+		MATERIAL_RT_DEPTH_NONE,
+		rt.NormalmapFlags,
+		CREATERENDERTARGETFLAGS_HDR,
+		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
+	)
+	rt.Lightmap = GetRenderTargetEx(
+		rt.LightmapName,
+		rtsize, rtsize,
+		RT_SIZE_NO_CHANGE,
+		MATERIAL_RT_DEPTH_NONE,
+		rt.LightmapFlags,
+		CREATERENDERTARGETFLAGS_HDR,
+		IMAGE_FORMAT_RGBA8888 --8192x8192, 256MB
+	)
+	rt.Material = CreateMaterial(
+		rt.RenderTargetName,
+		"LightmappedGeneric",
+		{
+			["$basetexture"] = rt.BaseTextureName,
+			["$bumpmap"] = rt.NormalmapName,
+			["$ssbump"] = "1",
+			["$nolod"] = "1",
+			["$alpha"] = ".95",
+			["$alphatest"] = "1",
+			["$alphatestreference"] = ".5",
+			["$allowalphatocoverage"] = "1",
+		}
+	)
+	rt.WaterMaterial = CreateMaterial(
+		rt.WaterMaterialName,
+		"Refract",
+		{
+			["$normalmap"] = rt.NormalmapName,
+			["$nolod"] = "1",
+			["$bluramount"] = "2",
+			["$refractamount"] = ".1",
+			["$refracttint"] = "[1 1 1]",
+		}
+	)
+	
+	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
+	local data = file.Open("data/" .. path, "rb", "GAME")
+	if data:Size() < 4 or data:ReadULong() ~= util.CRC(
+		file.Read("maps/" .. game.GetMap() .. ".bsp", "GAME")) then
+		net.Start "SplatoonSWEPs: Redownload ink data"
+		net.SendToServer()
+		data:Close()
+		ss.Data = ""
+		return
+	end
+	
+	data:Close()
+	ss:PrepareInkSurface(file.Read("data/" .. path, "GAME"))
 end)
 
 hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)

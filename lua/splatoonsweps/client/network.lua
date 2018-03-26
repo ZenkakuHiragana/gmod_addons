@@ -3,7 +3,7 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
-net.Receive("SplatoonSWEPs: DrawInk", function(...)
+net.Receive("SplatoonSWEPs: DrawInk", function()
 	local facenumber = net.ReadInt(ss.SURFACE_INDEX_BITS)
 	local color = net.ReadUInt(ss.COLOR_BITS)
 	local inktype = net.ReadUInt(4)
@@ -25,7 +25,7 @@ net.Receive("SplatoonSWEPs: DrawInk", function(...)
 	}] = true
 end)
 
-net.Receive("SplatoonSWEPs: Send error message from server", function(...)
+net.Receive("SplatoonSWEPs: Send error message from server", function()
 	local msg = net.ReadString()
 	local icon = net.ReadUInt(3)
 	local duration = net.ReadUInt(4)
@@ -33,6 +33,21 @@ net.Receive("SplatoonSWEPs: Send error message from server", function(...)
 end)
 
 local DamageSounds = {"TakeDamage", "DealDamage", "DealDamageCritical"}
-net.Receive("SplatoonSWEPs: Play damage sound", function(...)
+net.Receive("SplatoonSWEPs: Play damage sound", function()
 	surface.PlaySound(ss[DamageSounds[net.ReadUInt(2)]])
+end)
+
+local redownload = ""
+net.Receive("SplatoonSWEPs: Redownload ink data", function()
+	local finished = net.ReadBool()
+	local size = net.ReadUInt(16)
+	local data = net.ReadData(size)
+	redownload = redownload .. data
+	if not finished then
+		net.Start "SplatoonSWEPs: Redownload ink data"
+		net.SendToServer()
+		return
+	end
+	
+	ss:PrepareInkSurface(redownload)
 end)
