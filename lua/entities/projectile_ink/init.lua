@@ -153,9 +153,8 @@ function ENT:PhysicsCollide(coldata, collider)
 		d:SetMaxDamage(self.Damage)
 		d:SetReportedPosition(self:GetPos())
 		d:SetAttacker(o)
-		if IsValid(o) and isfunction(o.GetActiveWeapon) and IsValid(o:GetActiveWeapon()) then
-			d:SetInflictor(o:GetActiveWeapon())
-		end
+		d:SetInflictor(IsValid(o) and isfunction(o.GetActiveWeapon) and
+		IsValid(o:GetActiveWeapon()) and o:GetActiveWeapon() or game.GetWorld())
 		return coldata.HitEntity:TakeDamageInfo(d)
 	end
 end

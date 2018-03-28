@@ -277,11 +277,11 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 		if CLIENT then return end
 		self:AddSchedule(200 / ss.ToHammerHealth * ss.FrameToSec, function(self, schedule)
 			if not self:GetOnEnemyInk() then return true end --Enemy ink damage
-			if self.Owner:Health() > self.Owner:GetMaxHealth() / 2 then
-				local d = DamageInfo()
-				d:SetDamage(1)
-				self.Owner:TakeDamageInfo(d)
-			end
+			local d = DamageInfo()
+			d:SetAttacker(game.GetWorld())
+			d:SetDamage(self.Owner:Health() > self.Owner:GetMaxHealth() / 2 and 1 or 0)
+			d:SetInflictor(self.Owner)
+			self.Owner:TakeDamageInfo(d)
 		end)
 		
 		self:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)

@@ -120,7 +120,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 	collectgarbage "collect"
 	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
 	local data = file.Open(path, "rb", "DATA")
-	local mapCRC = util.CRC(file.Read("maps/" .. game.GetMap() .. ".bsp", "rb", true) or "")
+	local mapCRC = tonumber(util.CRC(file.Read("maps/" .. game.GetMap() .. ".bsp", true) or "")) or 0
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
 	if not data or data:Size() < 4 or data:ReadULong() ~= mapCRC then
 		file.Write(path, "")
@@ -182,8 +182,8 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 		file.Write(path, "")
 		data = file.Open(path, "wb", "DATA")
 		data:WriteULong(mapCRC)
+		for c in write:gmatch "." do data:WriteByte(c:byte()) end
 		data:Close()
-		file.Append(path, write)
 	end
 	
 	resource.AddSingleFile("data/" .. path)
@@ -204,13 +204,14 @@ end)
 
 hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, dmg)
 	local atk = dmg:GetAttacker()
+	if atk ~= game.GetWorld() and not (IsValid(atk) and ent:Health() > 0) then return end
 	if atk.IsSplatoonProjectile then return true end
-	if not (IsValid(dmg:GetInflictor()) and dmg:GetInflictor().IsSplatoonWeapon and ent:Health() > 0) then return end
 	local entweapon = ss:IsValidInkling(ent)
 	if entweapon then
 		if entweapon.ColorCode == dmg:GetInflictor().ColorCode then return true end
 		entweapon.HealSchedule:SetDelay(45 * ss.FrameToSec)
-		if ent:IsPlayer() then
+		if ent:IsPlayer() and IsValid(dmg:GetInflictor())
+			and dmg:GetInflictor().IsSplatoonWeapon then
 			net.Start "SplatoonSWEPs: Play damage sound"
 			net.WriteUInt(1, 2)
 			net.Send(ent)

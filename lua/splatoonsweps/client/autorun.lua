@@ -20,7 +20,6 @@ SplatoonSWEPs = SplatoonSWEPs or {
 		RenderTargetName = "splatoonsweps_rendertarget",
 		WaterMaterialName = "splatoonsweps_watermaterial",
 	},
-	SetupProgress = 0,
 	SequentialSurfaces = {
 		Angles = {},
 		Areas = {},
@@ -101,7 +100,7 @@ end
 
 function ss:PrepareInkSurface(write)
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
-	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
+	local path = "splatoonsweps/" .. game.GetMap() .. "_decompress.txt"
 	file.Write(path, util.Decompress(write:sub(5)))
 	local data = file.Open("data/" .. path, "rb", "GAME")
 	local numsurfs = data:ReadULong()
@@ -366,9 +365,9 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	)
 	
 	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
-	local data = file.Open("data/" .. path, "rb", "GAME")
-	if data:Size() < 4 or data:ReadULong() ~= util.CRC(
-		file.Read("maps/" .. game.GetMap() .. ".bsp", "GAME")) then
+	local data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, true)
+	if (data:Size() < 4 or data:ReadULong() ~= tonumber(util.CRC(
+		file.Read("maps/" .. game.GetMap() .. ".bsp", true) or ""))) then
 		net.Start "SplatoonSWEPs: Redownload ink data"
 		net.SendToServer()
 		data:Close()
@@ -377,7 +376,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	end
 	
 	data:Close()
-	ss:PrepareInkSurface(file.Read("data/" .. path, "GAME"))
+	ss:PrepareInkSurface(file.Read("data/" .. path, true))
 end)
 
 hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)

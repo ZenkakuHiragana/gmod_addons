@@ -49,5 +49,6 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function()
 		return
 	end
 	
+	file.Write("splatoonsweps/" .. game.GetMap() .. ".txt", redownload)
 	ss:PrepareInkSurface(redownload)
 end)
