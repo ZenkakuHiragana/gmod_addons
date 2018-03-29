@@ -80,6 +80,7 @@ function SWEP:Initialize()
 end
 
 function SWEP:Deploy()
+	self.SurpressDrawingVM = false
 	if self:IsFirstTimePredicted() then return self:ClientDeployBase() end
 end
 
@@ -90,17 +91,19 @@ function SWEP:ClientDeployBase()
 		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 		self:ChangeHullDuck()
-		local vm = self.Owner:GetViewModel()
-		if IsValid(vm) then self:BackupBonePositions(vm) end
+		-- self.Manip = self.Owner:GetManipulateBoneAngles(0)
+		-- local vm = self.Owner:GetViewModel()
+		-- if IsValid(vm) then self:BackupBonePositions(vm) end
 	end
 	
 	return self:SharedDeployBase()
 end
 
 function SWEP:Holster()
+	self.SurpressDrawingVM = true
 	if not (IsValid(self.Owner) and self:IsFirstTimePredicted()) then return end
 	if self.Owner:IsPlayer() then
-		self.Manip = self.Owner:GetManipulateBoneAngles(0)
+		-- self.Owner:ManipulateBoneAngles(0, self.Manip or angle_zero)
 		local vm = self.Owner:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
 		if self:GetPMID() ~= ss.PLAYER.NOSQUID and self.HullDuckMins then
@@ -122,12 +125,6 @@ function SWEP:OnRemove()
 	end
 	
 	if IsValid(self.Squid) then self.Squid:Remove() end
-	if IsValid(self.Owner) and self.Owner:IsPlayer() then
-		local vm = isfunction(self.Owner.GetViewModel) and self.Owner:GetViewModel()
-		if IsValid(vm) then self:ResetBonePositions(vm) end
-		self.Owner:ManipulateBoneAngles(0, self.Manip or angle_zero)
-	end
-	
 	return self:Holster()
 end
 

@@ -49,6 +49,7 @@ function ENT:Initialize()
 	ph:ApplyForceCenter(vector_origin)
 	ph:EnableGravity(self.IsDrop or false)
 	self.InitPos = self:GetPos()
+	self.InitTime = CurTime()
 	self.Straight = self.Straight or 0
 	self.ColorCode = self.ColorCode or 0
 	self.SplashNum = self.SplashNum or -1
@@ -83,7 +84,7 @@ function ENT:Initialize()
 	
 	self.ColRadius = nil
 	util.SpriteTrail(self, 0, ss:GetColor(self.ColorCode), false,
-	self.TrailWidth or 8, self.TrailEnd or 2, self.TrailLife or .08,
+	self.TrailWidth or 10, self.TrailEnd or 4, self.TrailLife or .12,
 	1 / ((self.TrailWidth or 8) + (self.TrailEnd or 2)), "effects/beam_generic01.vmt")
 end
 
@@ -95,7 +96,7 @@ end
 
 function ENT:PhysicsSimulate(phys, dt)
 	local vel = phys:GetVelocity()
-	if math.max(0, CurTime() - (self.InitTime or CurTime())) >= self.Straight then
+	if math.max(0, CurTime() - self.InitTime) >= self.Straight then
 		local accel = (math.NormalizeAngle(vel:Angle().pitch - phys:GetAngles().roll) / dt - phys:GetAngleVelocity().x) / dt
 		vel.z = vel.z > 0 and vel.z * 2 or 0
 		return Vector(accel), -vel / (dt * self.InitVelocityLength) + physenv.GetGravity() * 5, SIM_GLOBAL_ACCELERATION
@@ -134,7 +135,6 @@ function ENT:PhysicsUpdate(phys)
 		end
 	end
 	
-	self.InitTime = self.InitTime or CurTime()
 	phys:EnableGravity(math.max(0, CurTime() - self.InitTime) >= self.Straight)
 	if self.SplashCount > self.SplashNum then return end
 	local len = (phys:GetPos() - self.InitPos):Length2DSqr()
@@ -177,7 +177,7 @@ function ENT:PhysicsCollide(coldata, collider)
 		coldata.HitObject:SetVelocityInstantaneous(coldata.TheirOldVelocity)
 	end
 	
-	local t = math.max(0, CurTime() - (self.InitTime or CurTime()))
+	local t = math.max(0, CurTime() - self.InitTime)
 	if coldata.HitEntity:IsWorld() then
 		local tr = util.QuickTrace(coldata.HitPos, coldata.HitNormal, self)
 		if tr.HitSky then return end

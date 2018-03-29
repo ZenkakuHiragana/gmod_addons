@@ -95,9 +95,9 @@ function SWEP:SharedDeployBase()
 end
 
 function SWEP:SharedHolsterBase()
-	StopLoopSound(self)
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
 	self:SetHolstering(true)
+	StopLoopSound(self)
 	return true
 end
 

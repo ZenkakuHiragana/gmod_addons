@@ -1,6 +1,7 @@
 
 --The way to draw weapon models comes from SWEP Construction Kit.
 local ss = SplatoonSWEPs
+SWEP.BackupBoneInfo = {}
 SWEP.WElements = {
 	inktank = {
 		type = "Model",
@@ -34,15 +35,15 @@ SWEP.WElements = {
 function SWEP:ResetBonePositions(vm)
 	if not vm:GetBoneCount() then return end
 	for i = 0, vm:GetBoneCount() do
-		vm:ManipulateBoneScale(i, self.BackupBoneInfo[i].Scale or ss.vector_one)
-		vm:ManipulateBonePosition(i, self.BackupBoneInfo[i].Pos or vector_origin)
-		vm:ManipulateBoneAngles(i, self.BackupBoneInfo[i].Angle or angle_zero)
+		local info = self.BackupBoneInfo[i] or {}
+		vm:ManipulateBoneScale(i, info.Scale or ss.vector_one)
+		vm:ManipulateBonePosition(i, info.Pos or vector_origin)
+		vm:ManipulateBoneAngles(i, info.Angle or angle_zero)
 	end
 end
 
 function SWEP:BackupBonePositions(vm)
 	if not vm:GetBoneCount() then return end
-	self.BackupBoneInfo = {}
 	for i = 0, vm:GetBoneCount() do
 		self.BackupBoneInfo[i] = {
 			Scale = vm:GetManipulateBoneScale(i),
@@ -249,7 +250,8 @@ end
 function SWEP:PreDrawViewModel() render.SetBlend(0) end
 function SWEP:PostDrawViewModel() render.SetBlend(1) end
 function SWEP:ViewModelDrawn()
-	if not (IsValid(self) and IsValid(self.Owner) and self.VElements) or self:GetHolstering() then return end
+	if self.SurpressDrawingVM or self:GetHolstering() or
+	not (IsValid(self) and IsValid(self.Owner) and self.VElements) then return end
 	local bone_ent, vm = self.Owner, self.Owner:GetViewModel()
 	self:UpdateBonePositions(vm)
 	
