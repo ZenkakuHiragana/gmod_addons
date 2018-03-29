@@ -25,12 +25,14 @@ net.Receive("SplatoonSWEPs: DrawInk", function()
 	}] = true
 end)
 
-net.Receive("SplatoonSWEPs: Send error message from server", function()
+net.Receive("SplatoonSWEPs: Send ink cleanup", ss.ClearAllInk)
+net.Receive("SplatoonSWEPs: Send an error message", function()
 	local msg = net.ReadString()
 	local icon = net.ReadUInt(3)
 	local duration = net.ReadUInt(4)
 	notification.AddLegacy(msg, icon, duration)
 end)
+
 
 local DamageSounds = {"TakeDamage", "DealDamage", "DealDamageCritical"}
 net.Receive("SplatoonSWEPs: Play damage sound", function()

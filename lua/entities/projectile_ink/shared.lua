@@ -2,8 +2,9 @@
 	The main projectile entity of Splatoon SWEPS!!!
 ]]
 
+ENT.Base = "base_anim"
 ENT.Type = "anim"
-ENT.FlyingModel = Model "models/blooryevan/ink/inkprojectile.mdl"
+ENT.FlyingModel = Model "models/Items/grenadeAmmo.mdl"
 ENT.IsSplatoonProjectile = true
 function ENT:SharedInit(mdl)
 	self:SetModel(mdl or self.FlyingModel)
@@ -11,6 +12,7 @@ function ENT:SharedInit(mdl)
 	self:SetCustomCollisionCheck(true)
 	self:SetMoveCollide(MOVECOLLIDE_FLY_SLIDE)
 	self:SetNoDraw(true)
+	self:SetSolidFlags(FSOLID_NOT_STANDABLE)
 end
 
 function ENT:SetupDataTables()

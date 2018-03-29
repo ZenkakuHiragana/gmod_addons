@@ -5,8 +5,31 @@ AddCSLuaFile "shared.lua"
 include "shared.lua"
 
 ENT.DisableDuplicator = true
+ENT.NoCollide = {}
+ENT.NoCollideFilter = {}
 local ss = SplatoonSWEPs
 local dropangle = Angle(0, 0, 90)
+local function MakeNoCollide(self, ent)
+	if IsValid(self.NoCollide[ent]) then return end
+	local ps, pe = self:GetPhysicsObject(), ent:GetPhysicsObject()
+	if not (IsValid(ps) and IsValid(pe)) then return end
+	local nocol = ents.Create "logic_collision_pair"
+	nocol:SetKeyValue("startdisabled", 0)
+	nocol:SetPhysConstraintObjects(ps, pe)
+	nocol:Spawn()
+	nocol:Activate()
+	nocol:Input "DisableCollisions"
+	self.NoCollide[ent] = nocol
+	table.insert(self.NoCollideFilter, ent)
+end
+
+local function RemoveNoCollide(self)
+	if not IsValid(self.NoCollide[game.GetWorld()]) then return end
+	local n = self.NoCollide[game.GetWorld()]
+	n:Input "EnableCollisions"
+	n:Remove()
+end
+
 function ENT:GetRadius(min, rad)
 	return math.Remap(math.Clamp(self.InitPos.z - self:GetPos().z,
 		ss.mPaintNearDistance, ss.mPaintFarDistance),
@@ -17,7 +40,9 @@ function ENT:Initialize()
 	if not file.Exists(self.FlyingModel, "GAME") then return self:Remove() end
 	self.Hit = false
 	self:SharedInit()
-	self:PhysicsInitSphere(self.ColRadius or ss.mColRadius, "watermelon")
+	self.ColRadius = self.ColRadius or ss.mColRadius
+	self.ColBound = ss.vector_one * self.ColRadius * 1.1
+	self:PhysicsInitSphere(self.ColRadius, "watermelon")
 	if not self.IsDrop then self:StartMotionController() end
 	local ph = self:GetPhysicsObject()
 	if not IsValid(ph) then return end
@@ -60,8 +85,12 @@ function ENT:Initialize()
 	util.SpriteTrail(self, 0, ss:GetColor(self.ColorCode), false,
 	self.TrailWidth or 8, self.TrailEnd or 2, self.TrailLife or .08,
 	1 / ((self.TrailWidth or 8) + (self.TrailEnd or 2)), "effects/beam_generic01.vmt")
-	
-	self.emulatedelay = math.sqrt(2 / physenv.GetGravity():Length())
+end
+
+function ENT:OnRemove()
+	for _, n in pairs(self.NoCollide) do
+		if IsValid(n) then n:Remove() end
+	end
 end
 
 function ENT:PhysicsSimulate(phys, dt)
@@ -81,7 +110,29 @@ local splashrandom = {-1, 0, 1}
 function ENT:PhysicsUpdate(phys)
 	if not (IsValid(phys) and self:IsInWorld()) then
 		return SafeRemoveEntityDelayed(self, 0)
-	elseif self.IsDrop then return end
+	elseif self.IsDrop then
+		return
+	end
+	
+	local p, b = phys:GetPos(), self.ColBound
+	local t = {
+		start = p, endpos = p,
+		mins = -b, maxs = b,
+		filter = self.NoCollideFilter,
+		mask = MASK_SHOT_PORTAL,
+	}
+	local tr = util.TraceHull(t)
+	if tr.HitWorld then
+		RemoveNoCollide(self)
+	else
+		t.mask = MASK_SOLID
+		tr = util.TraceHull(t)
+		if not tr.Hit then
+			RemoveNoCollide(self)
+		elseif tr.Entity == game.GetWorld() or IsValid(tr.Entity) then
+			MakeNoCollide(self, tr.Entity)
+		end
+	end
 	
 	self.InitTime = self.InitTime or CurTime()
 	phys:EnableGravity(math.max(0, CurTime() - self.InitTime) >= self.Straight)
@@ -109,23 +160,23 @@ function ENT:PhysicsUpdate(phys)
 	splash.InkType = math.random(1, 3)
 	splash:Spawn()
 	splash:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-	splash:SetModelScale(.5)
 	splash.InitPos = self.InitPos
 	splash.IsDrop = true
-	-- local tr = util.QuickTrace(self.InitPos
-		-- + self.InitVelocity:GetNormalized() * nextlen
-		-- - vector_up * 6, vector_up * -32768, self)
-	-- local radius = self.SplashRadius or self.InkRadius
-	-- local color, yaw = self.ColorCode, self.InkYaw
-	-- radius = self:GetRadius(radius * self.MinRadius / self.InkRadius, radius)
-	-- timer.Simple(math.sqrt(phys:GetPos().z - tr.HitPos.z) * self.emulatedelay, function()
-		-- ss.InkManager.AddQueue(tr.HitPos, tr.HitNormal, radius, color, yaw, math.random(1, 3), 1)
-	-- end)
+	for _, p in ipairs(player.GetAll()) do
+		cleanup.Add(p, SplatoonSWEPs.CleanupTypeInk, splash)
+	end
 end
 
 local MAX_SLOPE = math.cos(math.rad(45))
 function ENT:PhysicsCollide(coldata, collider)
 	SafeRemoveEntityDelayed(self, 0)
+	if IsValid(coldata.HitEntity) and coldata.HitEntity:GetMaterialType() == MAT_GRATE then
+		collider:EnableCollisions(false)
+		collider:EnableCollisions(true)
+		MakeNoCollide(self, coldata.HitEntity)
+		coldata.HitObject:SetVelocityInstantaneous(coldata.TheirOldVelocity)
+	end
+	
 	local t = math.max(0, CurTime() - (self.InitTime or CurTime()))
 	if coldata.HitEntity:IsWorld() then
 		local tr = util.QuickTrace(coldata.HitPos, coldata.HitNormal, self)

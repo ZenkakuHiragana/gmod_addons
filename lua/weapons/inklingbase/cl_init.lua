@@ -68,12 +68,6 @@ function SWEP:Initialize()
 	self:CreateModels(self.VElements) --create viewmodels
 	self:CreateModels(self.WElements) --create worldmodels
 	
-	--init view model bone build function
-	if IsValid(self.Owner) and self.Owner:IsPlayer() then
-		local vm = self.Owner:GetViewModel()
-		if IsValid(vm) then self:ResetBonePositions(vm) end
-	end
-	
 	--Our initialize code
 	self.EnoughSubWeapon = true
 	self.PreviousInk = true
@@ -96,6 +90,8 @@ function SWEP:ClientDeployBase()
 		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 		self:ChangeHullDuck()
+		local vm = self.Owner:GetViewModel()
+		if IsValid(vm) then self:BackupBonePositions(vm) end
 	end
 	
 	return self:SharedDeployBase()
@@ -104,6 +100,7 @@ end
 function SWEP:Holster()
 	if not (IsValid(self.Owner) and self:IsFirstTimePredicted()) then return end
 	if self.Owner:IsPlayer() then
+		self.Manip = self.Owner:GetManipulateBoneAngles(0)
 		local vm = self.Owner:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
 		if self:GetPMID() ~= ss.PLAYER.NOSQUID and self.HullDuckMins then
@@ -125,10 +122,10 @@ function SWEP:OnRemove()
 	end
 	
 	if IsValid(self.Squid) then self.Squid:Remove() end
-	if IsValid(self.Owner) then
+	if IsValid(self.Owner) and self.Owner:IsPlayer() then
 		local vm = isfunction(self.Owner.GetViewModel) and self.Owner:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
-		self.Owner:ManipulateBoneAngles(0, angle_zero)
+		self.Owner:ManipulateBoneAngles(0, self.Manip or angle_zero)
 	end
 	
 	return self:Holster()

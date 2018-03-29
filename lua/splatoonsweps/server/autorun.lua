@@ -36,7 +36,9 @@ end
 
 
 function ss:ClearAllInk()
-	BroadcastLua "SplatoonSWEPs:ClearAllInk()"
+	net.Start "SplatoonSWEPs: Send ink cleanup"
+	net.Send(ss.PlayersReady)
+	
 	ss.InkCounter = 0
 	for node in ss:BSPPairsAll() do
 		for i = 1, #node.Surfaces.InkCircles do
@@ -204,7 +206,7 @@ end)
 
 hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, dmg)
 	local atk = dmg:GetAttacker()
-	if atk ~= game.GetWorld() and not (IsValid(atk) and ent:Health() > 0) then return end
+	if atk ~= game.GetWorld() and not (IsValid(atk) and ent:Health() > 0 and ss:IsValidInkling(atk)) then return end
 	if atk.IsSplatoonProjectile then return true end
 	local entweapon = ss:IsValidInkling(ent)
 	if entweapon then

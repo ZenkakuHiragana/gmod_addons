@@ -5,6 +5,7 @@ if not ss then return end
 
 util.AddNetworkString "SplatoonSWEPs: DrawInk"
 util.AddNetworkString "SplatoonSWEPs: Send an error message"
+util.AddNetworkString "SplatoonSWEPs: Send ink cleanup"
 util.AddNetworkString "SplatoonSWEPs: Play damage sound"
 util.AddNetworkString "SplatoonSWEPs: Ready to splat"
 util.AddNetworkString "SplatoonSWEPs: Redownload ink data"
@@ -26,4 +27,9 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function(_, ply)
 	net.Send(ply)
 	print("Redownloading ink data to", ply,
 	"(" .. math.floor(startpos / bps) .. "/" .. math.floor(data:len() / bps) .. ")")
+end)
+
+net.Receive("SplatoonSWEPs: Send ink cleanup", function(_, ply)
+	if not ply:IsAdmin() then return end
+	ss:ClearAllInk()
 end)

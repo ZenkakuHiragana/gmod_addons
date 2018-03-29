@@ -7,6 +7,7 @@ include "sound.lua"
 include "text.lua"
 include "weapons.lua"
 include "npcusableweapons.lua"
+cleanup.Register(ss.CleanupTypeInk)
 
 function ss:MinVector(a, b)
 	local c = Vector()
@@ -262,31 +263,14 @@ end
 
 --FIXME: ShouldCollide
 local bound = ss.vector_one * 10
-hook.Add("ShouldCollide", "SplatoonSWEPs: Ink go through grates", function(ent1, ent2)
-	local class1, class2 = ent1:GetClass(), ent2:GetClass()
-	local collide1, collide2 = class1 == "projectile_ink", class2 == "projectile_ink"
-	if collide1 == collide2 then return false end
-	-- local wep1 = isfunction(ent1.GetActiveWeapon) and IsValid(ent1:GetActiveWeapon()) and ent1:GetActiveWeapon()
-	-- local wep2 = isfunction(ent2.GetActiveWeapon) and IsValid(ent2:GetActiveWeapon()) and ent2:GetActiveWeapon()
-	-- if wep1 and wep2 then
-		
-	-- end
-	local ink, targetent = ent1, ent2
-	if class2 == "projectile_ink" then
-		if class1 == clasname then return false end
-		ink, targetent, class1, class2 = targetent, ink, class2, class1
-	end
-	if class1 ~= "projectile_ink" then return true end
-	if SERVER and targetent:GetMaterialType() == MAT_GRATE then return false end
-	local dir = ink:GetVelocity()
-	local filter = player.GetAll()
-	table.insert(filter, ink)
-	local tr = util.TraceLine({
-		start = ink:GetPos(),
-		endpos = ink:GetPos() + dir,
-		filter = filter,
-	})
-	return tr.MatType ~= MAT_GRATE
+hook.Add("ShouldCollide", "SplatoonSWEPs: Ink go through fences", function(ent1, ent2)
+	local ink, ent = ent1, ent2
+	local c1, c2 = ent1.IsSplatoonProjectile or false, ent2.IsSplatoonProjectile or false
+	if c1 == c2 then return false end
+	if c2 then ink, ent, c1, c2 = ent, ink, c2, c1 end
+	if not c1 then return true end
+	if SERVER and ent:GetMaterialType() == MAT_GRATE then return false end
+	return util.QuickTrace(ink:GetPos(), ink:GetVelocity(), table.ForceInsert(player.GetAll(), ink)).MatType ~= MAT_GRATE
 end)
 
 hook.Add("PhysgunPickup", "SplatoonSWEPs: Ink cannot be grabbed", function(ply, ent)

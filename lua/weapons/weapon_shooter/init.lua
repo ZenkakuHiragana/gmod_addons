@@ -2,6 +2,12 @@
 AddCSLuaFile "shared.lua"
 include "shared.lua"
 
+local function AddCleanup(e)
+	for _, p in ipairs(player.GetAll()) do
+		cleanup.Add(p, SplatoonSWEPs.CleanupTypeInk, e)
+	end
+end
+
 function SWEP:ServerInit()
 	self.SplashInitMul = 0
 	self.SplashInitRandom = 0
@@ -54,6 +60,7 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p.InitVelocityLength = self.Primary.InitVelocity / SplatoonSWEPs.ToHammerUnitsPerSec
 	p.InkType = math.random(4, 9)
 	p:Spawn()
+	AddCleanup(p)
 	
 	if SplashInitMul > 0 then return end
 	self.SplashInitRandom = self.SplashInitRandom + 1
@@ -75,7 +82,7 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p.IsDrop = true
 	p:Spawn()
 	p:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-	p:SetModelScale(.5)
+	AddCleanup(p)
 end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)

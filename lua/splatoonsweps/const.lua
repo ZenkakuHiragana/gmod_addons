@@ -276,6 +276,7 @@ function ss:GetColor(colorid)
 	return InkColors[colorid or math.random(self.MAX_COLORS)]
 end
 
+ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
 ss.MAX_COLORS = #InkColors
 ss.COLOR_BITS = 6

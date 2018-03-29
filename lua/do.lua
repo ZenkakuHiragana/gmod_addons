@@ -79,6 +79,26 @@ end
 	-- end
 -- end
 
+local c = 17
+local dir = Vector(100, 0, 0) * 0
+local mins, maxs = -Vector(c, c, c), Vector(c, c, c)
+for _, e in ipairs(ents.FindByClass "ent_test") do
+	local p = e:GetPos()
+	local tr = util.TraceHull {
+		start = p,
+		endpos = p,
+		mins = mins, maxs = maxs,
+		filter = e,
+	}
+	DebugSphere(tr.HitPos, 2.5, true)
+	DebugPoint(p, 5, true)
+	DebugPoint(p + dir, 1, true)
+	DebugVector(p, dir, true)
+	DebugBox(p + mins, p + maxs)
+	-- DebugBox(p + dir + mins, p + dir + maxs)
+	-- DebugBox(tr.HitPos + mins, tr.HitPos + maxs)
+	PrintTable(tr)
+end
 
 -- local mat = Material("splatoonsweps/inkshot/mask/shot" .. tostring(i) .. ".png")
 -- local width, height = mat:Width(), mat:Height()

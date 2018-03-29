@@ -267,6 +267,8 @@ WeaponNames2.ja = {
 
 ss.Text = {Error = {}, PrintNames = {}}
 ss.Text.Category = "Splatoon SWEPs"
+ss.Text.CleanupInk = "SplatoonSWEPs Ink"
+ss.Text.CleanupInkMessage = "Cleaned up SplatoonSWEPs Ink."
 ss.Text.ColorNames = {
 	"Red",
 	"Orange",
@@ -453,4 +455,6 @@ for i, c in ipairs(ss.WeaponClassNames) do
 end
 
 if SERVER then return end
+language.Add("Cleanup_" .. ss.CleanupTypeInk, ss.Text.CleanupInk)
+language.Add("Cleaned_" .. ss.CleanupTypeInk, ss.Text.CleanupInkMessage)
 steamworks.RequestPlayerInfo("76561198013738310", function(name) ss.Text.AuthorName = name end)

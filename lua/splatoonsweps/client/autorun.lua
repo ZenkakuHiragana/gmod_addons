@@ -32,14 +32,10 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	},
 }
 
-include "splatoonsweps/shared.lua"
-include "userinfo.lua"
-include "inkmanager.lua"
-include "network.lua"
-
 --Mesh limitation is
 -- 10922 = 32767 / 3 with mesh.Begin(),
 -- 21845 = 65535 / 3 with BuildFromTriangles()
+include "splatoonsweps/shared.lua"
 local ss = SplatoonSWEPs
 local surf = ss.SequentialSurfaces
 local rt = ss.RenderTarget
@@ -70,9 +66,9 @@ rt.LightmapFlags = bit.bor(
 )
 
 function ss:ClearAllInk()
-	self.InkQueue = {}
-	local amb = self.AmbientColor or render.GetAmbientLightColor():ToColor()
-	render.PushRenderTarget(self.RenderTarget.BaseTexture)
+	ss.InkQueue = {}
+	local amb = ss.AmbientColor or render.GetAmbientLightColor():ToColor()
+	render.PushRenderTarget(ss.RenderTarget.BaseTexture)
 	render.OverrideAlphaWriteEnable(true, true)
 	render.ClearDepth()
 	render.ClearStencil()
@@ -80,7 +76,7 @@ function ss:ClearAllInk()
 	render.OverrideColorWriteEnable(false)
 	render.PopRenderTarget()
 	
-	render.PushRenderTarget(self.RenderTarget.Normalmap)
+	render.PushRenderTarget(ss.RenderTarget.Normalmap)
 	render.OverrideAlphaWriteEnable(true, true)
 	render.ClearDepth()
 	render.ClearStencil()
@@ -88,7 +84,7 @@ function ss:ClearAllInk()
 	render.OverrideAlphaWriteEnable(false)
 	render.PopRenderTarget()
 	
-	render.PushRenderTarget(self.RenderTarget.Lightmap)
+	render.PushRenderTarget(ss.RenderTarget.Lightmap)
 	render.ClearDepth()
 	render.ClearStencil()
 	render.Clear(amb.r, amb.g, amb.b, 255)
@@ -305,6 +301,10 @@ function ss:PrepareInkSurface(write)
 	net.SendToServer()
 end
 
+include "userinfo.lua"
+include "inkmanager.lua"
+include "network.lua"
+
 hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function()
 	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
 	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
@@ -400,4 +400,11 @@ hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", 
 	surface.SetDrawColor(ColorAlpha(color:ToColor(),
 	48 * (1.1 - math.sqrt(ss.GrayScaleFactor:Dot(color))) / ss.GrayScaleFactor:Dot(render.GetToneMappingScaleLinear())))
 	surface.DrawRect(0, 0, ScrW(), ScrH())
+end)
+
+hook.Add("OnCleanup", "SplatoonSWEPs: Cleanup all ink", function(t)
+	if LocalPlayer():IsAdmin() and (t == "all" or t == ss.CleanupTypeInk) then
+		net.Start "SplatoonSWEPs: Send ink cleanup"
+		net.SendToServer()
+	end
 end)

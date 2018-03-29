@@ -1,6 +1,6 @@
 
 AddCSLuaFile()
-local ShootSound = Sound( "NPC_Hunter.FlechetteShoot" )
+local ShootSound = Sound "NPC_Hunter.FlechetteShoot"
 
 SWEP.PrintName = "GreatZenkakuMan's Sandbox"
 SWEP.Author = "GreatZenkakuMan"
