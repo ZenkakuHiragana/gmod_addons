@@ -5,29 +5,11 @@ AddCSLuaFile "shared.lua"
 include "shared.lua"
 
 ENT.DisableDuplicator = true
-ENT.NoCollide = {}
-ENT.NoCollideFilter = {}
 local ss = SplatoonSWEPs
 local dropangle = Angle(0, 0, 90)
 local function MakeNoCollide(self, ent)
-	if IsValid(self.NoCollide[ent]) then return end
-	local ps, pe = self:GetPhysicsObject(), ent:GetPhysicsObject()
-	if not (IsValid(ps) and IsValid(pe)) then return end
-	local nocol = ents.Create "logic_collision_pair"
-	nocol:SetKeyValue("startdisabled", 0)
-	nocol:SetPhysConstraintObjects(ps, pe)
-	nocol:Spawn()
-	nocol:Activate()
-	nocol:Input "DisableCollisions"
-	self.NoCollide[ent] = nocol
+	ss:MakeNoCollide(self, ent, self.NoCollide)
 	table.insert(self.NoCollideFilter, ent)
-end
-
-local function RemoveNoCollide(self)
-	if not IsValid(self.NoCollide[game.GetWorld()]) then return end
-	local n = self.NoCollide[game.GetWorld()]
-	n:Input "EnableCollisions"
-	n:Remove()
 end
 
 function ENT:GetRadius(min, rad)
@@ -42,6 +24,8 @@ function ENT:Initialize()
 	self:SharedInit()
 	self.ColRadius = self.ColRadius or ss.mColRadius
 	self.ColBound = ss.vector_one * self.ColRadius * 1.1
+	self.NoCollide = {}
+	self.NoCollideFilter = {self, self:GetOwner()}
 	self:PhysicsInitSphere(self.ColRadius, "watermelon")
 	if not self.IsDrop then self:StartMotionController() end
 	local ph = self:GetPhysicsObject()
@@ -83,9 +67,12 @@ function ENT:Initialize()
 	}
 	
 	self.ColRadius = nil
+	self.TrailWidth = self.TrailWidth or 10
+	self.TrailEnd = self.TrailEnd or 4
+	self.TrailLife = self.TrailLife or .15
 	util.SpriteTrail(self, 0, ss:GetColor(self.ColorCode), false,
-	self.TrailWidth or 10, self.TrailEnd or 4, self.TrailLife or .12,
-	1 / ((self.TrailWidth or 8) + (self.TrailEnd or 2)), "effects/beam_generic01.vmt")
+	self.TrailWidth, self.TrailEnd, self.TrailLife,
+	1 / (self.TrailWidth + self.TrailEnd), "effects/beam_generic01.vmt")
 end
 
 function ENT:OnRemove()
@@ -94,16 +81,19 @@ function ENT:OnRemove()
 	end
 end
 
-function ENT:PhysicsSimulate(phys, dt)
-	local vel = phys:GetVelocity()
-	if math.max(0, CurTime() - self.InitTime) >= self.Straight then
-		local accel = (math.NormalizeAngle(vel:Angle().pitch - phys:GetAngles().roll) / dt - phys:GetAngleVelocity().x) / dt
-		vel.z = vel.z > 0 and vel.z * 2 or 0
-		return Vector(accel), -vel / (dt * self.InitVelocityLength) + physenv.GetGravity() * 5, SIM_GLOBAL_ACCELERATION
-	else
-		self.ShadowParams.deltatime = dt
-		phys:ComputeShadowControl(self.ShadowParams)
+function ENT:PhysicsSimulate(p, t)
+	if not self.Hit then
+		local v = p:GetVelocity()
+		if math.max(0, CurTime() - self.InitTime + FrameTime()) >= self.Straight then
+			local accel = (math.NormalizeAngle(v:Angle().p - p:GetAngles().r) / t - p:GetAngleVelocity().x) / t
+			v.z = math.max(0, v.z)
+			return Vector(accel), -v / (t * self.InitVelocityLength) + physenv.GetGravity(), SIM_GLOBAL_ACCELERATION
+		else
+			self.ShadowParams.deltatime = t
+			p:ComputeShadowControl(self.ShadowParams)
+		end
 	end
+	
 	return vector_origin, vector_origin, SIM_GLOBAL_ACCELERATION
 end
 
@@ -111,30 +101,19 @@ local splashrandom = {-1, 0, 1}
 function ENT:PhysicsUpdate(phys)
 	if not (IsValid(phys) and self:IsInWorld()) then
 		return SafeRemoveEntityDelayed(self, 0)
-	elseif self.IsDrop then
+	elseif self.Hit then
 		return
 	end
 	
-	local p, b = phys:GetPos(), self.ColBound
-	local t = {
-		start = p, endpos = p,
-		mins = -b, maxs = b,
-		filter = self.NoCollideFilter,
-		mask = MASK_SHOT_PORTAL,
-	}
-	local tr = util.TraceHull(t)
-	if tr.HitWorld then
-		RemoveNoCollide(self)
+	local fence = ss:CheckFence(self, phys:GetPos(), phys:GetPos()
+	+ phys:GetVelocity() * FrameTime(), self.NoCollideFilter, -self.ColBound, self.ColBound)
+	if fence then
+		MakeNoCollide(self, fence)
 	else
-		t.mask = MASK_SOLID
-		tr = util.TraceHull(t)
-		if not tr.Hit then
-			RemoveNoCollide(self)
-		elseif tr.Entity == game.GetWorld() or IsValid(tr.Entity) then
-			MakeNoCollide(self, tr.Entity)
-		end
+		ss:RemoveNoCollide(self, nil, self.NoCollide)
 	end
 	
+	if self.IsDrop then return end
 	phys:EnableGravity(math.max(0, CurTime() - self.InitTime) >= self.Straight)
 	if self.SplashCount > self.SplashNum then return end
 	local len = (phys:GetPos() - self.InitPos):Length2DSqr()
@@ -158,10 +137,9 @@ function ENT:PhysicsUpdate(phys)
 	splash.TrailLife = .1
 	splash.InkYaw = self.InkYaw
 	splash.InkType = math.random(1, 3)
-	splash:Spawn()
-	splash:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
 	splash.InitPos = self.InitPos
 	splash.IsDrop = true
+	splash:Spawn()
 	for _, p in ipairs(player.GetAll()) do
 		cleanup.Add(p, SplatoonSWEPs.CleanupTypeInk, splash)
 	end
@@ -169,13 +147,26 @@ end
 
 local MAX_SLOPE = math.cos(math.rad(45))
 function ENT:PhysicsCollide(coldata, collider)
-	SafeRemoveEntityDelayed(self, 0)
-	if IsValid(coldata.HitEntity) and coldata.HitEntity:GetMaterialType() == MAT_GRATE then
+	if ss:CheckFence(self, coldata.HitPos, coldata.HitPos, self.NoCollideFilter, -self.ColBound, self.ColBound) then
 		collider:EnableCollisions(false)
-		collider:EnableCollisions(true)
 		MakeNoCollide(self, coldata.HitEntity)
 		coldata.HitObject:SetVelocityInstantaneous(coldata.TheirOldVelocity)
+		collider:SetVelocityInstantaneous(coldata.OurOldVelocity)
+		timer.Simple(0, function()
+			if not IsValid(collider) then return end
+			collider:SetPos(coldata.HitPos)
+			collider:EnableCollisions(true)
+		end)
+		return
 	end
+	
+	self.Hit = true
+	SafeRemoveEntityDelayed(self, self.TrailLife)
+	timer.Simple(0, function()
+		if not IsValid(self) then return end
+		self:SetMoveType(MOVETYPE_NONE)
+		self:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
+	end)
 	
 	local t = math.max(0, CurTime() - self.InitTime)
 	if coldata.HitEntity:IsWorld() then

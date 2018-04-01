@@ -35,21 +35,9 @@ SWEP.WElements = {
 function SWEP:ResetBonePositions(vm)
 	if not vm:GetBoneCount() then return end
 	for i = 0, vm:GetBoneCount() do
-		local info = self.BackupBoneInfo[i] or {}
-		vm:ManipulateBoneScale(i, info.Scale or ss.vector_one)
-		vm:ManipulateBonePosition(i, info.Pos or vector_origin)
-		vm:ManipulateBoneAngles(i, info.Angle or angle_zero)
-	end
-end
-
-function SWEP:BackupBonePositions(vm)
-	if not vm:GetBoneCount() then return end
-	for i = 0, vm:GetBoneCount() do
-		self.BackupBoneInfo[i] = {
-			Scale = vm:GetManipulateBoneScale(i),
-			Pos = vm:GetManipulateBonePosition(i),
-			Angle = vm:GetManipulateBoneAngles(i),
-		}
+		vm:ManipulateBoneScale(i, ss.vector_one)
+		vm:ManipulateBonePosition(i, vector_origin)
+		vm:ManipulateBoneAngles(i, angle_zero)
 	end
 end
 

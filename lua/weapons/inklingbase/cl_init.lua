@@ -80,7 +80,6 @@ function SWEP:Initialize()
 end
 
 function SWEP:Deploy()
-	self.SurpressDrawingVM = false
 	if self:IsFirstTimePredicted() then return self:ClientDeployBase() end
 end
 
@@ -88,22 +87,19 @@ function SWEP:ClientDeployBase()
 	self.CanHealStand, self.CanHealInk, self.CanReloadStand,  self.CanReloadInk = false, false, false, false
 	if not IsValid(self.Owner) then return end
 	if self.Owner:IsPlayer() then
+		self.SurpressDrawingVM = nil
 		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 		self:ChangeHullDuck()
-		-- self.Manip = self.Owner:GetManipulateBoneAngles(0)
-		-- local vm = self.Owner:GetViewModel()
-		-- if IsValid(vm) then self:BackupBonePositions(vm) end
 	end
 	
 	return self:SharedDeployBase()
 end
 
 function SWEP:Holster()
-	self.SurpressDrawingVM = true
-	if not (IsValid(self.Owner) and self:IsFirstTimePredicted()) then return end
+	if not IsValid(self.Owner) then return true end
 	if self.Owner:IsPlayer() then
-		-- self.Owner:ManipulateBoneAngles(0, self.Manip or angle_zero)
+		self.SurpressDrawingVM = true
 		local vm = self.Owner:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
 		if self:GetPMID() ~= ss.PLAYER.NOSQUID and self.HullDuckMins then

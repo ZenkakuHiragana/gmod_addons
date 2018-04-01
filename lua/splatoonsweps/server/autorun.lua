@@ -13,6 +13,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	BSP = {},
 	Displacements = {},
 	Models = {},
+	NoCollide = {},
 	InkCounter = 0,
 	InkShotMaterials = {},
 	PlayersReady = {},
@@ -34,20 +35,6 @@ for i = 1, 9 do
 	masktxt:Close()
 end
 
-
-function ss:ClearAllInk()
-	net.Start "SplatoonSWEPs: Send ink cleanup"
-	net.Send(ss.PlayersReady)
-	
-	ss.InkCounter = 0
-	for node in ss:BSPPairsAll() do
-		for i = 1, #node.Surfaces.InkCircles do
-			node.Surfaces.InkCircles[i] = {}
-		end
-	end
-	collectgarbage "collect"
-end
-
 --table vertices of face, Vector normal of plane, number distance from plane to origin
 --returning positive -> face is in positive side of the plane
 --returning negative -> face is in negative side of the plane
@@ -63,6 +50,19 @@ local function AcrossPlane(self, vertices, normal, dist)
 		end
 	end
 	return sign or 0
+end
+
+function ss:ClearAllInk()
+	net.Start "SplatoonSWEPs: Send ink cleanup"
+	net.Send(ss.PlayersReady)
+	
+	ss.InkCounter = 0
+	for node in ss:BSPPairsAll() do
+		for i = 1, #node.Surfaces.InkCircles do
+			node.Surfaces.InkCircles[i] = {}
+		end
+	end
+	collectgarbage "collect"
 end
 
 function ss:FindLeaf(vertices, modelindex)
@@ -108,6 +108,31 @@ function ss:SendError(msg, icon, duration, user)
 	else
 		net.Broadcast()
 	end
+end
+
+function ss:MakeNoCollide(src, tar, NoCollideTable)
+	if not (IsValid(src) and tar and tar ~= NULL) then return end
+	NoCollideTable = NoCollideTable or ss.NoCollide[src]
+	if not NoCollideTable or IsValid(NoCollideTable[tar]) then return end
+	local ps, pt = src:GetPhysicsObject(), tar:GetPhysicsObject()
+	if not (IsValid(ps) and IsValid(pt)) then return end
+	local nocol = ents.Create "logic_collision_pair"
+	nocol:SetKeyValue("startdisabled", 1)
+	nocol:SetPhysConstraintObjects(ps, pt)
+	nocol:Spawn()
+	nocol:Activate()
+	nocol:Input "DisableCollisions"
+	NoCollideTable[tar] = nocol
+end
+
+function ss:RemoveNoCollide(src, tar, NoCollideTable)
+	if not IsValid(src) then return end
+	NoCollideTable = NoCollideTable or ss.NoCollide[src]
+	if not NoCollideTable then return end
+	local n = NoCollideTable[tar or game.GetWorld()]
+	if not IsValid(n) then return end
+	n:Input "EnableCollisions"
+	n:Remove()
 end
 
 ss.AcrossPlane = AcrossPlane

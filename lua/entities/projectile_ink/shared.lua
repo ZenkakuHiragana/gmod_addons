@@ -9,7 +9,6 @@ ENT.IsSplatoonProjectile = true
 function ENT:SharedInit(mdl)
 	self:SetModel(mdl or self.FlyingModel)
 	self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
-	self:SetCustomCollisionCheck(true)
 	self:SetMoveCollide(MOVECOLLIDE_FLY_SLIDE)
 	self:SetNoDraw(true)
 	self:SetSolidFlags(FSOLID_NOT_STANDABLE)

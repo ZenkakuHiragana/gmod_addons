@@ -81,7 +81,6 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p.InkType = math.random(1, 3)
 	p.IsDrop = true
 	p:Spawn()
-	p:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
 	AddCleanup(p)
 end
 

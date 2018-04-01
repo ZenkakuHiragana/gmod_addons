@@ -224,3 +224,4 @@ pip-log.txt
 lua/memo.txt
 lua/entities/ent_test.lua
 lua/weapons/weapon_sandbox.lua
+lua/do.lua

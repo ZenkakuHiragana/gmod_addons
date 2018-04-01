@@ -118,6 +118,7 @@ end
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
 	if self.Owner:IsPlayer() then self:CallOnClient "ClientDeployBase" end
+	ss.NoCollide[self.Owner] = {}
 	self:SetHoldType "passive"
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
@@ -143,7 +144,6 @@ function SWEP:Deploy()
 	self.Color = ss:GetColor(self.ColorCode)
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 	self.SquidAvailable = tobool(ss:GetSquidmodel(self:GetPMID()))
-	
 	if self.Owner:IsPlayer() then
 		self.BackupPlayerInfo = {
 			Color = self.Owner:GetColor(),
@@ -238,7 +238,6 @@ function SWEP:Think()
 	if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
 		self:ChangePlayermodel(self.PMTable)
 	end
-	
 	
 	self:ProcessSchedules()
 	self:SharedThinkBase()

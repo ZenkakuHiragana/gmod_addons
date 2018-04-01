@@ -27,10 +27,12 @@ end
 
 function SWEP:ChangeHullDuck()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
-	if self:GetPMID() ~= ss.PLAYER.NOSQUID then
-		self.Owner:SetHullDuck(ss.SquidBoundMins, ss.SquidBoundMaxs)
-		self.Owner:SetViewOffsetDucked(ss.SquidViewOffset)
-	end
+	-- if self:GetPMID() ~= ss.PLAYER.NOSQUID then
+		-- local mins, maxs = self.Owner:GetHullDuck()
+		-- maxs.z = ss.SquidBoundHeight
+		-- self.Owner:SetHullDuck(mins, maxs)
+		-- self.Owner:SetViewOffsetDucked(ss.SquidViewOffset)
+	-- end
 end
 
 function SWEP:ChangeViewModel(act)
@@ -77,6 +79,7 @@ end
 function SWEP:SharedDeployBase()
 	PlayLoopSound(self)
 	self:SetHolstering(false)
+	self.Owner:SetCustomCollisionCheck(true)
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
 	self.SquidSpeedSqr = self.SquidSpeed^2
@@ -96,6 +99,7 @@ end
 
 function SWEP:SharedHolsterBase()
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
+	self.Owner:SetCustomCollisionCheck(false)
 	self:SetHolstering(true)
 	StopLoopSound(self)
 	return true
@@ -105,36 +109,34 @@ local inklingVM = ACT_VM_IDLE --Viewmodel animation(humanoid)
 local squidVM = ACT_VM_HOLSTER --Viewmodel animation(squid)
 local throwingVM = ACT_VM_IDLE_LOWERED --Viewmodel animation(throwing sub weapon)
 function SWEP:SharedThinkBase()
-	if SERVER or self:IsFirstTimePredicted() then
-		local sq = self.Owner:IsPlayer()
-		if sq then
-			sq = self.Owner:Crouching()
-		else
-			sq = self.Owner:GetFlags(FL_DUCKING)
-		end
-	
-		--Send viewmodel animation.
-		self:ChangeViewModel(self.IsSquid and squidVM or inklingVM)
-		if sq then
-			self.SwimSound:ChangeVolume(not self:GetInInk() and 0 or
-			self.Owner:GetVelocity():LengthSqr() / self.SquidSpeedSqr)
-			if not self.IsSquid then
-				self.Owner:RemoveAllDecals()
-				if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToSquid" end
-			end
-			
-			if self:GetOnEnemyInk() then
-				self:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)
-					self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
-				end)
-			end
-		elseif not sq and self.IsSquid then
-			self.SwimSound:ChangeVolume(0)
-			if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToHuman" end
+	local sq = self.Owner:IsPlayer()
+	if sq then
+		sq = self.Owner:Crouching()
+	else
+		sq = self.Owner:GetFlags(FL_DUCKING)
+	end
+
+	--Send viewmodel animation.
+	self:ChangeViewModel(self.IsSquid and squidVM or inklingVM)
+	if sq then
+		self.SwimSound:ChangeVolume(not self:GetInInk() and 0 or
+		self.Owner:GetVelocity():LengthSqr() / self.SquidSpeedSqr)
+		if not self.IsSquid then
+			self.Owner:RemoveAllDecals()
+			if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToSquid" end
 		end
 		
-		self.IsSquid = sq
+		if self:GetOnEnemyInk() then
+			self:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)
+				self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
+			end)
+		end
+	elseif not sq and self.IsSquid then
+		self.SwimSound:ChangeVolume(0)
+		if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToHuman" end
 	end
+	
+	self.IsSquid = sq
 	if isfunction(self.SharedThink) then return self:SharedThink() end
 end
 
