@@ -3,10 +3,10 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 include "const.lua"
+include "movement.lua"
 include "sound.lua"
 include "text.lua"
 include "weapons.lua"
-include "npcusableweapons.lua"
 cleanup.Register(ss.CleanupTypeInk)
 
 function ss:MinVector(a, b)
@@ -163,7 +163,7 @@ end
 function ss:CheckFence(ent, pos, endpos, filter, mins, maxs)
 	local t = {
 		start = pos, endpos = endpos,
-		mins = mins - vector_up * .01, maxs = maxs,
+		mins = mins, maxs = maxs,
 		filter = filter,
 		mask = MASK_SHOT_PORTAL,
 	}
@@ -172,142 +172,47 @@ function ss:CheckFence(ent, pos, endpos, filter, mins, maxs)
 	if not util.TraceHull(t).Hit then
 		t.mask = MASK_SOLID
 		local tr = util.TraceHull(t)
-		if tr.Hit then
-			return ent:OnGround() and ent:GetGroundEntity() or tr.Entity
+		if tr.Hit and tr.Entity ~= NULL then
+			return tr.Entity
 		end
 	end
 end
 
 --MOUSE1+LCtrl makes crouch, LCtrl+MOUSE1 makes primary attack.
 hook.Add("KeyPress", "SplattonSWEPs: Detect controls", function(ply, button)
-	local weapon = ss:IsValidInkling(ply)
-	if not weapon then return end
-	if button == IN_ATTACK then weapon.IsAttackDown = true end
-	if weapon.IsAttackDown and button == IN_DUCK then weapon.CrouchPriority = true end
+	local w = ss:IsValidInkling(ply)
+	if not w then return end
+	local attack = bit.band(button, IN_ATTACK) ~= 0
+	local duck = bit.band(button, IN_DUCK) ~= 0
+	w.IsAttackDown = w.IsAttackDown or attack
+	w.CrouchPriority = w.CrouchPriority or w.IsAttackDown and duck
 end)
 hook.Add("KeyRelease", "SplatoonSWEPs: Detect controls", function(ply, button)
-	local weapon = ss:IsValidInkling(ply)
-	if not weapon then return end
-	if button == IN_ATTACK then weapon.IsAttackDown = false end
-	if button == IN_ATTACK or button == IN_DUCK then weapon.CrouchPriority = false end
+	local w = ss:IsValidInkling(ply)
+	if not w then return end
+	local attack = bit.band(button, IN_ATTACK) ~= 0
+	local duck = bit.band(button, IN_DUCK) ~= 0
+	w.IsAttackDown = w.IsAttackDown and not attack
+	w.CrouchPriority = w.CrouchPriority and not (attack or duck)
 end)
 
 --Prevent crouching after firing.
-hook.Add("SetupMove", "SplatoonSWEPs: Prevent owner from crouch", function(ply, mvd)
+hook.Add("SetupMove", "SplatoonSWEPs: Prevent owner from crouch", function(ply, mv, cm)
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
-	local c = mvd:KeyDown(IN_DUCK)
+	local c = mv:KeyDown(IN_DUCK)
 	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and c and w:GetOnEnemyInk()
-	if (not w.CrouchPriority and c and mvd:KeyDown(IN_ATTACK))
+	if (not w.CrouchPriority and c and mv:KeyDown(IN_ATTACK))
 	or CurTime() < w:GetNextCrouchTime() or w.EnemyInkPreventCrouching then
-		mvd:SetButtons(bit.band(mvd:GetButtons(), bit.bnot(IN_DUCK)))
+		mv:SetButtons(bit.band(mv:GetButtons(), bit.bnot(IN_DUCK)))
+		cm:RemoveKey(IN_DUCK)
 	end
-end)
-
-local WALLCLIMB_KEYS = bit.bor(IN_JUMP, IN_FORWARD, IN_BACK)
-local LIMIT_Z_DEG = math.cos(math.rad(180 - 30))
-hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(ply, mv)
-	local w = ss:IsValidInkling(ply)
-	if not w then return end
-	local maxspeed = mv:GetMaxSpeed() * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
-	local v = mv:GetVelocity() --Current velocity
-	local speed = v:Length2D() --Horizontal speed
-	local vz = v.z v.z = 0
-	if w:GetInWallInk() and mv:KeyDown(WALLCLIMB_KEYS) then
-		vz = math.max(math.abs(vz) * -.75, vz + math.min(
-		12 + (mv:KeyPressed(IN_JUMP) and maxspeed / 4 or 0), maxspeed))
-		if ply:OnGround() and (ply:GetEyeTraceNoCursor().Fraction
-			< util.TraceLine(util.GetPlayerTrace(ply, -ply:GetAimVector())).Fraction)
-			== mv:KeyDown(IN_FORWARD) then
-			mv:AddKey(IN_JUMP)
-		end
-	end --Wall climbing
-	
-	if speed > maxspeed then --Limits horizontal speed
-		v = v * maxspeed / speed
-		speed = math.min(speed, maxspeed)
-	end
-	
-	if w.OnOutOfInk then --Prevent wall-climb jump
-		vz = math.min(vz, maxspeed * .8)
-		w.OnOutOfInk = false
-	end
-	
-	mv:SetVelocity(Vector(v.x, v.y, vz))
-	if not w.IsSquid then return end --Squids can go through fences
-	local friction = GetConVar "sv_friction":GetFloat()
-	local accel = GetConVar(ply:OnGround() and
-		"sv_accelerate" or "sv_airaccelerate"):GetFloat()
-	local gravity = GetConVar "sv_gravity":GetFloat() * FrameTime()
-	local direction = mv:GetMoveAngles()
-	direction.p = 0 --Add X, Y component
-	direction = direction:Forward() * mv:GetForwardSpeed()
-			  + direction:Right() * mv:GetSideSpeed()
-	direction = accel * direction * 1e-4 * maxspeed * FrameTime()
-	v = v * math.max(0, 1 - friction / speed) + direction
-	
-	speed = v:Length()
-	if speed > maxspeed then --X, Y speed cap
-		v = v * maxspeed / speed
-		speed = math.min(speed, maxspeed)
-	end
-	
-	v.z = vz - gravity + (ply:OnGround() and --Z component
-	mv:KeyPressed(IN_JUMP) and ply:GetJumpPower() or 0)
-	
-	local oldpos = mv:GetOrigin()
-	local filter = {ply, w}
-	local mins, maxs = ply:GetHullDuck()
-	local t = {
-		start = oldpos, endpos = oldpos + (v + ply:GetBaseVelocity()) * FrameTime(),
-		mins = mins, maxs = maxs, filter = filter, mask = MASK_SHOT_PORTAL,
-	}
-	
-	local onground, groundent = -1
-	for i = 1, 4 do
-		local tr = util.TraceHull(t)
-		if not tr.Hit then break end
-		local pull = tr.HitNormal * tr.HitNormal:Dot(tr.HitPos - t.endpos)
-		local solidvec = t.endpos + pull - tr.HitPos
-		solidvec:Normalize()
-		v = solidvec * solidvec:Dot(v)
-		t.endpos = t.endpos + pull
-		if tr.HitNormal.z > onground then
-			onground = tr.HitNormal.z
-			groundent = tr.Entity
-		end
-	end
-	local fence = ss:CheckFence(ply, oldpos, t.endpos, filter, mins, maxs)
-	if CLIENT then
-		debugoverlay.Box(oldpos, mins, maxs, .05, Color(0, 255, 0, 64))
-		debugoverlay.Box(t.endpos, mins, maxs, .05, Color(0, 0, 255, 64))
-		debugoverlay.Text(t.endpos, tostring(fence))
-	end
-	if fence then
-		ply:SetMoveType(MOVETYPE_NOCLIP)
-	elseif w.InFence and ply:GetMoveType() == MOVETYPE_NOCLIP then
-		ply:SetMoveType(MOVETYPE_WALK)
-	end
-	
-	w.InFence = tobool(fence)
-	if not fence then return end --Player is in fence, then apply
-	if onground < .70710678 then
-		ply:SetGroundEntity()
-		ply:RemoveFlags(FL_ONGROUND) --Can land on up to 45 deg slope
-	else
-		ply:SetGroundEntity(groundent)
-		ply:AddFlags(FL_ONGROUND)
-	end
-	
-	mv:SetVelocity(v)
-	mv:SetOrigin(t.endpos)
-	return true
 end)
 
 hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", function(ply, desired)
 	local w = ss:IsValidInkling(ply)
 	if not (desired and w and w.IsSquid) then return end
-	w.InFence = false
+	w:SetInFence(false)
 end)
 
 --Overriding footstep sound stops calling other addons' PlayerFootstep hook.

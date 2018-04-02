@@ -113,7 +113,7 @@ function SWEP:SharedThinkBase()
 	if sq then
 		sq = self.Owner:Crouching()
 	else
-		sq = self.Owner:GetFlags(FL_DUCKING)
+		sq = self.Owner:IsFlagSet(FL_DUCKING)
 	end
 
 	--Send viewmodel animation.
@@ -131,7 +131,7 @@ function SWEP:SharedThinkBase()
 				self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
 			end)
 		end
-	elseif not sq and self.IsSquid then
+	elseif self.IsSquid then
 		self.SwimSound:ChangeVolume(0)
 		if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToHuman" end
 	end
@@ -304,6 +304,7 @@ function SWEP:SetupDataTables()
 	ss:AddNetworkVar(self)
 	self.FunctionQueue = {}
 	self:AddNetworkVar("Bool", "InInk") --If owner is in ink.
+	self:AddNetworkVar("Bool", "InFence") --If owner is in fence.
 	self:AddNetworkVar("Bool", "InWallInk") --If owner is on wall.
 	self:AddNetworkVar("Bool", "OnEnemyInk") --If owner is on enemy ink.
 	self:AddNetworkVar("Bool", "Holstering") --The weapon is being holstered.
