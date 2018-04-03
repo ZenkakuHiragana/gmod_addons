@@ -6,11 +6,6 @@ CreateConVar("sv_splatoonsweps_enabled", "1",
 if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
 SplatoonSWEPs = SplatoonSWEPs or {
 	AmbientColor = color_white,
-	AreaBound = 0,
-	AspectSum = 0,
-	AspectSumX = 0,
-	AspectSumY = 0,
-	Displacements = {},
 	IMesh = {},
 	InkQueue = {},
 	RenderTarget = {
@@ -297,6 +292,19 @@ function ss:PrepareInkSurface(write)
 	collectgarbage "collect"
 	
 	ss.RenderTarget.Ready = true
+	local ply = LocalPlayer()
+	ss.m_surfaceFriction[ply] = ss.m_surfaceFriction[ply] or 1.0
+	ss.m_bInDuckJump[ply] = ss.m_bInDuckJump[ply] or false
+	ss.m_flDuckJumpTime[ply] = ss.m_flDuckJumpTime[ply] or 0
+	ss.m_flDucktime[ply] = ss.m_flDucktime[ply] or 0
+	ss.m_flFallVelocity[ply] = ss.m_flFallVelocity[ply] or 0
+	ss.m_flJumpTime[ply] = ss.m_flJumpTime[ply] or 0
+	ss.m_flSwimSoundTime[ply] = ss.m_flSwimSoundTime[ply] or 0
+	ss.m_flWaterJumpTime[ply] = ss.m_flWaterJumpTime[ply] or 0
+	ss.m_nWaterLevel[ply] = ss.m_nWaterLevel[ply] or 0
+	ss.m_nWaterType[ply] = ss.m_nWaterType[ply] or CONTENTS_EMPTY
+	ss.m_vecPunchAngleVel[ply] = ss.m_vecPunchAngleVel[ply] or vector_origin
+	ss.m_vecWaterJumpVel[ply] = ss.m_vecWaterJumpVel[ply] or vector_origin
 	net.Start "SplatoonSWEPs: Ready to splat"
 	net.SendToServer()
 end

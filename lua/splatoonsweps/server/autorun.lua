@@ -6,12 +6,7 @@ CreateConVar("sv_splatoonsweps_enabled", "1",
 "Enables or disables SplatoonSWEPs.")
 if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
 SplatoonSWEPs = SplatoonSWEPs or {
-	AreaBound = 0,
-	AspectSum = 0,
-	AspectSumX = 0,
-	AspectSumY = 0,
 	BSP = {},
-	Displacements = {},
 	Models = {},
 	NoCollide = {},
 	InkCounter = 0,

@@ -47,7 +47,8 @@ function ss:ConfigMenu()
 	end
 	
 	local function SetPlayerModel(DModelPanel) --Apply changes to preview model
-		local model = self.Playermodel[self:GetConVarInt "Playermodel"] or LocalPlayer():GetModel()
+		local model = self.Playermodel[self:GetConVarInt "Playermodel"]
+		if not model then model = player_manager.TranslatePlayerModel(GetConVar "cl_playermodel":GetString()) end
 		local bone = table.HasValue(self.Text.PlayermodelNames, model) and "ValveBiped.Bip01_Pelvis" or "ValveBiped.Bip01_Spine4"
 		
 		if not file.Exists(model, "GAME") then
@@ -58,7 +59,7 @@ function ss:ConfigMenu()
 		end
 		
 		DModelPanel:SetModel(model)
-		local center = DModelPanel.Entity:GetBonePosition(DModelPanel.Entity:LookupBone(bone))
+		local center = DModelPanel.Entity:GetBonePosition(DModelPanel.Entity:LookupBone(bone) or 0)
 		DModelPanel:SetLookAt(center)
 		DModelPanel:SetCamPos(center - Vector(-60, -10, -10))
 		DModelPanel.Entity:SetSequence "idle_fist"

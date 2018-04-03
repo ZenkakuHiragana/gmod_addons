@@ -9,6 +9,24 @@ include "text.lua"
 include "weapons.lua"
 cleanup.Register(ss.CleanupTypeInk)
 
+ss.AreaBound = ss.AreaBound or 0
+ss.AspectSum = ss.AspectSum or 0
+ss.AspectSumX = ss.AspectSumX or 0
+ss.AspectSumY = ss.AspectSumY or 0
+ss.Displacements = ss.Displacements or {}
+ss.m_surfaceFriction = ss.m_surfaceFriction or {}
+ss.m_bInDuckJump = ss.m_bInDuckJump or {}
+ss.m_flDuckJumpTime = ss.m_flDuckJumpTime or {}
+ss.m_flDucktime = ss.m_flDucktime or {}
+ss.m_flFallVelocity = ss.m_flFallVelocity or {}
+ss.m_flJumpTime = ss.m_flJumpTime or {}
+ss.m_flSwimSoundTime = ss.m_flSwimSoundTime or {}
+ss.m_flWaterJumpTime = ss.m_flWaterJumpTime or {}
+ss.m_nWaterLevel = ss.m_nWaterLevel or {}
+ss.m_nWaterType = ss.m_nWaterType or {}
+ss.m_vecPunchAngleVel = ss.m_vecPunchAngleVel or {}
+ss.m_vecWaterJumpVel = ss.m_vecWaterJumpVel or {}
+
 function ss:MinVector(a, b)
 	local c = Vector()
 	c.x = math.min(a.x, b.x)
@@ -194,25 +212,6 @@ hook.Add("KeyRelease", "SplatoonSWEPs: Detect controls", function(ply, button)
 	local duck = bit.band(button, IN_DUCK) ~= 0
 	w.IsAttackDown = w.IsAttackDown and not attack
 	w.CrouchPriority = w.CrouchPriority and not (attack or duck)
-end)
-
---Prevent crouching after firing.
-hook.Add("SetupMove", "SplatoonSWEPs: Prevent owner from crouch", function(ply, mv, cm)
-	local w = ss:IsValidInkling(ply)
-	if not w then return end
-	local c = mv:KeyDown(IN_DUCK)
-	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and c and w:GetOnEnemyInk()
-	if (not w.CrouchPriority and c and mv:KeyDown(IN_ATTACK))
-	or CurTime() < w:GetNextCrouchTime() or w.EnemyInkPreventCrouching then
-		mv:SetButtons(bit.band(mv:GetButtons(), bit.bnot(IN_DUCK)))
-		cm:RemoveKey(IN_DUCK)
-	end
-end)
-
-hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", function(ply, desired)
-	local w = ss:IsValidInkling(ply)
-	if not (desired and w and w.IsSquid) then return end
-	w:SetInFence(false)
 end)
 
 --Overriding footstep sound stops calling other addons' PlayerFootstep hook.
