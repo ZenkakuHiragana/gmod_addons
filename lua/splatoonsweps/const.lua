@@ -318,6 +318,12 @@ ss.TEXTUREFLAGS = {
 	UNUSED_80000000		= 0x80000000, --
 }
 
+ss.ViewModel = { -- Viewmodel animations
+	Standing = ACT_VM_IDLE, -- Humanoid form
+	Squid = ACT_VM_HOLSTER, -- Squid form
+	Throwing = ACT_VM_IDLE_LOWERED, -- Throwing sub weapon
+}
+
 local framepersec = 60
 local inklingspeed = .96 * framepersec
 ss.vector_one = Vector(1, 1, 1)

@@ -35,7 +35,7 @@ ss:SetPrimary(SWEP, {
 })
 
 if SERVER then return end
-SWEP.ViewModelBoneMods = {
+ss:SetViewModelMods(SWEP, {
 	["Base"] = {
 		scale = Vector(1, 1, 1),
 		pos = Vector(-30, 30, -30),
@@ -51,38 +51,19 @@ SWEP.ViewModelBoneMods = {
 		pos = Vector(-31, 25, 30),
 		angle = Angle(0, -8, -2)
 	},
-}
+})
 
-SWEP.VElements = {
-	weapon = {
-		type = "Model",
-		model = "models/props_splatoon/weapons/primaries/aerospray/aerospray.mdl",
-		bone = "ValveBiped.Bip01_Spine4",
-		rel = "",
-		pos = Vector(8, -26, -6),
-		angle = Angle(13, 80, 90),
-		size = Vector(0.56, 0.56, 0.56),
-		color = Color(255, 255, 255, 255),
-		surpresslightning = false,
-		material = "",
-		skin = 2,
-		bodygroup = {}
-	}
-}
+ss:SetViewModel(SWEP, {
+	model = "models/props_splatoon/weapons/primaries/aerospray/aerospray.mdl",
+	pos = Vector(8, -26, -6),
+	angle = Angle(13, 80, 90),
+	size = Vector(0.56, 0.56, 0.56),
+	skin = 2,
+})
 
-SWEP.WElements = {
-	weapon = {
-		type = "Model",
-		model = "models/props_splatoon/weapons/primaries/aerospray/aerospray.mdl",
-		bone = "ValveBiped.Bip01_R_Hand",
-		rel = "",
-		pos = Vector(11, 1, -4),
-		angle = Angle(0, 10, 180),
-		size = Vector(1, 1, 1),
-		color = Color(255, 255, 255, 255),
-		surpresslightning = false,
-		material = "",
-		skin = 2,
-		bodygroup = {}
-	}
-}
+ss:SetWorldModel(SWEP, {
+	model = "models/props_splatoon/weapons/primaries/aerospray/aerospray.mdl",
+	pos = Vector(11, 1, -4),
+	angle = Angle(0, 10, 180),
+	skin = 2,
+})

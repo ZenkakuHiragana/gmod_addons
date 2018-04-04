@@ -11,18 +11,7 @@ util.AddNetworkString "SplatoonSWEPs: Ready to splat"
 util.AddNetworkString "SplatoonSWEPs: Redownload ink data"
 net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 	table.insert(ss.PlayersReady, ply)
-	ss.m_surfaceFriction[ply] = ss.m_surfaceFriction[ply] or 1.0
-	ss.m_bInDuckJump[ply] = ss.m_bInDuckJump[ply] or false
-	ss.m_flDuckJumpTime[ply] = ss.m_flDuckJumpTime[ply] or 0
-	ss.m_flDucktime[ply] = ss.m_flDucktime[ply] or 0
-	ss.m_flFallVelocity[ply] = ss.m_flFallVelocity[ply] or 0
-	ss.m_flJumpTime[ply] = ss.m_flJumpTime[ply] or 0
-	ss.m_flSwimSoundTime[ply] = ss.m_flSwimSoundTime[ply] or 0
-	ss.m_flWaterJumpTime[ply] = ss.m_flWaterJumpTime[ply] or 0
-	ss.m_nWaterLevel[ply] = ss.m_nWaterLevel[ply] or 0
-	ss.m_nWaterType[ply] = ss.m_nWaterType[ply] or CONTENTS_EMPTY
-	ss.m_vecPunchAngleVel[ply] = ss.m_vecPunchAngleVel[ply] or vector_origin
-	ss.m_vecWaterJumpVel[ply] = ss.m_vecWaterJumpVel[ply] or vector_origin
+	ss:InitializeMoveEmulation(ply)
 end)
 
 net.Receive("SplatoonSWEPs: Redownload ink data", function(_, ply)

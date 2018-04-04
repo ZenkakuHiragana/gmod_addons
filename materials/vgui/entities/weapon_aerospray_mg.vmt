@@ -1,7 +1,0 @@
-"UnlitGeneric"
-{
-	"$basetexture" "vgui/entities/weapon_aerospray_mg"
-	"$nolod" 1
-	"$vertexalpha" 1
-	"$vertexcolor" 1
-}

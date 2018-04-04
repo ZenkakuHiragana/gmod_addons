@@ -1,5 +1,6 @@
 
 local ss = SplatoonSWEPs
+if not ss then return end
 ss:AddTimerFramework(SWEP)
 local function PlayLoopSound(self)
 	if not self.SwimSound:IsPlaying() then
@@ -61,7 +62,6 @@ end
 
 --When NPC weapon is picked up by player.
 function SWEP:OwnerChanged()
-	print("Owner changed", self, self.Owner)
 	if not IsValid(self.Owner) then
 		return StopLoopSound(self)
 	else
@@ -105,38 +105,7 @@ function SWEP:SharedHolsterBase()
 	return true
 end
 
-local inklingVM = ACT_VM_IDLE --Viewmodel animation(humanoid)
-local squidVM = ACT_VM_HOLSTER --Viewmodel animation(squid)
-local throwingVM = ACT_VM_IDLE_LOWERED --Viewmodel animation(throwing sub weapon)
 function SWEP:SharedThinkBase()
-	local sq = self.Owner:IsPlayer()
-	if sq then
-		sq = self.Owner:Crouching()
-	else
-		sq = self.Owner:IsFlagSet(FL_DUCKING)
-	end
-
-	--Send viewmodel animation.
-	self:ChangeViewModel(self.IsSquid and squidVM or inklingVM)
-	if sq then
-		self.SwimSound:ChangeVolume(not self:GetInInk() and 0 or
-		self.Owner:GetVelocity():LengthSqr() / self.SquidSpeedSqr)
-		if not self.IsSquid then
-			self.Owner:RemoveAllDecals()
-			if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToSquid" end
-		end
-		
-		if self:GetOnEnemyInk() then
-			self:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)
-				self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
-			end)
-		end
-	elseif self.IsSquid then
-		self.SwimSound:ChangeVolume(0)
-		if CLIENT then self.Owner:EmitSound "SplatoonSWEPs_Player.ToHuman" end
-	end
-	
-	self.IsSquid = sq
 	if isfunction(self.SharedThink) then return self:SharedThink() end
 end
 

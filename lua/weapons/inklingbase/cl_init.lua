@@ -91,6 +91,7 @@ function SWEP:ClientDeployBase()
 		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 		self:ChangeHullDuck()
+		self:UpdateBonePositions(self.Owner:GetViewModel())
 	end
 	
 	return self:SharedDeployBase()
@@ -152,7 +153,7 @@ function SWEP:Think()
 	end
 	
 	if self:GetPMID() ~= ss.PLAYER.NOSQUID then
-		self:DrawShadow(not self.IsSquid)
+		self:DrawShadow(not self.Owner:IsFlagSet(FL_DUCKING))
 	end
 	
 	self:ProcessSchedules()

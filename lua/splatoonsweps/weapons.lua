@@ -63,3 +63,46 @@ end
 
 function ss.CustomSecondary.weapon_shooter(p, info)
 end
+
+function ss:SetViewModelMods(weapon, mods)
+	weapon.ViewModelBoneMods = weapon.ViewModelBoneMods or {}
+	for bone, mod in pairs(mods) do
+		weapon.ViewModelBoneMods[bone] = mod
+	end
+end
+
+function ss:SetViewModel(weapon, view)
+	weapon.VElements = weapon.VElements or {}
+	weapon.VElements.weapon = {
+		type = "Model",
+		model = view.model,
+		bone = view.bone or "ValveBiped.Bip01_Spine4",
+		rel = "",
+		pos = view.pos,
+		angle = view.angle,
+		size = view.size or ss.vector_one,
+		color = color_white,
+		surpresslightning = false,
+		material = "",
+		skin = view.skin or 0,
+		bodygroup = view.bodygroup or {},
+	}
+end
+
+function ss:SetWorldModel(weapon, world)
+	weapon.WElements = weapon.WElements or {}
+	weapon.WElements.weapon = {
+		type = "Model",
+		model = world.model,
+		bone = world.bone or "ValveBiped.Bip01_R_Hand",
+		rel = "",
+		pos = world.pos,
+		angle = world.angle,
+		size = world.size or ss.vector_one,
+		color = color_white,
+		surpresslightning = false,
+		material = "",
+		skin = world.skin or 0,
+		bodygroup = world.bodygroup or {},
+	}
+end

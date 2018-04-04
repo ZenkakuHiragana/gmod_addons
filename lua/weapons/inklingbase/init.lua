@@ -70,13 +70,13 @@ function SWEP:Initialize()
 		local onink = self:GetGroundColor() >= 0
 		local onourink = self:GetGroundColor() == self.ColorCode
 		
-		self:SetInWallInk(self.IsSquid and (
+		self:SetInWallInk(self.Owner:IsFlagSet(FL_DUCKING) and (
 		ss:GetSurfaceColor(util.QuickTrace(p, fw - right, filter)) == self.ColorCode or
 		ss:GetSurfaceColor(util.QuickTrace(p, fw + right, filter)) == self.ColorCode or
 		ss:GetSurfaceColor(util.QuickTrace(p,-fw - right, filter)) == self.ColorCode or
 		ss:GetSurfaceColor(util.QuickTrace(p,-fw + right, filter)) == self.ColorCode))
 		
-		self:SetInInk(self.IsSquid and onink and onourink or self:GetInWallInk())
+		self:SetInInk(onink and onourink and self.Owner:IsFlagSet(FL_DUCKING) or self:GetInWallInk())
 		self:SetOnEnemyInk(onink and not onourink)
 		self.OwnerVelocity = self.Owner:GetVelocity()
 	end)

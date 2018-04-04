@@ -1,8 +1,8 @@
 
 --The way to draw weapon models comes from SWEP Construction Kit.
 local ss = SplatoonSWEPs
-SWEP.BackupBoneInfo = {}
-SWEP.WElements = {
+if not ss then return end
+SWEP.WElements = SWEP.WElements or {
 	inktank = {
 		type = "Model",
 		model = "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl",
@@ -46,8 +46,8 @@ function SWEP:UpdateBonePositions(vm)
 	if self.ViewModelBoneMods then
 		if not vm:GetBoneCount() then return end
 		
-		// !! WORKAROUND !! //
-		// We need to check all model names :/
+		-- !! WORKAROUND !! --
+		-- We need to check all model names :/
 		local allbones = {}
 		local loopthrough = self.ViewModelBoneMods
 		if not hasGarryFixedBoneScalingYet then
@@ -65,13 +65,13 @@ function SWEP:UpdateBonePositions(vm)
 			end
 			loopthrough = allbones
 		end
-		// !! ----------- !! //
+		-- !! ----------- !! --
 		
 		for k, v in pairs(loopthrough) do
 			local bone = vm:LookupBone(k)
 			if not bone then continue end
 			
-			// !! WORKAROUND !! //
+			-- !! WORKAROUND !! --
 			local s = Vector(v.scale)
 			local p = Vector(v.pos)
 			local ms = ss.vector_one
@@ -85,7 +85,7 @@ function SWEP:UpdateBonePositions(vm)
 			end
 			
 			s = s * ms
-			// !! ----------- !! //
+			-- !! ----------- !! --
 			
 			if vm:GetManipulateBoneScale(bone) ~= s then
 				vm:ManipulateBoneScale(bone, s)
@@ -108,8 +108,8 @@ function SWEP:GetBoneOrientation(basetab, tab, ent, bone_override)
 		local v = basetab[tab.rel]		
 		if not v then return end
 		
-		// Technically, if there exists an element with the same name as a bone
-		// you can get in an infinite loop. Let's just hope nobody's that stupid.
+		-- Technically, if there exists an element with the same name as a bone
+		-- you can get in an infinite loop. Let's just hope nobody's that stupid.
 		pos, ang = self:GetBoneOrientation(basetab, v, ent)
 		if not pos then return end
 		
@@ -125,50 +125,51 @@ function SWEP:GetBoneOrientation(basetab, tab, ent, bone_override)
 		local m = ent:GetBoneMatrix(bone)
 		if m then
 			pos, ang = m:GetTranslation(), m:GetAngles()
-		else
-			-- for i = 0, ent:GetBoneCount() do
-				-- print(ent:GetBoneName(i))
-			-- end
-			-- print(ent:GetBoneCount(), bone, ent:GetBoneName(bone), tab.bone)
 		end
 		
 		if IsValid(self.Owner) and self.Owner:IsPlayer() and 
 			ent == self.Owner:GetViewModel() and self.ViewModelFlip then
-			ang.r = -ang.r // Fixes mirrored models
+			ang.r = -ang.r -- Fixes mirrored models
 		end
 	end
 	
 	return pos, ang
 end
 
+function SWEP:RecreateModel(v)
+	v.modelEnt = ClientsideModel(v.model, RENDERGROUP_BOTH)
+	if IsValid(v.modelEnt) then
+		v.createdModel = v.model
+		v.modelEnt:SetPos(self:GetPos())
+		v.modelEnt:SetAngles(self:GetAngles())
+		v.modelEnt:SetParent(self)
+		v.modelEnt:SetNoDraw(true)
+		v.modelEnt:DrawShadow(true)
+		function v.modelEnt.GetInkColorProxy()
+			if IsValid(self) then
+				return self:GetInkColorProxy()
+			else
+				return ss.vector_one
+			end
+		end
+	else
+		v.modelEnt = nil
+	end
+	
+	return IsValid(v.modelEnt)
+end
+
 function SWEP:CreateModels(t)
 	if not t then return end
 	
-	// Create the clientside models here because Garry says we can't do it in the render hook
+	-- Create the clientside models here because Garry says we can't do it in the render hook
 	local errormodelshown, errormaterialshown = false, false
 	for k, v in pairs(t) do
 		if v.type == "Model" and v.model and v.model ~= "" and
 			(not IsValid(v.modelEnt) or v.createdModel ~= v.model) then
 			
 			if file.Exists(v.model, "GAME") then
-				v.modelEnt = ClientsideModel(v.model, RENDERGROUP_BOTH)
-				if IsValid(v.modelEnt) then
-					v.createdModel = v.model
-					v.modelEnt:SetPos(self:GetPos())
-					v.modelEnt:SetAngles(self:GetAngles())
-					v.modelEnt:SetParent(self)
-					v.modelEnt:SetNoDraw(true)
-					v.modelEnt:DrawShadow(true)
-					v.modelEnt.GetInkColorProxy = function()
-						if IsValid(self) then
-							return self:GetInkColorProxy()
-						else
-							return ss.vector_one
-						end
-					end
-				else
-					v.modelEnt = nil
-				end
+				self:RecreateModel(v)
 			elseif not errormodelshown then
 				self:PopupError "SplatoonSWEPs: Required models are not found!"
 				errormodelshown = true
@@ -179,7 +180,7 @@ function SWEP:CreateModels(t)
 			if file.Exists("materials/" .. v.sprite .. ".vmt", "GAME") then
 				local name = v.sprite .. "-"
 				local params = {["$basetexture"] = v.sprite}
-				// make sure we create a unique name based on the selected options
+				-- make sure we create a unique name based on the selected options
 				local tocheck = {"nocull", "additive", "vertexalpha", "vertexcolor", "ignorez"}
 				for i, j in pairs(tocheck) do
 					if v[j] then
@@ -241,18 +242,17 @@ function SWEP:ViewModelDrawn()
 	if self.SurpressDrawingVM or self:GetHolstering() or
 	not (IsValid(self) and IsValid(self.Owner) and self.VElements) then return end
 	local bone_ent, vm = self.Owner, self.Owner:GetViewModel()
-	self:UpdateBonePositions(vm)
-	
 	for k, name in ipairs(self.vRenderOrder) do
 		local v = self.VElements[name]
 		if not v then self.vRenderOrder = nil break end
 		if v.hide or not v.bone then continue end
 		
-		local model, sprite = v.modelEnt, v.spriteMaterial		
+		local sprite = v.spriteMaterial		
 		local pos, ang = self:GetBoneOrientation(self.VElements, v, vm)
 		if not pos then continue end
-		
-		if v.type == "Model" and IsValid(model) then
+		if v.type == "Model" then
+			if not (IsValid(v.modelEnt) or self:RecreateModel(v)) then continue end
+			local model = v.modelEnt
 			model:SetPos(pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z)
 			ang:RotateAroundAxis(ang:Up(), v.angle.y)
 			ang:RotateAroundAxis(ang:Right(), v.angle.p)
@@ -329,7 +329,7 @@ end
 function SWEP:DrawWorldModel()
 	if IsValid(self.Owner) then
 		if self:GetHolstering() then return end
-		if self.IsSquid and self.Owner:IsPlayer() then
+		if self.Owner:IsPlayer() and self.Owner:Crouching() then
 			if self:GetPMID() ~= ss.PLAYER.NOSQUID then
 				if IsValid(self.Squid) and not self:GetInInk() then
 					--It seems changing eye position doesn't work.
@@ -362,7 +362,7 @@ function SWEP:DrawWorldModel()
 	end
 	
 	self:SetupBones()
-	local bone_ent = self // when the weapon is dropped
+	local bone_ent = self -- when the weapon is dropped
 	if self.Owner ~= LocalPlayer() then self:Think() end
 	if not self.WElements then return end
 	for k, name in pairs(self.wRenderOrder) do
@@ -381,8 +381,10 @@ function SWEP:DrawWorldModel()
 		local pos, ang = self:GetBoneOrientation(self.WElements, v, bone_ent, not v.bone and "ValveBiped.Bip01_R_Hand")
 		if not pos then continue end
 		
-		local model, sprite = v.modelEnt, v.spriteMaterial
-		if v.type == "Model" and IsValid(model) then
+		local sprite = v.spriteMaterial
+		if v.type == "Model" then
+			if not (IsValid(v.modelEnt) or self:RecreateModel(v)) then continue end
+			local model = v.modelEnt
 			model:SetPos(pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z)
 			ang:RotateAroundAxis(ang:Up(), v.angle.y)
 			ang:RotateAroundAxis(ang:Right(), v.angle.p)
