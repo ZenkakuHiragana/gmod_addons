@@ -9,47 +9,45 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 	width = 0,
 	height = 0,
 	onewindow = true,
-	init = function(icon, window)
-		ss:ConfigMenu()
-		window:Close()
-	end,
+	init = ss.ConfigMenu,
 })
 
 for i, c in ipairs(ss.ConVar) do
 	CreateClientConVar(c, tostring(ss.ConVarDefaults[i]), true, true, ss.Text.CVarDescription[i])
 end
 
-function ss:ConfigMenu()
-	local previewmodel = "models/props_splatoon/weapons/primaries/splattershot/splattershot.mdl"
+function ss:ConfigMenu(window)
 	local division = 3
-	local Window = vgui.Create "DFrame" --Main window
-	Window:SetSize(ScrW() / division, ScrH() / division)
-	Window:SetMinWidth(ScrW() / 3)
-	Window:SetMinHeight(ScrH() / 3)
-	Window:SetTitle(ss.Text.ConfigTitle)
-	Window:Center()
-	Window:SetDraggable(true)
-	Window:ShowCloseButton(true)
-	Window:SetVisible(true)
-	Window:NoClipping(false)
-	Window:MakePopup()
+	window:SetSize(ScrW() / division, ScrH() / division)
+	window:SetMinWidth(ScrW() / 3)
+	window:SetMinHeight(ScrH() / 3)
+	window:SetWidth(ScrW() / 3)
+	window:SetHeight(ScrH() / 3)
+	window:SetTitle(ss.Text.ConfigTitle)
+	window:Center()
+	window:SetDraggable(true)
+	window:ShowCloseButton(true)
+	window:SetVisible(true)
+	window:NoClipping(false)
 	
-	local LabelError = Label(ss.Text.Error.NotFoundPlayermodel, Window)
-	LabelError:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2 + 30)
+	local previewmodel = "models/props_splatoon/weapons/primaries/splattershot/splattershot.mdl"
+	local LabelError = window:Add "DLabel"
+	LabelError:SetPos(window:GetWide() * 0.4, window:GetTall() / 3 * 2 + 30)
 	LabelError:SetFont "DermaDefaultBold"
+	LabelError:SetText(ss.Text.Error.NotFoundPlayermodel)
 	LabelError:SetTextColor(Color(255, 128, 128))
 	LabelError:SizeToContents()
 	LabelError:SetVisible(false)
 	
 	local function GetColor() --Get current color for preview model
-		local color = self:GetColor(self:GetConVarInt "InkColor")
+		local color = ss:GetColor(ss:GetConVarInt "InkColor")
 		return Vector(color.r, color.g, color.b) / 255
 	end
 	
 	local function SetPlayerModel(DModelPanel) --Apply changes to preview model
-		local model = self.Playermodel[self:GetConVarInt "Playermodel"]
+		local model = ss.Playermodel[ss:GetConVarInt "Playermodel"]
 		if not model then model = player_manager.TranslatePlayerModel(GetConVar "cl_playermodel":GetString()) end
-		local bone = table.HasValue(self.Text.PlayermodelNames, model) and "ValveBiped.Bip01_Pelvis" or "ValveBiped.Bip01_Spine4"
+		local bone = table.HasValue(ss.Text.PlayermodelNames, model) and "ValveBiped.Bip01_Pelvis" or "ValveBiped.Bip01_Spine4"
 		
 		if not file.Exists(model, "GAME") then
 			model = LocalPlayer():GetModel()
@@ -69,40 +67,40 @@ function ss:ConfigMenu()
 	end
 	
 	if not file.Exists(previewmodel, "GAME") then --If weapon model is not found
-		local ErrorLabel = Label(ss.Text.Error.NotFoundWeaponModel, Window)
+		local ErrorLabel = Label(ss.Text.Error.NotFoundWeaponModel, window)
 		ErrorLabel:SizeToContents()
 		ErrorLabel:Dock(FILL) --Bring it to center
 		ErrorLabel:SetContentAlignment(5)
 		return
 	end
 	
-	local Preview = vgui.Create("DModelPanel", Window) --Preview weapon model
+	local Preview = window:Add "DModelPanel" --Preview weapon model
 	Preview:SetDirectionalLight(BOX_RIGHT, color_white)
 	Preview:SetContentAlignment(5)
-	Preview:SetSize(Window:GetWide() * 0.4, Window:GetTall() / 2)
-	Preview:SetPos(Window:GetWide() / -30, 24)
+	Preview:SetSize(window:GetWide() * 0.4, window:GetTall() / 2)
+	Preview:SetPos(window:GetWide() / -30, 24)
 	Preview:SetModel(previewmodel)
 	local center = Preview.Entity:WorldSpaceCenter()
 	Preview:SetLookAt(center)
 	Preview:SetCamPos(center + Vector(-30, 30, 10))
 	Preview.Entity.GetInkColorProxy = GetColor
 	
-	local Playermodel = vgui.Create("DModelPanel", Window) --Preview playermodel
+	local Playermodel = window:Add "DModelPanel" --Preview playermodel
 	function Playermodel:LayoutEntity() end
 	Playermodel:SetDirectionalLight(BOX_RIGHT, color_white)
 	Playermodel:SetContentAlignment(5)
-	Playermodel:SetSize(Window:GetWide() * 0.4, Window:GetTall() * 0.75)
-	Playermodel:AlignLeft(Window:GetWide() / 20)
+	Playermodel:SetSize(window:GetWide() * 0.4, window:GetTall() * 0.75)
+	Playermodel:AlignLeft(window:GetWide() / 20)
 	Playermodel:AlignBottom()
 	SetPlayerModel(Playermodel)
 	
-	local ComboColor = vgui.Create("DComboBox", Window) --Ink color selection box
+	local ComboColor = window:Add "DComboBox" --Ink color selection box
 	ComboColor:SetSortItems(false)
-	ComboColor:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 4)
-	ComboColor:SetSize(Window:GetWide() * 0.31, 24)
-	ComboColor:SetValue(self:GetColorName(self:GetConVarInt "InkColor"))
-	for i = 1, self.MAX_COLORS do
-		ComboColor:AddChoice(self:GetColorName(i))
+	ComboColor:SetPos(window:GetWide() * 0.4, window:GetTall() / 4)
+	ComboColor:SetSize(window:GetWide() * 0.31, 24)
+	ComboColor:SetValue(ss:GetColorName(ss:GetConVarInt "InkColor"))
+	for i = 1, ss.MAX_COLORS do
+		ComboColor:AddChoice(ss:GetColorName(i))
 	end
 	
 	function ComboColor:OnSelect(index, value, data)
@@ -110,16 +108,17 @@ function ss:ConfigMenu()
 		if cvar then cvar:SetInt(index) end
 	end
 	
-	local LabelColor = Label(ss.Text.InkColor, Window)
+	local LabelColor = window:Add "DLabel"
+	LabelColor:SetPos(window:GetWide() * 0.4, window:GetTall() / 4 - 24)
+	LabelColor:SetText(ss.Text.InkColor)
 	LabelColor:SizeToContents()
-	LabelColor:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 4 - 24)
 	
-	local ComboModel = vgui.Create("DComboBox", Window) --Playermodel selection box
+	local ComboModel = window:Add "DComboBox" --Playermodel selection box
 	ComboModel:SetSortItems(false)
-	ComboModel:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2)
-	ComboModel:SetSize(Window:GetWide() * 0.31, 24)
-	ComboModel:SetValue(self.Text.PlayermodelNames[self:GetConVarInt "Playermodel"])
-	for i, c in ipairs(self.Text.PlayermodelNames) do
+	ComboModel:SetPos(window:GetWide() * 0.4, window:GetTall() / 3 * 2)
+	ComboModel:SetSize(window:GetWide() * 0.31, 24)
+	ComboModel:SetValue(ss.Text.PlayermodelNames[ss:GetConVarInt "Playermodel"])
+	for i, c in ipairs(ss.Text.PlayermodelNames) do
 		ComboModel:AddChoice(c)
 	end
 	
@@ -129,12 +128,13 @@ function ss:ConfigMenu()
 		SetPlayerModel(Playermodel)
 	end
 	
-	local LabelModel = Label(ss.Text.Playermodel, Window)
+	local LabelModel = window:Add "DLabel"
+	LabelModel:SetPos(window:GetWide() * 0.4, window:GetTall() / 3 * 2 - 24)
+	LabelModel:SetText(ss.Text.Playermodel)
 	LabelModel:SizeToContents()
-	LabelModel:SetPos(Window:GetWide() * 0.4, Window:GetTall() / 3 * 2 - 24)
 	
-	local Options = vgui.Create("DPanel", Window) --Group of checkboxes
-	Options:SetWide(Window:GetWide() / 4)
+	local Options = window:Add "DPanel" --Group of checkboxes
+	Options:SetWide(window:GetWide() / 4)
 	Options:Dock(RIGHT)
 	
 	local OptionsConVar = {
@@ -145,11 +145,11 @@ function ss:ConfigMenu()
 		"DrawInkOverlay",
 	}
 	for i = 0, 4 do
-		local Check = vgui.Create("DCheckBoxLabel", Options)
+		local Check = Options:Add "DCheckBoxLabel"
 		Check:SetPos(4, 4 + 20 * i)
 		Check:SetText(ss.Text.Options[i + 1])
-		Check:SetConVar(self:GetConVarName(OptionsConVar[i + 1]))
-		Check:SetValue(self:GetConVarInt(OptionsConVar[i + 1]))
+		Check:SetConVar(ss:GetConVarName(OptionsConVar[i + 1]))
+		Check:SetValue(ss:GetConVarInt(OptionsConVar[i + 1]))
 		Check:SetDark(true)
 		Check:SizeToContents()
 	end

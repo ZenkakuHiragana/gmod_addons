@@ -311,9 +311,11 @@ ss.CheckSplatoonPlayermodels = {
 
 hook.Add("PlayerSpawn", "SplatoonSWEPs: Fix PM change", function(ply)
 	ply.IsSplatoonPlayermodel = nil
+	ply:SetSubMaterial()
 end)
 hook.Add("Tick", "SplatoonSWEPs: Fix playermodel hull change", function()
 	for _, p in ipairs(player.GetAll()) do
+		if ss:IsValidInkling(p) then continue end
 		local is = ss.CheckSplatoonPlayermodels[p:GetModel()]
 		if is and p.IsSplatoonPlayermodel ~= true and GetConVar "splt_EditScale":GetInt() == 1 then
 			p:SetViewOffset(Vector(0, 0, 42))
