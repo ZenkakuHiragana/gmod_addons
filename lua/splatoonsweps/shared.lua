@@ -280,7 +280,7 @@ hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 			weapon.Slot = weaponslot[weapon.Base] or 0
 			weapon.SlotPos = i
 			if CLIENT then
-				local icon = "vgui/entities/" .. c
+				local icon = "entities/" .. c
 				if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then icon = "weapons/swep" end
 				weapon.WepSelectIcon = surface.GetTextureID(icon)
 			end

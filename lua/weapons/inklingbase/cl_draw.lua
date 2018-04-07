@@ -121,7 +121,7 @@ function SWEP:GetBoneOrientation(basetab, tab, ent, bone_override)
 		bone = ent:LookupBone(bone_override or tab.bone)
 		if not bone then return end
 		
-		pos, ang = vector_origin, angle_zero
+		pos, ang = Vector(), Angle()
 		local m = ent:GetBoneMatrix(bone)
 		if m then
 			pos, ang = m:GetTranslation(), m:GetAngles()
@@ -242,6 +242,8 @@ function SWEP:ViewModelDrawn()
 	if self.SurpressDrawingVM or self:GetHolstering() or
 	not (IsValid(self) and IsValid(self.Owner) and self.VElements) then return end
 	local bone_ent, vm = self.Owner, self.Owner:GetViewModel()
+	self:UpdateBonePositions(vm)
+	
 	for k, name in ipairs(self.vRenderOrder) do
 		local v = self.VElements[name]
 		if not v then self.vRenderOrder = nil break end
