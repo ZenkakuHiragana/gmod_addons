@@ -254,3 +254,7 @@ hook.Add("Tick", "SplatoonSWEPs: Do ink coroutines", function()
 end)
 
 hook.Add("PostCleanupMap", "SplatoonSWEPs: Cleanup all ink", ss.ClearAllInk)
+hook.Add("PlayerInitialSpawn", "SplatoonSWEPs: Bots compatibility", function(ply)
+	if not ply:IsBot() then return end
+	ss:InitializeMoveEmulation(ply)
+end)

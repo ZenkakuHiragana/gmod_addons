@@ -33,7 +33,7 @@ SWEP.WElements = SWEP.WElements or {
 }
 
 function SWEP:ResetBonePositions(vm)
-	if not vm:GetBoneCount() then return end
+	if not (IsValid(vm) and vm:GetBoneCount()) then return end
 	for i = 0, vm:GetBoneCount() do
 		vm:ManipulateBoneScale(i, ss.vector_one)
 		vm:ManipulateBonePosition(i, vector_origin)
@@ -43,7 +43,7 @@ end
 
 local hasGarryFixedBoneScalingYet = false
 function SWEP:UpdateBonePositions(vm)
-	if self.ViewModelBoneMods then
+	if IsValid(vm) and self.ViewModelBoneMods then
 		if not vm:GetBoneCount() then return end
 		
 		-- !! WORKAROUND !! --
