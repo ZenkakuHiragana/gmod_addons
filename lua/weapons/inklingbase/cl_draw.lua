@@ -171,7 +171,7 @@ function SWEP:CreateModels(t)
 			if file.Exists(v.model, "GAME") then
 				self:RecreateModel(v)
 			elseif not errormodelshown then
-				self:PopupError "SplatoonSWEPs: Required models are not found!"
+				self:PopupError "WeaponModelNotFound"
 				errormodelshown = true
 			end
 		elseif v.type == "Sprite" and v.sprite and v.sprite ~= "" and
@@ -198,7 +198,7 @@ function SWEP:CreateModels(t)
 					v.spriteMaterial = nil
 				end
 			elseif not errormaterialshown then
-				self:PopupError "SplatoonSWEPs: Required sprite materials are not found!"
+				self:PopupError "WeaponSpriteMatNotFound"
 				errormaterialshown = true
 			end
 		end
@@ -228,10 +228,9 @@ function SWEP:MakeSquidModel(id)
 			self.Squid = nil
 		end
 	elseif not self.ErrorSquidModel then
-		print "SplatoonSWEPs: Squid model is not found!  Check your subscription!"
 		self.ErrorSquidModel = true
 		if self:GetPMID() ~= ss.PLAYER.NOSQUID then
-			self:PopupError "SplatoonSWEPs: Squid model is not found!  You cannot become squid!"
+			self:PopupError "WeaponSquidModelNotFound"
 		end
 	end
 end

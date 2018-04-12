@@ -315,8 +315,13 @@ ss.Text.Error.NotFoundPlayermodel =
 [[ERROR: Playermodel is not found!
 Make sure you have required addons!]]
 ss.Text.Error.NotFoundWeaponModel = 
-[[Weapon model is not found!
+[[ERROR: Weapon model is not found!
 Make sure you have subscribed all required addons!]]
+ss.Text.Error.CantSpawnInk = "SplatoonSWEPs: Can't spawn ink!  Required model is not found!"
+ss.Text.Error.WeaponModelNotFound = "SplatoonSWEPs: Required model is not found!"
+ss.Text.Error.WeaponPlayermodelNotFound = "SplatoonSWEPs: Required playermodel is not found!"
+ss.Text.Error.WeaponSquidModelNotFound = "SplatoonSWEPs: Squid model is not found!  Check your subscriptions!"
+ss.Text.Error.WeaponSpriteMatNotFound = "SplatoonSWEPs: Required sprite material is not found!"
 ss.Text.Options = {
 	"Heal when stand",
 	"Heal when in ink",
@@ -325,6 +330,7 @@ ss.Text.Options = {
 	"Draw ink overlay",
 }
 ss.Text.CVarDescription = {
+	Enabled = "Enables or disables SplatoonSWEPs.",
 	[[Your ink color.  Available values are:
 ]] .. TableToString(ss.Text.ColorNames),
 	[[Your thirdperson model.  Available values are:
@@ -406,8 +412,13 @@ if lang == "ja" then
 	[[エラー: プレイヤーモデルが見つかりません！
 必要なアドオンを確認してください！]]
 	ss.Text.Error.NotFoundWeaponModel = 
-	[[ブキのモデルが見つかりません！
+	[[エラー: ブキのモデルが見つかりません！
 必要なアドオンをすべてサブスクライブしていることを確認してください！]]
+	ss.Text.Error.CantSpawnInk = "SplatoonSWEPs: 必要なモデルが見つからないため、インクを出現させられません！"
+	ss.Text.Error.WeaponModelNotFound = "SplatoonSWEPs: 必要なモデルが見つかりません！"
+	ss.Text.Error.WeaponPlayermodelNotFound = "SplatoonSWEPs: プレイヤーモデルが見つかりません！"
+	ss.Text.Error.WeaponSquidModelNotFound = "SplatoonSWEPs: イカのモデルが見つかりません！"
+	ss.Text.Error.WeaponSpriteMatNotFound = "SplatoonSWEPs: 必要なスプライトマテリアルが見つかりません！"
 	ss.Text.Options = {
 		"インク外でHP回復",
 		"インク内でHP回復",
@@ -416,6 +427,7 @@ if lang == "ja" then
 		"インクオーバーレイの描画",
 	}
 	ss.Text.CVarDescription = {
+	Enabled = "SplatoonSWEPsを有効化するかどうか。",
 	[[インクの色を設定する。使用可能な値は以下の通り。:
 ]] .. TableToString(ss.Text.ColorNames),
 	[[三人称モデル。使用可能な値は以下の通り。:

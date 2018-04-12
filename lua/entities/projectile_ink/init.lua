@@ -1,78 +1,87 @@
 --[[
-	The main projectile entity of Splatoon SWEPs!!!
+	The main projectile entity of SplatoonSWEPs!!!
 ]]
+local ss = SplatoonSWEPs
+if not ss then return end
+
 AddCSLuaFile "shared.lua"
 include "shared.lua"
 
 ENT.DisableDuplicator = true
-local ss = SplatoonSWEPs
+ENT.SplashCount = 0 -- Vars for ink drop pattern
+ENT.SplashInitMul = 0 --
+ENT.SplashInterval = 0 --
+ENT.SplashNum = -1 --
+ENT.SplashPatterns = 1 --
+ENT.SplashRandom = 0 --
+
+ENT.Damage = 0 -- Ink damage amount
+ENT.MinDamage = 0 --
+ENT.DecreaseDamage = 0 --
+ENT.MinDamageTime = 0 --
+
+ENT.InkRatio = 1 -- Ink graphics X:Y
+ENT.InkRadius = 1 -- Ink draw radius
+ENT.MinRadius = 1 --
+ENT.DecreaseRadius = 0 --
+ENT.MinRadiusTime = 0 --
+
+ENT.ColBound = ss.vector_one * ss.mColRadius -- Collision bound
+ENT.ColorCode = 0 -- Ink color
+ENT.InitVelocity = vector_origin -- Initial velocity
+ENT.InitVelocityLength = 0 -- Short for ENT.InitVelocity:Length()
+ENT.IsDrop = false -- Ink is created from another ink = true
+ENT.Straight = 0 -- mStraightFrame, flying time without gravity
+
+ENT.TrailWidth = 10 -- Sprite trail properties
+ENT.TrailEnd = 4 --
+ENT.TrailLife = .15 --
 local dropangle = Angle(0, 0, 90)
+local MAX_SLOPE = math.cos(math.rad(45))
+local shadowparams = {
+	secondstoarrive = ENT.Straight,
+	pos = vector_origin,
+	angle = dropangle,
+	maxangular = .1,
+	maxangulardamp = .8,
+	maxspeed = 32768,
+	maxspeeddamp = 10000,
+	dampfactor = 0,
+	teleportdistance = 0,
+	deltatime = 0,
+}
 local function MakeNoCollide(self, ent)
 	ss:MakeNoCollide(self, ent, self.NoCollide)
 	table.insert(self.NoCollideFilter, ent)
 end
 
+-- Returns ink draw radius.
+-- The higher it started to fall, the smaller the radius.
 function ENT:GetRadius(min, rad)
 	return math.Remap(math.Clamp(self.InitPos.z - self:GetPos().z,
 		ss.mPaintNearDistance, ss.mPaintFarDistance),
 		ss.mPaintFarDistance, ss.mPaintNearDistance, min, rad)
 end
 
-function ENT:Initialize()
-	if not file.Exists(self.FlyingModel, "GAME") then return self:Remove() end
-	self.Hit = false
+function ENT:Initialize(colradius)
 	self:SharedInit()
-	self.ColRadius = self.ColRadius or ss.mColRadius
-	self.ColBound = ss.vector_one * self.ColRadius * 1.1
-	self.NoCollide = {}
-	self.NoCollideFilter = {self, self:GetOwner()}
-	self:PhysicsInitSphere(self.ColRadius, "watermelon")
-	if not self.IsDrop then self:StartMotionController() end
+	self:PhysicsInitSphere(colradius or ss.mColRadius, "watermelon")
+	self:PhysWake()
+	
 	local ph = self:GetPhysicsObject()
 	if not IsValid(ph) then return end
-	ph:ApplyForceCenter(vector_origin)
-	ph:EnableGravity(self.IsDrop or false)
+	ph:EnableGravity(self.IsDrop)
+	self:StartMotionController()
 	self.InitPos = self:GetPos()
 	self.InitTime = CurTime()
-	self.Straight = self.Straight or 0
-	self.ColorCode = self.ColorCode or 0
-	self.SplashNum = self.SplashNum or -1
-	self.SplashPatterns = self.SplashPatterns or 1
-	self.SplashInterval = self.SplashInterval or 0
-	self.SplashInitMul = self.SplashInitMul or 0
-	self.SplashRandom = self.SplashRandom or 0
-	self.SplashCount = 0
-	self.Damage = self.Damage or 0
-	self.DecreaseDamage = self.DecreaseDamage or 0
-	self.MinDamage = self.MinDamage or 0
-	self.MinDamageTime = self.MinDamageTime or 0
-	self.InkRadius = self.InkRadius or 10
-	self.MinRadius = self.MinRadius or 10
-	self.DecreaseRadius = self.DecreaseRadius or 0
-	self.MinRadiusTime = self.MinRadiusTime or 0
+	self.InitVelocityLength = self.InitVelocityLength / 4.5
+	self.NoCollide = {}
+	self.NoCollideFilter = {self, self:GetOwner()}
 	self.SplashInit = self.SplashInterval / self.SplashPatterns * self.SplashInitMul
-	self.InitVelocity = self.InitVelocity or vector_origin
-	self.InitVelocityLength = (self.InitVelocityLength or 1) / 4.5
-	self.ShadowParams = {
-		secondstoarrive = self.Straight,
-		pos = self.InitPos + self.InitVelocity * self.Straight,
-		angle = dropangle,
-		maxangular = .1,
-		maxangulardamp = .8,
-		maxspeed = 32768,
-		maxspeeddamp = 10000,
-		dampfactor = 0,
-		teleportdistance = 0,
-		deltatime = 0,
-	}
+	self.Destination = self.InitPos + self.InitVelocity * self.Straight
 	
-	self.ColRadius = nil
-	self.TrailWidth = self.TrailWidth or 10
-	self.TrailEnd = self.TrailEnd or 4
-	self.TrailLife = self.TrailLife or .15
-	util.SpriteTrail(self, 0, ss:GetColor(self.ColorCode), false,
-	self.TrailWidth, self.TrailEnd, self.TrailLife,
-	1 / (self.TrailWidth + self.TrailEnd), "effects/beam_generic01.vmt")
+	if colradius then self.ColBound = ss.vector_one * colradius end
+	util.SpriteTrail(self, 0, ss:GetColor(self.ColorCode), false, self.TrailWidth, self.TrailEnd, self.TrailLife, 1 / (self.TrailWidth + self.TrailEnd), "effects/beam_generic01.vmt")
 end
 
 function ENT:OnRemove()
@@ -81,41 +90,54 @@ function ENT:OnRemove()
 	end
 end
 
+-- Physics simulation for ink trajectory
+-- The first some frames(1/60 sec.) ink flies without gravity
+-- After that, ink decelerates horizontally and is affected by gravity
 function ENT:PhysicsSimulate(p, t)
-	if not self.Hit then
-		local v = p:GetVelocity()
-		if math.max(0, CurTime() - self.InitTime + FrameTime()) >= self.Straight then
-			local accel = (math.NormalizeAngle(v:Angle().p - p:GetAngles().r) / t - p:GetAngleVelocity().x) / t
-			v.z = math.max(0, v.z)
-			return Vector(accel), -v / (t * self.InitVelocityLength) + physenv.GetGravity(), SIM_GLOBAL_ACCELERATION
-		else
-			self.ShadowParams.deltatime = t
-			p:ComputeShadowControl(self.ShadowParams)
-		end
+	local pos, v = p:GetPos(), p:GetVelocity()
+	local fence = ss:CheckFence(self, pos, pos + v * t, self.NoCollideFilter, -self.ColBound, self.ColBound)
+	if fence then
+		MakeNoCollide(self, fence)
+		timer.Simple(0, function()
+			if not (IsValid(self) and IsValid(p)) then return end
+			self:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
+		end)
+	else
+		ss:RemoveNoCollide(self, nil, self.NoCollide)
+		timer.Simple(0, function()
+			if not (IsValid(self) and IsValid(p)) then return end
+			self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
+		end)
+	end
+	
+	if self.IsDrop or self.Hit then return vector_origin, vector_origin, SIM_GLOBAL_ACCELERATION end
+		debugoverlay.Box(pos, -self.ColBound, self.ColBound, 0.1, Color(0, 255, 0, 64))
+		debugoverlay.Box(pos + v * t, -self.ColBound, self.ColBound, 0.1, Color(0, 255, 0, 64))
+		debugoverlay.Line(pos - self.ColBound, pos + v * t - self.ColBound, 0.1, Color(0, 255, 0, 64))
+		debugoverlay.Line(pos + self.ColBound, pos + v * t + self.ColBound, 0.1, Color(0, 255, 0, 64))
+	if math.max(0, CurTime() - self.InitTime + FrameTime()) >= self.Straight then -- Affected by gravity and decelerates horizontally
+		local accel = (math.NormalizeAngle(v:Angle().p - p:GetAngles().r) / t - p:GetAngleVelocity().x) / t
+		v.z = math.max(0, v.z)
+		return Vector(accel), -v / (t * self.InitVelocityLength) + physenv.GetGravity(), SIM_GLOBAL_ACCELERATION
+	else -- Goes straight
+		shadowparams.deltatime = t
+		shadowparams.pos = self.Destination
+		shadowparams.secondstoarrive = self.Straight
+		p:ComputeShadowControl(shadowparams)
 	end
 	
 	return vector_origin, vector_origin, SIM_GLOBAL_ACCELERATION
 end
 
-local splashrandom = {-1, 0, 1}
 function ENT:PhysicsUpdate(phys)
 	if not (IsValid(phys) and self:IsInWorld()) then
 		return SafeRemoveEntityDelayed(self, 0)
-	elseif self.Hit then
+	elseif self.IsDrop or self.Hit then
 		return
 	end
 	
-	local fence = ss:CheckFence(self, phys:GetPos(), phys:GetPos()
-	+ phys:GetVelocity() * FrameTime(), self.NoCollideFilter, -self.ColBound, self.ColBound)
-	if fence then
-		MakeNoCollide(self, fence)
-	else
-		ss:RemoveNoCollide(self, nil, self.NoCollide)
-	end
-	
-	if self.IsDrop then return end
 	phys:EnableGravity(math.max(0, CurTime() - self.InitTime) >= self.Straight)
-	if self.SplashCount > self.SplashNum then return end
+	if self.SplashCount > self.SplashNum then return end -- Creates an ink drop
 	local len = (phys:GetPos() - self.InitPos):Length2DSqr()
 	local nextlen = self.SplashCount * self.SplashInterval + self.SplashInit
 	if len < nextlen * nextlen then return end
@@ -128,7 +150,6 @@ function ENT:PhysicsUpdate(phys)
 	splash:SetAngles(dropangle)
 	splash:SetOwner(self:GetOwner())
 	splash:SetInkColorProxy(self:GetInkColorProxy())
-	splash.ColRadius = ss.mSplashColRadius
 	splash.InkRadius = self.SplashRadius or self.InkRadius
 	splash.MinRadius = splash.InkRadius * self.MinRadius / self.InkRadius
 	splash.ColorCode = self.ColorCode
@@ -145,18 +166,20 @@ function ENT:PhysicsUpdate(phys)
 	end
 end
 
-local MAX_SLOPE = math.cos(math.rad(45))
-function ENT:PhysicsCollide(coldata, collider)
+function ENT:PhysicsCollide(coldata, collider) -- If ink hits something
+	local dp = coldata.OurOldVelocity * FrameTime()
 	if ss:CheckFence(self, coldata.HitPos, coldata.HitPos, self.NoCollideFilter, -self.ColBound, self.ColBound) then
-		collider:EnableCollisions(false)
 		MakeNoCollide(self, coldata.HitEntity)
+		coldata.HitEntity:SetVelocity(coldata.TheirOldVelocity)
 		coldata.HitObject:SetVelocityInstantaneous(coldata.TheirOldVelocity)
-		collider:SetVelocityInstantaneous(coldata.OurOldVelocity)
 		timer.Simple(0, function()
-			if not IsValid(collider) then return end
+			if not (IsValid(collider) and IsValid(self)) then return end
+			self:SetPos(coldata.HitPos)
+			self:SetVelocity(coldata.OurOldVelocity)
 			collider:SetPos(coldata.HitPos)
-			collider:EnableCollisions(true)
+			collider:SetVelocityInstantaneous(coldata.OurOldVelocity)
 		end)
+		print "hit"
 		return
 	end
 	
@@ -169,15 +192,17 @@ function ENT:PhysicsCollide(coldata, collider)
 	end)
 	
 	local t = math.max(0, CurTime() - self.InitTime)
-	if coldata.HitEntity:IsWorld() then
+	if coldata.HitEntity:IsWorld() then -- If ink hits worldspawn
 		local tr = util.QuickTrace(coldata.HitPos, coldata.HitNormal, self)
 		if tr.HitSky then return end
 		self:EmitSound "SplatoonSWEPs_Ink.HitWorld"
-		local ratio = self.InkRatio or 1
+		
+		local ratio = self.InkRatio -- Shooter ink is sometimes stretched
 		local radius = self:GetRadius(self.MinRadius, self.InkRadius)
 		if self.InkType > 3 and tr.HitNormal.z > MAX_SLOPE and collider:IsGravityEnabled() then
-			local min, max, actual = self.InitVelocity * self.Straight, nil, tr.HitPos - self.InitPos
-			max, actual = min:Length(), actual:Length2D() min = max / 3
+			local min = self.InitVelocity * self.Straight
+			local max = min:Length() min = max / 3
+			local actual = tr.HitPos:DistToSqr(self.InitPos)
 			local stretch = math.Remap(math.Clamp(actual, min, max), min, max, 1, 1.5)
 			radius, ratio = radius * stretch, .6 / stretch
 		else
@@ -185,7 +210,7 @@ function ENT:PhysicsCollide(coldata, collider)
 		end
 		
 		return ss.InkManager.AddQueue(tr.HitPos, tr.HitNormal, radius, self.ColorCode, self.InkYaw, self.InkType, ratio)
-	elseif self.Damage > 0 then
+	elseif self.Damage > 0 then -- If ink hits an NPC or something
 		local d, o = DamageInfo(), self:GetOwner()
 		t = t - self.DecreaseDamage
 		d:SetDamage(math.Remap(-math.Clamp(t, 0, self.MinDamageTime), -self.MinDamageTime, 0, self.MinDamage, self.Damage))
@@ -195,8 +220,7 @@ function ENT:PhysicsCollide(coldata, collider)
 		d:SetMaxDamage(self.Damage)
 		d:SetReportedPosition(self:GetPos())
 		d:SetAttacker(o)
-		d:SetInflictor(IsValid(o) and isfunction(o.GetActiveWeapon) and
-		IsValid(o:GetActiveWeapon()) and o:GetActiveWeapon() or game.GetWorld())
+		d:SetInflictor(IsValid(o) and isfunction(o.GetActiveWeapon) and IsValid(o:GetActiveWeapon()) and o:GetActiveWeapon() or game.GetWorld())
 		return coldata.HitEntity:TakeDamageInfo(d)
 	end
 end

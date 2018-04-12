@@ -1,13 +1,12 @@
 
 local OldItemTintBind
 local function ItemTintInit(self, mat, values)
-	-- Store the name of the variable we want to set
-	self.ResultTo = values.resultvar
+	self.ResultTo = values.resultvar -- Store the name of the variable we want to set
 end
 
 if steamworks.ShouldMountAddon "135491961" then
-	include "matproxy/tf2itempaint.lua"
-	ItemTintInit = matproxy.ProxyList.ItemTintColor.init
+	include "matproxy/tf2itempaint.lua" -- Hat Painter & Crit Glow Tools conflicts
+	ItemTintInit = matproxy.ProxyList.ItemTintColor.init -- So take some workaround
 	OldItemTintBind = matproxy.ProxyList.ItemTintColor.bind
 end
 

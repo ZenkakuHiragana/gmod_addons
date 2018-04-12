@@ -27,9 +27,10 @@ end)
 
 net.Receive("SplatoonSWEPs: Send ink cleanup", ss.ClearAllInk)
 net.Receive("SplatoonSWEPs: Send an error message", function()
-	local msg = net.ReadString()
-	local icon = net.ReadUInt(3)
-	local duration = net.ReadUInt(4)
+	local icon = net.ReadUInt(ss.SEND_ERROR_NOTIFY_BITS)
+	local duration = net.ReadUInt(ss.SEND_ERROR_DURATION_BITS)
+	local msg = ss.Text.Error[net.ReadString()]
+	if not msg then return end
 	notification.AddLegacy(msg, icon, duration)
 end)
 

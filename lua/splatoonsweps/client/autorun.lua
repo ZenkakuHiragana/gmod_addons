@@ -1,20 +1,10 @@
 
 --Clientside ink manager
-CreateConVar("sv_splatoonsweps_enabled", "1",
-{FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE},
-"Enables or disables SplatoonSWEPs.")
-if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
 SplatoonSWEPs = SplatoonSWEPs or {
 	AmbientColor = color_white,
 	IMesh = {},
 	InkQueue = {},
-	RenderTarget = {
-		BaseTextureName = "splatoonsweps_basetexture",
-		NormalmapName = "splatoonsweps_normalmap",
-		LightmapName = "splatoonsweps_lightmap",
-		RenderTargetName = "splatoonsweps_rendertarget",
-		WaterMaterialName = "splatoonsweps_watermaterial",
-	},
+	RenderTarget = {},
 	SequentialSurfaces = {
 		Angles = {},
 		Areas = {},
@@ -27,39 +17,22 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	},
 }
 
+include "../const.lua"
+include "../text.lua"
+local ss = SplatoonSWEPs
+local cvarflags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
+
+CreateConVar("sv_splatoonsweps_enabled", "1", cvarflags, ss.Text.CVarDescription.Enabled)
+if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
+
 --Mesh limitation is
 -- 10922 = 32767 / 3 with mesh.Begin(),
 -- 21845 = 65535 / 3 with BuildFromTriangles()
 include "splatoonsweps/shared.lua"
-local ss = SplatoonSWEPs
 local surf = ss.SequentialSurfaces
 local rt = ss.RenderTarget
 local MAX_TRIANGLES = math.floor(32768 / 3)
 local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
-rt.BaseTextureFlags = bit.bor(
-	ss.TEXTUREFLAGS.NOMIP,
-	ss.TEXTUREFLAGS.NOLOD,
-	ss.TEXTUREFLAGS.PROCEDURAL,
-	ss.TEXTUREFLAGS.RENDERTARGET,
-	ss.TEXTUREFLAGS.NODEPTHBUFFER
-)
-rt.NormalmapFlags = bit.bor(
-	ss.TEXTUREFLAGS.NORMAL,
-	ss.TEXTUREFLAGS.NOMIP,
-	ss.TEXTUREFLAGS.NOLOD,
-	ss.TEXTUREFLAGS.PROCEDURAL,
-	ss.TEXTUREFLAGS.RENDERTARGET,
-	ss.TEXTUREFLAGS.NODEPTHBUFFER,
-	ss.TEXTUREFLAGS.SSBUMP
-)
-rt.LightmapFlags = bit.bor(
-	ss.TEXTUREFLAGS.NOMIP,
-	ss.TEXTUREFLAGS.NOLOD,
-	ss.TEXTUREFLAGS.PROCEDURAL,
-	ss.TEXTUREFLAGS.RENDERTARGET,
-	ss.TEXTUREFLAGS.NODEPTHBUFFER
-)
-
 function ss:ClearAllInk()
 	ss.InkQueue = {}
 	local amb = ss.AmbientColor or render.GetAmbientLightColor():ToColor()
@@ -155,11 +128,10 @@ function ss:PrepareInkSurface(write)
 	
 	data:Close()
 	file.Delete(path)
-	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
 	local rtmergin = 4 / rtsize --arearatio[units/pixel]
-	local arearatio = 41.3329546960896 / rtsize * (ss.AreaBound * ss.AspectSum / numsurfs
-		* ss.AspectSumX / ss.AspectSumY / 2500 + numsurfs)^.523795515713613
+	local arearatio = 41.3329546960896 / rtsize * (ss.AreaBound * ss.AspectSum / numsurfs * ss.AspectSumX / ss.AspectSumY / 2500 + numsurfs)^.523795515713613
 	local convertunit = rtsize * arearatio --convertunit[pixel * units/pixel -> units]
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
@@ -301,45 +273,45 @@ include "userinfo.lua"
 include "inkmanager.lua"
 include "network.lua"
 
+--21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
 hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function()
-	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"], render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
 	
-	--21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
 	rt.BaseTexture = GetRenderTargetEx(
-		rt.BaseTextureName,
+		ss.RTName.BaseTexture,
 		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
-		rt.BaseTextureFlags,
+		ss.RTFlags.BaseTexture,
 		CREATERENDERTARGETFLAGS_HDR,
 		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
 	)
 	rtsize = math.min(rt.BaseTexture:Width(), rt.BaseTexture:Height())
 	rt.Normalmap = GetRenderTargetEx(
-		rt.NormalmapName,
+		ss.RTName.Normalmap,
 		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
-		rt.NormalmapFlags,
+		ss.RTFlags.Normalmap,
 		CREATERENDERTARGETFLAGS_HDR,
 		19 --IMAGE_FORMAT_BGRA4444, 8192x8192, 128MB
 	)
 	rt.Lightmap = GetRenderTargetEx(
-		rt.LightmapName,
+		ss.RTName.Lightmap,
 		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
-		rt.LightmapFlags,
+		ss.RTFlags.Lightmap,
 		CREATERENDERTARGETFLAGS_HDR,
 		IMAGE_FORMAT_RGBA8888 --8192x8192, 256MB
 	)
 	rt.Material = CreateMaterial(
-		rt.RenderTargetName,
+		ss.RTName.RenderTarget,
 		"LightmappedGeneric",
 		{
-			["$basetexture"] = rt.BaseTextureName,
-			["$bumpmap"] = rt.NormalmapName,
+			["$basetexture"] = ss.RTName.BaseTexture,
+			["$bumpmap"] = ss.RTName.Normalmap,
 			["$ssbump"] = "1",
 			["$nolod"] = "1",
 			["$alpha"] = ".95",
@@ -349,10 +321,10 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 		}
 	)
 	rt.WaterMaterial = CreateMaterial(
-		rt.WaterMaterialName,
+		ss.RTName.WaterMaterial,
 		"Refract",
 		{
-			["$normalmap"] = rt.NormalmapName,
+			["$normalmap"] = ss.RTName.Normalmap,
 			["$nolod"] = "1",
 			["$bluramount"] = "2",
 			["$refractamount"] = ".1",

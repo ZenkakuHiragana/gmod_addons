@@ -49,7 +49,7 @@ for i = 1, circle_polys do
 	reference_vert:Rotate(Angle(0, 0, 360 / circle_polys))
 end
 
-function RequestInkOrder(self)
+function RequestInkOrder(self) --Old function
 	local tr = self.Owner:GetEyeTrace()
 	local pos, normal = tr.HitPos, tr.HitNormal
 	local radius = 500
@@ -59,9 +59,5 @@ function RequestInkOrder(self)
 	for i, v in ipairs(reference_polys) do
 		DebugLine(LocalToWorld(v, angle_zero, pos, normal:Angle()), LocalToWorld(reference_polys[i % #reference_polys + 1], angle_zero, pos, normal:Angle()))
 	end
-end
-
-function RequestInkOrder(self)
-	SplatoonSWEPs.BuildOverlap()
 end
 ----------------------

@@ -6,9 +6,10 @@ include "baseinfo.lua"
 include "cl_draw.lua"
 include "ai_translations.lua"
 
-local errorduration = 10
 function SWEP:PopupError(msg)
-	notification.AddLegacy(msg, NOTIFY_ERROR, errorduration)
+	msg = ss.Text.Error[msg]
+	if not msg then return end
+	notification.AddLegacy(msg, NOTIFY_ERROR, 10)
 end
 
 function SWEP:IsFirstTimePredicted()

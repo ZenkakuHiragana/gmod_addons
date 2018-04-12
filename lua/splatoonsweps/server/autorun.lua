@@ -1,10 +1,6 @@
 
 --SplatoonSWEPs structure
 --The core of new ink system.
-CreateConVar("sv_splatoonsweps_enabled", "1",
-{FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE},
-"Enables or disables SplatoonSWEPs.")
-if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
 SplatoonSWEPs = SplatoonSWEPs or {
 	BSP = {},
 	Models = {},
@@ -14,7 +10,14 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	PlayersReady = {},
 }
 
+include "../const.lua"
+include "../text.lua"
+
 local ss = SplatoonSWEPs
+local cvarflags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
+CreateConVar("sv_splatoonsweps_enabled", "1", cvarflags, ss.Text.CVarDescription.Enabled)
+if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
+
 local abs, collectgarbage, insert, ipairs, pairs, remove
 = math.abs, collectgarbage, table.insert, ipairs, pairs, table.remove
 for i = 1, 9 do
@@ -35,7 +38,7 @@ end
 --returning negative -> face is in negative side of the plane
 --returning 0 -> face intersects with the plane
 local PlaneThickness = 0.2
-local function AcrossPlane(self, vertices, normal, dist)
+local function AcrossPlane(vertices, normal, dist)
 	local sign
 	for i, v in ipairs(vertices) do --for each vertices of face
 		local dot = normal:Dot(v) - dist
@@ -61,9 +64,9 @@ function ss:ClearAllInk()
 end
 
 function ss:FindLeaf(vertices, modelindex)
-	local node = self.Models[modelindex or 1]
+	local node = ss.Models[modelindex or 1]
 	while node.Separator do
-		local sign = AcrossPlane(ss, vertices, node.Separator.normal, node.Separator.distance)
+		local sign = AcrossPlane(vertices, node.Separator.normal, node.Separator.distance)
 		if sign == 0 then return node end
 		node = node.ChildNodes[sign > 0 and 1 or 2]
 	end
@@ -74,12 +77,12 @@ end
 function ss:BSPPairs(vertices, modelindex)
 	return function(queue, old)
 		if old.Separator then
-			local sign = AcrossPlane(ss, vertices, old.Separator.normal, old.Separator.distance)
+			local sign = AcrossPlane(vertices, old.Separator.normal, old.Separator.distance)
 			if sign >= 0 then insert(queue, old.ChildNodes[1]) end
 			if sign <= 0 then insert(queue, old.ChildNodes[2]) end
 		end
 		return remove(queue, 1)
-	end, {self.Models[modelindex or 1]}, {}
+	end, {ss.Models[modelindex or 1]}, {}
 end
 
 function ss:BSPPairsAll(modelindex)
@@ -89,15 +92,15 @@ function ss:BSPPairsAll(modelindex)
 			insert(queue, old.ChildNodes[2])
 		end
 		return remove(queue, 1)
-	end, {self.Models[modelindex or 1]}
+	end, {ss.Models[modelindex or 1]}
 end
 
-function ss:SendError(msg, icon, duration, user)
-	if not user:IsPlayer() then return end
+function ss:SendError(msg, user, icon, duration)
+	if user and not user:IsPlayer() then return end
 	net.Start "SplatoonSWEPs: Send an error message"
+	net.WriteUInt(icon or 1, ss.SEND_ERROR_NOTIFY_BITS)
+	net.WriteUInt(duration or 8, ss.SEND_ERROR_DURATION_BITS)
 	net.WriteString(msg)
-	net.WriteUInt(icon, self.SEND_ERROR_NOTIFY_BITS)
-	net.WriteUInt(duration, self.SEND_ERROR_DURATION_BITS)
 	if user then
 		net.Send(user)
 	else
@@ -130,7 +133,6 @@ function ss:RemoveNoCollide(src, tar, NoCollideTable)
 	n:Remove()
 end
 
-ss.AcrossPlane = AcrossPlane
 include "splatoonsweps/shared.lua"
 include "bsp.lua"
 include "inkmanager.lua"

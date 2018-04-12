@@ -128,6 +128,41 @@ ss.WeaponClassNames2 = {
 	"weapon_undercoverbrella",
 }
 
+ss.TEXTUREFLAGS = {
+	POINTSAMPLE			= 0x00000001, --Low quality, "pixel art" texture filtering.
+	TRILINEAR			= 0x00000002, --Medium quality texture filtering.
+	CLAMPS				= 0x00000004, --Clamp S coordinates.
+	CLAMPT				= 0x00000008, --Clamp T coordinates.
+	ANISOTROPIC			= 0x00000010, --High quality texture filtering.
+	HINT_DXT5			= 0x00000020, --Used in skyboxes.  Make sure edges are seamless.
+	PWL_CORRECTED		= 0x00000040, --Purpose unknown.
+	NORMAL				= 0x00000080, --Texture is a normal map.
+	NOMIP				= 0x00000100, --Render largest mipmap only. (Does not delete existing mipmaps, just disables them.)
+	NOLOD				= 0x00000200, --Not affected by texture resolution settings.
+	ALL_MIPS			= 0x00000400, --No Minimum Mipmap
+	PROCEDURAL			= 0x00000800, --Texture is an procedural texture (code can modify it).
+	ONEBITALPHA			= 0x00001000, --One bit alpha channel used.
+	EIGHTBITALPHA		= 0x00002000, --Eight bit alpha channel used.
+	ENVMAP				= 0x00004000, --Texture is an environment map.
+	RENDERTARGET		= 0x00008000, --Texture is a render target.
+	DEPTHRENDERTARGET	= 0x00010000, --Texture is a depth render target.
+	NODEBUGOVERRIDE		= 0x00020000, --
+	SINGLECOPY			= 0x00040000, --
+	UNUSED_00080000		= 0x00080000, --
+	IMMEDIATE_CLEANUP	= 0x00100000, --Immediately destroy this texture when its refernce count hits zero.
+	UNUSED_00200000		= 0x00200000, --
+	UNUSED_00400000		= 0x00400000, --
+	NODEPTHBUFFER		= 0x00800000, --Do not buffer for Video Processing, generally render distance.
+	UNUSED_01000000		= 0x01000000, --
+	CLAMPU				= 0x02000000, --Clamp U coordinates (for volumetric textures).
+	VERTEXTEXTURE		= 0x04000000, --Usable as a vertex texture
+	SSBUMP				= 0x08000000, --Texture is a SSBump. (SSB)
+	UNUSED_10000000		= 0x10000000, --
+	BORDER				= 0x20000000, --Clamp to border colour on all texture coordinates.
+	UNUSED_40000000		= 0x40000000, --
+	UNUSED_80000000		= 0x80000000, --
+}
+
 ss.ConVar = {
 	"cl_splatoonsweps_inkcolor",
 	"cl_splatoonsweps_playermodel",
@@ -183,8 +218,45 @@ ss.RTSize = {
 	[ss.RTResID.DULTRA	] = 40132,
 }
 
+ss.RTName = {
+	BaseTexture = "splatoonsweps_basetexture",
+	Normalmap = "splatoonsweps_normalmap",
+	Lightmap = "splatoonsweps_lightmap",
+	RenderTarget = "splatoonsweps_rendertarget",
+	WaterMaterial = "splatoonsweps_watermaterial",
+}
+
+ss.RTFlags = {
+	BaseTexture = bit.bor(
+		ss.TEXTUREFLAGS.NOMIP,
+		ss.TEXTUREFLAGS.NOLOD,
+		ss.TEXTUREFLAGS.ALL_MIPS,
+		ss.TEXTUREFLAGS.PROCEDURAL,
+		ss.TEXTUREFLAGS.RENDERTARGET,
+		ss.TEXTUREFLAGS.NODEPTHBUFFER
+	),
+	Normalmap = bit.bor(
+		ss.TEXTUREFLAGS.NORMAL,
+		ss.TEXTUREFLAGS.NOMIP,
+		ss.TEXTUREFLAGS.NOLOD,
+		ss.TEXTUREFLAGS.ALL_MIPS,
+		ss.TEXTUREFLAGS.PROCEDURAL,
+		ss.TEXTUREFLAGS.RENDERTARGET,
+		ss.TEXTUREFLAGS.NODEPTHBUFFER,
+		ss.TEXTUREFLAGS.SSBUMP
+	),
+	Lightmap = bit.bor(
+		ss.TEXTUREFLAGS.NOMIP,
+		ss.TEXTUREFLAGS.NOLOD,
+		ss.TEXTUREFLAGS.ALL_MIPS,
+		ss.TEXTUREFLAGS.PROCEDURAL,
+		ss.TEXTUREFLAGS.RENDERTARGET,
+		ss.TEXTUREFLAGS.NODEPTHBUFFER
+	),
+}
+
 function ss:GetConVarName(name)
-	return self.ConVar[self.ConVarName[name]]
+	return self.ConVar[self.ConVarName[name]] or ""
 end
 
 function ss:GetConVar(name)
@@ -283,41 +355,6 @@ ss.COLOR_BITS = 6
 ss.SURFACE_INDEX_BITS = 20
 ss.SEND_ERROR_DURATION_BITS = 4
 ss.SEND_ERROR_NOTIFY_BITS = 3
-ss.TEXTUREFLAGS = {
-	POINTSAMPLE			= 0x00000001, --Low quality, "pixel art" texture filtering.
-	TRILINEAR			= 0x00000002, --Medium quality texture filtering.
-	CLAMPS				= 0x00000004, --Clamp S coordinates.
-	CLAMPT				= 0x00000008, --Clamp T coordinates.
-	ANISOTROPIC			= 0x00000010, --High quality texture filtering.
-	HINT_DXT5			= 0x00000020, --Used in skyboxes.  Make sure edges are seamless.
-	PWL_CORRECTED		= 0x00000040, --Purpose unknown.
-	NORMAL				= 0x00000080, --Texture is a normal map.
-	NOMIP				= 0x00000100, --Render largest mipmap only. (Does not delete existing mipmaps, just disables them.)
-	NOLOD				= 0x00000200, --Not affected by texture resolution settings.
-	ALL_MIPS			= 0x00000400, --No Minimum Mipmap
-	PROCEDURAL			= 0x00000800, --Texture is an procedural texture (code can modify it).
-	ONEBITALPHA			= 0x00001000, --One bit alpha channel used.
-	EIGHTBITALPHA		= 0x00002000, --Eight bit alpha channel used.
-	ENVMAP				= 0x00004000, --Texture is an environment map.
-	RENDERTARGET		= 0x00008000, --Texture is a render target.
-	DEPTHRENDERTARGET	= 0x00010000, --Texture is a depth render target.
-	NODEBUGOVERRIDE		= 0x00020000, --
-	SINGLECOPY			= 0x00040000, --
-	UNUSED_00080000		= 0x00080000, --
-	IMMEDIATE_CLEANUP	= 0x00100000, --Immediately destroy this texture when its refernce count hits zero.
-	UNUSED_00200000		= 0x00200000, --
-	UNUSED_00400000		= 0x00400000, --
-	NODEPTHBUFFER		= 0x00800000, --Do not buffer for Video Processing, generally render distance.
-	UNUSED_01000000		= 0x01000000, --
-	CLAMPU				= 0x02000000, --Clamp U coordinates (for volumetric textures).
-	VERTEXTEXTURE		= 0x04000000, --Usable as a vertex texture
-	SSBUMP				= 0x08000000, --Texture is a SSBump. (SSB)
-	UNUSED_10000000		= 0x10000000, --
-	BORDER				= 0x20000000, --Clamp to border colour on all texture coordinates.
-	UNUSED_40000000		= 0x40000000, --
-	UNUSED_80000000		= 0x80000000, --
-}
-
 ss.ViewModel = { -- Viewmodel animations
 	Standing = ACT_VM_IDLE, -- Humanoid form
 	Squid = ACT_VM_HOLSTER, -- Squid form
