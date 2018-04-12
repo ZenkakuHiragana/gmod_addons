@@ -16,7 +16,7 @@ include "../text.lua"
 local ss = SplatoonSWEPs
 local cvarflags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
 CreateConVar("sv_splatoonsweps_enabled", "1", cvarflags, ss.Text.CVarDescription.Enabled)
-if not GetConVar "sv_splatoonsweps_enabled":GetBool() then return end
+if not GetConVar "sv_splatoonsweps_enabled":GetBool() then SplatoonSWEPs = nil return end
 
 local abs, collectgarbage, insert, ipairs, pairs, remove
 = math.abs, collectgarbage, table.insert, ipairs, pairs, table.remove

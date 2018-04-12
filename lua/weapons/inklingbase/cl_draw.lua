@@ -137,6 +137,7 @@ function SWEP:GetBoneOrientation(basetab, tab, ent, bone_override)
 end
 
 function SWEP:RecreateModel(v)
+	if not util.IsModelLoaded(v.model) then return end
 	v.modelEnt = ClientsideModel(v.model, RENDERGROUP_BOTH)
 	if IsValid(v.modelEnt) then
 		v.createdModel = v.model
@@ -373,7 +374,7 @@ function SWEP:DrawWorldModel()
 			local fraction = math.Clamp(self.JustUsableTime + 0.15 - CurTime(), 0, 0.15)
 			local size = -1600 * (fraction - 0.075)^2 + 20
 			v.size = {x = size, y = size}
-			v.hide = not self.WElements["inktank"].modelEnt or self:GetInk() < self.Secondary.TakeAmmo
+			v.hide = not IsValid(self.WElements["inktank"].modelEnt) or self:GetInk() < self.Secondary.TakeAmmo
 		elseif name == "inktank" and IsValid(self.Owner) then
 			bone_ent = self.Owner
 		end

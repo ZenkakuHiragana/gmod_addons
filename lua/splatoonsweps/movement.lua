@@ -27,6 +27,7 @@ ss.MoveEmulation = ss.MoveEmulation or {
 	m_flJumpTime = {},
 	m_flMaxSpeed = {},
 	m_flSideMove = {},
+	m_flStepSoundTime = {},
 	m_flSwimSoundTime = {},
 	m_flUpMove = {},
 	m_flWaterEntryTime = {},
@@ -154,7 +155,6 @@ local function PlayerSplash()
 end
 
 local function PlaySwimSound()
-	-- MoveHelper():StartSound(me.m_vecOrigin[ply], "Player.Swim")
 	me.m_nEmitSound[ply] = "Player.Swim"
 end
 
@@ -269,44 +269,20 @@ local function TryTouchGroundInQuadrants(start, endpos, fMask, collisionGroup, p
 	local minsSrc, maxsSrc = GetPlayerMins(), GetPlayerMaxs()
 	local fraction, hitpos = pm.Fraction, pm.HitPos
 	
-	-- Check the -x, -y quadrant
-	local mins = minsSrc
-	local maxs = Vector(math.min(0, maxsSrc.x), math.min(0, maxsSrc.y), maxsSrc.z)
-	pm = TryTouchGround(start, endpos, mins, maxs, fMask, collisionGroup)
-	if pm.Entity and pm.HitNormal.z >= 0.7 then
-		pm.Fraction = fraction
-		pm.HitPos = hitpos
-		return pm
-	end
-	
-	-- Check the +x, +y quadrant
-	mins = Vector(math.max(0, minsSrc.x), math.max(0, minsSrc.y), minsSrc.z)
-	maxs = maxsSrc
-	pm = TryTouchGround(start, endpos, mins, maxs, fMask, collisionGroup)
-	if pm.Entity and pm.HitNormal.z >= 0.7 then
-		pm.Fraction = fraction
-		pm.HitPos = hitpos
-		return pm
-	end
-	
-	-- Check the -x, +y quadrant
-	mins = Vector(minsSrc.x, math.max(0, minsSrc.y), minsSrc.z)
-	maxs = Vector(math.min(0, maxsSrc.x), maxsSrc.y, maxsSrc.z)
-	pm = TryTouchGround(start, endpos, mins, maxs, fMask, collisionGroup)
-	if pm.Entity and pm.HitNormal.z >= 0.7 then
-		pm.Fraction = fraction
-		pm.HitPos = hitpos
-		return pm
-	end
-	
-	-- Check the +x, -y quadrant
-	mins = Vector(math.max(0, minsSrc.x), minsSrc.y, minsSrc.z)
-	maxs = Vector(maxsSrc.x, math.min(0, maxsSrc.y), maxsSrc.z)
-	pm = TryTouchGround(start, endpos, mins, maxs, fMask, collisionGroup)
-	if pm.Entity and pm.HitNormal.z >= 0.7 then
-		pm.Fraction = fraction
-		pm.HitPos = hitpos
-		return pm
+	for mins, maxs in pairs {
+		-- Check the -x, -y quadrant
+		[minsSrc] = Vector(math.min(0, maxsSrc.x), math.min(0, maxsSrc.y), maxsSrc.z),
+		-- Check the +x, +y quadrant
+		[Vector(math.max(0, minsSrc.x), math.max(0, minsSrc.y), minsSrc.z)] = maxsSrc,
+		-- Check the -x, +y quadrant
+		[Vector(minsSrc.x, math.max(0, minsSrc.y), minsSrc.z)]
+		= Vector(math.min(0, maxsSrc.x), maxsSrc.y, maxsSrc.z),
+		-- Check the +x, -y quadrant
+		[Vector(math.max(0, minsSrc.x), minsSrc.y, minsSrc.z)]
+		= Vector(maxsSrc.x, math.min(0, maxsSrc.y), maxsSrc.z),
+	} do
+		pm = TryTouchGround(start, endpos, mins, maxs, fMask, collisionGroup)
+		if pm.Entity ~= NULL and pm.HitNormal.z >= 0.7 then break end
 	end
 
 	pm.Fraction = fraction
@@ -344,7 +320,7 @@ local function SetGroundEntity(pm)
 		vecBaseVelocity.z = oldGround:GetAbsVelocity().z
 	end
 	
-	bvel = vecBaseVelocity
+	me.m_vecBaseVelocity[ply] = vecBaseVelocity
 	me.m_entGroundEntity[ply] = newGround or NULL
 	
 	-- If we are on something...
@@ -493,8 +469,7 @@ local function ClipVelocity(vin, normal, out, overbounce)
 		blocked = bit.bor(blocked, 0x02)
 	end
 	
-	out:Set(vin)
-	out:Sub(normal * backoff)
+	out:Set(vin - normal * backoff)
 	
 	-- iterate once to make sure we aren't still moving through the plane
 	local adjust = out:Dot(normal)
@@ -517,8 +492,8 @@ local function StartGravity()
 	-- Add gravity so they'll be in the correct position during movement
 	-- yes, this 0.5 looks wrong, but it's not.
 	me.m_vecVelocity[ply].z = me.m_vecVelocity[ply].z - ent_gravity * GetCurrentGravity() * 0.5 * FrameTime()
-	me.m_vecVelocity[ply].z = me.m_vecVelocity[ply].z + bvel.x * FrameTime()
-	bvel.z = 0
+	me.m_vecVelocity[ply].z = me.m_vecVelocity[ply].z + me.m_vecBaseVelocity[ply].x * FrameTime()
+	me.m_vecBaseVelocity[ply].z = 0
 
 	CheckVelocity()
 end
@@ -542,7 +517,7 @@ end
 local function PlayerRoughLandingEffects(fvol)
 	if fvol > 0.0 then
 		-- Play landing sound right away.
-		-- ply:SetSaveValue("m_flStepSoundTime", 400)
+		me.m_flStepSoundTime[ply] = 400
 
 		-- Play step sound for current texture.
 		-- ply:PlayStepSound(me.m_vecOrigin[ply], me.m_pSurfaceData[ply], fvol, true)
@@ -853,7 +828,7 @@ local function CheckWater()
 
 			-- BUGBUG -- this depends on the value of an unspecified enumerated type
 			-- The deeper we are, the stronger the current.
-			bvel = bvel + 50.0 * me.m_nWaterLevel[ply] * v
+			me.m_vecBaseVelocity[ply] = me.m_vecBaseVelocity[ply] + 50.0 * me.m_nWaterLevel[ply] * v
 		end
 	end
 	
@@ -978,11 +953,11 @@ local function CategorizePosition()
 		local pm = TryTouchGround(bumpOrigin, point, GetPlayerMins(), GetPlayerMaxs(), MASK_SHOT, COLLISION_GROUP_PLAYER_MOVEMENT)
 		
 		-- Was on ground, but now suddenly am not.  If we hit a steep plane, we are not on ground
-		if not pm.Entity or pm.Entity == NULL or pm.HitNormal.z < 0.7 then
+		if pm.Entity == NULL or pm.HitNormal.z < 0.7 then
 			-- Test four sub-boxes, to see if any of them would have found shallower slope we could actually stand on
 			pm = TryTouchGroundInQuadrants(bumpOrigin, point, MASK_SHOT, COLLISION_GROUP_PLAYER_MOVEMENT, pm)
 
-			if not pm.Entity or pm.Entity == NULL or pm.HitNormal.z < 0.7 then
+			if pm.Entity == NULL or pm.HitNormal.z < 0.7 then
 				SetGroundEntity(nil)
 				-- probably want to add a check for a +z velocity too!
 				if me.m_vecVelocity[ply].z > 0.0 and me.m_nMoveType[ply] ~= MOVETYPE_NOCLIP then
@@ -1066,7 +1041,7 @@ local function Friction()
 		me.m_vecVelocity[ply]:Mul(newspeed)
 	end
 	
- 	-- me.m_outWishVel[ply]:Sub((1 - newspeed) * me.m_vecVelocity[ply])
+ 	me.m_outWishVel[ply]:Sub((1 - newspeed) * me.m_vecVelocity[ply])
 end
 
 local function Accelerate(wishdir, wishspeed, accel)
@@ -1094,13 +1069,13 @@ end
 local function AirAccelerate(wishdir, wishspeed, accel)
 	if IsDead() then return end
 	if me.m_flWaterJumpTime[ply] ~= 0 then return end
-	local wishspd = math.min(wishspeed, GetAirSpeedCap()) -- Cap speed
+	local ws = math.min(wishspeed, GetAirSpeedCap()) -- Cap speed
 	
 	-- Determine veer amount
 	local currentspeed = me.m_vecVelocity[ply]:Dot(wishdir)
 	
 	-- See how much to add
-	local addspeed = wishspd - currentspeed
+	local addspeed = ws - currentspeed
 	
 	-- If not adding any, done.
 	if addspeed <= 0 then return end
@@ -1112,7 +1087,7 @@ local function AirAccelerate(wishdir, wishspeed, accel)
 	
 	-- Adjust pmove vel.
 	me.m_vecVelocity[ply]:Add(accelspeed * wishdir)
-	-- me.m_outWishVel[ply]:Add(accelspeed * wishdir)
+	me.m_outWishVel[ply]:Add(accelspeed * wishdir)
 end
 
 local function TryPlayerMove(pFirstDest, pFirstTrace)
@@ -1129,7 +1104,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 	local time_left, allFraction = FrameTime(), 0 -- Total time for this movement operation.
 	local blocked = 0 -- Assume not blocked
 	for bumpcount = 1, numbumps do
-		if me.m_vecVelocity[ply]:Length() == 0.0 then break end
+		if me.m_vecVelocity[ply]:LengthSqr() == 0.0 then break end
 		
 		-- Assume we can move all the way from the current origin to the
 		--  end point.
@@ -1162,7 +1137,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 		--  copy the end position into the pmove.origin and 
 		--  zero the plane counter.
 		if pm.Fraction > 0 then
-			if numbumps > 0 and pm.Fraction == 1 then
+			if pm.Fraction == 1 then -- and numplanes > 1
 				-- There's a precision issue with terrain tracing that can cause a swept box to successfully trace
 				--  when the end position is stuck in the triangle.  Re-run the test with an uswept box to catch that
 				--  case until the bug is fixed.
@@ -1225,7 +1200,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 		-- reflect player velocity 
 		-- Only give this a try for first impact plane because you can get yourself stuck in an acute corner by jumping in place
 		--  and pressing forward and nobody was really using this bounce/reflection feature anyway...
-		if numplanes == 2 and me.m_nMoveType[ply] == MOVETYPE_WALK and me.m_entGroundEntity[ply] == NULL then
+		if numplanes == 1 and me.m_nMoveType[ply] == MOVETYPE_WALK and me.m_entGroundEntity[ply] == NULL then
 			for i = 1, numplanes do
 				if planes[i].z > 0.7 then
 					-- floor or slope
@@ -1245,20 +1220,21 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 				ClipVelocity(original_velocity, planes[a], me.m_vecVelocity[ply], 1)
 				for j = 1, numplanes do
 					b = j
-					if b ~= a then
+					if j ~= i then
 						-- Are we now moving against this plane?
-						if me.m_vecVelocity[ply]:Dot(planes[b]) < 0 then
+						if me.m_vecVelocity[ply]:Dot(planes[j]) < 0 then
 							break -- not ok
 						end
-					elseif b == numplanes then
-						b = b + 1
+					elseif j == numplanes then
+						b = numplanes + 1
+						break
 					end
 				end
 				
 				if b == numplanes + 1 then -- Didn't have to clip, so we're ok
 					break
-				elseif a == numplanes then
-					a = a + 1
+				elseif i == numplanes then
+					a = numplanes + 1
 				end
 			end
 			
@@ -1315,7 +1291,6 @@ local function StayOnGround()
 	start.z, endpos.z = start.z + 2, endpos.z - ply:GetStepSize()
 	
 	-- See how far up we can go without getting stuck
-	
 	local trace = TracePlayerBBox(me.m_vecOrigin[ply], start, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT)
 	start = trace.HitPos
 	
@@ -1443,12 +1418,12 @@ local function AirMove()
 	AirAccelerate(wishdir, wishspeed, GetConVar "sv_airaccelerate":GetFloat())
 	
 	-- Add in any base velocity to the current velocity.
-	me.m_vecVelocity[ply]:Add(bvel)
+	me.m_vecVelocity[ply]:Add(me.m_vecBaseVelocity[ply])
 	
 	TryPlayerMove()
 	
 	-- Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
-	me.m_vecVelocity[ply]:Sub(bvel)
+	me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 end
 
 local function WalkMove()
@@ -1495,13 +1470,13 @@ local function WalkMove()
 	me.m_vecVelocity[ply].z = 0
 	
 	-- Add in any base velocity to the current velocity.
-	me.m_vecVelocity[ply]:Add(bvel)
+	me.m_vecVelocity[ply]:Add(me.m_vecBaseVelocity[ply])
 	
 	local spd = me.m_vecVelocity[ply]:Length()
 	if spd < 1.0 then
 		me.m_vecVelocity[ply]:Zero()
 		-- Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
-		me.m_vecVelocity[ply]:Sub(bvel)
+		me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 		return
 	end
 	
@@ -1513,12 +1488,12 @@ local function WalkMove()
 	local pm = TracePlayerBBox(me.m_vecOrigin[ply], dest, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT)
 	
 	-- If we made it all the way, then copy trace end as new player position.
-	-- me.m_outWishVel[ply] = me.m_outWishVel[ply] + wishdir * wishspeed
+	me.m_outWishVel[ply]:Add(wishdir * wishspeed)
 
 	if pm.Fraction == 1 then
 		me.m_vecOrigin[ply] = pm.HitPos
 		-- Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
-		me.m_vecVelocity[ply]:Sub(bvel)
+		me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 		
 		StayOnGround()
 		return
@@ -1527,21 +1502,21 @@ local function WalkMove()
 	-- Don't walk up stairs if not on ground.
 	if oldground == NULL and me.m_nWaterLevel[ply] == 0 then
 		-- Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
-		me.m_vecVelocity[ply]:Sub(bvel)
+		me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 		return
 	end
 	
 	-- If we are jumping out of water, don't do anything more.
 	if me.m_flWaterJumpTime[ply] ~= 0 then
 		-- Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
-		me.m_vecVelocity[ply]:Sub(bvel)
+		me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 		return
 	end
 	
 	StepMove(dest, pm)
 	
 	-- Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
-	me.m_vecVelocity[ply]:Sub(bvel)
+	me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 	
 	StayOnGround()
 end
@@ -1577,8 +1552,7 @@ local function WaterMove()
 		wishspeed = me.m_flMaxSpeed[ply]
 	end
 	
-	-- Slow us down a bit.
-	wishspeed = wishspeed * 0.8
+	wishspeed = wishspeed * 0.8 -- Slow us down a bit.
 	
 	-- Water friction
 	local temp = Vector(me.m_vecVelocity[ply])
@@ -1604,11 +1578,11 @@ local function WaterMove()
 			GetConVar "sv_accelerate":GetFloat() * wishspeed * FrameTime() * me.m_surfaceFriction[ply])
 			
 			me.m_vecVelocity[ply]:Add(accelspeed * wishvel)
-			-- me.m_outWishVel[ply]:Add(accelspeed * wishvel)
+			me.m_outWishVel[ply]:Add(accelspeed * wishvel)
 		end
 	end
 	
-	me.m_vecVelocity[ply]:Add(bvel)
+	me.m_vecVelocity[ply]:Add(me.m_vecBaseVelocity[ply])
 	
 	-- Now move
 	-- assume it is a stair or a slope, so press down from stepheight above
@@ -1627,7 +1601,7 @@ local function WaterMove()
 			me.m_outStepHeight[ply] = me.m_outStepHeight[ply] + stepDist
 			-- walked up the step, so just keep result and exit
 			me.m_vecOrigin[ply]:Set(pm.HitPos)
-			me.m_vecVelocity[ply]:Sub(bvel)
+			me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 			return
 		end
 		
@@ -1636,14 +1610,14 @@ local function WaterMove()
 	else
 		if me.m_entGroundEntity[ply] == NULL then
 			TryPlayerMove()
-			me.m_vecVelocity[ply]:Sub(bvel)
+			me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 			return
 		end
 		
 		StepMove(dest, pm)
 	end
 	
-	me.m_vecVelocity[ply]:Sub(bvel)
+	me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 end
 
 local function FullWalkMove()
@@ -1658,7 +1632,7 @@ local function FullWalkMove()
 		CheckWater() -- See if we are still in water?
 		return
 	end
-
+	
 	-- If we are swimming in the water, see if we are nudging against a place we can jump up out
 	--  of, and, if so, start out jump.  Otherwise, if we are not moving up, then reset jump timer to 0
 	if me.m_nWaterLevel[ply] >= WL_Waist then
@@ -1733,7 +1707,7 @@ local function FullWalkMove()
 	if me.m_nOldWaterLevel[ply] == WL_NotInWater and me.m_nWaterLevel[ply] ~= WL_NotInWater or
 		me.m_nOldWaterLevel[ply] ~= WL_NotInWater and me.m_nWaterLevel[ply] == WL_NotInWater then
 		PlaySwimSound()
-		PlayerSplash() -- if SERVER then in original source
+		PlayerSplash() -- if not CLIENT then in original source
 	end
 end
 
@@ -1909,13 +1883,26 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 		mask = MASK_SHOT, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 		filter = ply,
 	}
-	SetGroundEntity(util.TraceHull(t))
+	
+	local tr = util.TraceHull(t)
+	if tr.Entity == NULL or tr.HitNormal.z < .7 then
+		tr = TryTouchGroundInQuadrants(oldpos, t.endpos, MASK_SHOT, COLLISION_GROUP_PLAYER_MOVEMENT, tr)
+		if tr.Entity == NULL or tr.HitNormal.z < .7 then
+			SetGroundEntity(nil)
+		else
+			SetGroundEntity(tr)
+		end
+	else
+		SetGroundEntity(tr)
+	end
 	SquidMove()
 
 	t.endpos = me.m_vecOrigin[ply]
 	t.mask = MASK_PLAYERSOLID
 	w:SetInFence(util.TraceHull(t).Hit or mv:GetVelocity():DistToSqr(me.m_vecVelocity[ply]) > 1e-6)
 	if w:GetInFence() then
+	debugoverlay.Box(mv:GetOrigin() + me.m_vecVelocity[ply], t.mins, t.maxs, .1, Color(0, 0, 255, 64))
+	debugoverlay.Box(mv:GetOrigin() + mv:GetVelocity(), t.mins, t.maxs, .1, Color(0, 255, 0, 64))
 		ply:SetViewPunchAngles(me.m_angViewPunchAngles[ply])
 		ply:SetGroundEntity(me.m_entGroundEntity[ply])
 		mv:SetMaxClientSpeed(me.m_flClientMaxSpeed[ply])

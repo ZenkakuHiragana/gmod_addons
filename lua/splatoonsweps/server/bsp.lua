@@ -401,6 +401,7 @@ end,
 	local lighting = bsp:GetLump(LUMP.LIGHTING)
 	local dispinfooffset = bsp:GetLump(LUMP.DISPINFO).offset
 	local dispvertsoffset = bsp:GetLump(LUMP.DISP_VERTS).offset
+	local materials = {}
 	lump.num = math.min(math.floor(lump.length / size) - 1, 65536 - 1)
 	for i = 0, lump.num do
 		local PlaneTable = planes.data[read "UShort"]
@@ -413,14 +414,18 @@ end,
 		local dispinfo = read "Short"
 		bsp.bsp:Skip(42)
 		
-		if not (bsp.FirstFace < i and i < bsp.NumFaces) then continue end
+		if not (bsp.FirstFace <= i and i < bsp.NumFaces) then continue end
 		
-		local texname = TexInfoTable.TexData.name:lower()
-		if texname:find "tools/" or texname:find "water" or
+		local texname = TexInfoTable.TexData.name
+		local texlow = texname:lower()
+		if texlow:find "tools/" or texlow:find "water" or
 			bit.band(TexInfoTable.flags, TextureFilterBits) ~= 0 then
 			continue
 		end
-
+		
+		materials[texname] = materials[texname] or Material(texname)
+		if materials[texname]:GetString "$surfaceprop" == "metalgrate" then continue end
+		
 		local fullverts, full2d, center = {}, {}, vector_origin
 		for k = 0, numedges do --Fetch all vertices
 			fullverts[k] = surfedges.data[firstedge + k]
@@ -428,7 +433,6 @@ end,
 		end
 		center = center / (#fullverts + 1)
 		
-		if bit.band(util.PointContents(center - normal * .01), CONTENTS_GRATE) ~= 0 then continue end
 		for k, v in pairs(fullverts) do
 			full2d[k] = ss:To2D(v, center, angle)
 		end
