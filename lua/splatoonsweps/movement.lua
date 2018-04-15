@@ -900,8 +900,6 @@ local function CheckWaterJump()
 end
 
 local function CategorizePosition()
-	local point = Vector(me.m_vecOrigin[ply])
-	
 	-- Reset this each time we-recategorize, otherwise we have bogus friction when we jump into water and plunge downward really quickly
 	me.m_surfaceFriction[ply] = 1.0
 	
@@ -919,10 +917,10 @@ local function CategorizePosition()
 	-- observers don't have a ground entity
 	if ply:GetObserverMode() ~= OBS_MODE_NONE then return end
 	
-	local flOffset = 2.0
-	point.z = point.z - flOffset
-	
 	local bumpOrigin = Vector(me.m_vecOrigin[ply])
+	local point = Vector(me.m_vecOrigin[ply])
+	local flOffset = 1.0 -- flOffset = 2.0f; in gamemovement.cpp
+	point.z = point.z - flOffset
 	
 	-- Shooting up really fast.  Definitely not on ground.
 	-- On ladder moving up, so not on ground either
@@ -933,17 +931,15 @@ local function CategorizePosition()
 	local bMovingUp = zvel > 0.0
 	local bMovingUpRapidly = zvel > NON_JUMP_VELOCITY
 	local flGroundEntityVelZ = 0.0
-	if bMovingUpRapidly then
+	if bMovingUpRapidly and me.m_entGroundEntity[ply] ~= NULL then
 		-- Tracker 73219, 75878:  ywb 8/2/07
 		-- After save/restore (and maybe at other times), we can get a case where we were saved on a lift and 
 		--  after restore we'll have a high local velocity due to the lift making our abs velocity appear high.  
 		-- We need to account for standing on a moving ground object in that case in order to determine if we really 
 		--  are moving away from the object we are standing on at too rapid a speed.  Note that CheckJump already sets
 		--  ground entity to NULL, so this wouldn't have any effect unless we are moving up rapidly not from the jump button.
-		if me.m_entGroundEntity[ply] ~= NULL then
-			flGroundEntityVelZ = me.m_entGroundEntity[ply]:GetAbsVelocity().z
-			bMovingUpRapidly = zvel - flGroundEntityVelZ > NON_JUMP_VELOCITY
-		end
+		flGroundEntityVelZ = me.m_entGroundEntity[ply]:GetAbsVelocity().z
+		bMovingUpRapidly = zvel - flGroundEntityVelZ > NON_JUMP_VELOCITY
 	end
 	
 	-- Was on ground, but now suddenly am not
@@ -1109,7 +1105,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 		-- Assume we can move all the way from the current origin to the
 		--  end point.
 		endpos = me.m_vecOrigin[ply] + time_left * me.m_vecVelocity[ply]
-
+		
 		-- See if we can make it from origin to end point.
 		if g_bMovementOptimizations then
 			-- If their velocity Z is 0, then we can avoid an extra trace here during WalkMove.
@@ -1132,7 +1128,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 			me.m_vecVelocity[ply]:Zero()
 			return 4
 		end
-
+		
 		-- If we moved some portion of the total distance, then
 		--  copy the end position into the pmove.origin and 
 		--  zero the plane counter.
@@ -1266,7 +1262,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 			end
 		end
 	end
-
+	
 	if allFraction == 0 then
 		me.m_vecVelocity[ply]:Zero()
 	end
@@ -1346,7 +1342,7 @@ local function StepMove(vecDestination, trace)
 	-- Move down a stair (attempt to).
 	vecEndPos:Set(me.m_vecOrigin[ply])
 	if me.m_bAllowAutoMovement[ply] then
-		vecEndPos.z = vecEndPos.z - ply:GetStepSize() + DIST_EPSILON
+		vecEndPos.z = vecEndPos.z - ply:GetStepSize() - DIST_EPSILON
 	end
 		
 	trace = TracePlayerBBox(me.m_vecOrigin[ply], vecEndPos, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT)
@@ -1489,7 +1485,7 @@ local function WalkMove()
 	
 	-- If we made it all the way, then copy trace end as new player position.
 	me.m_outWishVel[ply]:Add(wishdir * wishspeed)
-
+	
 	if pm.Fraction == 1 then
 		me.m_vecOrigin[ply] = pm.HitPos
 		-- Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
@@ -1703,7 +1699,7 @@ local function FullWalkMove()
 		end
 		CheckFalling()
 	end
-
+	
 	if me.m_nOldWaterLevel[ply] == WL_NotInWater and me.m_nWaterLevel[ply] ~= WL_NotInWater or
 		me.m_nOldWaterLevel[ply] ~= WL_NotInWater and me.m_nWaterLevel[ply] == WL_NotInWater then
 		PlaySwimSound()
@@ -1898,7 +1894,7 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 	SquidMove()
 
 	t.endpos = me.m_vecOrigin[ply]
-	t.mask = MASK_PLAYERSOLID
+	t.mask = bit.bor(CONTENTS_GRATE, CONTENTS_MONSTER)
 	w:SetInFence(util.TraceHull(t).Hit or mv:GetVelocity():DistToSqr(me.m_vecVelocity[ply]) > 1e-6)
 	if w:GetInFence() then
 	debugoverlay.Box(mv:GetOrigin() + me.m_vecVelocity[ply], t.mins, t.maxs, .1, Color(0, 0, 255, 64))
