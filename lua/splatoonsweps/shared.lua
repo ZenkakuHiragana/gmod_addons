@@ -223,17 +223,24 @@ for k, v in pairs(hook.GetTable().PlayerFootstep or {}) do
 	if isstring(k) then hostkey, hostfunc = k, v end
 end
 
-local function PlayerFootstep(ply, pos, foot, sound, volume, filter)
-	if not (IsValid(ply) and isfunction(ply.GetActiveWeapon)) then return end
-	local weapon = ply:GetActiveWeapon()
-	local IsSplatoonWeapon = IsValid(weapon) and weapon.IsSplatoonWeapon and not weapon:GetHolstering()
-	if ((IsSplatoonWeapon and weapon:GetGroundColor() >= 0) or (SERVER and
-	ss:GetSurfaceColor(util.QuickTrace(ply:GetPos(), FootstepTrace, ply)))) then
-		if not (IsSplatoonWeapon and weapon:GetInInk()) and (SERVER or ply ~= LocalPlayer()) then
+local function PlayerFootstep(ply, pos, foot, soundname, volume, filter)
+	local w = ss:IsValidInkling(ply)
+	if not w then return end
+	if w:GetGroundColor() >= 0 or SERVER and -- If player is on ink
+		ss:GetSurfaceColor(util.QuickTrace(ply:GetPos(), FootstepTrace, ply)) then
+		if not w:GetInInk() and (SERVER or ply ~= LocalPlayer()) then
 			ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		end
 		return true
 	end
+	
+	if not ply:Crouching() then return end
+	if w:GetPMID() ~= ss.PLAYER.NOSQUID then
+		-- Squid footsteps
+		return true
+	end
+	
+	return soundname:find "chainlink" and true or nil
 end
 
 if hostkey and hostfunc then

@@ -71,6 +71,7 @@ function ENT:Initialize(colradius)
 	local ph = self:GetPhysicsObject()
 	if not IsValid(ph) then return end
 	ph:EnableGravity(self.IsDrop)
+	ph:SetBuoyancyRatio(0)
 	self:StartMotionController()
 	self.InitPos = self:GetPos()
 	self.InitTime = CurTime()

@@ -34,7 +34,6 @@ ss:SetPrimary(SWEP, {
 	},
 })
 
-if SERVER then return end
 ss:SetViewModelMods(SWEP, {
 	["ValveBiped.Bip01_L_Finger0"] = {
 		scale = Vector(1, 1, 1),

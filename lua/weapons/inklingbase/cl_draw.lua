@@ -5,7 +5,7 @@ if not ss then return end
 SWEP.WElements = SWEP.WElements or {
 	inktank = {
 		type = "Model",
-		model = "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl",
+		model = ss.InkTankModel,
 		bone = "ValveBiped.Bip01_Spine4",
 		rel = "",
 		pos = Vector(-20, 3, 0),

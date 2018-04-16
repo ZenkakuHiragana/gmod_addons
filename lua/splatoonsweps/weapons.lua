@@ -75,7 +75,7 @@ function ss:SetViewModel(weapon, view)
 	weapon.VElements = weapon.VElements or {}
 	weapon.VElements.weapon = {
 		type = "Model",
-		model = view.model,
+		model = Model(view.model),
 		bone = view.bone or "ValveBiped.Bip01_Spine4",
 		rel = "",
 		pos = view.pos,
@@ -93,7 +93,7 @@ function ss:SetWorldModel(weapon, world)
 	weapon.WElements = weapon.WElements or {}
 	weapon.WElements.weapon = {
 		type = "Model",
-		model = world.model,
+		model = Model(world.model),
 		bone = world.bone or "ValveBiped.Bip01_R_Hand",
 		rel = "",
 		pos = world.pos,

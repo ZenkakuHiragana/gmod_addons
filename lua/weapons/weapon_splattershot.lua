@@ -34,7 +34,6 @@ ss:SetPrimary(SWEP, {
 	},
 })
 
-if SERVER then return end
 ss:SetViewModelMods(SWEP, {
 	["Base"] = {
 		scale = Vector(1, 1, 1),

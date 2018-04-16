@@ -198,13 +198,14 @@ function SWEP:ChangeInInk(name, old, new)
 	old, new = tobool(old), tobool(new)
 	local outofink = old and not new
 	local intoink = not old and new
-	if outofink == intoink then return end
-	if self.Owner:IsPlayer() then
+	if outofink == intoink then return
+	elseif self.Owner:IsPlayer() then
 		self.Owner:SetCrouchedWalkSpeed(intoink and 1 or .5)
 		self:SetPlayerSpeed(intoink and self.SquidSpeed or self.InklingSpeed)
 	end
 	
-	if intoink and SERVER then
+	if CLIENT then return end
+	if intoink then
 		if self.Owner:IsPlayer() then self.Owner:SetDSP(14) end
 		local velocity = math.abs(self.OwnerVelocity.z)
 		if self.Owner:OnGround() and velocity > 400 then
@@ -214,9 +215,8 @@ function SWEP:ChangeInInk(name, old, new)
 			local dp = 50 - velocity / 4
 			self.Owner:EmitSound("SplatoonSWEPs_Player.InkDiveShallow", 75, 100 + dp, .5, CHAN_BODY)
 		end
-	elseif outofink then
-		if SERVER and self.Owner:IsPlayer() then self.Owner:SetDSP(1) end
-		self.OnOutOfInk = true
+	elseif outofink and self.Owner:IsPlayer() then
+		self.Owner:SetDSP(1)
 	end
 end
 

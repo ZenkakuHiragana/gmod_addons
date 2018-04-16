@@ -95,6 +95,7 @@ local FX_WATER_IN_SLIME = 0x01
 local GAMEMOVEMENT_JUMP_HEIGHT = 21.0 -- units
 local GAMEMOVEMENT_JUMP_TIME = 510.0 -- ms approx. - based on the 21 unit height jump
 local LIMIT_Z_DEG = math.cos(math.rad(180 - 30))
+local MASK_GRATE = bit.bor(CONTENTS_GRATE, CONTENTS_MONSTER)
 local MAX_CLIP_PLANES = 5
 local PLAYER_FALL_PUNCH_THRESHOLD = 303.0 or 350 -- HL2 or Other
 local PLAYER_LAND_ON_FLOATING_OBJECT = 173 or 200 -- HL2 or Other
@@ -133,6 +134,9 @@ local function GetPlayerMaxs(ducked)
 	end
 	
 	return maxs
+end
+local function GetPlayerViewOffset(ducked)
+	return ducked and ply:GetViewOffsetDucked() or ply:GetViewOffset()
 end
 
 local function PlayerSplash()
@@ -878,8 +882,7 @@ local function CheckWaterJump()
 			end
 		end
 		
-		vecStart.z = me.m_vecOrigin[ply].z + WATERJUMP_HEIGHT + (ply:Crouching()
-		and ply:GetViewOffsetDucked().z or ply:GetViewOffset().z)
+		vecStart.z = me.m_vecOrigin[ply].z + GetPlayerViewOffset(ply:Crouching()).z + WATERJUMP_HEIGHT
 		vecEnd = vecStart + 24.0 * flatforward
 		me.m_vecWaterJumpVel[ply] = -50.0 * tr.HitNormal
 		
@@ -919,18 +922,17 @@ local function CategorizePosition()
 	
 	local bumpOrigin = Vector(me.m_vecOrigin[ply])
 	local point = Vector(me.m_vecOrigin[ply])
-	local flOffset = 1.0 -- flOffset = 2.0f; in gamemovement.cpp
+	local flOffset = 2.0
 	point.z = point.z - flOffset
 	
 	-- Shooting up really fast.  Definitely not on ground.
 	-- On ladder moving up, so not on ground either
 	-- NOTE: 145 is a jump.
-	local NON_JUMP_VELOCITY = 140.0
+	local NON_JUMP_VELOCITY = 65 -- float NON_JUMP_VELOCITY = 140.0f; in gamemovement.cpp
 	
 	local zvel = me.m_vecVelocity[ply].z
 	local bMovingUp = zvel > 0.0
 	local bMovingUpRapidly = zvel > NON_JUMP_VELOCITY
-	local flGroundEntityVelZ = 0.0
 	if bMovingUpRapidly and me.m_entGroundEntity[ply] ~= NULL then
 		-- Tracker 73219, 75878:  ywb 8/2/07
 		-- After save/restore (and maybe at other times), we can get a case where we were saved on a lift and 
@@ -938,7 +940,7 @@ local function CategorizePosition()
 		-- We need to account for standing on a moving ground object in that case in order to determine if we really 
 		--  are moving away from the object we are standing on at too rapid a speed.  Note that CheckJump already sets
 		--  ground entity to NULL, so this wouldn't have any effect unless we are moving up rapidly not from the jump button.
-		flGroundEntityVelZ = me.m_entGroundEntity[ply]:GetAbsVelocity().z
+		local flGroundEntityVelZ = me.m_entGroundEntity[ply]:GetAbsVelocity().z
 		bMovingUpRapidly = zvel - flGroundEntityVelZ > NON_JUMP_VELOCITY
 	end
 	
@@ -1776,6 +1778,32 @@ local function SquidMove()
 	FullWalkMove()
 end
 
+local function CheckFenceStand(pos, endpos, ignorenormals)
+	local t = { -- Check strictly if player stands on fence.
+		start = pos, endpos = endpos,
+		mins = GetPlayerMins(), maxs = GetPlayerMaxs(),
+		mask = MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
+		filter = ply,
+	}
+	
+	local tr = util.TraceHull(t)
+	t.mask = MASK_SHOT
+	local trsolid = util.TraceHull(t)
+	if ignorenormals then tr.HitNormal.z, trsolid.HitNormal.z = 1, 1 end
+	
+	local b = tr.Entity == NULL or tr.HitNormal.z < .7
+	if b ~= (trsolid.Entity == NULL or trsolid.HitNormal.z < .7) then return not b, tr.StartSolid end
+	if b then
+		tr = TryTouchGroundInQuadrants(pos, t.endpos, MASK_GRATE, COLLISION_GROUP_PLAYER_MOVEMENT, tr)
+		trsolid = TryTouchGroundInQuadrants(pos, t.endpos, MASK_SHOT, COLLISION_GROUP_PLAYER_MOVEMENT, trsolid)
+		if ignorenormals then tr.HitNormal.z, trsolid.HitNormal.z = 1, 1 end
+		if not (tr.Entity == NULL or tr.HitNormal.z < .7) and
+			(trsolid.Entity == NULL or trsolid.HitNormal.z < .7) then
+			return true, tr.StartSolid
+		end
+	end
+end
+
 hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(ply, mv)
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
@@ -1804,11 +1832,11 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(ply, mv)
 		speed = math.min(speed, maxspeed)
 	end
 	
-	if w.OnOutOfInk then --Prevent wall-climb jump
-		vz = math.min(vz, maxspeed * .8)
-		w.OnOutOfInk = false
+	if w.OnOutofInk and not w:GetInWallInk() then
+		vz = math.min(vz, ply:GetJumpPower() / 2)
 	end
 	
+	w.OnOutofInk = w:GetInWallInk()
 	mv:SetVelocity(Vector(v.x, v.y, vz))
 	
 	--Send viewmodel animation.
@@ -1868,37 +1896,41 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
 	if not ply:Crouching() then w:SetInFence(false) return end
-	local infence = w:GetInFence()
-	if not infence and ply:GetMoveType() == MOVETYPE_NOCLIP then return end
+	local prevfence = w:GetInFence()
+	if not prevfence and ply:GetMoveType() == MOVETYPE_NOCLIP then return end
 	local oldpos = Vector(me.m_vecOrigin[ply])
-	local oldvel = Vector(me.m_vecVelocity[ply])
-	local oldvangles = Angle(me.m_angViewPunchAngles[ply])
 	local t = {
-		start = oldpos, endpos = oldpos - vector_up,
+		start = oldpos, endpos = oldpos,
 		mins = GetPlayerMins(), maxs = GetPlayerMaxs(),
-		mask = MASK_SHOT, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
+		mask = MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 		filter = ply,
 	}
 	
 	local tr = util.TraceHull(t)
-	if tr.Entity == NULL or tr.HitNormal.z < .7 then
-		tr = TryTouchGroundInQuadrants(oldpos, t.endpos, MASK_SHOT, COLLISION_GROUP_PLAYER_MOVEMENT, tr)
-		if tr.Entity == NULL or tr.HitNormal.z < .7 then
-			SetGroundEntity(nil)
-		else
-			SetGroundEntity(tr)
+	t.mask = MASK_SHOT -- Check if player is stuck in fence
+	w:SetInFence(tr.Entity ~= NULL and util.TraceHull(t).Entity == NULL)
+	if ply:GetGroundEntity() ~= NULL then
+		t.endpos = prevfence and oldpos or mv:GetOrigin()
+		t.endpos.z = t.endpos.z - 2 -- Check if player is on fence
+		tr = util.TraceHull(t)
+		t.mask = MASK_GRATE
+		if util.TraceHull(t).Entity ~= NULL and tr.Entity == NULL then
+			SetGroundEntity(nil) -- Squid cannot stand on fence
+			w:SetInFence(true)
 		end
-	else
-		SetGroundEntity(tr)
 	end
-	SquidMove()
-
-	t.endpos = me.m_vecOrigin[ply]
-	t.mask = bit.bor(CONTENTS_GRATE, CONTENTS_MONSTER)
-	w:SetInFence(util.TraceHull(t).Hit or mv:GetVelocity():DistToSqr(me.m_vecVelocity[ply]) > 1e-6)
+	
+	SquidMove() -- Movement emulation
+	
+	if not w:GetInFence() then
+		t.endpos = me.m_vecOrigin[ply]
+		t.mask = MASK_GRATE
+		tr = util.TraceHull(t)
+		t.mask = MASK_SHOT -- Check if player is penetrating into fence
+		w:SetInFence(tr.Entity ~= NULL and util.TraceHull(t).Entity == NULL)
+	end
+	
 	if w:GetInFence() then
-	debugoverlay.Box(mv:GetOrigin() + me.m_vecVelocity[ply], t.mins, t.maxs, .1, Color(0, 0, 255, 64))
-	debugoverlay.Box(mv:GetOrigin() + mv:GetVelocity(), t.mins, t.maxs, .1, Color(0, 255, 0, 64))
 		ply:SetViewPunchAngles(me.m_angViewPunchAngles[ply])
 		ply:SetGroundEntity(me.m_entGroundEntity[ply])
 		mv:SetMaxClientSpeed(me.m_flClientMaxSpeed[ply])
@@ -1907,13 +1939,13 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 		mv:SetSideSpeed(me.m_flSideMove[ply])
 		mv:SetUpSpeed(me.m_flUpMove[ply])
 		mv:SetButtons(me.m_nButtons[ply])
-		if me.m_nEmitSound[ply] then ply:EmitSound(me.m_nEmitSound[ply]) end
+		-- if me.m_nEmitSound[ply] then ply:EmitSound(me.m_nEmitSound[ply]) end
 		ply:RemoveFlags(ply:GetFlags())
 		ply:AddFlags(bit.bor(me.m_nFlags[ply], FL_DUCKING))
 		ply:SetMoveType(MOVETYPE_NOCLIP)
 		mv:SetOldButtons(me.m_nOldButtons[ply])
-		if me.m_nSetAnimation[ply] then ply:SetAnimation(me.m_nSetAnimation[ply]) end
-		if me.m_nSplashData[ply] then util.Effect("watersplash", me.m_nSplashData[ply]) end
+		-- if me.m_nSetAnimation[ply] then ply:SetAnimation(me.m_nSetAnimation[ply]) end
+		-- if me.m_nSplashData[ply] then util.Effect("watersplash", me.m_nSplashData[ply]) end
 		mv:SetAngles(me.m_vecAngles[ply])
 		mv:SetOldAngles(me.m_vecOldAngles[ply])
 		mv:SetOrigin(me.m_vecOrigin[ply])
@@ -1929,17 +1961,19 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 			ply:RemoveFlags(FL_ONGROUND)
 		end
 		
-		if not infence then hook.Run("SplatoonSWEPs: OnPlayerEnteredFence", me.m_vecOrigin[ply], me.m_vecVelocity[ply]) end
+		if not prevfence then hook.Run("SplatoonSWEPs: OnPlayerEnteredFence", me.m_vecOrigin[ply], me.m_vecVelocity[ply]) end
 		hook.Run("UpdateAnimation", ply, me.m_vecVelocity[ply], ply:GetSequenceGroundSpeed(ply:GetSequence()))
 	else
 		ply:SetMoveType(MOVETYPE_WALK)
-		if infence and bit.band(me.m_nButtons[ply], IN_DUCK) == 0 then
-			t.mins, t.maxs = ply:GetHull()
+		if prevfence and not mv:KeyDown(IN_DUCK) then
+			t.mask, t.mins, t.maxs = MASK_PLAYERSOLID, ply:GetHull()
 			if util.TraceHull(t).Hit then return end
+			
+			local vel = mv:GetVelocity()
+			vel.z = math.min(vel.z, 100)
+			mv:SetVelocity(vel)
 			ply:RemoveFlags(FL_DUCKING)
-			oldvel.z = math.min(oldvel.z, 100)
-			mv:SetVelocity(oldvel)
-			hook.Run("SplatoonSWEPs: OnPlayerLeftFence", me.m_vecOrigin[ply], me.m_vecVelocity[ply])
+			hook.Run("SplatoonSWEPs: OnPlayerLeftFence", mv:GetOrigin(), mv:GetVelocity())
 		end
 	end
 end)

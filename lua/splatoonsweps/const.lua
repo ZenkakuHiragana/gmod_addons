@@ -276,6 +276,7 @@ function ss:GetConVarBool(name)
 	return ss:GetConVarInt(name) ~= 0
 end
 
+ss.InkTankModel = Model "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl"
 ss.PLAYER = {
 	GIRL = 1,
 	BOY = 2,

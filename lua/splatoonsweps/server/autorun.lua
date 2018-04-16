@@ -10,8 +10,8 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	PlayersReady = {},
 }
 
-include "../const.lua"
-include "../text.lua"
+include "splatoonsweps/const.lua"
+include "splatoonsweps/text.lua"
 
 local ss = SplatoonSWEPs
 local cvarflags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
