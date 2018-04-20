@@ -237,6 +237,7 @@ local function PlayerFootstep(ply, pos, foot, soundname, volume, filter)
 	if not ply:Crouching() then return end
 	if w:GetPMID() ~= ss.PLAYER.NOSQUID then
 		-- Squid footsteps
+		ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		return true
 	end
 	

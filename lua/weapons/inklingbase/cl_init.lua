@@ -99,6 +99,7 @@ function SWEP:ClientDeployBase()
 end
 
 function SWEP:Holster()
+	if self:GetInFence() then return false end
 	if not IsValid(self.Owner) then return true end
 	if self.Owner:IsPlayer() then
 		self.SurpressDrawingVM = true

@@ -203,6 +203,7 @@ function SWEP:Deploy()
 end
 
 function SWEP:Holster()
+	if self:GetInFence() then return false end
 	if not IsValid(self.Owner) then return true end
 	if game.SinglePlayer() and self.Owner:IsPlayer() then self:CallOnClient "Holster" end
 	self.PMTable = nil

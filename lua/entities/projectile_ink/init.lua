@@ -180,7 +180,7 @@ function ENT:PhysicsCollide(coldata, collider) -- If ink hits something
 			collider:SetPos(coldata.HitPos)
 			collider:SetVelocityInstantaneous(coldata.OurOldVelocity)
 		end)
-		print "hit"
+		
 		return
 	end
 	
