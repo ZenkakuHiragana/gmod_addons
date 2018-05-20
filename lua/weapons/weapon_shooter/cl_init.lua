@@ -22,6 +22,6 @@ function SWEP:ClientInit()
 end
 
 function SWEP:ClientPrimaryAttack(canattack)
-	if not (canattack and self:IsFirstTimePredicted()) then return end
+	if not canattack then return end
 	self.WeaponSize = CurTime() --Expand weapon model
 end

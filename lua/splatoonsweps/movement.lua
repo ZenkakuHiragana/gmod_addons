@@ -60,6 +60,7 @@ ss.MoveEmulation = ss.MoveEmulation or {
 	m_vecVelocity = {},
 	m_vecWaterJumpVel = {},
 }
+local FT = FrameTime
 local me, mv, ply = ss.MoveEmulation
 function ss:InitializeMoveEmulation(ply)
 	if not IsValid(ply) then return end
@@ -78,6 +79,9 @@ function ss:InitializeMoveEmulation(ply)
 	me.m_outJumpVel[ply] = Vector()
 	me.m_outStepHeight[ply] = 0
 	me.m_outWishVel[ply] = Vector()
+	if SERVER then return end
+	me.m_flInFence = me.m_flInFence or {}
+	me.m_flInFence[ply] = false
 end
 
 local COORD_FRACTIONAL_BITS = 5
@@ -173,13 +177,13 @@ local function DecayPunchAngle()
 	local vecPunchAngles = me.m_angViewPunchAngles[ply]
 	vecPunchAngles = Vector(vecPunchAngles.p, vecPunchAngles.y, vecPunchAngles.r)
 	if vecPunchAngles:LengthSqr() > 0.001 or me.m_vecPunchAngleVel[ply]:LengthSqr() > 0.001 then
-		vecPunchAngles = vecPunchAngles + me.m_vecPunchAngleVel[ply] * FrameTime()
-		local damping = math.max(0, 1 - PUNCH_DAMPING * FrameTime())
+		vecPunchAngles = vecPunchAngles + me.m_vecPunchAngleVel[ply] * FT()
+		local damping = math.max(0, 1 - PUNCH_DAMPING * FT())
 		me.m_vecPunchAngleVel[ply] = me.m_vecPunchAngleVel[ply] * damping
 		
 		-- torsional spring
 		-- UNDONE: Per-axis spring constant?
-		local springForceMagnitude = PUNCH_SPRING_CONSTANT * FrameTime()
+		local springForceMagnitude = PUNCH_SPRING_CONSTANT * FT()
 		springForceMagnitude = math.Clamp(springForceMagnitude, 0, 2)
 		me.m_vecPunchAngleVel[ply] = me.m_vecPunchAngleVel[ply] - vecPunchAngles * springForceMagnitude
 
@@ -424,7 +428,7 @@ local function CheckParameters()
 end
 
 local function ReduceTimers()
-	local frame_msec = 1000.0 * FrameTime()
+	local frame_msec = 1000.0 * FT()
 	if me.m_flDucktime[ply] > 0 then
 		me.m_flDucktime[ply] = math.max(0, me.m_flDucktime[ply] - frame_msec)
 	end if me.m_flDuckJumpTime[ply] > 0 then
@@ -488,8 +492,8 @@ local function StartGravity()
 
 	-- Add gravity so they'll be in the correct position during movement
 	-- yes, this 0.5 looks wrong, but it's not.
-	me.m_vecVelocity[ply].z = me.m_vecVelocity[ply].z - ent_gravity * GetCurrentGravity() * 0.5 * FrameTime()
-	me.m_vecVelocity[ply].z = me.m_vecVelocity[ply].z + me.m_vecBaseVelocity[ply].x * FrameTime()
+	me.m_vecVelocity[ply].z = me.m_vecVelocity[ply].z - ent_gravity * GetCurrentGravity() * 0.5 * FT()
+	me.m_vecVelocity[ply].z = me.m_vecVelocity[ply].z + me.m_vecBaseVelocity[ply].x * FT()
 	me.m_vecBaseVelocity[ply].z = 0
 
 	CheckVelocity()
@@ -506,7 +510,7 @@ local function FinishGravity()
 	end
 	
 	-- Get the correct velocity for the end of the dt
-	me.m_vecVelocity[ply].z = me.m_vecVelocity[ply].z - ent_gravity * GetCurrentGravity() * FrameTime() / 2
+	me.m_vecVelocity[ply].z = me.m_vecVelocity[ply].z - ent_gravity * GetCurrentGravity() * FT() / 2
 	
 	CheckVelocity()
 end
@@ -613,7 +617,7 @@ local function CheckJumpButton()
 	
 	-- See if we are waterjumping.  If so, decrement count and return.
 	if me.m_flWaterJumpTime[ply] ~= 0 then
-		me.m_flWaterJumpTime[ply] = math.max(0, me.m_flWaterJumpTime[ply] - FrameTime())
+		me.m_flWaterJumpTime[ply] = math.max(0, me.m_flWaterJumpTime[ply] - FT())
 		return
 	end
 	
@@ -993,7 +997,7 @@ local function WaterJump()
 		return
 	end
 	
-	me.m_flWaterJumpTime[ply] = me.m_flWaterJumpTime[ply] - 1000.0 * FrameTime()
+	me.m_flWaterJumpTime[ply] = me.m_flWaterJumpTime[ply] - 1000.0 * FT()
 	
 	if me.m_flWaterJumpTime[ply] <= 0 or me.m_nWaterLevel[ply] == 0 then
 		me.m_flWaterJumpTime[ply] = 0
@@ -1020,7 +1024,7 @@ local function Friction()
 		local control = math.max(speed, GetConVar "sv_stopspeed":GetFloat())
 		
 		-- Add the amount to the drop amount.
-		drop = drop + control * friction * FrameTime()
+		drop = drop + control * friction * FT()
 	end
 	
 	-- scale the velocity
@@ -1051,7 +1055,7 @@ local function Accelerate(wishdir, wishspeed, accel)
 	
 	-- Determine amount of accleration.
 	-- Cap at addspeed
-	local accelspeed = math.min(addspeed, accel * FrameTime() * wishspeed * me.m_surfaceFriction[ply])
+	local accelspeed = math.min(addspeed, accel * FT() * wishspeed * me.m_surfaceFriction[ply])
 	
 	-- Adjust velocity.
 	me.m_vecVelocity[ply]:Add(accelspeed * wishdir)
@@ -1074,7 +1078,7 @@ local function AirAccelerate(wishdir, wishspeed, accel)
 	-- Determine acceleration speed after acceleration
 	-- Cap it
 	local accelspeed = math.min(addspeed,
-	accel * wishspeed * FrameTime() * me.m_surfaceFriction[ply])
+	accel * wishspeed * FT() * me.m_surfaceFriction[ply])
 	
 	-- Adjust pmove vel.
 	me.m_vecVelocity[ply]:Add(accelspeed * wishdir)
@@ -1092,7 +1096,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 	local a, b = 0, 0
 	local pm --TraceResult
 	local endpos = Vector()
-	local time_left, allFraction = FrameTime(), 0 -- Total time for this movement operation.
+	local time_left, allFraction = FT(), 0 -- Total time for this movement operation.
 	local blocked = 0 -- Assume not blocked
 	for bumpcount = 1, numbumps do
 		if me.m_vecVelocity[ply]:LengthSqr() == 0.0 then break end
@@ -1472,7 +1476,7 @@ local function WalkMove()
 	end
 	
 	-- first try just moving to the destination	
-	local dest = me.m_vecOrigin[ply] + me.m_vecVelocity[ply] * FrameTime()
+	local dest = me.m_vecOrigin[ply] + me.m_vecVelocity[ply] * FT()
 	dest.z = me.m_vecOrigin[ply].z
 	
 	-- first try moving directly to the next spot
@@ -1550,7 +1554,7 @@ local function WaterMove()
 	local speed, newspeed = temp:Length()
 	temp:Normalize()
 	if speed ~= 0 then
-		newspeed = speed - FrameTime() * speed * GetConVar "sv_friction":GetFloat() * me.m_surfaceFriction[ply]
+		newspeed = speed - FT() * speed * GetConVar "sv_friction":GetFloat() * me.m_surfaceFriction[ply]
 		if newspeed < 0.1 then
 			newspeed = 0
 		end
@@ -1566,7 +1570,7 @@ local function WaterMove()
 		if addspeed > 0 then
 			wishvel:Normalize()
 			local accelspeed = math.min(addspeed,
-			GetConVar "sv_accelerate":GetFloat() * wishspeed * FrameTime() * me.m_surfaceFriction[ply])
+			GetConVar "sv_accelerate":GetFloat() * wishspeed * FT() * me.m_surfaceFriction[ply])
 			
 			me.m_vecVelocity[ply]:Add(accelspeed * wishvel)
 			me.m_outWishVel[ply]:Add(accelspeed * wishvel)
@@ -1577,7 +1581,7 @@ local function WaterMove()
 	
 	-- Now move
 	-- assume it is a stair or a slope, so press down from stepheight above
-	local dest = me.m_vecOrigin[ply] + FrameTime() * me.m_vecVelocity[ply]
+	local dest = me.m_vecOrigin[ply] + FT() * me.m_vecVelocity[ply]
 	local pm = TracePlayerBBox(me.m_vecOrigin[ply], dest, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT)
 	if pm.Fraction == 1.0 then
 		local start = Vector(dest)
@@ -1797,13 +1801,28 @@ local function CheckFenceStand(pos, endpos, ignorenormals)
 	end
 end
 
-hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(ply, mv)
+local function GetInFence(w, oldpos, newpos) --workaround!!
+	if not ply:Crouching() then return false end
+	local t = {
+		start = oldpos, endpos = newpos or oldpos,
+		mins = GetPlayerMins(), maxs = GetPlayerMaxs(),
+		mask = MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
+		filter = ply,
+	}
+	
+	local tr = util.TraceHull(t)
+	t.mask = MASK_SHOT -- Check if player is stuck in fence
+	return tr.Entity ~= NULL and util.TraceHull(t).Entity == NULL
+end
+
+hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
+	ply, mv = p, m
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
 	local maxspeed = mv:GetMaxSpeed() * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
 	for v, i in pairs {
-		[mv:GetVelocity()] = false,
-		[me.m_vecVelocity[ply]] = true
+		[mv:GetVelocity()] = true,
+		[me.m_vecVelocity[ply]] = false,
 	} do --Current velocity
 		local speed, vz = v:Length2D(), v.z -- Horizontal speed, Z component
 		if w:GetInWallInk() and mv:KeyDown(WALLCLIMB_KEYS) then
@@ -1827,41 +1846,39 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(ply, mv)
 			speed = math.min(speed, maxspeed)
 		end
 		
-		if w.OnOutofInk and not w:GetInWallInk() then
-			vz = math.min(vz, ply:GetJumpPower() / 2)
+		v.z = w.OnOutofInk and not w:GetInWallInk()
+		and math.min(vz, ply:GetJumpPower() / 2) or vz
+		if i then mv:SetVelocity(v) end
+	end
+		
+	--Send viewmodel animation.
+	local infence = SERVER and w:GetInFence() or CLIENT and me.m_flInFence[ply]
+	if ply:Crouching() then
+		w.SwimSound:ChangeVolume(w:GetInInk() and mv:GetVelocity():Length2D() / w.SquidSpeed or 0)
+		if bit.band(me.m_nFlags[ply], FL_DUCKING) == 0 then
+			ply:RemoveAllDecals()
+			if SERVER then
+				w:ChangeViewModel(ss.ViewModel.Squid)
+				ply:EmitSound "SplatoonSWEPs_Player.ToSquid"
+			end
 		end
 		
-		w.OnOutofInk, v.z = w:GetInWallInk(), vz
-		if i then continue end
-		mv:SetVelocity(v)
-		
-		--Send viewmodel animation.
-		if ply:Crouching() then
-			w.SwimSound:ChangeVolume(w:GetInInk() and speed / w.SquidSpeed or 0)
-			if bit.band(me.m_nFlags[ply], FL_DUCKING) == 0 then
-				ply:RemoveAllDecals()
-				if SERVER then
-					w:ChangeViewModel(ss.ViewModel.Squid)
-					ply:EmitSound "SplatoonSWEPs_Player.ToSquid"
-				end
-			end
-			
-			if w:GetOnEnemyInk() then
-				w:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)
-					self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
-				end)
-			end
-		elseif w:GetInFence() then
-			mv:AddKey(IN_DUCK)
-		elseif bit.band(me.m_nFlags[ply], FL_DUCKING) ~= 0 then
-			w.SwimSound:ChangeVolume(0)
-			if SERVER then
-				w:ChangeViewModel(ss.ViewModel.Standing)
-				ply:EmitSound "SplatoonSWEPs_Player.ToHuman"
-			end
+		if w:GetOnEnemyInk() then
+			w:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)
+				self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
+			end)
+		end
+	elseif infence then
+		mv:AddKey(IN_DUCK) --Cannot stand while in fence - it's not correct behavior
+	elseif bit.band(me.m_nFlags[ply], FL_DUCKING) ~= 0 then
+		w.SwimSound:ChangeVolume(0)
+		if SERVER then
+			w:ChangeViewModel(ss.ViewModel.Standing)
+			ply:EmitSound "SplatoonSWEPs_Player.ToHuman"
 		end
 	end
 	
+	w.OnOutofInk = w:GetInWallInk()
 	me.m_angViewPunchAngles[ply] = ply:GetViewPunchAngles()
 	me.m_bAllowAutoMovement[ply] = true
 	me.m_bInDuckJump[ply] = ply:Crouching() and not ply:OnGround()
@@ -1884,8 +1901,10 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(ply, mv)
 	me.m_vecBaseVelocity[ply] = ply:GetBaseVelocity()
 	me.m_vecOldAngles[ply] = mv:GetOldAngles()
 	me.m_vecOrigin[ply] = mv:GetOrigin()
-	if not w:GetInFence() and ply:Crouching() then
-		me.m_vecVelocity[ply] = mv:GetVelocity()
+	me.m_vecVelocity[ply] = mv:GetVelocity()
+	if CLIENT then me.m_flInFence[ply] = w:GetInFence() end
+	if infence and ply:GetMoveType() == MOVETYPE_NOCLIP then
+		ply:SetMoveType(MOVETYPE_WALK)
 	end
 end)
 
@@ -1894,54 +1913,38 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 	ply, mv = p, m
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
-	if not ply:Crouching() then w:SetInFence(false) return end
-	local prevfence = w:GetInFence()
-	if not prevfence and ply:GetMoveType() == MOVETYPE_NOCLIP then return end
-	local oldpos = Vector(me.m_vecOrigin[ply])
-	local t = {
-		start = oldpos, endpos = oldpos,
-		mins = GetPlayerMins(), maxs = GetPlayerMaxs(),
-		mask = MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
-		filter = ply,
-	}
-	
-	local tr = util.TraceHull(t)
-	t.mask = MASK_SHOT -- Check if player is stuck in fence
-	w:SetInFence(tr.Entity ~= NULL and util.TraceHull(t).Entity == NULL)
-	if ply:GetGroundEntity() ~= NULL then
-		t.endpos = prevfence and oldpos or mv:GetOrigin()
-		t.endpos.z = t.endpos.z - 2 -- Check if player is on fence
-		tr = util.TraceHull(t)
-		t.mask = MASK_GRATE
-		if util.TraceHull(t).Entity ~= NULL and tr.Entity == NULL then
-			SetGroundEntity(nil) -- Squid cannot stand on fence
-			w:SetInFence(true)
+	if not ply:Crouching() then
+		if SERVER then
+			w:SetInFence(false)
+		else
+			me.m_flInFence[ply] = false
 		end
+		
+		return
+	end
+	
+	local prevfence = SERVER and w:GetInFence() or CLIENT and me.m_flInFence[ply]
+	if not prevfence and ply:GetMoveType() == MOVETYPE_NOCLIP then return end
+	local infence = GetInFence(w, me.m_vecOrigin[ply])
+	local oldpos = Vector(me.m_vecOrigin[ply])
+	local newpos = Vector(oldpos)
+	newpos.z = newpos.z - 2
+	if ply:GetGroundEntity() ~= NULL and GetInFence(w, oldpos, newpos) then
+		SetGroundEntity(nil) -- Squid cannot stand on fence
+		infence = true
 	end
 	
 	SquidMove() -- Movement emulation
+	infence = infence or GetInFence(w, me.m_vecOrigin[ply]) -- Check if player is penetrating into fence
 	
-	if not w:GetInFence() then
-		t.endpos = me.m_vecOrigin[ply]
-		t.mask = MASK_GRATE
-		tr = util.TraceHull(t)
-		t.mask = MASK_SHOT -- Check if player is penetrating into fence
-		w:SetInFence(tr.Entity ~= NULL and util.TraceHull(t).Entity == NULL)
+	if SERVER then
+		w:SetInFence(infence)
+	else
+		me.m_flInFence[ply] = infence
 	end
 	
-	local plyph = ply:GetPhysicsObject()
-	if IsValid(plyph) then
-		plyph:EnableCollisions(not w:GetInFence())
-		plyph:RecheckCollisionFilter()
-	end
-	-- print(mv:GetVelocity(), me.m_vecVelocity[ply], w:GetInFence(), prevfence)
-	if not (w:GetInFence() or prevfence) then return end
-	ply:SetPos(me.m_vecOrigin[ply])
-	ply:SetNetworkOrigin(me.m_vecOrigin[ply])
-	mv:SetOrigin(me.m_vecOrigin[ply])
-	-- mv:SetVelocity(vector_origin)
-	
-	if w:GetInFence() then
+	if not (infence or prevfence) then return end
+	if infence then
 		ply:SetViewPunchAngles(me.m_angViewPunchAngles[ply])
 		ply:SetGroundEntity(me.m_entGroundEntity[ply])
 		mv:SetMaxClientSpeed(me.m_flClientMaxSpeed[ply])
@@ -1959,8 +1962,9 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 		-- if me.m_nSplashData[ply] then util.Effect("watersplash", me.m_nSplashData[ply]) end
 		mv:SetAngles(me.m_vecAngles[ply])
 		mv:SetOldAngles(me.m_vecOldAngles[ply])
-		-- mv:SetOrigin(me.m_vecOrigin[ply])
+		mv:SetOrigin(me.m_vecOrigin[ply])
 		mv:SetVelocity(me.m_vecVelocity[ply])
+		ply:SetMoveType(MOVETYPE_NOCLIP)
 		ply:AddEFlags(EFL_NOCLIP_ACTIVE)
 		if me.m_nWaterLevel[ply] > WL_NotInWater then
 			ply:AddFlags(FL_INWATER)
@@ -1971,39 +1975,37 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 		else
 			ply:RemoveFlags(FL_ONGROUND)
 		end
-		
-		if not prevfence then
-			hook.Run("SplatoonSWEPs: OnPlayerEnteredFence", me.m_vecOrigin[ply], me.m_vecVelocity[ply])
+	elseif not mv:KeyDown(IN_DUCK) then
+		local t = {
+			start = oldpos, endpos = me.m_vecOrigin[ply],
+			mask = MASK_PLAYERSOLID, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
+			filter = ply,
+		}
+		t.mins, t.maxs = ply:GetHull()
+		if not util.TraceHull(t).Hit then
+			local vel = math.min(me.m_vecVelocity[ply].z / 2, 100)
+			me.m_vecVelocity[ply].z = 0
+			ply:RemoveFlags(FL_DUCKING)
+			mv:SetVelocity(me.m_vecVelocity[ply] + vector_up * vel)
 		end
-	else
-		hook.Run("SplatoonSWEPs: OnPlayerLeftFence", mv:GetOrigin(), mv:GetVelocity())
-		local vel = me.m_vecVelocity[ply].z / 2
-		if not mv:KeyDown(IN_DUCK) then
-			t.mask, t.mins, t.maxs = MASK_PLAYERSOLID, ply:GetHull()
-			if not util.TraceHull(t).Hit then
-				vel = math.min(vel, 100)
-				ply:RemoveFlags(FL_DUCKING)
-			end
-		end
-		
-		mv:SetVelocity(vector_up * vel)
 	end
 end)
 
 hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", function(ply, desired)
 	local w = ss:IsValidInkling(ply)
-	local plyph = ply:GetPhysicsObject()
-	if not (w and IsValid(plyph)) then return end
-	if not desired then
-		me.m_vecVelocity[ply] = Vector()
-	end
+	if not w then return end
 	
-	w:SetInFence(not desired and util.TraceHull {
+	local old = w:GetInFence()
+	w:SetInFence(not old and util.TraceHull {
 		start = ply:GetPos(), endpos = ply:GetPos(),
 		mins = GetPlayerMins(), maxs = GetPlayerMaxs(),
 		mask = MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 		filter = ply,
 	} .Hit)
 	
-	return true
+	if CLIENT then
+		me.m_flInFence[ply] = w:GetInFence()
+	end
+	
+	return old == w:GetInFence()
 end)

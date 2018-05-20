@@ -129,16 +129,14 @@ end
 
 function SWEP:Think()
 	if not IsValid(self.Owner) or self:GetHolstering() then return end
-	if self:IsFirstTimePredicted() then
-		local enough = self:GetInk() > self.Secondary.TakeAmmo
-		if not self.EnoughSubWeapon and enough then
-			self.JustUsableTime = CurTime()
-			if self.Owner == LocalPlayer() then
-				surface.PlaySound(ss.BombAvailable)
-			end
+	local enough = self:GetInk() > self.Secondary.TakeAmmo
+	if not self.EnoughSubWeapon and enough then
+		self.JustUsableTime = CurTime()
+		if self.Owner == LocalPlayer() then
+			surface.PlaySound(ss.BombAvailable)
 		end
-		self.EnoughSubWeapon = enough
 	end
+	self.EnoughSubWeapon = enough
 	
 	if IsValid(self.Squid) then
 		if self:GetPMID() == ss.PLAYER.OCTO then

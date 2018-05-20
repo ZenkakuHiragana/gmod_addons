@@ -79,7 +79,6 @@ end
 function SWEP:SharedDeployBase()
 	PlayLoopSound(self)
 	self:SetHolstering(false)
-	self.Owner:SetCustomCollisionCheck(true)
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
 	self.SquidSpeedSqr = self.SquidSpeed^2
@@ -99,7 +98,6 @@ end
 
 function SWEP:SharedHolsterBase()
 	if isfunction(self.SharedHolster) then self:SharedHolster() end
-	self.Owner:SetCustomCollisionCheck(false)
 	self:SetHolstering(true)
 	StopLoopSound(self)
 	return true

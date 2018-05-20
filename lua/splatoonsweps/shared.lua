@@ -225,22 +225,14 @@ end
 
 local function PlayerFootstep(ply, pos, foot, soundname, volume, filter)
 	local w = ss:IsValidInkling(ply)
-	if not w then return end
-	if w:GetGroundColor() >= 0 or SERVER and -- If player is on ink
-		ss:GetSurfaceColor(util.QuickTrace(ply:GetPos(), FootstepTrace, ply)) then
-		if not w:GetInInk() and (SERVER or ply ~= LocalPlayer()) then
-			ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
-		end
-		return true
-	end
-	
-	if not ply:Crouching() then return end
-	if w:GetPMID() ~= ss.PLAYER.NOSQUID then
-		-- Squid footsteps
+	if not w or CLIENT and ply == LocalPlayer() then return end
+	local standing = not ply:Crouching()
+	if ply:Crouching() and w:GetPMID() ~= ss.PLAYER.NOSQUID or not ply:Crouching() and w:GetGroundColor() >= 0 then
 		ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		return true
 	end
 	
+	if standing then return end
 	return soundname:find "chainlink" and true or nil
 end
 
@@ -259,11 +251,7 @@ else
 end
 
 --Inklings with the same ink color will not collide
-local bound = ss.vector_one * 5
-hook.Add("ShouldCollide", "SplatoonSWEPs: Ink go through fences", function(ent1, ent2)
-	local w1, w2 = ss:IsValidInkling(ent1), ss:IsValidInkling(ent2)
-	if w1 and w2 then return w1:GetInkColorProxy() ~= w2:GetInkColorProxy() end
-end)
+-- ^ Set player's team correctly and do Player:SetNoCollideWithTeammates(true)
 
 hook.Add("PhysgunPickup", "SplatoonSWEPs: Ink cannot be grabbed", function(ply, ent)
 	if ent.IsSplatoonProjectile then return false end
