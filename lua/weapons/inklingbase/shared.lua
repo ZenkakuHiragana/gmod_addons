@@ -153,7 +153,7 @@ end
 function SWEP:PrimaryAttack()
 	if self:GetHolstering() then return end
 	local canattack = self:CommonFire(true)
-	if game.SinglePlayer() and self.Owner:IsPlayer() then self:CallOnClient "PrimaryAttack" end
+	if self.Owner:IsPlayer() then self:CallOnClient "PrimaryAttack" end
 	if self.CannotStandup then return end
 	if isfunction(self.SharedPrimaryAttack) then self:SharedPrimaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerPrimaryAttack) then
@@ -167,7 +167,7 @@ end
 function SWEP:SecondaryAttack()
 	if self:GetHolstering() then return end
 	local canattack = self:CommonFire(false)
-	if game.SinglePlayer() and self.Owner:IsPlayer() then self:CallOnClient "SecondaryAttack" end
+	if self.Owner:IsPlayer() then self:CallOnClient "SecondaryAttack" end
 	if self.CannotStandup then return end
 	if isfunction(self.SharedSecondaryAttack) then self:SharedSecondaryAttack(canattack) end
 	if SERVER and isfunction(self.ServerSecondaryAttack) then

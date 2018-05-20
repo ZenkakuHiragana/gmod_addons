@@ -225,14 +225,13 @@ end
 
 local function PlayerFootstep(ply, pos, foot, soundname, volume, filter)
 	local w = ss:IsValidInkling(ply)
-	if not w or CLIENT and ply == LocalPlayer() then return end
-	local standing = not ply:Crouching()
-	if ply:Crouching() and w:GetPMID() ~= ss.PLAYER.NOSQUID or not ply:Crouching() and w:GetGroundColor() >= 0 then
+	if not w or SERVER then return end
+	if ply:Crouching() and w:GetPMID() ~= ss.PLAYER.NOSQUID and w:GetGroundColor() < 0 or not ply:Crouching() and w:GetGroundColor() >= 0 then
 		ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		return true
 	end
 	
-	if standing then return end
+	if not ply:Crouching() then return end
 	return soundname:find "chainlink" and true or nil
 end
 
