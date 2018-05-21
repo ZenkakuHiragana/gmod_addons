@@ -63,6 +63,12 @@ end
 --When NPC weapon is picked up by player.
 function SWEP:OwnerChanged()
 	if not IsValid(self.Owner) then
+		if SERVER then
+			timer.Simple(5, function()
+				if IsValid(self) and IsValid(self.Owner) then return end
+				self:Remove()
+			end)
+		end
 		return StopLoopSound(self)
 	else
 		return PlayLoopSound(self)

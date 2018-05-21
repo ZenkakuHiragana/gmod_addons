@@ -44,7 +44,7 @@ end
 function SWEP:SharedThink()
 	if self:GetPMID() == ss.PLAYER.NOSQUID and self.Owner:IsFlagSet(FL_DUCKING) then
 		self:SetHoldType(self.HoldType)
-	elseif self:GetAimTimer() < CurTime() then
+	elseif self.Owner:IsPlayer() and self:GetAimTimer() < CurTime() then
 		self:SetHoldType "passive"
 		self.InklingSpeed = self:GetInklingSpeed()
 		if not (self:GetOnEnemyInk() or self:GetInInk()) then

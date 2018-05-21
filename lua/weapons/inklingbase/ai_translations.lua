@@ -143,7 +143,7 @@ function SWEP:SetupWeaponHoldTypeForAI(t)
 		self.ActivityTranslateAI [ ACT_RELOAD_LOW ] 				= ACT_RELOAD_SMG1
 		self.ActivityTranslateAI [ ACT_GESTURE_RELOAD ] 			= ACT_GESTURE_RELOAD_SMG1
 		
-	elseif t == "shotgun" or t == "passive" then
+	elseif t == "shotgun" then
 		
 		self.ActivityTranslateAI [ ACT_RANGE_ATTACK1 ] 				= ACT_RANGE_ATTACK_SHOTGUN
 		self.ActivityTranslateAI [ ACT_MELEE_ATTACK1 ] 				= ACT_IDLE_ANGRY_SHOTGUN

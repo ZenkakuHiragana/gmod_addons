@@ -86,16 +86,16 @@ function SWEP:Initialize()
 	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
 		self.HoldType = "smg"
 		self:SetHoldType(self.HoldType)
-		local npcrange = self.Primary.InitVelocity * (self.Primary.Straight + 4.5 * ss.FrameToSec) * 2
+		local npcrange = self.Primary.InitVelocity * (self.Primary.Straight + 4.5 * ss.FrameToSec)
 		self:SetSaveValue("m_fMinRange1", 0)
 		self:SetSaveValue("m_fMinRange2", 0)
 		self:SetSaveValue("m_fMaxRange1", npcrange)
 		self:SetSaveValue("m_fMaxRange2", npcrange)
-		self:SetNPCMinBurst(self.Primary.Delay)
-		self:SetNPCMaxBurst(self.Primary.Delay)
+		self:SetNPCMinBurst(3)
+		self:SetNPCMaxBurst(8)
 		self:SetNPCFireRate(self.Primary.Delay)
 		self:SetNPCMinRest(self.Primary.Delay)
-		self:SetNPCMaxRest(self.Primary.Delay)
+		self:SetNPCMaxRest(self.Primary.Delay * 3)
 		self:Deploy()
 		local timername = "SplatoonSWEPs: NPC Think function" .. self:EntIndex()
 		timer.Create(timername, 0, 0, function()
@@ -118,9 +118,12 @@ end
 
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
-	if self.Owner:IsPlayer() then self:CallOnClient "ClientDeployBase" end
+	if self.Owner:IsPlayer() then
+		self:CallOnClient "ClientDeployBase"
+		self:SetHoldType "passive"
+	end
+	
 	ss.NoCollide[self.Owner] = {}
-	self:SetHoldType "passive"
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
 	self:SetNextCrouchTime(CurTime())
@@ -234,7 +237,6 @@ function SWEP:Holster()
 	return self:SharedHolsterBase()
 end
 
-function SWEP:OnRemove() return self:Holster() end
 function SWEP:Think()
 	if not IsValid(self.Owner) or self:GetHolstering() then return end
 	if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then

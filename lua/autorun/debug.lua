@@ -49,15 +49,4 @@ for i = 1, circle_polys do
 	reference_vert:Rotate(Angle(0, 0, 360 / circle_polys))
 end
 
-function RequestInkOrder(self) --Old function
-	local tr = self.Owner:GetEyeTrace()
-	local pos, normal = tr.HitPos, tr.HitNormal
-	local radius = 500
-	SplatoonSWEPs.InkManager.AddQueue(pos, normal, radius, self.ColorCode, reference_polys)
-	DebugPoint(pos, 5, true)
-	DebugVector(pos, normal * 50, true)
-	for i, v in ipairs(reference_polys) do
-		DebugLine(LocalToWorld(v, angle_zero, pos, normal:Angle()), LocalToWorld(reference_polys[i % #reference_polys + 1], angle_zero, pos, normal:Angle()))
-	end
-end
 ----------------------

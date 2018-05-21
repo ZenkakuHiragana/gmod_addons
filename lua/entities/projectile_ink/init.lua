@@ -210,7 +210,7 @@ function ENT:PhysicsCollide(coldata, collider) -- If ink hits something
 			self.InkType = math.random(1, 3)
 		end
 		
-		return ss.InkManager.AddQueue(tr.HitPos, tr.HitNormal, radius, self.ColorCode, self.InkYaw, self.InkType, ratio)
+		return ss:Paint(tr.HitPos, tr.HitNormal, radius, self.ColorCode, self.InkYaw, self.InkType, ratio)
 	elseif self.Damage > 0 then -- If ink hits an NPC or something
 		local d, o = DamageInfo(), self:GetOwner()
 		t = t - self.DecreaseDamage
@@ -220,7 +220,7 @@ function ENT:PhysicsCollide(coldata, collider) -- If ink hits something
 		d:SetDamageType(DMG_GENERIC)
 		d:SetMaxDamage(self.Damage)
 		d:SetReportedPosition(self:GetPos())
-		d:SetAttacker(o)
+		d:SetAttacker(IsValid(o) and o or game.GetWorld())
 		d:SetInflictor(IsValid(o) and isfunction(o.GetActiveWeapon) and IsValid(o:GetActiveWeapon()) and o:GetActiveWeapon() or game.GetWorld())
 		return coldata.HitEntity:TakeDamageInfo(d)
 	end

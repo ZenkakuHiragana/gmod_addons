@@ -61,27 +61,7 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p.InkType = math.random(4, 9)
 	p:Spawn()
 	AddCleanup(p)
-	
-	if SplashInitMul > 0 then return end
-	self.SplashInitRandom = self.SplashInitRandom + 1
-	p = ents.Create "projectile_ink"
-	if not IsValid(p) then return end
-	p:SetPos(self.Owner:GetShootPos() + delta_position)
-	p:SetAngles(ang)
-	p:SetOwner(self.Owner)
-	p:SetInkColorProxy(self:GetInkColorProxy())
-	p.InkRadius = self.Primary.InkRadius
-	p.MinRadius = self.Primary.MinRadius
-	p.InitVelocity = -vector_up * 100
-	p.ColorCode = self.ColorCode
-	p.TrailWidth = 4
-	p.TrailEnd = 1
-	p.TrailLife = .1
-	p.InkYaw = self.Owner:EyeAngles().yaw
-	p.InkType = math.random(1, 3)
-	p.IsDrop = true
-	p:Spawn()
-	AddCleanup(p)
+	self.SplashInitRandom = self.SplashInitRandom + (SplashInitMul > 0 and 0 or 1)
 end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)

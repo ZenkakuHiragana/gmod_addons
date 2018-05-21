@@ -248,13 +248,6 @@ hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, 
 	net.Send(atk)
 end)
 
-hook.Add("Tick", "SplatoonSWEPs: Do ink coroutines", function()
-	local self = ss.InkManager
-	if coroutine.status(self.DoCoroutines) == "dead" then return end
-	local ok, message = coroutine.resume(self.DoCoroutines)
-	if not ok then ErrorNoHalt(self, "SplatoonSWEPs Error: ", message, "\n") end
-end)
-
 hook.Add("PostCleanupMap", "SplatoonSWEPs: Cleanup all ink", ss.ClearAllInk)
 hook.Add("PlayerInitialSpawn", "SplatoonSWEPs: Bots compatibility", function(ply)
 	if not ply:IsBot() then return end

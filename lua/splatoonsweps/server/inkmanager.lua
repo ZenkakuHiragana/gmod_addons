@@ -69,7 +69,16 @@ local function AddInkRectangle(ink, newink, sz)
 	ink[newink] = sz
 end
 
-local function QueueCoroutine(pos, normal, radius, color, angle, inktype, ratio)
+-- SplatoonSWEPs:Paint()
+-- Draws a drop of ink.
+-- Arguments:
+--   Vector pos		| Center position.
+--   Vector normal	| Normal of the surface to draw.
+--   number radius	| Scale of ink in Hammer units.
+--   number angle	| Ink rotation in degrees.
+--   number inktype | Shape of ink.
+--   number ratio	| Aspect ratio.
+function ss:Paint(pos, normal, radius, color, angle, inktype, ratio)
 	local ang, polys = normal:Angle(), {}
 	ang.roll = abs(normal.z) > COS_MAX_DEG_DIFF and angle * normal.z or ang.yaw
 	for i, v in ipairs(reference_polys) do --Scaling
@@ -108,42 +117,7 @@ local function QueueCoroutine(pos, normal, radius, color, angle, inktype, ratio)
 			}
 			AddInkRectangle(surf.InkCircles[i], inkdata, ss.InkCounter)
 			ss.InkCounter = ss.InkCounter + 1
-			
-			inkqueue = inkqueue + 1
-			if inkqueue % MAX_INKQUEUE_AT_ONCE == 0 then yield() end
 		end
-	end
-	
-	yield(true)
-end
-
-local function ProcessQueue()
-	while true do
-		-- local done = 0
-		for q in pairs(PaintQueue) do
-			if status(q.co) == "dead" then continue end
-			local ok, msg = resume(q.co, q.pos, q.normal, q.radius, q.color, q.angle, q.inktype, q.ratio)
-			if ok and msg then PaintQueue[q] = nil end
-			-- done = done + 1
-			-- if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then yield() end
-		end
-		
-		yield()
-	end
-end
-
---Do a list of coroutines.
-local function DoCoroutines()
-	local self = ss.InkManager
-	local threads = self.Threads
-	while true do
-		-- local done = 0
-		for i, co in pairs(threads) do
-			resume(co)
-			-- done = done + 1
-			-- if done % MAX_COROUTINES_AT_ONCE == 0 then yield() end
-		end
-		yield()
 	end
 end
 
@@ -176,20 +150,3 @@ function ss:GetSurfaceColor(tr)
 		end
 	end
 end
-
-ss.InkManager = {
-	DoCoroutines = create(DoCoroutines),
-	Threads = {ProcessQueue = create(ProcessQueue)},
-	AddQueue = function(pos, normal, radius, color, angle, inktype, ratio)
-		PaintQueue[{
-			angle = NormalizeAngle(angle), --Rotation
-			co = create(QueueCoroutine), --Coroutine
-			color = color, --Ink color
-			normal = normal, --Normal vector
-			pos = pos, --Origin
-			radius = radius, --Size
-			ratio = ratio, --Stretch ink, x/y
-			inktype = inktype, --Texture type
-		}] = true
-	end,
-}
