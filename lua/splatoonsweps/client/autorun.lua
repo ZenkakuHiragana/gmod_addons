@@ -128,6 +128,10 @@ function ss:PrepareInkSurface(write)
 	
 	data:Close()
 	file.Delete(path)
+	
+	--HACKHACK - This is Splatoon 2 map made by Lpower531. It has special decals that hides our ink.
+	if game.GetMap() == "gm_moray_towers" then INK_SURFACE_DELTA_NORMAL = 2 end
+	
 	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
 	local rtmergin = 4 / rtsize --arearatio[units/pixel]

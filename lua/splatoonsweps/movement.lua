@@ -3,8 +3,6 @@
 --Source codes are taken from source-sdk-2013/mp/src/game/shared/gamemovement.cpp
 local ss = SplatoonSWEPs
 if not ss then return end
-util.PrecacheSound "Player.Swim"
-
 ss.MoveEmulation = ss.MoveEmulation or {
 	m_surfaceFriction = {},
 	m_surfaceProps = {},
@@ -1801,7 +1799,7 @@ local function CheckFenceStand(pos, endpos, ignorenormals)
 	end
 end
 
-local function GetInFence(w, oldpos, newpos) --workaround!!
+local function GetInFence(w, oldpos, newpos)
 	if not ply:Crouching() then return false end
 	local t = {
 		start = oldpos, endpos = newpos or oldpos,
@@ -2009,3 +2007,31 @@ hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", function(ply, desired)
 	
 	return old == w:GetInFence()
 end)
+
+local nest = nil
+for _, hookname in ipairs {"CalcMainActivity", "TranslateActivity"} do
+	hook.Add(hookname, "SplatoonSWEPs: Crouch anim in fence", function(ply, ...)
+		if nest then nest = nil return end
+		if not ply:Crouching() then return end
+		local w = ss:IsValidInkling(ply)
+		if not (w and w:GetInFence()) then return end
+		local onground = ply:OnGround()
+		ply:SetMoveType(MOVETYPE_WALK)
+		ply:AddFlags(FL_DUCKING)
+		if me.m_entGroundEntity[ply] ~= NULL then
+			ply:AddFlags(FL_ONGROUND)
+		else
+			ply:RemoveFlags(FL_ONGROUND)
+		end
+		nest = true
+		ply.m_bWasNoclipping = nil
+		local res1, res2 = gamemode.Call(hookname, ply, ...)
+		ply:SetMoveType(MOVETYPE_NOCLIP)
+		if onground then
+			ply:AddFlags(FL_ONGROUND)
+		else
+			ply:RemoveFlags(FL_ONGROUND)
+		end
+		return res1, res2
+	end)
+end
