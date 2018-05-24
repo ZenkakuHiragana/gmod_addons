@@ -26,25 +26,26 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 		window:SetVisible(true)
 		window:NoClipping(false)
 		
-		local previewmodel = "models/props_splatoon/weapons/primaries/splattershot/splattershot.mdl"
 		local LabelError = window:Add "DLabel"
-		LabelError:SetPos(window:GetWide() * 0.4, window:GetTall() / 3 * 2 + 30)
+		LabelError:SetPos(window:GetWide() * .4, window:GetTall() / 3 * 2 + 30)
 		LabelError:SetFont "DermaDefaultBold"
 		LabelError:SetText(ss.Text.Error.NotFoundPlayermodel)
 		LabelError:SetTextColor(Color(255, 128, 128))
-		LabelError:SizeToContents()
 		LabelError:SetVisible(false)
+		LabelError:SizeToContents()
 		
 		local function GetColor() --Get current color for preview model
 			local color = ss:GetColor(ss:GetConVarInt "InkColor")
 			return Vector(color.r, color.g, color.b) / 255
 		end
 		
+		local function GetPlayermodel(i)
+			return ss.Playermodel[i or ss:GetConVarInt "Playermodel"] or
+			player_manager.TranslatePlayerModel(GetConVar "cl_playermodel":GetString())
+		end
+		
 		local function SetPlayerModel(DModelPanel) --Apply changes to preview model
-			local model = ss.Playermodel[ss:GetConVarInt "Playermodel"]
-			if not model then model = player_manager.TranslatePlayerModel(GetConVar "cl_playermodel":GetString()) end
-			local bone = table.HasValue(ss.Text.PlayermodelNames, model) and "ValveBiped.Bip01_Pelvis" or "ValveBiped.Bip01_Spine4"
-			
+			local model = GetPlayermodel()
 			if not file.Exists(model, "GAME") then
 				model = LocalPlayer():GetModel()
 				LabelError:SetVisible(true)
@@ -53,84 +54,86 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			end
 			
 			DModelPanel:SetModel(model)
-			local center = DModelPanel.Entity:GetBonePosition(DModelPanel.Entity:LookupBone(bone) or 0)
-			DModelPanel:SetLookAt(center)
-			DModelPanel:SetCamPos(center - Vector(-60, -10, -10))
-			DModelPanel.Entity:SetSequence "idle_fist"
-			DModelPanel.Entity:SetEyeTarget(center - Vector(-40, 0, -10))
-			DModelPanel.Entity.GetPlayerColor = GetColor
-			DModelPanel.Entity.GetInkColorProxy = GetColor
+			local ent = DModelPanel.Entity
+			ent:SetPos(-Vector(160, 0, 0))
+			ent:SetSequence "idle_fist"
+			ent.GetPlayerColor = GetColor
+			ent.GetInkColorProxy = GetColor
+			
+			local issquid = ss.CheckSplatoonPlayermodels[model]
+			local mins, maxs = ent:GetRenderBounds()
+			local top = issquid and 60 or mins.z + maxs.z
+			local campos = vector_up * top / 2
+			ent:SetEyeTarget(campos)
+			DModelPanel:SetCamPos(campos)
+			DModelPanel:SetLookAt(ent:GetPos() + campos)
 		end
-		
-		if not file.Exists(previewmodel, "GAME") then --If weapon model is not found
-			local ErrorLabel = Label(ss.Text.Error.NotFoundWeaponModel, window)
-			ErrorLabel:SizeToContents()
-			ErrorLabel:Dock(FILL) --Bring it to center
-			ErrorLabel:SetContentAlignment(5)
-			return
-		end
-		
-		local Preview = window:Add "DModelPanel" --Preview weapon model
-		Preview:SetDirectionalLight(BOX_RIGHT, color_white)
-		Preview:SetContentAlignment(5)
-		Preview:SetSize(window:GetWide() * 0.4, window:GetTall() / 2)
-		Preview:SetPos(window:GetWide() / -30, 24)
-		Preview:SetModel(previewmodel)
-		local center = Preview.Entity:WorldSpaceCenter()
-		Preview:SetLookAt(center)
-		Preview:SetCamPos(center + Vector(-30, 30, 10))
-		Preview.Entity.GetInkColorProxy = GetColor
 		
 		local Playermodel = window:Add "DModelPanel" --Preview playermodel
 		function Playermodel:LayoutEntity() end
-		Playermodel:SetDirectionalLight(BOX_RIGHT, color_white)
+		Playermodel:Dock(LEFT)
 		Playermodel:SetContentAlignment(5)
-		Playermodel:SetSize(window:GetWide() * 0.4, window:GetTall() * 0.75)
-		Playermodel:AlignLeft(window:GetWide() / 20)
-		Playermodel:AlignBottom()
+		Playermodel:SetCursor "arrow"
+		Playermodel:SetDirectionalLight(BOX_RIGHT, color_white)
+		Playermodel:SetFOV(20)
+		Playermodel:SetWide(window:GetWide() * .4)
+		Playermodel:AlignLeft()
+		Playermodel:AlignTop()
 		SetPlayerModel(Playermodel)
 		
-		local ComboColor = window:Add "DComboBox" --Ink color selection box
-		ComboColor:SetSortItems(false)
-		ComboColor:SetPos(window:GetWide() * 0.4, window:GetTall() / 4)
-		ComboColor:SetSize(window:GetWide() * 0.31, 24)
-		ComboColor:SetValue(ss:GetColorName(ss:GetConVarInt "InkColor"))
-		for i = 1, ss.MAX_COLORS do
-			ComboColor:AddChoice(ss:GetColorName(i))
-		end
-		
-		function ComboColor:OnSelect(index, value, data)
-			local cvar = ss:GetConVar "InkColor"
-			if cvar then cvar:SetInt(index) end
-		end
-		
-		local LabelColor = window:Add "DLabel"
-		LabelColor:SetPos(window:GetWide() * 0.4, window:GetTall() / 4 - 24)
+		local LabelColor = window:Add "DLabel" --"Ink color:" label
+		LabelColor:SetPos(window:GetWide() * .4, 32)
 		LabelColor:SetText(ss.Text.InkColor)
 		LabelColor:SizeToContents()
 		
-		local ComboModel = window:Add "DComboBox" --Playermodel selection box
-		ComboModel:SetSortItems(false)
-		ComboModel:SetPos(window:GetWide() * 0.4, window:GetTall() / 3 * 2)
-		ComboModel:SetSize(window:GetWide() * 0.31, 24)
-		ComboModel:SetValue(ss.Text.PlayermodelNames[ss:GetConVarInt "Playermodel"])
-		for i, c in ipairs(ss.Text.PlayermodelNames) do
-			ComboModel:AddChoice(c)
+		local CurrentColor = window:Add "DColorButton" --Current color box on top left
+		CurrentColor:SetCursor "arrow"
+		CurrentColor:SetPos(window:GetWide() * .01, window:GetTall() * .01 + 24)
+		CurrentColor:SetSize(window:GetTall() / 16, window:GetTall() / 16)
+		CurrentColor:SetColor(ss:GetColor(ss:GetConVarInt "InkColor"))
+		
+		local ColorSelector = window:Add "DColorPalette" --Color picker
+		ColorSelector:SetPos(window:GetWide() * .4, 60)
+		ColorSelector:SetWide(window:GetWide() * .31)
+		ColorSelector:SetButtonSize(math.Round(ColorSelector:GetWide() / math.ceil(ss.MAX_COLORS / 3)))
+		ColorSelector:SetColorButtons(ss.InkColors)
+		for _, color in pairs(ColorSelector:GetChildren()) do
+			local i = color:GetID()
+			color:SetToolTip(ss.Text.ColorNames[i])
+			function color:DoClick()
+				local cvar = ss:GetConVar "InkColor"
+				if cvar then cvar:SetInt(i) end
+				CurrentColor:SetColor(ss:GetColor(i))
+			end
 		end
 		
-		function ComboModel:OnSelect(index, value, data)
-			local cvar = ss:GetConVar "Playermodel"
-			if cvar then cvar:SetInt(index) end
-			SetPlayerModel(Playermodel)
-		end
-		
-		local LabelModel = window:Add "DLabel"
-		LabelModel:SetPos(window:GetWide() * 0.4, window:GetTall() / 3 * 2 - 24)
+		local LabelModel = window:Add "DLabel" --"Playermodel:" label
+		LabelModel:SetPos(window:GetWide() * .4, window:GetTall() / 2)
 		LabelModel:SetText(ss.Text.Playermodel)
 		LabelModel:SizeToContents()
 		
-		local Options = window:Add "DPanel" --Group of checkboxes
-		Options:SetWide(window:GetWide() / 4)
+		local ModelSelector = window:Add "DIconLayout" --Playermodel selection box
+		local y = window:GetTall() / 2 + LabelModel:GetTall()
+		ModelSelector:SetPos(window:GetWide() * .4, y)
+		ModelSelector:SetSize(window:GetWide() * .31, window:GetTall() - y)
+		local size = ModelSelector:GetWide() / #ss.Text.PlayermodelNames * 2
+		for i, c in ipairs(ss.Text.PlayermodelNames) do
+			local item = ModelSelector:Add "SpawnIcon"
+			item:SetSize(size, size)
+			item:SetModel(GetPlayermodel(i))
+			item:SetToolTip(c)
+			function item:DoClick()
+				local cvar = ss:GetConVar "Playermodel"
+				if cvar then cvar:SetInt(i) end
+				SetPlayerModel(Playermodel)
+			end
+		end
+		
+		local Options = window:Add "DScrollPanel" --Group of checkboxes
+		local m = window:GetTall() * .01
+		Options:SetSize(window:GetWide() / 4, window:GetTall())
+		Options:DockMargin(m, m, m, m)
+		Options:DockPadding(m, m, m, m)
 		Options:Dock(RIGHT)
 		
 		local OptionsConVar = {
@@ -138,16 +141,46 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			"CanHealInk",
 			"CanReloadStand",
 			"CanReloadInk",
+			"BecomeSquid",
 			"DrawInkOverlay",
 		}
-		for i = 0, 4 do
+		for i = 1, #OptionsConVar do
 			local Check = Options:Add "DCheckBoxLabel"
-			Check:SetPos(4, 4 + 20 * i)
-			Check:SetText(ss.Text.Options[i + 1])
-			Check:SetConVar(ss:GetConVarName(OptionsConVar[i + 1]))
-			Check:SetValue(ss:GetConVarInt(OptionsConVar[i + 1]))
-			Check:SetDark(true)
+			Check:Dock(TOP)
+			Check:SetText(ss.Text.Options[i])
+			Check:SetConVar(ss:GetConVarName(OptionsConVar[i]))
+			Check:SetValue(ss:GetConVarInt(OptionsConVar[i]))
 			Check:SizeToContents()
+		end
+		
+		Options:InvalidateParent()
+		local before = ss.RenderTarget.BaseTexture:Width()
+		local ComboRes = Options:Add "DComboBox"
+		ComboRes:SetSortItems(false)
+		ComboRes:SetPos(0, Options:GetTall() * .85)
+		ComboRes:SetSize(Options:GetWide() * .85, 17)
+		ComboRes:SetValue(ss.Text.RTResolutionName[ss:GetConVarInt "RTResolution" + 1])
+		for i = 1, #ss.Text.RTResolutionName do
+			ComboRes:AddChoice(ss.Text.RTResolutionName[i])
+		end
+		
+		local LabelResReq = Options:Add "DLabel"
+		LabelResReq:SetFont "DermaDefaultBold"
+		LabelResReq:SetPos(0, Options:GetTall() * .85 - ComboRes:GetTall())
+		LabelResReq:SetText(ss.Text.RTRestartRequired)
+		LabelResReq:SetTextColor(Color(255, 128, 128))
+		LabelResReq:SetVisible(before ~= ss.RTSize[ss:GetConVarInt "RTResolution"])
+		LabelResReq:SizeToContents()
+		
+		local LabelRes = Options:Add "DLabel" --"Ink buffer size:" label
+		LabelRes:SetPos(0, Options:GetTall() * .85 - ComboRes:GetTall() - LabelResReq:GetTall())
+		LabelRes:SetText(ss.Text.RTResolution)
+		LabelRes:SizeToContents()
+		
+		function ComboRes:OnSelect(index, value, data)
+			local cvar = ss:GetConVar "RTResolution"
+			if cvar then cvar:SetInt(index - 1) end
+			LabelResReq:SetVisible(before ~= ss.RTSize[index - 1])
 		end
 	end,
 })

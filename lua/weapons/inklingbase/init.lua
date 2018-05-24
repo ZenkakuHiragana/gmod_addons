@@ -130,12 +130,21 @@ function SWEP:Deploy()
 	self.OwnerVelocity = self.Owner:GetVelocity()
 	self.ViewAnim = ACT_VM_IDLE
 	if self.Owner:IsPlayer() and not self.Owner:IsBot() then
-		self:SetPMID(self.Owner:GetInfoNum(ss:GetConVarName "Playermodel", 1))
-		self.CanHealStand = self.Owner:GetInfoNum(ss:GetConVarName "CanHealStand", 1) ~= 0
-		self.CanHealInk = self.Owner:GetInfoNum(ss:GetConVarName "CanHealInk", 1) ~= 0
-		self.CanReloadStand = self.Owner:GetInfoNum(ss:GetConVarName "CanReloadStand", 1) ~= 0
-		self.CanReloadInk = self.Owner:GetInfoNum(ss:GetConVarName "CanReloadInk", 1) ~= 0
-		self.ColorCode = self.Owner:GetInfoNum(ss:GetConVarName "InkColor", 1)
+		for i, param in ipairs {
+			"Playermodel", "InkColor",
+			"CanHealStand", "CanHealInk",
+			"CanReloadStand", "CanReloadInk",
+			"BecomeSquid",
+		} do
+			local value = self.Owner:GetInfoNum(ss:GetConVarName(param), ss.ConVarDefaults[ss.ConVarName[param]])
+			if i == 1 then
+				self:SetPMID(value)
+			elseif i == 2 then
+				self.ColorCode = value
+			else
+				self[param] = value
+			end
+		end
 	else
 		self:SetPMID(table.Random(ss.PLAYER))
 		self.CanHealStand = true

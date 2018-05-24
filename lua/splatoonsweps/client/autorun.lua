@@ -31,6 +31,7 @@ if not GetConVar "sv_splatoonsweps_enabled":GetBool() then SplatoonSWEPs = nil r
 include "splatoonsweps/shared.lua"
 local surf = ss.SequentialSurfaces
 local rt = ss.RenderTarget
+local crashpath = "splatoonsweps/crashdump.txt" -- Existing this means the client crashed before.
 local MAX_TRIANGLES = math.floor(32768 / 3)
 local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
 function ss:ClearAllInk()
@@ -63,7 +64,6 @@ function ss:ClearAllInk()
 end
 
 function ss:PrepareInkSurface(write)
-	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
 	local path = "splatoonsweps/" .. game.GetMap() .. "_decompress.txt"
 	file.Write(path, util.Decompress(write:sub(5)))
 	local data = file.Open("data/" .. path, "rb", "GAME")
@@ -279,9 +279,17 @@ include "network.lua"
 
 --21: IMAGE_FORMAT_BGRA5551, 19: IMAGE_FORMAT_BGRA4444
 hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function()
-	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
+	if file.Exists(crashpath, "DATA") then -- If the client has crashed before, RT shrinks.
+		local res = ss:GetConVar "RTResolution"
+		if res then res:SetInt(ss.RTResID.MINIMUM) end
+		notification.AddLegacy(ss.Text.Error.CrashDetected, NOTIFY_GENERIC, 15)
+	end
+	
+	file.Write(crashpath, "")
 	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
 	
+	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	rt.BaseTexture = GetRenderTargetEx(
 		ss.RTName.BaseTexture,
 		rtsize, rtsize,
@@ -336,6 +344,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 		}
 	)
 	
+	file.Delete(crashpath)
 	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
 	local data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, true)
 	if (data:Size() < 4 or data:ReadULong() ~= tonumber(util.CRC(
@@ -354,12 +363,12 @@ end)
 hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
 	local weapon = ss:IsValidInkling(ply)
 	if not weapon then return end
-	if weapon:GetPMID() == ss.PLAYER.NOSQUID then
-		ply:DrawShadow(not weapon:GetInInk())
-		return weapon:GetInInk() or nil
-	else
+	if weapon.BecomeSquid then
 		ply:DrawShadow(not ply:Crouching())
 		return ply:Crouching() or nil
+	else
+		ply:DrawShadow(not weapon:GetInInk())
+		return weapon:GetInInk() or nil
 	end
 end)
 

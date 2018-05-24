@@ -226,7 +226,7 @@ end
 local function PlayerFootstep(ply, pos, foot, soundname, volume, filter)
 	local w = ss:IsValidInkling(ply)
 	if not w or SERVER then return end
-	if ply:Crouching() and w:GetPMID() ~= ss.PLAYER.NOSQUID and w:GetGroundColor() < 0 or not ply:Crouching() and w:GetGroundColor() >= 0 then
+	if ply:Crouching() and w.BecomeSquid and w:GetGroundColor() < 0 or not ply:Crouching() and w:GetGroundColor() >= 0 then
 		ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		return true
 	end
@@ -296,18 +296,11 @@ else
 	hook.Remove("Tick", "splt_Offsets_cl")
 end
 
-ss.CheckSplatoonPlayermodels = {
-	["models/drlilrobot/splatoon/ply/marie.mdl"] = true,
-	["models/drlilrobot/splatoon/ply/callie.mdl"] = true,
-	["models/drlilrobot/splatoon/ply/inkling_boy.mdl"] = true,
-	["models/drlilrobot/splatoon/ply/inkling_girl.mdl"] = true,
-	["models/drlilrobot/splatoon/ply/octoling.mdl"] = true,
-}
-
 hook.Add("PlayerSpawn", "SplatoonSWEPs: Fix PM change", function(ply)
 	ply.IsSplatoonPlayermodel = nil
 	ply:SetSubMaterial()
 end)
+
 hook.Add("Tick", "SplatoonSWEPs: Fix playermodel hull change", function()
 	for _, p in ipairs(player.GetAll()) do
 		if ss:IsValidInkling(p) then continue end

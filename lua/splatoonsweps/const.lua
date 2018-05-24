@@ -170,6 +170,7 @@ ss.ConVar = {
 	"cl_splatoonsweps_canhealink",
 	"cl_splatoonsweps_canreloadstand",
 	"cl_splatoonsweps_canreloadink",
+	"cl_splatoonsweps_becomesquid",
 	"cl_splatoonsweps_drawinkoverlay",
 	"cl_splatoonsweps_rtresolution",
 }
@@ -181,11 +182,13 @@ ss.ConVarName = {
 	CanHealInk = 4,
 	CanReloadStand = 5,
 	CanReloadInk = 6,
-	DrawInkOverlay = 7,
-	RTResolution = 8,
+	BecomeSquid = 7,
+	DrawInkOverlay = 8,
+	RTResolution = 9,
 }
 
 ss.RTResID = {
+	MINIMUM	= 0, -- 2048x2048,		32MB
 	SMALL	= 1, --	4096x4096,		128MB
 	DSMALL	= 2, --	2x4096x4096,	256MB
 	MEDIUM	= 3, --	8192x8192,		512MB
@@ -203,11 +206,13 @@ ss.ConVarDefaults = {
 	1,
 	1,
 	1,
-	0,
-	ss.RTResID.MEDIUM,
+	1,
+	1,
+	ss.RTResID.SMALL,
 }
 
 ss.RTSize = {
+	[ss.RTResID.MINIMUM	] = 2048,
 	[ss.RTResID.SMALL	] = 4096,
 	[ss.RTResID.DSMALL	] = 5792,
 	[ss.RTResID.MEDIUM	] = 8192,
@@ -284,7 +289,6 @@ ss.PLAYER = {
 	MARIE = 4,
 	CALLIE = 5,
 	NOCHANGE = 6,
-	NOSQUID = 7,
 }
 ss.Playermodel = {
 	Model "models/drlilrobot/splatoon/ply/inkling_girl.mdl",
@@ -292,7 +296,6 @@ ss.Playermodel = {
 	Model "models/drlilrobot/splatoon/ply/octoling.mdl",
 	Model "models/drlilrobot/splatoon/ply/marie.mdl",
 	Model "models/drlilrobot/splatoon/ply/callie.mdl",
-	nil,
 	nil,
 }
 
@@ -307,14 +310,24 @@ ss.Squidmodel = {
 	Model "models/props_splatoon/squids/octopus_beta.mdl",
 }
 
+ss.CheckSplatoonPlayermodels = {
+	["models/drlilrobot/splatoon/ply/marie.mdl"] = true,
+	["models/drlilrobot/splatoon/ply/callie.mdl"] = true,
+	["models/drlilrobot/splatoon/ply/inkling_boy.mdl"] = true,
+	["models/drlilrobot/splatoon/ply/inkling_girl.mdl"] = true,
+	["models/drlilrobot/splatoon/ply/octoling.mdl"] = true,
+}
+
 function ss:GetSquidmodel(pmid)
-	if pmid == self.PLAYER.NOSQUID or pmid == self.PLAYER.NOCHANGE then return end
+	if pmid == self.PLAYER.NOCHANGE then return end
 	local squid = self.Squidmodel[pmid == self.PLAYER.OCTO and self.SQUID.OCTO or self.SQUID.INKLING]
 	return file.Exists(squid, "GAME") and squid or nil
 end
 
 --List of available ink colors(25 colors)
-local InkColors = {
+ss.InkColors = {
+	-- color_transparent,
+	
 	HSVToColor(0,	1,	1	),
 	HSVToColor(30,	1,	1	),
 	HSVToColor(60,	1,	1	),
@@ -346,12 +359,12 @@ local InkColors = {
 }
 
 function ss:GetColor(colorid)
-	return InkColors[colorid or math.random(self.MAX_COLORS)]
+	return ss.InkColors[colorid or math.random(self.MAX_COLORS)]
 end
 
 ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
-ss.MAX_COLORS = #InkColors
+ss.MAX_COLORS = #ss.InkColors
 ss.COLOR_BITS = 6
 ss.SURFACE_INDEX_BITS = 20
 ss.SEND_ERROR_DURATION_BITS = 4

@@ -266,10 +266,12 @@ WeaponNames2.ja = {
 }
 
 ss.Text = {Error = {}, PrintNames = {}}
-ss.Text.Category = "Splatoon SWEPs"
+ss.Text.Category = "SplatoonSWEPs"
 ss.Text.CleanupInk = "SplatoonSWEPs Ink"
 ss.Text.CleanupInkMessage = "Cleaned up SplatoonSWEPs Ink."
 ss.Text.ColorNames = {
+	-- "Transparent",
+	
 	"Red",
 	"Orange",
 	"Yellow",
@@ -306,8 +308,20 @@ ss.Text.PlayermodelNames = {
 	"Marie",
 	"Callie",
 	"Don't change playermodel",
-	"Don't change playermodel and don't become squid",
 }
+ss.Text.RTResolutionName = {
+	"2048x2048, 32MB",
+	"4096x4096, 128MB",
+	"2x4096x4096, 256MB",
+	"8192x8192, 512MB",
+	"2x8192x8192, 1GB",
+	"16384x16384, 2GB",
+	"2x16384x16384, 4GB",
+	"32768x32768, 8GB",
+	"2x32768x32768, 16GB",
+}
+ss.Text.RTResolution = "Ink buffer size:"
+ss.Text.RTRestartRequired = "(Requires restart)"
 ss.Text.ConfigTitle = "SplatoonSWEPs Configuration"
 ss.Text.InkColor = "Ink color:"
 ss.Text.Playermodel = "Playermodel:"
@@ -322,11 +336,13 @@ ss.Text.Error.WeaponModelNotFound = "SplatoonSWEPs: Required model is not found!
 ss.Text.Error.WeaponPlayermodelNotFound = "SplatoonSWEPs: Required playermodel is not found!"
 ss.Text.Error.WeaponSquidModelNotFound = "SplatoonSWEPs: Squid model is not found!  Check your subscriptions!"
 ss.Text.Error.WeaponSpriteMatNotFound = "SplatoonSWEPs: Required sprite material is not found!"
+ss.Text.Error.CrashDetected = "SplatoonSWEPs: Ink resolution has been reduced so as not to crash your client."
 ss.Text.Options = {
 	"Heal when stand",
 	"Heal when in ink",
 	"Reload when stand",
 	"Reload when in ink",
+	"Become squid",
 	"Draw ink overlay",
 }
 ss.Text.CVarDescription = {
@@ -339,11 +355,13 @@ ss.Text.CVarDescription = {
 	"Whether or not you can heal yourself when you are in ink. (1: yes, 0: no)",
 	"Whether or not you can reload your ink when you are out of ink. (1: yes, 0: no)",
 	"Whether or not you can reload your ink when you are in ink. (1: yes, 0: no)",
+	"Whether or not you will become squid on crouching. (1: yes, 0: no)",
 	"Whether or not ink overlay should be drawn in firstperson. (1: yes, 0: no)",
 	[[RenderTarget resolution used in ink system.
 To apply the change, restart your GMOD client.
 Higher option needs more VRAM.
 Make sure your graphics card has enough space of video memory.
+0: If your client has crashed while SplatoonSWEPs is loading, this value is set.  The resolution is 2048x2048.
 1: RT has 4096x4096 resolution.
     This option uses 128MB of your VRAM.
 2: RT has 2x4096x4096 resolution.
@@ -367,6 +385,8 @@ Crouch: Become squid.]]
 if lang == "ja" then
 	ss.Text.ConfigTitle = "SplatoonSWEPs 設定"
 	ss.Text.ColorNames = {
+		-- "透明",
+		
 		"赤色",
 		"橙色",
 		"黄色",
@@ -403,9 +423,10 @@ if lang == "ja" then
 		"ホタル",
 		"アオリ",
 		"無変更",
-		"無変更&イカにならない",
 	}
 
+	ss.Text.RTResolution = "インク バッファサイズ:"
+	ss.Text.RTRestartRequired = "(再起動が必要)"
 	ss.Text.InkColor = "インクの色:"
 	ss.Text.Playermodel = "プレイヤーモデル:"
 	ss.Text.Error.NotFoundPlayermodel =
@@ -419,11 +440,13 @@ if lang == "ja" then
 	ss.Text.Error.WeaponPlayermodelNotFound = "SplatoonSWEPs: プレイヤーモデルが見つかりません！"
 	ss.Text.Error.WeaponSquidModelNotFound = "SplatoonSWEPs: イカのモデルが見つかりません！"
 	ss.Text.Error.WeaponSpriteMatNotFound = "SplatoonSWEPs: 必要なスプライトマテリアルが見つかりません！"
+	ss.Text.Error.CrashDetected = "SplatoonSWEPs: GMODクライアントの異常終了を検知したため、インクの解像度が縮小されています。"
 	ss.Text.Options = {
 		"インク外でHP回復",
 		"インク内でHP回復",
 		"インク外でインク回復",
 		"インク内でインク回復",
+		"イカになる",
 		"インクオーバーレイの描画",
 	}
 	ss.Text.CVarDescription = {
@@ -436,11 +459,13 @@ if lang == "ja" then
 	"インクの中で体力が回復するかどうか。 (1: する 0: しない)",
 	"インクの外でインクが回復するかどうか。 (1: する 0: しない)",
 	"インクの中でインクが回復するかどうか。 (1: する 0: しない)",
+	"しゃがんだ時にイカになるかどうか。 (1: する 0: しない)",
 	"一人称視点でインクのオーバーレイを描画するかどうか。 (1: する 0: しない)",
 	[[インクの描画システムで用いるRenderTargetの設定。
 変更を反映するにはGMODの再起動が必要です。
 高解像度になるほど多くのVRAM容量が必要になります。
 変更の際にはビデオメモリの容量が十分にあることを確認してください。
+0: SplatoonSWEPsのロード中にクラッシュした場合の値で、解像度は2048x2048です。
 1: RTの解像度は4096x4096です。
     このオプションは128MBのVRAMを必要とします。
 2: RTの解像度は2x4096x4096です。

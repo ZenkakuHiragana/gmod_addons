@@ -28,7 +28,7 @@ end
 
 function SWEP:ChangeHullDuck()
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
-	-- if self:GetPMID() ~= ss.PLAYER.NOSQUID then
+	-- if self.BecomeSquid then
 		-- local mins, maxs = self.Owner:GetHullDuck()
 		-- maxs.z = ss.SquidBoundHeight
 		-- self.Owner:SetHullDuck(mins, maxs)

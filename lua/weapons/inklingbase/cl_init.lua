@@ -85,7 +85,19 @@ function SWEP:Deploy()
 end
 
 function SWEP:ClientDeployBase()
-	self.CanHealStand, self.CanHealInk, self.CanReloadStand,  self.CanReloadInk = false, false, false, false
+	for i, param in ipairs {
+		"InkColor", "BecomeSquid",
+		"CanHealStand", "CanHealInk",
+		"CanReloadStand", "CanReloadInk",
+	} do
+		local value = ss:GetConVarBool(param)
+		if i == 1 then
+			self.ColorCode = value
+		else
+			self[param] = value
+		end
+	end
+	
 	if not IsValid(self.Owner) then return end
 	if self.Owner:IsPlayer() then
 		self.SurpressDrawingVM = nil
@@ -105,7 +117,7 @@ function SWEP:Holster()
 		self.SurpressDrawingVM = true
 		local vm = self.Owner:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
-		if self:GetPMID() ~= ss.PLAYER.NOSQUID and self.HullDuckMins then
+		if self.BecomeSquid and self.HullDuckMins then
 			self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 			self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 		end
@@ -152,7 +164,7 @@ function SWEP:Think()
 		self:MakeSquidModel()
 	end
 	
-	if self:GetPMID() ~= ss.PLAYER.NOSQUID then
+	if self.BecomeSquid then
 		self:DrawShadow(not self.Owner:IsFlagSet(FL_DUCKING))
 	end
 	

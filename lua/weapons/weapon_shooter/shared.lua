@@ -42,7 +42,7 @@ function SWEP:CustomDataTables()
 end
 
 function SWEP:SharedThink()
-	if self:GetPMID() == ss.PLAYER.NOSQUID and self.Owner:IsFlagSet(FL_DUCKING) then
+	if self.BecomeSquid and self.Owner:IsFlagSet(FL_DUCKING) then
 		self:SetHoldType(self.HoldType)
 	elseif self.Owner:IsPlayer() and self:GetAimTimer() < CurTime() then
 		self:SetHoldType "passive"
