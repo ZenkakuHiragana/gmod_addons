@@ -62,12 +62,11 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p:Spawn()
 	AddCleanup(p)
 	self.SplashInitRandom = self.SplashInitRandom + (SplashInitMul > 0 and 0 or 1)
+	
+	if not self.Primary.TripleShotDelay then return end
+	self.SplashInitMul = self.SplashInitMul + 2
 end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
 	self:PrimaryAttack()
-	self:AddSchedule(self.Primary.Delay, 1, function()
-		if not IsValid(self.Owner) or self.Owner:IsPlayer() then return end
-		self:PrimaryAttack()
-	end)
 end

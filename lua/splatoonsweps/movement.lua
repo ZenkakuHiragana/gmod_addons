@@ -1848,7 +1848,7 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 		and math.min(vz, ply:GetJumpPower() / 2) or vz
 		if i then mv:SetVelocity(v) end
 	end
-		
+	
 	--Send viewmodel animation.
 	local infence = SERVER and w:GetInFence() or CLIENT and me.m_flInFence[ply]
 	if ply:Crouching() then

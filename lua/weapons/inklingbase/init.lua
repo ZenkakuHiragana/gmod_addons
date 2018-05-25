@@ -22,20 +22,6 @@ function SWEP:ChangePlayermodel(data)
 		end
 	end
 	
-	if data.SetOffsets then
-		self.Owner:SetNWInt("splt_isSet", 1)
-		self.Owner:SetNWInt("splt_SplatoonOffsets", 2)
-		if isfunction(self.Owner.SplatoonOffsets) then
-			self.Owner:SplatoonOffsets()
-		end
-	else
-		self.Owner:SetNWInt("splt_isSet", 0)
-		self.Owner:SetNWInt("splt_SplatoonOffsets", 1)
-		if isfunction(self.Owner.DefaultOffsets) then
-			self.Owner:DefaultOffsets()
-		end
-	end
-	
 	self.Owner:SetSubMaterial()
 	self.Owner:SetPlayerColor(data.PlayerColor)
 	local hands = self.Owner:GetHands()

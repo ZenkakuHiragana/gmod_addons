@@ -65,7 +65,7 @@ function SWEP:OwnerChanged()
 	if not IsValid(self.Owner) then
 		if SERVER then
 			timer.Simple(5, function()
-				if IsValid(self) and IsValid(self.Owner) then return end
+				if not IsValid(self) or IsValid(self.Owner) then return end
 				self:Remove()
 			end)
 		end
@@ -96,6 +96,7 @@ function SWEP:SharedDeployBase()
 		self.Owner:SetJumpPower(self.JumpPower)
 		self.Owner:SetColor(color_white)
 		self.Owner:SetCrouchedWalkSpeed(.5)
+		if isfunction(self.Owner.SplatColors) then self.Owner:SplatColors() end
 	end
 	
 	if isfunction(self.SharedDeploy) then self:SharedDeploy() end

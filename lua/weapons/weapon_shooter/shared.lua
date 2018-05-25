@@ -8,6 +8,9 @@ function SWEP:SharedInit()
 	self.NextPlayEmpty = CurTime()
 	self:SetModifyWeaponSize(CurTime() - 1)
 	self:SetAimTimer(CurTime())
+	
+	if not self.Primary.TripleShotDelay then return end
+	self:SetTripleShot(0)
 end
 
 --Playing sounds
@@ -33,16 +36,36 @@ function SWEP:SharedPrimaryAttack(canattack)
 		self:SetModifyWeaponSize(CurTime())
 		if SERVER or IsFirstTimePredicted() then self:EmitSound(self.ShootSound) end
 		if CLIENT then self.PreviousInk = true end
+		
+		if not (self.Primary.TripleShotDelay and (SERVER or IsFirstTimePredicted())) then return end
+		if self:GetTripleShot() > 0 then
+			if self:GetTripleShot() > 1 then
+				local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
+				self:SetNextPrimaryFire(CurTime() + self.Primary.TripleShotDelay / laggedvalue)
+				self:SetNextCrouchTime(CurTime() + self.Primary.TripleShotDelay / laggedvalue)
+				if SERVER then self:SetTripleShot(0) end
+			elseif SERVER then
+				self:SetTripleShot(2)
+			end
+		else
+			if SERVER then self:SetTripleShot(1) end
+			self:AddSchedule(self:GetNextPrimaryFire() - CurTime(), 2, function(self, schedule)
+				self:PrimaryAttack()
+			end)
+		end
 	end
 end
 
 function SWEP:CustomDataTables()
 	self:AddNetworkVar("Float", "ModifyWeaponSize") --Shooter expands its model when firing.
 	self:AddNetworkVar("Float", "AimTimer")
+	
+	if not self.Primary.TripleShotDelay then return end
+	self:AddNetworkVar("Int", "TripleShot") --Shooting counter for Nozzlenoses.
 end
 
 function SWEP:SharedThink()
-	if self.BecomeSquid and self.Owner:IsFlagSet(FL_DUCKING) then
+	if self.Owner:IsFlagSet(FL_DUCKING) then
 		self:SetHoldType(self.HoldType)
 	elseif self.Owner:IsPlayer() and self:GetAimTimer() < CurTime() then
 		self:SetHoldType "passive"

@@ -322,6 +322,11 @@ ss.Text.RTResolutionName = {
 }
 ss.Text.RTResolution = "Ink buffer size:"
 ss.Text.RTRestartRequired = "(Requires restart)"
+ss.Text.DescRTResolution = 
+[[Buffer size used in ink system.
+To apply the change, restart your GMOD client.
+Higher option needs more VRAM.
+Make sure your graphics card has enough space of video memory.]]
 ss.Text.ConfigTitle = "SplatoonSWEPs Configuration"
 ss.Text.InkColor = "Ink color:"
 ss.Text.Playermodel = "Playermodel:"
@@ -357,7 +362,7 @@ ss.Text.CVarDescription = {
 	"Whether or not you can reload your ink when you are in ink. (1: yes, 0: no)",
 	"Whether or not you will become squid on crouching. (1: yes, 0: no)",
 	"Whether or not ink overlay should be drawn in firstperson. (1: yes, 0: no)",
-	[[RenderTarget resolution used in ink system.
+	[[The resolution of RenderTarget used in ink system.
 To apply the change, restart your GMOD client.
 Higher option needs more VRAM.
 Make sure your graphics card has enough space of video memory.
@@ -427,6 +432,11 @@ if lang == "ja" then
 
 	ss.Text.RTResolution = "インク バッファサイズ:"
 	ss.Text.RTRestartRequired = "(再起動が必要)"
+	ss.Text.DescRTResolution =
+	[[インクの描画システムで用いるバッファサイズの設定です。
+この変更を反映するにはGMODの再起動が必要です。
+また、高解像度になるほど多くのVRAM容量が要求されます。
+変更の際にはビデオメモリの容量が十分にあることを確認してください。]]
 	ss.Text.InkColor = "インクの色:"
 	ss.Text.Playermodel = "プレイヤーモデル:"
 	ss.Text.Error.NotFoundPlayermodel =
@@ -462,21 +472,21 @@ if lang == "ja" then
 	"しゃがんだ時にイカになるかどうか。 (1: する 0: しない)",
 	"一人称視点でインクのオーバーレイを描画するかどうか。 (1: する 0: しない)",
 	[[インクの描画システムで用いるRenderTargetの設定。
-変更を反映するにはGMODの再起動が必要です。
-高解像度になるほど多くのVRAM容量が必要になります。
-変更の際にはビデオメモリの容量が十分にあることを確認してください。
-0: SplatoonSWEPsのロード中にクラッシュした場合の値で、解像度は2048x2048です。
-1: RTの解像度は4096x4096です。
-    このオプションは128MBのVRAMを必要とします。
-2: RTの解像度は2x4096x4096です。
-    オプション1の2倍の面積に等しい解像度を持ちます。
-    このオプションは256MBのVRAMを必要とします。
-3: 8192x8192。512MB。
-4: 2x8192x8192。1GB。
-5: 16384x16384。2GB。
-6: 2x16384x16384。4GB。
-7: 32768x32768。8GB。
-8: 2x32768x32768。16GB。]]}
+この変更を反映するにはGMODの再起動を必要とする。
+また、高解像度になるほど多くのVRAM容量が要求される。
+ビデオメモリの容量が十分にあることを確認してから変更することを推奨する。
+0: SplatoonSWEPsのロード中にクラッシュした場合の値で、解像度は2048x2048である。
+1: RTの解像度は4096x4096である。
+    このオプションは128MBのVRAMを必要とする。
+2: RTの解像度は2x4096x4096である。
+    オプション1の2倍の面積に等しい解像度を持つ。
+    このオプションは256MBのVRAMを必要とする。
+3: 8192x8192、512MB。
+4: 2x8192x8192、1GB。
+5: 16384x16384、2GB。
+6: 2x16384x16384、4GB。
+7: 32768x32768、8GB。
+8: 2x32768x32768、16GB。]]}
 	ss.Text.AuthorName = "全角ひらがな"
 	ss.Text.Purpose = "ブキを手に取り、イカになれ！"
 	ss.Text.Instructions = [[

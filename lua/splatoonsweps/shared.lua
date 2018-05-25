@@ -13,6 +13,7 @@ ss.AspectSum = ss.AspectSum or 0
 ss.AspectSumX = ss.AspectSumX or 0
 ss.AspectSumY = ss.AspectSumY or 0
 ss.Displacements = ss.Displacements or {}
+ss.PlayerHullChanged = ss.PlayerHullChanged or {}
 cleanup.Register(ss.CleanupTypeInk)
 function ss:MinVector(a, b)
 	local c = Vector()
@@ -292,28 +293,27 @@ if SERVER then
 	hook.Remove("KeyPress", "splt_KeyPress")
 	hook.Remove("PlayerSpawn", "splt_Spawn")
 	hook.Remove("PlayerDeath", "splt_OnDeath")
+	hook.Add("PlayerSpawn", "SplatoonSWEPs: Fix PM change", function(ply)
+		ply:SetSubMaterial()
+	end)
 else
 	hook.Remove("Tick", "splt_Offsets_cl")
 end
 
-hook.Add("PlayerSpawn", "SplatoonSWEPs: Fix PM change", function(ply)
-	ply.IsSplatoonPlayermodel = nil
-	ply:SetSubMaterial()
-end)
-
+local width = 16
 hook.Add("Tick", "SplatoonSWEPs: Fix playermodel hull change", function()
 	for _, p in ipairs(player.GetAll()) do
-		if ss:IsValidInkling(p) then continue end
 		local is = ss.CheckSplatoonPlayermodels[p:GetModel()]
-		if is and p.IsSplatoonPlayermodel ~= true and GetConVar "splt_EditScale":GetInt() == 1 then
+		if not p:Alive() then ss.PlayerHullChanged[p] = nil continue end
+		if is and GetConVar "splt_EditScale":GetInt() ~= 0 and ss.PlayerHullChanged[p] ~= true then
 			p:SetViewOffset(Vector(0, 0, 42))
 			p:SetViewOffsetDucked(Vector(0, 0, 28))
-			p:SetHull(Vector(-13, -13, 0), Vector(13, 13, 53))
-			p:SetHullDuck(Vector(-13, -13, 0), Vector(13, 13, 33))
-			p.IsSplatoonPlayermodel = true
-		elseif not is and p.IsSplatoonPlayermodel ~= false then
+			p:SetHull(Vector(-width, -width, 0), Vector(width, width, 53))
+			p:SetHullDuck(Vector(-width, -width, 0), Vector(width, width, 33))
+			ss.PlayerHullChanged[p] = true
+		elseif not is and ss.PlayerHullChanged[p] ~= false then
 			p:DefaultOffsets()
-			p.IsSplatoonPlayermodel = false
+			ss.PlayerHullChanged[p] = false
 		end
 	end
 end)

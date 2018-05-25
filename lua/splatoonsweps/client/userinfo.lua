@@ -159,6 +159,7 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 		ComboRes:SetSortItems(false)
 		ComboRes:SetPos(0, Options:GetTall() * .85)
 		ComboRes:SetSize(Options:GetWide() * .85, 17)
+		ComboRes:SetToolTip(ss.Text.DescRTResolution)
 		ComboRes:SetValue(ss.Text.RTResolutionName[ss:GetConVarInt "RTResolution" + 1])
 		for i = 1, #ss.Text.RTResolutionName do
 			ComboRes:AddChoice(ss.Text.RTResolutionName[i])
@@ -169,12 +170,14 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 		LabelResReq:SetPos(0, Options:GetTall() * .85 - ComboRes:GetTall())
 		LabelResReq:SetText(ss.Text.RTRestartRequired)
 		LabelResReq:SetTextColor(Color(255, 128, 128))
+		LabelResReq:SetToolTip(ss.Text.DescRTResolution)
 		LabelResReq:SetVisible(before ~= ss.RTSize[ss:GetConVarInt "RTResolution"])
 		LabelResReq:SizeToContents()
 		
 		local LabelRes = Options:Add "DLabel" --"Ink buffer size:" label
 		LabelRes:SetPos(0, Options:GetTall() * .85 - ComboRes:GetTall() - LabelResReq:GetTall())
 		LabelRes:SetText(ss.Text.RTResolution)
+		LabelRes:SetToolTip(ss.Text.DescRTResolution)
 		LabelRes:SizeToContents()
 		
 		function ComboRes:OnSelect(index, value, data)
