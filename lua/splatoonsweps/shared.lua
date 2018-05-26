@@ -226,8 +226,9 @@ end
 
 local function PlayerFootstep(ply, pos, foot, soundname, volume, filter)
 	local w = ss:IsValidInkling(ply)
-	if not w or SERVER then return end
-	if ply:Crouching() and w.BecomeSquid and w:GetGroundColor() < 0 or not ply:Crouching() and w:GetGroundColor() >= 0 then
+	if not w or not game.SinglePlayer() and SERVER then return end
+	if ply:Crouching() and w.BecomeSquid and w:GetGroundColor() < 0 or
+	not ply:Crouching() and w:GetGroundColor() >= 0 then
 		ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		return true
 	end

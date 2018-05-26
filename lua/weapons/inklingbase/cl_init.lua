@@ -90,11 +90,11 @@ function SWEP:ClientDeployBase()
 		"CanHealStand", "CanHealInk",
 		"CanReloadStand", "CanReloadInk",
 	} do
-		local value = ss:GetConVarBool(param)
+		local value = ss:GetConVarInt(param)
 		if i == 1 then
 			self.ColorCode = value
 		else
-			self[param] = value
+			self[param] = value > 0
 		end
 	end
 	

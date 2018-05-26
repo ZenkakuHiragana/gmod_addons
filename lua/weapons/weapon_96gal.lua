@@ -9,10 +9,10 @@ ss:SetPrimary(SWEP, {
 	Recoil				= .2,					--Viewmodel recoil intensity
 	TakeAmmo			= .025,					--Ink consumption per fire[-]
 	PlayAnimPercent		= 0,					--Play PLAYER_ATTACK1 animation frequency[%]
-	FirePosition		= Vector(0, -6, -9),	--Ink spawn position
+	FirePosition		= Vector(0, -9, -9),	--Ink spawn position
 	Damage				= .62,					--Maximum damage[-]
 	MinDamage			= .31,					--Minimum damage[-]
-	InkRadius			= 21,				--Painting radius[Splatoon units]
+	InkRadius			= 21,					--Painting radius[Splatoon units]
 	MinRadius			= 18.5,					--Minimum painting radius[Splatoon units]
 	SplashRadius		= 14.5,					--Painting radius[Splatoon units]
 	SplashPatterns		= 5,					--Paint patterns
@@ -21,7 +21,7 @@ ss:SetPrimary(SWEP, {
 	Spread				= 4.5,					--Aim cone[deg]
 	SpreadJump			= 12,					--Aim cone while jumping[deg]
 	SpreadBias			= .25,					--Aim cone random component[deg]
-	MoveSpeed			= .4,					--Walk speed while shooting[Splatoon units/frame]
+	MoveSpeed			= .40000001,			--Walk speed while shooting[Splatoon units/frame]
 	InitVelocity		= 22,					--Ink initial velocity[Splatoon units/frame]	
 	Delay = {
 		Aim				= 20,					--Change hold type[frames]
@@ -42,7 +42,7 @@ ss:SetViewModelMods(SWEP, {
 	},
 	["Base"] = {
 		scale = Vector(1, 1, 1),
-		pos = Vector(-30, 26, -30),
+		pos = Vector(-31, 26.5, -31),
 		angle = Angle(1, 0, 0)
 	},
 	["ValveBiped.Bip01_L_Clavicle"] = {

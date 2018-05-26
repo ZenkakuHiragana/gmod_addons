@@ -9,7 +9,7 @@ ss:SetPrimary(SWEP, {
 	Recoil				= .2,					--Viewmodel recoil intensity
 	TakeAmmo			= .01,					--Ink consumption per fire[-]
 	PlayAnimPercent		= 0,					--Play PLAYER_ATTACK1 animation frequency[%]
-	FirePosition		= Vector(1, -14, -9),	--Ink spawn position
+	FirePosition		= Vector(-7, -8, -7),	--Ink spawn position
 	Damage				= .28999999,			--Maximum damage[-]
 	MinDamage			= .145,					--Minimum damage[-]
 	InkRadius			= 22,					--Painting radius[Splatoon units]
@@ -43,7 +43,7 @@ ss:SetViewModelMods(SWEP, {
 	},
 	["ValveBiped.Bip01_Spine4"] = {
 		scale = Vector(1, 1, 1),
-		pos = Vector(-30, 26, 30),
+		pos = Vector(-30, 24.5, 29),
 		angle = Angle(0, -8, 0),
 	},
 	["ValveBiped.Bip01_L_Finger0"] = {

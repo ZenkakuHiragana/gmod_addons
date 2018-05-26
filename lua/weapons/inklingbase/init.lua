@@ -128,7 +128,7 @@ function SWEP:Deploy()
 			elseif i == 2 then
 				self.ColorCode = value
 			else
-				self[param] = value
+				self[param] = value > 0
 			end
 		end
 	else
