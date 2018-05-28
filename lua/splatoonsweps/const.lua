@@ -173,6 +173,7 @@ ss.ConVar = {
 	"cl_splatoonsweps_becomesquid",
 	"cl_splatoonsweps_drawinkoverlay",
 	"cl_splatoonsweps_rtresolution",
+	"cl_splatoonsweps_drawcrosshair",
 }
 
 ss.ConVarName = {
@@ -185,6 +186,7 @@ ss.ConVarName = {
 	BecomeSquid = 7,
 	DrawInkOverlay = 8,
 	RTResolution = 9,
+	DrawCrosshair = 10,
 }
 
 ss.RTResID = {
@@ -209,6 +211,7 @@ ss.ConVarDefaults = {
 	1,
 	1,
 	ss.RTResID.SMALL,
+	1,
 }
 
 ss.RTSize = {
@@ -326,12 +329,10 @@ end
 
 --List of available ink colors(25 colors)
 ss.InkColors = {
-	-- color_transparent,
-	
 	HSVToColor(0,	1,	1	),
 	HSVToColor(30,	1,	1	),
 	HSVToColor(60,	1,	1	),
-	HSVToColor(90,	1,	1	),
+	HSVToColor(80,	1,	1	),
 	HSVToColor(120,	1,	1	),
 	HSVToColor(150,	1,	1	),
 	HSVToColor(180,	1,	1	),
@@ -358,10 +359,48 @@ ss.InkColors = {
 	HSVToColor(0,	0,	1	),
 }
 
+ss.CrosshairColors = {
+	2, --Red -> Orange
+	1, --Orange -> Red
+	14, --Yellow -> Olive
+	14, --Yellowish green -> Olive
+	15, --Lime -> Green
+	16, --Spring green -> Dark cyan
+	16, --Cyan -> Dark cyan
+	10, --Azure blue -> Light indigo
+	18, --Blue -> Purple
+	9, --Light indigo -> Blue
+	12, --Magenta -> Deep pink
+	11, --Deep pink -> Magenta
+	
+	1, --Maroon -> Red
+	15, --Olive -> Green
+	19, --Green -> Light green
+	10, --Dark cyan -> Light indigo
+	10, --Navy -> Light indigo
+	8, --Purple -> Azure blue
+	
+	15, --Light green -> Green
+	16, --Light blue -> Dark cyan
+	11, --Pink -> Magenta
+	
+	22, --Black -> Black
+	23, --Gray -> Gray
+	24, --Light gray -> Light gray
+	25, --White -> White
+}
+
 function ss:GetColor(colorid)
 	return ss.InkColors[colorid or math.random(self.MAX_COLORS)]
 end
 
+ss.Materials = {
+	Crosshair = {
+		Dot = Material "splatoonsweps/crosshair/dot.vmt",
+		Outer = Material "splatoonsweps/crosshair/outer.vmt",
+		Inner = Material "splatoonsweps/crosshair/inner.vmt",
+	},
+}
 ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
 ss.MAX_COLORS = #ss.InkColors
@@ -389,7 +428,7 @@ ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec
 ss.ToHammerHealth = 100
 ss.FrameToSec = 1 / framepersec
 ss.SecToFrame = framepersec
-ss.mDegRandomY = 1.5 --Crosshair ratio in Splattershot Pro is 2:1, mDegRandom of that is 3.00.
+ss.mDegRandomY = 1 --Crosshair ratio in Splattershot Pro is 2:1, mDegRandom of that is 3.00.
 for key, value in pairs {
 	InklingBaseSpeed = inklingspeed, --Walking speed [Splatoon units/60frame]
 	SquidBaseSpeed = 1.923 * framepersec, --Swimming speed [Splatoon units/60frame]

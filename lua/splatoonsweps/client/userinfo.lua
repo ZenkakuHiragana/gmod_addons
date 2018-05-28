@@ -143,6 +143,7 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			"CanReloadInk",
 			"BecomeSquid",
 			"DrawInkOverlay",
+			"DrawCrosshair"
 		}
 		for i = 1, #OptionsConVar do
 			local Check = Options:Add "DCheckBoxLabel"

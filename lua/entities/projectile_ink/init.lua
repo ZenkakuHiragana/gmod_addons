@@ -26,7 +26,7 @@ ENT.MinRadius = 1 --
 ENT.DecreaseRadius = 0 --
 ENT.MinRadiusTime = 0 --
 
-ENT.ColBound = ss.vector_one * ss.mColRadius -- Collision bound
+ENT.ColRadius = ss.mColRadius
 ENT.ColorCode = 0 -- Ink color
 ENT.InitVelocity = vector_origin -- Initial velocity
 ENT.InitVelocityLength = 0 -- Short for ENT.InitVelocity:Length()
@@ -63,9 +63,10 @@ function ENT:GetRadius(min, rad)
 		ss.mPaintFarDistance, ss.mPaintNearDistance, min, rad)
 end
 
-function ENT:Initialize(colradius)
+function ENT:Initialize()
+	self.ColBound = ss.vector_one * self.ColRadius
 	self:SharedInit()
-	self:PhysicsInitSphere(colradius or ss.mColRadius, "watermelon")
+	self:PhysicsInitSphere(self.ColRadius, "watermelon")
 	self:PhysWake()
 	
 	local ph = self:GetPhysicsObject()
@@ -80,8 +81,6 @@ function ENT:Initialize(colradius)
 	self.NoCollideFilter = {self, self:GetOwner()}
 	self.SplashInit = self.SplashInterval / self.SplashPatterns * self.SplashInitMul
 	self.Destination = self.InitPos + self.InitVelocity * self.Straight
-	
-	if colradius then self.ColBound = ss.vector_one * colradius end
 	util.SpriteTrail(self, 0, ss:GetColor(self.ColorCode), false, self.TrailWidth, self.TrailEnd, self.TrailLife, 1 / (self.TrailWidth + self.TrailEnd), "effects/beam_generic01.vmt")
 end
 
@@ -112,10 +111,6 @@ function ENT:PhysicsSimulate(p, t)
 	end
 	
 	if self.IsDrop or self.Hit then return vector_origin, vector_origin, SIM_GLOBAL_ACCELERATION end
-		debugoverlay.Box(pos, -self.ColBound, self.ColBound, 0.1, Color(0, 255, 0, 64))
-		debugoverlay.Box(pos + v * t, -self.ColBound, self.ColBound, 0.1, Color(0, 255, 0, 64))
-		debugoverlay.Line(pos - self.ColBound, pos + v * t - self.ColBound, 0.1, Color(0, 255, 0, 64))
-		debugoverlay.Line(pos + self.ColBound, pos + v * t + self.ColBound, 0.1, Color(0, 255, 0, 64))
 	if math.max(0, CurTime() - self.InitTime + FrameTime()) >= self.Straight then -- Affected by gravity and decelerates horizontally
 		local accel = (math.NormalizeAngle(v:Angle().p - p:GetAngles().r) / t - p:GetAngleVelocity().x) / t
 		v.z = math.max(0, v.z)

@@ -4,6 +4,15 @@ if not ss then return end
 
 SWEP.Base = "inklingbase"
 SWEP.PrintName = "Shooter base"
+function SWEP:GetFirePosition()
+	local pos = Vector(self.Primary.FirePosition)
+	if IsValid(self.Owner) then
+		pos:Rotate(self.Owner:EyeAngles())
+	end
+	
+	return pos
+end
+
 function SWEP:SharedInit()
 	self.NextPlayEmpty = CurTime()
 	self:SetModifyWeaponSize(CurTime() - 1)

@@ -270,8 +270,6 @@ ss.Text.Category = "SplatoonSWEPs"
 ss.Text.CleanupInk = "SplatoonSWEPs Ink"
 ss.Text.CleanupInkMessage = "Cleaned up SplatoonSWEPs Ink."
 ss.Text.ColorNames = {
-	-- "Transparent",
-	
 	"Red",
 	"Orange",
 	"Yellow",
@@ -349,6 +347,7 @@ ss.Text.Options = {
 	"Reload when in ink",
 	"Become squid",
 	"Draw ink overlay",
+	"Draw crosshair",
 }
 ss.Text.CVarDescription = {
 	Enabled = "Enables or disables SplatoonSWEPs.",
@@ -356,12 +355,12 @@ ss.Text.CVarDescription = {
 ]] .. TableToString(ss.Text.ColorNames),
 	[[Your thirdperson model.  Available values are:
 ]] .. TableToString(ss.Text.PlayermodelNames),
-	"Whether or not you can heal yourself when you are out of ink. (1: yes, 0: no)",
-	"Whether or not you can heal yourself when you are in ink. (1: yes, 0: no)",
-	"Whether or not you can reload your ink when you are out of ink. (1: yes, 0: no)",
-	"Whether or not you can reload your ink when you are in ink. (1: yes, 0: no)",
-	"Whether or not you will become squid on crouching. (1: yes, 0: no)",
-	"Whether or not ink overlay should be drawn in firstperson. (1: yes, 0: no)",
+	"Heal yourself when you are out of ink. (1: yes, 0: no)",
+	"Heal yourself when you are in ink. (1: yes, 0: no)",
+	"Reload your ink when you are out of ink. (1: yes, 0: no)",
+	"Reload your ink when you are in ink. (1: yes, 0: no)",
+	"Become squid on crouching. (1: yes, 0: no)",
+	"Draw ink overlay in firstperson. (1: yes, 0: no)",
 	[[The resolution of RenderTarget used in ink system.
 To apply the change, restart your GMOD client.
 Higher option needs more VRAM.
@@ -377,7 +376,9 @@ Make sure your graphics card has enough space of video memory.
 5: 16384x16384, 2GB.
 6: 2x16384x16384, 4GB.
 7: 32768x32768, 8GB.
-8: 2x32768x32768, 16GB.]]}
+8: 2x32768x32768, 16GB.]],
+	"Draw Splatoon-styled crosshair. (1: yes, 0: no)",
+}
 ss.Text.AuthorName = "GreatZenkakuMan"
 ss.Text.Purpose = "Splat ink!"
 ss.Text.Instructions = 
@@ -390,8 +391,6 @@ Crouch: Become squid.]]
 if lang == "ja" then
 	ss.Text.ConfigTitle = "SplatoonSWEPs 設定"
 	ss.Text.ColorNames = {
-		-- "透明",
-		
 		"赤色",
 		"橙色",
 		"黄色",
@@ -458,6 +457,7 @@ if lang == "ja" then
 		"インク内でインク回復",
 		"イカになる",
 		"インクオーバーレイの描画",
+		"照準の描画",
 	}
 	ss.Text.CVarDescription = {
 	Enabled = "SplatoonSWEPsを有効化するかどうか。",
@@ -486,7 +486,9 @@ if lang == "ja" then
 5: 16384x16384、2GB。
 6: 2x16384x16384、4GB。
 7: 32768x32768、8GB。
-8: 2x32768x32768、16GB。]]}
+8: 2x32768x32768、16GB。]],
+	"スプラトゥーン風の照準を描画するかどうか。 (1: する 0: しない)",
+}
 	ss.Text.AuthorName = "全角ひらがな"
 	ss.Text.Purpose = "ブキを手に取り、イカになれ！"
 	ss.Text.Instructions = [[

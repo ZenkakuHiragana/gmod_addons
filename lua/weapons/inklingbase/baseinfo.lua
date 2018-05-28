@@ -8,7 +8,7 @@ if CLIENT then
 	SWEP.BobScale = 1
 	SWEP.BounceWeaponIcon = true
 	SWEP.DrawAmmo = false
-	SWEP.DrawCrosshair = false
+	SWEP.DrawCrosshair = true
 	SWEP.DrawWeaponInfoBox = true
 	SWEP.Instructions = ss.Text.Instructions
 	SWEP.Purpose = ss.Text.Purpose

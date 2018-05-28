@@ -42,7 +42,7 @@ ss:SetViewModelMods(SWEP, {
 	},
 	["Base"] = {
 		scale = Vector(1, 1, 1),
-		pos = Vector(-30, 28, -30),
+		pos = Vector(-33, 27, -30.5),
 		angle = Angle(1, 0, 0)
 	},
 	["ValveBiped.Bip01_L_Clavicle"] = {

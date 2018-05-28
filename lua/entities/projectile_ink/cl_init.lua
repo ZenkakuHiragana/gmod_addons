@@ -4,7 +4,7 @@ include "shared.lua"
 local ss = SplatoonSWEPs
 if not ss then return end
 ENT.AutomaticFrameAdvance = true
-ENT.Author			= "GreatZenkakuMan"
+ENT.Author			= ss.Text.AuthorName
 ENT.Contact			= ""
 ENT.Instructions	= ""
 ENT.PrintName		= "Projectile Ink"
