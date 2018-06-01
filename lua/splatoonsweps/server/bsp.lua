@@ -169,7 +169,7 @@ end
 
 --TODO: if the face is underwater then return end
 local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
-	if #v3d < 3 or bsp.FaceIndex > (1247232 or 600000) then return end
+	if #v3d < 3 or bsp.FaceIndex > 1247232 then return end
 	
 	local surf = ss:FindLeaf(disp or v3d).Surfaces
 	local area, bound, minangle, minmins = math.huge, nil, nil, nil
@@ -394,7 +394,7 @@ end,
 end,
 
 [LUMP.FACES] = function(lump)
-	local size = 56
+	local size = 56 -- Structure size
 	local planes = bsp:GetLump(LUMP.PLANES)
 	local surfedges = bsp:GetLump(LUMP.SURFEDGES)
 	local texinfo = bsp:GetLump(LUMP.TEXINFO)
@@ -509,7 +509,6 @@ end,
 end,
 
 [LUMP.GAME_LUMP] = function(lump)
-	print("surfaces: ", bsp.FaceIndex)
 	local lumpCount = read "Long"
 	local headers = {}
 	for i = 1, lumpCount do
@@ -520,11 +519,9 @@ end,
 		headers[i].fileofs = read "Long"
 		headers[i].filelen = read "Long"
 	end
-	print("Number of gamelumps: ", #headers)
 	
 	local props = 0
 	for _, l in ipairs(headers) do --id == "scrp", Static Prop Gamelump
-		print("Gamelump version: ", l.version)
 		if l.id ~= 1936749168 then continue end
 		bsp.bsp:Seek(l.fileofs)
 		local nextlump = l.fileofs + l.filelen
@@ -586,8 +583,6 @@ end,
 		
 		break
 	end
-	print("Number of triangles: ", props)
-	print("All: ", bsp.FaceIndex)
 end,
 }
 ParseFunction[LUMP.FACES_HDR] = ParseFunction[FACES]

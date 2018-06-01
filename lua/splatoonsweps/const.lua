@@ -414,6 +414,16 @@ ss.ViewModel = { -- Viewmodel animations
 	Throwing = ACT_VM_IDLE_LOWERED, -- Throwing sub weapon
 }
 
+if game.GetMap() == "gm_inkopolis_b1" then
+	ss.SquidSolidMask = bit.band(MASK_PLAYERSOLID, bit.bnot(CONTENTS_PLAYERCLIP))
+	ss.SquidSolidMaskBrushOnly = bit.band(MASK_PLAYERSOLID_BRUSHONLY, bit.bnot(CONTENTS_PLAYERCLIP))
+	ss.MASK_GRATE = CONTENTS_PLAYERCLIP
+else
+	ss.SquidSolidMask = MASK_SHOT
+	ss.SquidSolidMaskBrushOnly = MASK_SHOT_PORTAL
+	ss.MASK_GRATE = bit.bor(CONTENTS_GRATE, CONTENTS_MONSTER)
+end
+
 local framepersec = 60
 local inklingspeed = .96 * framepersec
 ss.vector_one = Vector(1, 1, 1)

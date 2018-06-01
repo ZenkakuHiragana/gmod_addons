@@ -171,7 +171,7 @@ function ss:CheckFence(ent, pos, endpos, filter, mins, maxs)
 		start = pos, endpos = endpos,
 		mins = mins, maxs = maxs,
 		filter = filter,
-		mask = MASK_SHOT_PORTAL,
+		mask = ss.SquidSolidMask,
 	}
 	
 	t.mins = mins
@@ -280,6 +280,7 @@ hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 				local icon = "entities/" .. c
 				if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then icon = "weapons/swep" end
 				weapon.WepSelectIcon = surface.GetTextureID(icon)
+				killicon.Add(c, icon, color_white)
 			end
 		end
 		

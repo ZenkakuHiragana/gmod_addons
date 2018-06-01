@@ -90,7 +90,6 @@ local FX_WATER_IN_SLIME = 0x01
 local GAMEMOVEMENT_JUMP_HEIGHT = 21.0 -- units
 local GAMEMOVEMENT_JUMP_TIME = 510.0 -- ms approx. - based on the 21 unit height jump
 local LIMIT_Z_DEG = math.cos(math.rad(180 - 30))
-local MASK_GRATE = bit.bor(CONTENTS_GRATE, CONTENTS_MONSTER)
 local MAX_CLIP_PLANES = 5
 local PLAYER_FALL_PUNCH_THRESHOLD = 303.0 or 350 -- HL2 or Other
 local PLAYER_LAND_ON_FLOATING_OBJECT = 173 or 200 -- HL2 or Other
@@ -159,7 +158,7 @@ end
 
 local function PlayerSolidMask(brushOnly)
 	-- return brushOnly and MASK_PLAYERSOLID_BRUSHONLY or MASK_PLAYERSOLID
-	return brushOnly and MASK_SHOT_PORTAL or MASK_SHOT
+	return brushOnly and ss.SquidSolidMaskBrushOnly or ss.SquidSolidMask
 end
 
 local function RumbleEffect(index, rumbleData, rumbleFlags)
@@ -943,12 +942,12 @@ local function CategorizePosition()
 	if bMovingUpRapidly or bMovingUp and me.m_nMoveType[ply] == MOVETYPE_LADDER then
 		SetGroundEntity(nil)
 	else -- Try and move down.
-		local pm = TryTouchGround(bumpOrigin, point, GetPlayerMins(), GetPlayerMaxs(), MASK_SHOT, COLLISION_GROUP_PLAYER_MOVEMENT)
+		local pm = TryTouchGround(bumpOrigin, point, GetPlayerMins(), GetPlayerMaxs(), ss.SquidSolidMask, COLLISION_GROUP_PLAYER_MOVEMENT)
 		
 		-- Was on ground, but now suddenly am not.  If we hit a steep plane, we are not on ground
 		if pm.Entity == NULL or pm.HitNormal.z < 0.7 then
 			-- Test four sub-boxes, to see if any of them would have found shallower slope we could actually stand on
-			pm = TryTouchGroundInQuadrants(bumpOrigin, point, MASK_SHOT, COLLISION_GROUP_PLAYER_MOVEMENT, pm)
+			pm = TryTouchGroundInQuadrants(bumpOrigin, point, ss.SquidSolidMask, COLLISION_GROUP_PLAYER_MOVEMENT, pm)
 
 			if pm.Entity == NULL or pm.HitNormal.z < 0.7 then
 				SetGroundEntity(nil)
@@ -1777,20 +1776,20 @@ local function CheckFenceStand(pos, endpos, ignorenormals)
 	local t = { -- Check strictly if player stands on fence.
 		start = pos, endpos = endpos,
 		mins = GetPlayerMins(), maxs = GetPlayerMaxs(),
-		mask = MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
+		mask = ss.MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 		filter = ply,
 	}
 	
 	local tr = util.TraceHull(t)
-	t.mask = MASK_SHOT
+	t.mask = ss.SquidSolidMask
 	local trsolid = util.TraceHull(t)
 	if ignorenormals then tr.HitNormal.z, trsolid.HitNormal.z = 1, 1 end
 	
 	local b = tr.Entity == NULL or tr.HitNormal.z < .7
 	if b ~= (trsolid.Entity == NULL or trsolid.HitNormal.z < .7) then return not b, tr.StartSolid end
 	if b then
-		tr = TryTouchGroundInQuadrants(pos, t.endpos, MASK_GRATE, COLLISION_GROUP_PLAYER_MOVEMENT, tr)
-		trsolid = TryTouchGroundInQuadrants(pos, t.endpos, MASK_SHOT, COLLISION_GROUP_PLAYER_MOVEMENT, trsolid)
+		tr = TryTouchGroundInQuadrants(pos, t.endpos, ss.MASK_GRATE, COLLISION_GROUP_PLAYER_MOVEMENT, tr)
+		trsolid = TryTouchGroundInQuadrants(pos, t.endpos, ss.SquidSolidMask, COLLISION_GROUP_PLAYER_MOVEMENT, trsolid)
 		if ignorenormals then tr.HitNormal.z, trsolid.HitNormal.z = 1, 1 end
 		if not (tr.Entity == NULL or tr.HitNormal.z < .7) and
 			(trsolid.Entity == NULL or trsolid.HitNormal.z < .7) then
@@ -1804,12 +1803,12 @@ local function GetInFence(w, oldpos, newpos)
 	local t = {
 		start = oldpos, endpos = newpos or oldpos,
 		mins = GetPlayerMins(), maxs = GetPlayerMaxs(),
-		mask = MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
+		mask = ss.MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 		filter = ply,
 	}
 	
 	local tr = util.TraceHull(t)
-	t.mask = MASK_SHOT -- Check if player is stuck in fence
+	t.mask = ss.SquidSolidMask -- Check if player is stuck in fence
 	return tr.Entity ~= NULL and util.TraceHull(t).Entity == NULL
 end
 
@@ -1829,7 +1828,7 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 			if ply:OnGround() then
 				local t = {
 					start = ply:GetShootPos(), endpos = ply:GetShootPos() + ply:GetAimVector() * 32768,
-					mask = MASK_SHOT, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT, filter = ply,
+					mask = ss.SquidSolidMask, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT, filter = ply,
 				}
 				local fw = util.TraceLine(t)
 				t.endpos = ply:GetShootPos() - ply:GetAimVector() * 32768
@@ -1997,7 +1996,7 @@ hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", function(ply, desired)
 	w:SetInFence(not old and util.TraceHull {
 		start = ply:GetPos(), endpos = ply:GetPos(),
 		mins = GetPlayerMins(), maxs = GetPlayerMaxs(),
-		mask = MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
+		mask = ss.MASK_GRATE, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 		filter = ply,
 	} .Hit)
 	

@@ -39,10 +39,10 @@ function SWEP:DoDrawCrosshair(x, y)
 	local pos = self.Owner:GetShootPos()
 	local dp = self:GetFirePosition()
 	local len = self.Primary.InitVelocity * (self.Primary.Straight + 2.5 * ss.FrameToSec)
-	local dir = self.Owner:EyeAngles():Forward()
+	local dir = self.Owner:EyeAngles():Forward() --Not using GetAimVector() to ignore context menu cursor
 	local t = {
 		start = pos + dp, endpos = pos + dp + dir * len,
-		filter = {self, self.Owner}, mask = MASK_SHOT,
+		filter = {self, self.Owner}, mask = ss.SquidSolidMask,
 		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 		mins = -ss.vector_one * self.Primary.ColRadius,
 		maxs = ss.vector_one * self.Primary.ColRadius,
@@ -61,37 +61,34 @@ function SWEP:DoDrawCrosshair(x, y)
 	surface.DrawTexturedRect(x - s / 2, y - s / 2, s, s)
 	
 	--Four lines around
-	outersize = outersize / 2
+	outersize = outersize * .4
 	s = math.ceil(math.sqrt(ScrW() * ScrH() / lines))
 	local pitch = self.Owner:GetRight()
 	local yaw = pitch:Cross(dir)
 	local jumpfactor = math.Clamp(self.Owner:GetVelocity().z, 0, 32)
 	local spreadx = math.Remap(jumpfactor, 0, 32, self.Primary.Spread, self.Primary.SpreadJump)
-	for _, d in ipairs {
-		{a = -spreadx, p = ss.mDegRandomY, x = {-1, 1}, y = {-1, 1}},
-		{a = spreadx, p = ss.mDegRandomY, x = {1, -1}, y = {-1, 1}},
-		{a = -spreadx, p = -ss.mDegRandomY, x = {1, -1}, y = {-1, 1}},
-		{a = spreadx, p = -ss.mDegRandomY, x = {-1, 1}, y = {-1, 1}},
-	} do
+	for i = 1, 4 do
 		local rot = dir:Angle()
-		rot:RotateAroundAxis(yaw, d.a)
-		rot:RotateAroundAxis(pitch, d.p)
+		rot:RotateAroundAxis(yaw, spreadx * (i > 2 and 1 or -1))
+		rot:RotateAroundAxis(pitch, ss.mDegRandomY * (bit.band(i, 3) > 1 and 1 or -1))
 		t.start, t.endpos = pos, pos + rot:Forward() * len
 		tr = util.TraceHull(t)
 		cam.Start3D(pos, dir:Angle())
 		local v = tr.HitPos:ToScreen()
 		cam.End3D()
 		if v.visible then
+			local f = bit.band(i, 1) ~= 0 and 1 or -1
 			local dx, dy = v.x - ScrW() / 2, v.y - ScrH() / 2
 			if math.abs(dx) < outersize then
 				v.x = x + outersize * (dx > 0 and 1 or -1)
 			end if math.abs(dy) < outersize then
 				v.y = y + outersize * (dy > 0 and 1 or -1)
 			end
+			
 			surface.SetDrawColor(255, 255, 255, 255)
-			surface.DrawLine(v.x + s * d.x[1], v.y + s * d.y[1], v.x + s * d.x[2], v.y + s * d.y[2])
-			surface.DrawLine(v.x + s * d.x[1] - 1, v.y + s * d.y[1], v.x + s * d.x[2] - 1, v.y + s * d.y[2])
-			surface.DrawLine(v.x + s * d.x[1], v.y + s * d.y[1] - 1, v.x + s * d.x[2], v.y + s * d.y[2] - 1)
+			surface.DrawLine(v.x + s * f, v.y - s, v.x + s * -f, v.y + s)
+			surface.DrawLine(v.x + s * f + f, v.y - s, v.x + s * -f + f, v.y + s)
+			surface.DrawLine(v.x + s * f, v.y - s - 1, v.x + s * -f, v.y + s - 1)
 		end
 	end
 	return true

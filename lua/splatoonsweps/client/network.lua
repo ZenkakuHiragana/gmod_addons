@@ -8,19 +8,16 @@ net.Receive("SplatoonSWEPs: DrawInk", function()
 	local color = net.ReadUInt(ss.COLOR_BITS)
 	local inktype = net.ReadUInt(4)
 	local pos = net.ReadVector()
-	local radius = net.ReadVector()
-	local inkangle = radius.y
-	local ratio = radius.z
-	radius = radius.x
+	local info = net.ReadVector() --(Radius, Inkangle, Ratio)
 	ss.InkQueue[{
 		c = color,
 		dispflag = facenumber < 0 and 0 or 1,
 		done = 0,
-		inkangle = inkangle,
+		inkangle = info.y,
 		n = math.abs(facenumber),
 		pos = pos,
-		r = radius,
-		ratio = ratio,
+		r = info.x,
+		ratio = info.z,
 		t = inktype,
 	}] = true
 end)

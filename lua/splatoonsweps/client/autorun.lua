@@ -130,7 +130,9 @@ function ss:PrepareInkSurface(write)
 	file.Delete(path)
 	
 	--HACKHACK - This is Splatoon 2 map made by Lpower531. It has special decals that hides our ink.
-	if game.GetMap() == "gm_moray_towers" then INK_SURFACE_DELTA_NORMAL = 2 end
+	if game.GetMap() == "gm_moray_towers" or game.GetMap() == "gm_kelp_dome" then
+		INK_SURFACE_DELTA_NORMAL = 2
+	end
 	
 	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
@@ -242,7 +244,7 @@ function ss:PrepareInkSurface(write)
 				
 				ContinueMesh()
 			end
-			-- ss.Displacements[k] = nil
+			ss.Displacements[k] = nil
 		else
 			for t, v in ipairs(surf.Vertices[k]) do
 				v.u, v.v = v.u / divuv, v.v / divuv
@@ -259,11 +261,11 @@ function ss:PrepareInkSurface(write)
 				ContinueMesh()
 			end
 		end
-		-- surf.Areas[k], surf.Vertices[k] = nil
+		surf.Areas[k], surf.Vertices[k] = nil
 	end
 	mesh.End()
 	
-	-- surf.Areas, ss.Displacements, surf.Vertices, surf.AreaBound = nil
+	surf.Areas, ss.Displacements, surf.Vertices, surf.AreaBound = nil
 	ss:ClearAllInk()
 	collectgarbage "collect"
 	
