@@ -120,7 +120,7 @@ function SWEP:Deploy()
 			"Playermodel", "InkColor",
 			"CanHealStand", "CanHealInk",
 			"CanReloadStand", "CanReloadInk",
-			"BecomeSquid",
+			"BecomeSquid", "AvoidWalls",
 		} do
 			local value = self.Owner:GetInfoNum(ss:GetConVarName(param), ss.ConVarDefaults[ss.ConVarName[param]])
 			if i == 1 then

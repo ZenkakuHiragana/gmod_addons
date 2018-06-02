@@ -89,6 +89,7 @@ function SWEP:ClientDeployBase()
 		"InkColor", "BecomeSquid",
 		"CanHealStand", "CanHealInk",
 		"CanReloadStand", "CanReloadInk",
+		"AvoidWalls",
 	} do
 		local value = ss:GetConVarInt(param)
 		if i == 1 then

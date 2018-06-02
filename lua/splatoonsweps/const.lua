@@ -174,6 +174,8 @@ ss.ConVar = {
 	"cl_splatoonsweps_drawinkoverlay",
 	"cl_splatoonsweps_rtresolution",
 	"cl_splatoonsweps_drawcrosshair",
+	"cl_splatoonsweps_avoidwalls",
+	"cl_splatoonsweps_newstylecrosshair",
 }
 
 ss.ConVarName = {
@@ -187,6 +189,8 @@ ss.ConVarName = {
 	DrawInkOverlay = 8,
 	RTResolution = 9,
 	DrawCrosshair = 10,
+	AvoidWalls = 11,
+	NewStyleCrosshair = 12,
 }
 
 ss.RTResID = {
@@ -212,6 +216,8 @@ ss.ConVarDefaults = {
 	1,
 	ss.RTResID.SMALL,
 	1,
+	1,
+	0,
 }
 
 ss.RTSize = {
@@ -439,6 +445,8 @@ ss.ToHammerHealth = 100
 ss.FrameToSec = 1 / framepersec
 ss.SecToFrame = framepersec
 ss.mDegRandomY = 1 --Crosshair ratio in Splattershot Pro is 2:1, mDegRandom of that is 3.00.
+ss.SpreadJumpMaxVelocity = 32
+ss.SpreadJumpCoefficient = .25
 for key, value in pairs {
 	InklingBaseSpeed = inklingspeed, --Walking speed [Splatoon units/60frame]
 	SquidBaseSpeed = 1.923 * framepersec, --Swimming speed [Splatoon units/60frame]

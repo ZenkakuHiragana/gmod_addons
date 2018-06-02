@@ -5,12 +5,51 @@ if not ss then return end
 SWEP.Base = "inklingbase"
 SWEP.PrintName = "Shooter base"
 function SWEP:GetFirePosition()
-	local pos = Vector(self.Primary.FirePosition)
-	if IsValid(self.Owner) then
-		pos:Rotate(self.Owner:EyeAngles())
+	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
+	local aim = self.Owner:GetAimVector()
+	local col = self.Primary.ColRadius
+	local dp = Vector(self.Primary.FirePosition)
+	dp:Rotate(self.Owner:EyeAngles())
+	local shootpos = self.Owner:GetShootPos()
+	local t = {
+		start = shootpos, endpos = shootpos + aim * self.Primary.Range,
+		filter = {self, self.Owner}, mask = ss.SquidSolidMask,
+		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
+		mins = -ss.vector_one * col, maxs = ss.vector_one * col,
+	}
+	local tr = util.TraceLine(t)
+	local trhull = util.TraceHull(t)
+	local pos = shootpos + dp
+	local min = {dir = 1, dist = math.huge, pos = pos}
+	
+	t.start, t.endpos = pos, tr.HitPos
+	local trtest = util.TraceHull(t)
+	if self.AvoidWalls and tr.HitPos:DistToSqr(shootpos) > trtest.HitPos:DistToSqr(pos) * 9 then
+		for dir, negate in ipairs {false, "y", "z", "yz", 0} do --right, left, up
+			if negate then
+				if negate == 0 then
+					dp = vector_origin
+					pos = shootpos
+				else
+					dp = Vector(self.Primary.FirePosition)
+					for i = 1, negate:len() do
+						local s = negate:sub(i, i)
+						dp[s] = -dp[s]
+					end
+					dp:Rotate(self.Owner:EyeAngles())
+					pos = shootpos + dp
+				end
+				t.start = pos
+				trtest = util.TraceHull(t)
+			end
+			
+			if trtest.StartSolid then continue end
+			local dist = math.floor(trtest.HitPos:DistToSqr(tr.HitPos))
+			if dist < min.dist then min.dir, min.dist, min.pos = dir, dist, pos end
+		end
 	end
 	
-	return pos
+	return min.pos, (tr.HitPos - min.pos):GetNormalized(), min.dir
 end
 
 function SWEP:SharedInit()

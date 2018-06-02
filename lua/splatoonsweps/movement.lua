@@ -1832,7 +1832,13 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 				}
 				local fw = util.TraceLine(t)
 				t.endpos = ply:GetShootPos() - ply:GetAimVector() * 32768
-				if fw.Fraction < util.TraceLine(t).Fraction == mv:KeyDown(IN_FORWARD) then
+				local bk = util.TraceLine(t)
+				t.endpos = ply:GetShootPos() + ply:GetRight() * 32768
+				local right = util.TraceLine(t)
+				t.endpos = ply:GetShootPos() - ply:GetRight() * 32768
+				local left = util.TraceLine(t)
+				if math.min(fw.Fraction, bk.Fraction) < math.min(right.Fraction, left.Fraction)
+				and fw.Fraction < bk.Fraction == mv:KeyDown(IN_FORWARD) then
 					mv:AddKey(IN_JUMP)
 				end
 			end

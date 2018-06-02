@@ -16,25 +16,27 @@ function SWEP:ServerInit()
 end
 
 --Serverside: create ink projectile.
+local jumpvelocity = 32
 function SWEP:ServerPrimaryAttack(canattack)
 	if self.CrouchPriority or self:GetInk() <= 0 then return end
-	self.SplashInitMul = self.SplashInitMul + 1
-	local aim = IsValid(self.Owner) and self.Owner:GetAimVector() or self:GetForward()
-	local ang = aim:Angle()
-	local angle_initvelocity = Angle(ang)
-	local spreadx = math.Rand(-self.Primary.SpreadBias, self.Primary.SpreadBias)
-	local jumpfactor = math.Clamp(self.Owner:GetVelocity().z, 0, 32)
-	spreadx = spreadx + math.Remap(jumpfactor, 0, 32, self.Primary.Spread, self.Primary.SpreadJump)
-	
-	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
-	angle_initvelocity:RotateAroundAxis(self.Owner:GetRight():Cross(aim), math.Rand(-spreadx, spreadx))
-	angle_initvelocity:RotateAroundAxis(self.Owner:GetRight(), math.Rand(-ss.mDegRandomY, ss.mDegRandomY))
-	local InitVelocity = angle_initvelocity:Forward() * self.Primary.InitVelocity
-	local SplashInitMul = self.SplashInitMul % self.Primary.SplashPatterns
-	local SplashNumRounded = math[math.random() < .5 and "floor" or "ceil"](self.Primary.SplashNum)
 	local p = ents.Create "projectile_ink"
 	if not IsValid(p) then return end
-	p:SetPos(self.Owner:GetShootPos() + self:GetFirePosition())
+	
+	local SplashInitMul = self.SplashInitMul % self.Primary.SplashPatterns
+	local SplashNumRounded = math[math.random() < .5 and "floor" or "ceil"](self.Primary.SplashNum)
+	local DegRandomX = math.Rand(-self.Primary.SpreadBias, self.Primary.SpreadBias)
+	+ math.Remap(math.Clamp(self.Owner:GetVelocity().z * ss.SpreadJumpCoefficient,
+	0, ss.SpreadJumpMaxVelocity), 0, ss.SpreadJumpMaxVelocity, self.Primary.Spread, self.Primary.SpreadJump)
+	
+	local pos, dir, h = self:GetFirePosition()
+	local right = self.Owner:GetRight()
+	local ang = dir:Angle()
+	local angle_initvelocity = Angle(ang)
+	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
+	angle_initvelocity:RotateAroundAxis(right:Cross(dir), math.Rand(-DegRandomX, DegRandomX))
+	angle_initvelocity:RotateAroundAxis(right, math.Rand(-ss.mDegRandomY, ss.mDegRandomY))
+	local InitVelocity = angle_initvelocity:Forward() * self.Primary.InitVelocity
+	p:SetPos(pos)
 	p:SetAngles(ang)
 	p:SetOwner(self.Owner)
 	p:SetInkColorProxy(self:GetInkColorProxy())
@@ -60,9 +62,7 @@ function SWEP:ServerPrimaryAttack(canattack)
 	p:Spawn()
 	AddCleanup(p)
 	self.SplashInitRandom = self.SplashInitRandom + (SplashInitMul > 0 and 0 or 1)
-	
-	if not self.Primary.TripleShotDelay then return end
-	self.SplashInitMul = self.SplashInitMul + 2
+	self.SplashInitMul = self.SplashInitMul + (self.Primary.TripleShotDelay and 3 or 1)
 end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
