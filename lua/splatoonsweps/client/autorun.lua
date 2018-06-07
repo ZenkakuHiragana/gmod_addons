@@ -365,13 +365,26 @@ end)
 hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
 	local weapon = ss:IsValidInkling(ply)
 	if not weapon then return end
+	
+	local drawing
 	if weapon.BecomeSquid then
 		ply:DrawShadow(not ply:Crouching())
-		return ply:Crouching() or nil
+		drawing = ply:Crouching()
 	else
 		ply:DrawShadow(not weapon:GetInInk())
-		return weapon:GetInInk() or nil
+		drawing = weapon:GetInInk()
 	end
+	
+	if drawing then return true end
+	render.SetBlend(math.Remap(math.Clamp(
+		weapon:GetPos():DistToSqr(EyePos()) / 100, 0, ss.CameraFadeDistance / 100),
+		0, ss.CameraFadeDistance / 100, 0, 1))
+end)
+
+hook.Add("PostPlayerDraw", "SplatoonSWEPs: Thirdperson player fadeout", function(ply)
+	local weapon = ss:IsValidInkling(ply)
+	if not weapon then return end
+	render.SetBlend(1)
 end)
 
 hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", function()

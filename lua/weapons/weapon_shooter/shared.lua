@@ -17,6 +17,13 @@ function SWEP:GetFirePosition()
 		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 		mins = -ss.vector_one * col, maxs = ss.vector_one * col,
 	}
+	for _, e in pairs(ents.FindAlongRay(t.start, t.endpos, t.mins * 5, t.maxs * 5)) do
+		local w = ss:IsValidInkling(e)
+		if not w or w.ColorCode == self.ColorCode then continue end
+		table.insert(t.filter, e)
+		table.insert(t.filter, w)
+	end
+	
 	local tr = util.TraceLine(t)
 	local trhull = util.TraceHull(t)
 	local pos = shootpos + dp
@@ -28,7 +35,7 @@ function SWEP:GetFirePosition()
 		for dir, negate in ipairs {false, "y", "z", "yz", 0} do --right, left, up
 			if negate then
 				if negate == 0 then
-					dp = vector_origin
+					dp = vector_up * self.Primary.FirePosition.z
 					pos = shootpos
 				else
 					dp = Vector(self.Primary.FirePosition)
@@ -39,6 +46,7 @@ function SWEP:GetFirePosition()
 					dp:Rotate(self.Owner:EyeAngles())
 					pos = shootpos + dp
 				end
+				
 				t.start = pos
 				trtest = util.TraceHull(t)
 			end
@@ -85,7 +93,7 @@ function SWEP:SharedPrimaryAttack(canattack)
 		if SERVER or IsFirstTimePredicted() then self:EmitSound(self.ShootSound) end
 		if CLIENT then self.PreviousInk = true end
 		
-		if not (self.Primary.TripleShotDelay and (SERVER or IsFirstTimePredicted())) then return end
+		if not ((SERVER or IsFirstTimePredicted()) and self.Primary.TripleShotDelay) then return end
 		if self:GetTripleShot() > 0 then
 			if self:GetTripleShot() > 1 then
 				local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1

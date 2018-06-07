@@ -12,7 +12,8 @@ end
 local function TableToString(t)
 	local str = ""
 	for i, v in ipairs(t) do
-		str = str .. tostring(i) .. ":\t" .. tostring(v) .. "\n"
+		if i > 1 then str = str .. "\n" end
+		str = str .. tostring(i) .. ":\t" .. tostring(v)
 	end
 	
 	return str
@@ -352,8 +353,9 @@ ss.Text.Options = {
 	"Become squid",
 	"Draw ink overlay",
 	"Draw crosshair",
-	"Make sight avoid walls",
 	"Use new style crosshair",
+	"Make sight avoid walls",
+	"Move Viewmodel",
 }
 ss.Text.CVarDescription = {
 	Enabled = "Enables or disables SplatoonSWEPs.",
@@ -384,8 +386,9 @@ Make sure your graphics card has enough space of video memory.
 7: 32768x32768, 8GB.
 8: 2x32768x32768, 16GB.]],
 	"Draw Splatoon-styled crosshair. (1: yes, 0: no)",
-	"Prevent SWEPs from shooting at wall wastfully. (1: yes, 0: no)",
 	"Make crosshair act like Splatoon 2. (1: yes, 0: no)",
+	"Prevent SWEPs from shooting at wall wastfully. (1: yes, 0: no)",
+	"Move viewmodel when avoid setting is enabled. (1: yes, 0: no)",
 }
 ss.Text.AuthorName = "GreatZenkakuMan"
 ss.Text.Purpose = "Splat ink!"
@@ -466,8 +469,9 @@ if lang == "ja" then
 		"イカになる",
 		"インクオーバーレイの描画",
 		"照準の描画",
-		"壁を避けて狙う",
 		"Splatoon 2風の照準",
+		"壁を避けて狙う",
+		"ビューモデルを動かす",
 	}
 	ss.Text.CVarDescription = {
 	Enabled = "SplatoonSWEPsを有効化するかどうか。",
@@ -498,8 +502,9 @@ if lang == "ja" then
 7: 32768x32768、8GB。
 8: 2x32768x32768、16GB。]],
 	"スプラトゥーン風の照準を描画するかどうか。 (1: する 0: しない)",
-	"インクが壁に吸い付かないようにするかどうか。 (1: する 0: しない)",
 	"照準の動き方をスプラトゥーン2に合わせるかどうか。 (1: する 0: しない)",
+	"インクが壁に吸い付かないようにするかどうか。 (1: する 0: しない)",
+	"壁を避けて狙う時、ビューモデルを動かすかどうか。 (1: する 0: しない)",
 }
 	ss.Text.AuthorName = "全角ひらがな"
 	ss.Text.Purpose = "ブキを手に取り、イカになれ！"

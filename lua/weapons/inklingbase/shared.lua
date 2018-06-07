@@ -146,7 +146,7 @@ function SWEP:CommonFire(isprimary)
 	if self.Owner:IsPlayer() then
 		local rnda = Weapon.Recoil * -1
 		local rndb = Weapon.Recoil * util.SharedRandom(
-		"SplatoonSWEPs: Weapon base recoil" .. self:EntIndex(), -1, 1)
+		"SplatoonSWEPs: Weapon base recoil" .. self:EntIndex(), -1, 1, CurTime())
 		self.Owner:ViewPunch(Angle(rnda, rndb, rnda)) --Apply viewmodel punch
 		if math.random() < Weapon.PlayAnimPercent then
 			self.Owner:SetAnimation(PLAYER_ATTACK1)

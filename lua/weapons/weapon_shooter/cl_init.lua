@@ -39,7 +39,10 @@ function SWEP:ClientInit()
 end
 
 function SWEP:GetViewModelPosition(pos, ang)
+	if not IsValid(self.Owner) then return pos, ang end
+	
 	local _, _, armpos = self:GetFirePosition()
+	if not ss:GetConVarBool "MoveViewmodel" or self.Owner:Crouching() then armpos = 1 end
 	local iang = self.IronSightsAng[armpos] or Vector()
 	self.p = self.p + (iang.x - self.p) * .1
 	self.y = self.y + (iang.y - self.y) * .1
@@ -60,16 +63,17 @@ end
 local dot = 1920 * 1080 / 8^2 --Measuring screenshot
 local inner = 1920 * 1080 / 64^2 --Texture size / 2
 local outer = 1920 * 1080 / 64^2 --Texture size / 2
-local lines = 1920 * 1080 / 6^2 --Just a random value
+local outerhitsize = 1920 * 1080 / 72^2 --Texture size / 2
+local lines = 1920 * 1080 / 32^2 --Just a random value
 local color_circle = Color(0, 0, 0, 64)
 local color_nohit = Color(255, 255, 255, 64)
 function SWEP:DoDrawCrosshair(x, y)
 	if not ss:GetConVarBool "DrawCrosshair" then return end
 	if vgui.CursorVisible() then x, y = input.GetCursorPos() end
 	
-	--Surrounding circle
 	local splt2 = ss:GetConVarBool "NewStyleCrosshair"
 	local color = ss:GetColor(ss.CrosshairColors[self.ColorCode])
+	local inkcolor = ss:GetColor(self.ColorCode)
 	local pos, dir = self:GetFirePosition()
 	local throughpos = self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range
 	local t = {
@@ -81,10 +85,116 @@ function SWEP:DoDrawCrosshair(x, y)
 	}
 	
 	local tr = util.TraceHull(t)
+	local hitentity = IsValid(tr.Entity) and tr.Entity:Health() > 0
+	local outersize = math.ceil(math.sqrt(ScrW() * ScrH() / outer))
+	if hitentity then
+		local w = ss:IsValidInkling(tr.Entity)
+		if w and w.ColorCode == self.ColorCode then
+			hitentity = false
+		end
+	end
+	
 	cam.Start3D()
 	local hit = tr.HitPos:ToScreen()
 	local through = throughpos:ToScreen()
 	cam.End3D()
+	
+	-- Four lines around
+	local frac = tr.Fraction
+	local basecolor = splt2 and tr.Hit and color_nohit or color_white
+	local lx, ly = hit.x, hit.y
+	local w = math.ceil(math.sqrt(ScrW() * ScrH() / lines))
+	local h = math.ceil(w / 16)
+	local pitch = self.Owner:GetRight()
+	local yaw = pitch:Cross(dir)
+	local spreadx = math.Remap(math.Clamp(self.Owner:GetVelocity().z
+	* ss.SpreadJumpCoefficient, 0, ss.SpreadJumpMaxVelocity),
+	0, ss.SpreadJumpMaxVelocity, self.Primary.Spread, self.Primary.SpreadJump)
+	if splt2 then
+		frac = 1
+		lx, ly = through.x, through.y
+		if tr.Hit then
+			dir = self.Owner:GetAimVector()
+			pos = self.Owner:GetShootPos()
+		end
+	end
+	
+	local linesize = outersize * (1.5 - frac)
+	for i = 1, 4 do
+		local rot = dir:Angle()
+		local mx, my = i > 2 and 1 or -1, bit.band(i, 3) > 1 and 1 or -1
+		rot:RotateAroundAxis(yaw, spreadx * mx)
+		rot:RotateAroundAxis(pitch, ss.mDegRandomY * my)
+		
+		cam.Start3D()
+		local endpos = pos + rot:Forward() * self.Primary.Range * frac
+		local hit = endpos:ToScreen()
+		cam.End3D()
+		
+		if not hit.visible then continue end
+		hit.x = hit.x - linesize * mx * (hitentity and .75 or 1)
+		hit.y = hit.y - linesize * my * (hitentity and .75 or 1)
+		surface.SetDrawColor(basecolor)
+		surface.SetMaterial(ss.Materials.Crosshair.Line)
+		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
+		
+		if not hitentity then continue end
+		surface.SetDrawColor(inkcolor)
+		surface.SetMaterial(ss.Materials.Crosshair.LineColor)
+		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
+	end
+	
+	--Hit cross pattern, background
+	local lp = (1.4 - tr.Fraction) * outersize / 2 --line position
+	if hitentity then
+		surface.SetMaterial(ss.Materials.Crosshair.Line)
+		surface.SetDrawColor(color_black)
+		local w = outersize * .8 + 8
+		local h = math.ceil(w / 8) + 2
+		for i = 1, 4 do
+			local dx, dy = lp * (i > 2 and 1 or -1), lp * (bit.band(i, 3) > 1 and 1 or -1)
+			surface.DrawTexturedRectRotated(hit.x + dx, hit.y + dy, w, h, 90 * i + 45)
+		end
+	end
+	
+	--Outer circle
+	surface.SetMaterial(ss.Materials.Crosshair.Outer)
+	if hitentity then
+		local outersizehit = math.ceil(math.sqrt(ScrW() * ScrH() / outerhitsize))
+		surface.SetDrawColor(color_black)
+		surface.DrawTexturedRect(hit.x - outersizehit / 2, hit.y - outersizehit / 2, outersizehit, outersizehit)
+	end
+	
+	surface.SetDrawColor(tr.Hit and color or color_circle)
+	surface.DrawTexturedRect(hit.x - outersize / 2, hit.y - outersize / 2, outersize, outersize)
+	if splt2 and tr.Hit then
+		surface.SetDrawColor(color_circle)
+		surface.DrawTexturedRect(through.x - outersize / 2, through.y - outersize / 2, outersize, outersize)
+	end
+	
+	--Hit cross pattern, foreground
+	if hitentity then
+		for mat, col in pairs {[""] = color_white, Color = inkcolor} do
+			surface.SetMaterial(ss.Materials.Crosshair["Line" .. mat])
+			surface.SetDrawColor(col)
+			local w = outersize * .8
+			local h = math.floor(w / 16)
+			for i = 1, 4 do
+				local dx, dy = lp * (i > 2 and 1 or -1), lp * (bit.band(i, 3) > 1 and 1 or -1)
+				surface.DrawTexturedRectRotated(hit.x + dx, hit.y + dy, w, h, 90 * i + 45)
+			end
+		end
+	end
+	
+	--Inner circle
+	surface.SetMaterial(ss.Materials.Crosshair.Inner)
+	surface.SetDrawColor(tr.Hit and color_white or color_nohit)
+	s = math.ceil(math.sqrt(ScrW() * ScrH() / inner))
+	surface.DrawTexturedRect(hit.x - s / 2, hit.y - s / 2, s, s)
+	if splt2 and tr.Hit then
+		surface.SetDrawColor(color_nohit)
+		surface.DrawTexturedRect(through.x - s / 2, through.y - s / 2, s, s)
+	end
 	
 	--Center circle
 	local s = math.ceil(math.sqrt(ScrW() * ScrH() / dot))
@@ -94,76 +204,6 @@ function SWEP:DoDrawCrosshair(x, y)
 	if splt2 and tr.Hit then
 		surface.SetDrawColor(color_nohit)
 		surface.DrawTexturedRect(through.x - s / 2, through.y - s / 2, s, s)
-	end
-	
-	--Outer circle
-	local outersize = math.ceil(math.sqrt(ScrW() * ScrH() / outer))
-	surface.SetDrawColor(tr.Hit and color or color_circle)
-	surface.SetMaterial(ss.Materials.Crosshair.Outer)
-	surface.DrawTexturedRect(hit.x - outersize / 2, hit.y - outersize / 2, outersize, outersize)
-	if splt2 and tr.Hit then
-		surface.SetDrawColor(color_circle)
-		surface.DrawTexturedRect(through.x - outersize / 2, through.y - outersize / 2, outersize, outersize)
-	end
-	
-	--Inner circle
-	surface.SetDrawColor(tr.Hit and color_white or color_nohit)
-	surface.SetMaterial(ss.Materials.Crosshair.Inner)
-	s = math.ceil(math.sqrt(ScrW() * ScrH() / inner))
-	surface.DrawTexturedRect(hit.x - s / 2, hit.y - s / 2, s, s)
-	if splt2 and tr.Hit then
-		surface.SetDrawColor(color_nohit)
-		surface.DrawTexturedRect(through.x - s / 2, through.y - s / 2, s, s)
-	end
-	
-	-- Four lines around
-	surface.SetDrawColor(splt2 and tr.Hit and color_nohit or color_white)
-	if splt2 then
-		tr.Fraction = 1
-		x, y = through.x, through.y
-		if tr.Hit then
-			dir = self.Owner:GetAimVector()
-			pos = self.Owner:GetShootPos()
-		end
-	else
-		x, y = hit.x, hit.y
-	end
-	
-	outersize = outersize * math.max(0, 1.35 - tr.Fraction)
-	s = math.ceil(math.sqrt(ScrW() * ScrH() / lines))
-	local pitch = self.Owner:GetRight()
-	local yaw = pitch:Cross(dir)
-	local spreadx = math.Remap(math.Clamp(self.Owner:GetVelocity().z
-	* ss.SpreadJumpCoefficient, 0, ss.SpreadJumpMaxVelocity),
-	0, ss.SpreadJumpMaxVelocity, self.Primary.Spread, self.Primary.SpreadJump)
-	for i = 1, 4 do
-		local rot = dir:Angle()
-		local mx, my = i > 2 and 1 or -1, bit.band(i, 3) > 1 and 1 or -1
-		rot:RotateAroundAxis(yaw, spreadx * mx)
-		rot:RotateAroundAxis(pitch, ss.mDegRandomY * my)
-		
-		cam.Start3D()
-		local endpos = pos + rot:Forward() * self.Primary.Range * tr.Fraction
-		local hit = endpos:ToScreen()
-		cam.End3D()
-		
-		if hit.visible then
-			local f = bit.band(i, 1) ~= 0 and 1 or -1
-			local dx, dy = hit.x - x, hit.y - y
-			if mx < 0 and dx < outersize then
-				hit.x = x + outersize
-			elseif mx > 0 and dx > -outersize then
-				hit.x = x - outersize
-			end if my < 0 and dy < outersize then
-				hit.y = y + outersize
-			elseif my > 0 and dy > -outersize then
-				hit.y = y - outersize
-			end 
-			
-			surface.DrawLine(hit.x + s * f,  hit.y - s, hit.x + s * -f, hit.y + s)
-			surface.DrawLine(hit.x + s * f + f, hit.y - s, hit.x + s * -f + f, hit.y + s)
-			surface.DrawLine(hit.x + s * f, hit.y - s - 1, hit.x + s * -f, hit.y + s - 1)
-		end
 	end
 	
 	return true

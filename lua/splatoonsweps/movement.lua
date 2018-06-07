@@ -2023,11 +2023,6 @@ for _, hookname in ipairs {"CalcMainActivity", "TranslateActivity"} do
 		local onground = ply:OnGround()
 		ply:SetMoveType(MOVETYPE_WALK)
 		ply:AddFlags(FL_DUCKING)
-		if me.m_entGroundEntity[ply] ~= NULL then
-			ply:AddFlags(FL_ONGROUND)
-		else
-			ply:RemoveFlags(FL_ONGROUND)
-		end
 		nest = true
 		ply.m_bWasNoclipping = nil
 		local res1, res2 = gamemode.Call(hookname, ply, ...)

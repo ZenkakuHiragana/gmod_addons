@@ -364,9 +364,18 @@ function SWEP:DrawWorldModel()
 	end
 	
 	self:SetupBones()
-	local bone_ent = self -- when the weapon is dropped
+	local bone_ent = self.Owner -- when the weapon is dropped
+	if not IsValid(bone_ent) then bone_ent = self end
 	if self.Owner ~= LocalPlayer() then self:Think() end
 	if not self.WElements then return end
+	
+	local cameradistance = 1
+	if self.Owner == LocalPlayer() then
+		cameradistance = math.Remap(math.Clamp(
+		self:GetPos():DistToSqr(EyePos()), 0, ss.CameraFadeDistance),
+		0, ss.CameraFadeDistance, 0, 1)
+	end
+	
 	for k, name in pairs(self.wRenderOrder) do
 		local v = self.WElements[name]
 		if not v then self.wRenderOrder = nil break end
@@ -449,7 +458,7 @@ function SWEP:DrawWorldModel()
 			
 			model:EnableMatrix("RenderMultiply", matrix)
 			render.SetColorModulation(v.color.r / 255, v.color.g / 255, v.color.b / 255)
-			render.SetBlend(v.color.a / 255)
+			render.SetBlend(v.color.a / 255 * cameradistance)
 			model:DrawModel()
 			model:CreateShadow()
 			render.SetBlend(1)
@@ -461,8 +470,14 @@ function SWEP:DrawWorldModel()
 			
 		elseif v.type == "Sprite" and sprite then
 			local drawpos = pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z
+			local a = sprite:GetFloat "$alpha"
+			local t = sprite:GetFloat "$translucent"
+			sprite:SetFloat("$alpha", cameradistance)
+			sprite:SetFloat("$translucent", 1)
 			render.SetMaterial(sprite)
 			render.DrawSprite(drawpos, v.size.x, v.size.y, v.color)
+			sprite:SetFloat("$alpha", a or 1)
+			sprite:SetFloat("$translucent", t or 0)
 			
 		elseif v.type == "Quad" and v.draw_func then
 			local drawpos = pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z

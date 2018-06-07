@@ -136,6 +136,7 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 		Options:DockPadding(m, m, m, m)
 		Options:Dock(RIGHT)
 		
+		local AvoidWalls
 		local OptionsConVar = {
 			"CanHealStand",
 			"CanHealInk",
@@ -144,8 +145,9 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			"BecomeSquid",
 			"DrawInkOverlay",
 			"DrawCrosshair",
-			"AvoidWalls",
 			"NewStyleCrosshair",
+			"AvoidWalls",
+			"MoveViewmodel",
 		}
 		for i = 1, #OptionsConVar do
 			local Check = Options:Add "DCheckBoxLabel"
@@ -154,6 +156,15 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			Check:SetConVar(ss:GetConVarName(OptionsConVar[i]))
 			Check:SetValue(ss:GetConVarInt(OptionsConVar[i]))
 			Check:SizeToContents()
+			
+			if OptionsConVar[i] == "AvoidWalls" then
+				AvoidWalls = Check
+			elseif OptionsConVar[i] == "MoveViewmodel" then
+				Check:SetIndent(Options:GetWide() / 8)
+				function AvoidWalls:OnChange(checked)
+					Check:SetEnabled(checked)
+				end
+			end
 		end
 		
 		Options:InvalidateParent()

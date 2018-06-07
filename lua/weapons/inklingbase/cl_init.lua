@@ -85,18 +85,26 @@ function SWEP:Deploy()
 end
 
 function SWEP:ClientDeployBase()
-	for i, param in ipairs {
-		"InkColor", "BecomeSquid",
-		"CanHealStand", "CanHealInk",
-		"CanReloadStand", "CanReloadInk",
-		"AvoidWalls",
-	} do
-		local value = ss:GetConVarInt(param)
-		if i == 1 then
-			self.ColorCode = value
-		else
-			self[param] = value > 0
+	if self.Owner:IsPlayer() and not self.Owner:IsBot() then
+		for i, param in ipairs {
+			"InkColor", "BecomeSquid",
+			"CanHealStand", "CanHealInk",
+			"CanReloadStand", "CanReloadInk",
+			"AvoidWalls",
+		} do
+			local value = ss:GetConVarInt(param)
+			if i == 1 then
+				self.ColorCode = value
+			else
+				self[param] = value > 0
+			end
 		end
+	else
+		self.CanHealStand = true
+		self.CanHealInk = true
+		self.CanReloadStand = true
+		self.CanReloadInk = true
+		self.ColorCode = math.floor(util.SharedRandom("SplatoonSWEPs: BotColorCode", 1, ss.MAX_COLORS, CurTime()))
 	end
 	
 	if not IsValid(self.Owner) then return end

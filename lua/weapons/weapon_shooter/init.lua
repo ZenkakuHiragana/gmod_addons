@@ -13,6 +13,12 @@ end
 function SWEP:ServerInit()
 	self.SplashInitMul = 0
 	self.SplashInitRandom = 0
+	
+	if not self.Primary.TripleShotDelay then return end
+	self:SetNPCMinBurst(1)
+	self:SetNPCMaxBurst(1)
+	self:SetNPCMinRest(self.Primary.TripleShotDelay)
+	self:SetNPCMaxRest(self.Primary.TripleShotDelay)
 end
 
 --Serverside: create ink projectile.
@@ -67,4 +73,7 @@ end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
 	self:PrimaryAttack()
+	self:AddSchedule(self.Primary.Delay, 1, function(self, sched)
+		self:PrimaryAttack()
+	end)
 end

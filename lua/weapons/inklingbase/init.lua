@@ -68,15 +68,13 @@ function SWEP:Initialize()
 	end)
 	
 	self:SharedInitBase()
-	if isfunction(self.ServerInit) then self:ServerInit() end
 	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
 		self.HoldType = "smg"
 		self:SetHoldType(self.HoldType)
-		local npcrange = self.Primary.InitVelocity * (self.Primary.Straight + 4.5 * ss.FrameToSec)
 		self:SetSaveValue("m_fMinRange1", 0)
 		self:SetSaveValue("m_fMinRange2", 0)
-		self:SetSaveValue("m_fMaxRange1", npcrange)
-		self:SetSaveValue("m_fMaxRange2", npcrange)
+		self:SetSaveValue("m_fMaxRange1", self.Primary.Range)
+		self:SetSaveValue("m_fMaxRange2", self.Primary.Range)
 		self:SetNPCMinBurst(3)
 		self:SetNPCMaxBurst(8)
 		self:SetNPCFireRate(self.Primary.Delay)
@@ -92,6 +90,8 @@ function SWEP:Initialize()
 			self:Think()
 		end)
 	end
+	
+	if isfunction(self.ServerInit) then self:ServerInit() end
 end
 
 function SWEP:OnRemove()
@@ -137,7 +137,7 @@ function SWEP:Deploy()
 		self.CanHealInk = true
 		self.CanReloadStand = true
 		self.CanReloadInk = true
-		self.ColorCode = math.random(ss.MAX_COLORS)
+		self.ColorCode = math.floor(util.SharedRandom("SplatoonSWEPs: BotColorCode", 1, ss.MAX_COLORS, CurTime()))
 	end
 	
 	self.Color = ss:GetColor(self.ColorCode)
