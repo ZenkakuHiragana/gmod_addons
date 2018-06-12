@@ -4,16 +4,16 @@ if not ss then return end
 
 function ss:SetPrimary(weapon, info)
 	local p = istable(weapon.Primary) and weapon.Primary or {}
-	p.ClipSize = self.MaxInkAmount --Clip size only for displaying.
-	p.DefaultClip = self.MaxInkAmount
+	p.ClipSize = ss.MaxInkAmount --Clip size only for displaying.
+	p.DefaultClip = ss.MaxInkAmount
 	p.Automatic = info.IsAutomatic or false
 	p.Ammo = "Ink"
-	p.Delay = info.Delay.Fire * self.FrameToSec
+	p.Delay = info.Delay.Fire * ss.FrameToSec
 	p.Recoil = info.Recoil or .2
-	p.ReloadDelay = info.Delay.Reload * self.FrameToSec
-	p.TakeAmmo = info.TakeAmmo * self.MaxInkAmount
+	p.ReloadDelay = info.Delay.Reload * ss.FrameToSec
+	p.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
 	p.PlayAnimPercent = info.PlayAnimPercent
-	p.CrouchDelay = info.Delay.Crouch * self.FrameToSec
+	p.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
 	weapon.Primary = p
 	if isfunction(ss.CustomPrimary[weapon.Base]) then
 		ss.CustomPrimary[weapon.Base](p, info)
@@ -26,12 +26,12 @@ function ss:SetSecondary(weapon, info)
 	s.DefaultClip = -1
 	s.Automatic = info.IsAutomatic or false
 	s.Ammo = "Ink"
-	s.Delay = info.Delay.Fire * self.FrameToSec
+	s.Delay = info.Delay.Fire * ss.FrameToSec
 	s.Recoil = info.Recoil or .2
-	s.ReloadDelay = info.Delay.Reload * self.FrameToSec
-	s.TakeAmmo = info.TakeAmmo * self.MaxInkAmount
+	s.ReloadDelay = info.Delay.Reload * ss.FrameToSec
+	s.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
 	s.PlayAnimPercent = info.PlayAnimPercent
-	s.CrouchDelay = info.Delay.Crouch * self.FrameToSec
+	s.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
 	weapon.Secondary = s
 	if isfunction(ss.CustomSecondary[weapon.Base]) then
 		ss.CustomSecondary[weapon.Base](s, info)

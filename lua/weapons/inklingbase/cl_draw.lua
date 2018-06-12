@@ -396,10 +396,17 @@ function SWEP:DrawWorldModel()
 		if v.type == "Model" then
 			if not (IsValid(v.modelEnt) or self:RecreateModel(v)) then continue end
 			local model = v.modelEnt
-			model:SetPos(pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z)
-			ang:RotateAroundAxis(ang:Up(), v.angle.y)
-			ang:RotateAroundAxis(ang:Right(), v.angle.p)
-			ang:RotateAroundAxis(ang:Forward(), v.angle.r)
+			if name ~= "weapon" or v.bone ~= "ValveBiped.Bip01_L_Hand" then
+				model:SetPos(pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z)
+				ang:RotateAroundAxis(ang:Up(), v.angle.y)
+				ang:RotateAroundAxis(ang:Right(), v.angle.p)
+				ang:RotateAroundAxis(ang:Forward(), v.angle.r)
+			else
+				model:SetPos(pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y - ang:Up() * v.pos.z)
+				ang:RotateAroundAxis(ang:Up(), v.angle.y)
+				ang:RotateAroundAxis(ang:Right(), v.angle.p)
+				ang:RotateAroundAxis(ang:Forward(), v.angle.r + 180)
+			end
 			model:SetAngles(ang)
 			
 			local matrix = Matrix()

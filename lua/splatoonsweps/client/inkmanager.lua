@@ -3,53 +3,75 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
-local rt = ss.RenderTarget
-local MAX_PROCESS_QUEUE_AT_ONCE = 100
-local inkmaterial = Material "splatoonsweps/splatoonink"
-local normalmaterial = Material "splatoonsweps/splatoonink_normal"
-local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
-local LightmapSampleTable = {[7] = 1.2}
-local NumPoly, Polysin, Polycos, Lightrad = 16, {}, {}, {}
-for i = 0, NumPoly do
-	local a = math.rad(i * -360 / NumPoly)
-	Polysin[i], Polycos[i] = math.sin(a), math.cos(a)
-end
-
-for n in pairs(LightmapSampleTable) do
-	Lightrad[n] = {}
-	local frac = math.rad(360 / n)
-	for i = 1, n do
-		Lightrad[n][i] = Vector(math.cos(frac * i), math.sin(frac * i))
-	end
-end
-
+local Angle, GetConVar, ipairs, LocalPlayer, pairs, tostring, Vector
+ =	Angle, GetConVar, ipairs, LocalPlayer, pairs, tostring, Vector
+local End2D, FindByClass, Start2D = cam.End2D, ents.FindByClass, cam.Start2D
+local create, resume, status, yield
+ =	coroutine.create, coroutine.resume, coroutine.status, coroutine.yield
+local ceil, Clamp, cos, floor, huge, rad, Round, sin
+ =	math.ceil, math.Clamp, math.cos, math.floor, math.huge, math.rad, math.Round, math.sin
+local CL, GLC, GTMSL, ODE, PopFM, PopRT, PushFM, PushRT, rSM, SLT, SSR, STMSL, URT
+ =	render.ComputeLighting, render.GetLightColor,
+	render.GetToneMappingScaleLinear, render.OverrideDepthEnable,
+	render.PopFlashlightMode, render.PopRenderTarget,
+	render.PushFlashlightMode, render.PushRenderTarget,
+	render.SetMaterial, render.SetLightmapTexture,
+	render.SetScissorRect, render.SetToneMappingScaleLinear,
+	render.UpdateRefractTexture
+local DTR, DTRR, SDC, sSM
+ =	surface.DrawTexturedRect, surface.DrawTexturedRectRotated,
+	surface.SetDrawColor, surface.SetMaterial
+local CAABB2D, GetColor, To2D, To3D, vector_one
+ =	ss.CollisionAABB2D, ss.GetColor, ss.To2D, ss.To3D, ss.vector_one
 local amb = render.GetAmbientLightColor() * .3
 local amblen = amb:Length() * .3
 if amblen > 1 then amb = amb / amblen end
 local ambscale = ss.GrayScaleFactor:Dot(amb) / 2
+local imesh = ss.IMesh
+local inkqueue = ss.InkQueue
+local rt = ss.RenderTarget
+local surf = ss.SequentialSurfaces
+
+local MAX_PROCESS_QUEUE_AT_ONCE = 300
+local inkmaterial = Material "splatoonsweps/splatoonink"
+local normalmaterial = Material "splatoonsweps/splatoonink_normal"
+local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
+local Lightrad = {}
+do
+	local n = 3
+	local frac = math.rad(360 / n)
+	for i = 1, n do
+		Lightrad[i] = Vector(math.cos(frac * i), math.sin(frac * i))
+	end
+end
+
 local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
-	if not rt.Ready or bDrawingSkybox or GetConVar "mat_wireframe":GetBool() or GetConVar "mat_showlowresimage":GetBool() then return end
-	local hdrscale = render.GetToneMappingScaleLinear()
-	render.SetToneMappingScaleLinear(ss.vector_one * .05) --Set HDR scale for custom lightmap
-	render.SetMaterial(rt.Material) --Ink base texture
-	render.SetLightmapTexture(rt.Lightmap) --Set custom lightmap
-	render.OverrideDepthEnable(true, true) --Write to depth buffer for translucent surface culling
-	for i, m in ipairs(ss.IMesh) do m:Draw() end --Draw whole ink surface
-	render.OverrideDepthEnable(false) --Back to default
-	render.SetToneMappingScaleLinear(hdrscale) --Back to default
-	render.UpdateRefractTexture() --Make the ink "watery"
-	render.SetMaterial(rt.WaterMaterial) --Set water texture for ink
-	for i, m in ipairs(ss.IMesh) do m:Draw() end --Draw ink again
-	if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then return end
-	render.PushFlashlightMode(true) --Ink lit by player's flashlight or projected texture
-	render.SetMaterial(rt.Material) --Ink base texture
-	for i, m in ipairs(ss.IMesh) do m:Draw() end --Draw once again
-	render.PopFlashlightMode() --Back to default
+	if not rt.Ready or bDrawingSkybox or
+	GetConVar "mat_wireframe":GetBool() or
+	GetConVar "mat_showlowresimage":GetBool() then return end
+	local hdrscale = GTMSL()
+	STMSL(vector_one * .05) --Set HDR scale for custom lightmap
+	rSM(rt.Material) --Ink base texture
+	SLT(rt.Lightmap) --Set custom lightmap
+	ODE(true, true) --Write to depth buffer for translucent surface culling
+	for i, m in ipairs(imesh) do m:Draw() end --Draw whole ink surface
+	ODE(false) --Back to default
+	STMSL(hdrscale) --Back to default
+	
+	URT() --Make the ink "watery"
+	rSM(rt.WaterMaterial) --Set water texture for ink
+	for i, m in ipairs(imesh) do m:Draw() end --Draw ink again
+	
+	if not LocalPlayer():FlashlightIsOn() and #FindByClass "*projectedtexture*" == 0 then return end
+	PushFM(true) --Ink lit by player's flashlight or projected texture
+	rSM(rt.Material) --Ink base texture
+	for i, m in ipairs(imesh) do m:Draw() end --Draw once again
+	PopFM() --Back to default
 end
 
 local function GetLight(p, n)
-	local lightcolor = render.GetLightColor(p + n)
-	local light = render.ComputeLighting(p + n, n)
+	local lightcolor = GLC(p + n)
+	local light = CL(p + n, n)
 	if lightcolor:LengthSqr() > 1 then lightcolor:Normalize() end
 	if light:LengthSqr() > 1 then light:Normalize() end
 	return (light + lightcolor + amb) / 2.3
@@ -58,84 +80,113 @@ end
 local function ProcessQueue()
 	while true do
 		local done = 0
-		for q in pairs(ss.InkQueue) do
+		for q in pairs(inkqueue) do
+			-- q.done = q.done + 1
 			q.done, done = q.done + 1, done + 1
-			if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then coroutine.yield() end
-			if q.done > 5 then ss.InkQueue[q] = nil end
-			local c = ss:GetColor(q.c)
-			local radius = math.Round(ss:UnitsToPixels(q.r))
-			local size, vrad = radius * 2, ss.vector_one * radius
-			local surf = ss.SequentialSurfaces
-			local bound = ss:UnitsToPixels(surf.Bounds[q.n])
-			local uvorg = ss:UVToPixels(Vector(surf.u[q.n], surf.v[q.n]))
-			local angle, origin, normal, moved = Angle(surf.Angles[q.n]), surf.Origins[q.n], surf.Normals[q.n], surf.Moved[q.n]
-			local pos2d = ss:UnitsToPixels(ss:To2D(q.pos, origin, angle))
-			if moved then pos2d.x, q.inkangle = -pos2d.x, -(q.inkangle + 90) end
+			-- if done % MAX_PROCESS_QUEUE_AT_ONCE == 0 then yield() end
+			if q.done > 5 then inkqueue[q] = nil end
+			local c = GetColor(ss, q.c)
+			local radius = Round(q.r * ss.UnitsToPixels)
+			local size = radius * 2
+			local bound = surf.Bounds[q.n] * ss.UnitsToPixels
+			local uvorg = Vector(surf.u[q.n], surf.v[q.n]) * ss.UVToPixels
+			local angle, origin, normal, moved = surf.Angles[q.n], surf.Origins[q.n], surf.Normals[q.n], surf.Moved[q.n]
+			local pos2d = To2D(ss, q.pos, origin, angle) * ss.UnitsToPixels
+			if moved then pos2d.x, q.inkangle = -pos2d.x, -q.inkangle - 90 end
 			local lightorg = q.pos - normal * (normal:Dot(q.pos - origin) - 1) * q.dispflag
 			local light = GetLight(lightorg, normal)
-			local center = Vector(math.Round(pos2d.x + uvorg.x), math.Round(pos2d.y + uvorg.y))
-			local s = Vector(math.floor(uvorg.x) - 1, math.floor(uvorg.y) - 1)
-			local b = Vector(math.ceil(uvorg.x + bound.x) + 1, math.ceil(uvorg.y + bound.y) + 1)
-			if not ss:CollisionAABB2D(s, b, center - vrad, center + vrad) then q.done = math.huge continue end
+			local center = Vector(Round(pos2d.x + uvorg.x), Round(pos2d.y + uvorg.y))
+			local s = Vector(floor(uvorg.x) - 1, floor(uvorg.y) - 1)
+			local b = Vector(ceil(uvorg.x + bound.x) + 1, ceil(uvorg.y + bound.y) + 1)
+			if not CAABB2D(ss, s, b, center - vector_one * radius,
+			center + vector_one * radius) then q.done = huge continue end
 			local settexture = "splatoonsweps/inkshot/shot" .. tostring(q.t)
 			
 			inkmaterial:SetTexture("$basetexture", settexture)
 			normalmaterial:SetTexture("$basetexture", settexture .. "n")
-			render.PushRenderTarget(rt.BaseTexture)
-			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
-			cam.Start2D()
-			surface.SetDrawColor(c)
-			surface.SetMaterial(inkmaterial)
-			surface.DrawTexturedRectRotated(center.x, center.y, size * q.ratio, size, q.inkangle)
-			cam.End2D()
-			render.SetScissorRect(0, 0, 0, 0, false)
-			render.PopRenderTarget()
+			PushRT(rt.BaseTexture)
+			SSR(s.x, s.y, b.x, b.y, true)
+			Start2D()
+			SDC(c) sSM(inkmaterial)
+			DTRR(center.x, center.y, size * q.ratio, size, q.inkangle)
+			End2D() SSR(0, 0, 0, 0, false) PopRT()
 			
 			--Draw on normal map
-			render.PushRenderTarget(rt.Normalmap)
-			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
-			cam.Start2D()
-			surface.SetDrawColor(color_white)
-			surface.SetMaterial(normalmaterial)
-			surface.DrawTexturedRectRotated(center.x, center.y, size * q.ratio, size, q.inkangle)
-			cam.End2D()
-			render.SetScissorRect(0, 0, 0, 0, false)
-			render.PopRenderTarget()
+			PushRT(rt.Normalmap)
+			SSR(s.x, s.y, b.x, b.y, true)
+			Start2D()
+			SDC(color_white) sSM(normalmaterial)
+			DTRR(center.x, center.y, size * q.ratio, size, q.inkangle)
+			End2D() SSR(0, 0, 0, 0, false) PopRT()
 			
 			--Draw on lightmap
+			local num = floor(Clamp(40 - done, 0, 14) / 2)
+			local fr = num / 7
 			radius, size = radius / 2, size / 2
-			-- center, uvorg, s, b = center / 2, uvorg / 2, s / 2, b / 2
-			-- s.x, s.y, b.x, b.y = math.floor(s.x), math.floor(s.y), math.ceil(b.x), math.ceil(b.y)
-			render.PushRenderTarget(rt.Lightmap)
-			render.SetScissorRect(s.x, s.y, b.x, b.y, true)
-			cam.Start2D()
-			surface.SetDrawColor(light:ToColor())
-			surface.SetMaterial(lightmapmaterial)
-			surface.DrawTexturedRect(center.x - radius, center.y - radius, size, size)
-			for n, mul in pairs(LightmapSampleTable) do
-				for i = 1, n do
-					local r = Lightrad[n][i] * radius * mul
-					surface.SetDrawColor(GetLight(ss:To3D(ss:PixelsToUnits(
-					surf.Moved[q.n] and Vector(-r.x, r.y) or r), lightorg, angle), normal):ToColor())
-					r = r + center - ss.vector_one * radius
-					surface.DrawTexturedRect(r.x, r.y, size, size)
-				end
+			PushRT(rt.Lightmap)
+			SSR(s.x, s.y, b.x, b.y, true)
+			Start2D()
+			SDC(light:ToColor()) sSM(lightmapmaterial)
+			DTR(center.x - radius * fr, center.y - radius * fr, size * fr, size * fr)
+			local frac = rad(360 / num)
+			for i = 1, num do
+				local rx = cos(frac * i) * radius
+				local ry = sin(frac * i) * radius
+				if moved then rx = -rx end
+				local r = Vector(rx, ry) * ss.PixelsToUnits
+				SDC(GetLight(To3D(ss, r, lightorg, angle), normal):ToColor())
+				DTR(floor(rx + center.x - radius), floor(ry + center.y - radius), size, size)
 			end
-			cam.End2D()
-			render.SetScissorRect(0, 0, 0, 0, false)
-			render.OverrideAlphaWriteEnable(false)
-			render.PopRenderTarget()
+			End2D() SSR(0, 0, 0, 0, false) PopRT()
 		end
 		
-		coroutine.yield()
+		yield()
 	end
 end
 
-local DoCoroutine = coroutine.create(ProcessQueue)
+-- local function PrepareLightmap()
+	-- PushRT(rt.Lightmap) Start2D() sSM(lightmapmaterial)
+	-- local maxsize = 24 * ss.UnitsToPixels
+	-- local done = 0
+	-- local MAX = 65536
+	-- for i, bound in ipairs(surf.Bounds) do
+		-- local ub = bound * ss.UnitsToPixels
+		-- local uvorg = Vector(surf.u[i], surf.v[i]) * ss.UVToPixels
+		-- local angle, origin, normal, moved = surf.Angles[i], surf.Origins[i], surf.Normals[i], surf.Moved[i]
+		-- local s = Vector(floor(uvorg.x) - 1, floor(uvorg.y) - 1)
+		-- local b = Vector(ceil(uvorg.x + ub.x) + 1, ceil(uvorg.y + ub.y) + 1)
+		-- local r = math.min(maxsize, ub.x / 8, ub.y / 8)
+		-- local r2 = r * 2
+		-- SSR(s.x, s.y, b.x, b.y, true)
+		-- for x = r / 2, ub.x + r, r / 2 do
+			-- for y = r / 2, ub.y + r, r / 2 do
+				-- done = done + 1
+				-- if done % MAX == 0 then
+					-- End2D() SSR(0, 0, 0, 0, false) PopRT()
+					-- print("Lightmap yield", done / MAX) yield()
+					-- PushRT(rt.Lightmap) SSR(s.x, s.y, b.x, b.y, true) Start2D()
+					-- sSM(lightmapmaterial)
+				-- end
+				-- local pos = Vector(x, y)
+				-- local lightorg = To3D(ss, pos * ss.PixelsToUnits, origin, angle)
+				-- SDC(GetLight(lightorg, normal):ToColor())
+				-- DTR(x + s.x - r, y + s.y - r, r2, r2)
+			-- end
+		-- end
+	-- end
+	
+	-- End2D() SSR(0, 0, 0, 0, false) PopRT()
+	-- print "SplatoonSWEPs: Lightmap is ready!"
+-- end
+
+local Coroutines = {create(ProcessQueue)}--, create(PrepareLightmap)}
 local function GMTick()
-	if not rt.Ready or coroutine.status(DoCoroutine) == "dead" then return end
-	local ok, message = coroutine.resume(DoCoroutine)
-	if not ok then ErrorNoHalt(message) end
+	if not rt.Ready then return end
+	for _, c in ipairs(Coroutines) do
+		if status(c) == "dead" then continue end
+		local ok, message = resume(c)
+		if not ok then ErrorNoHalt(message, "\n") end
+	end
 end
 
 hook.Add("PreDrawTranslucentRenderables", "SplatoonSWEPs: Draw ink", DrawMeshes)

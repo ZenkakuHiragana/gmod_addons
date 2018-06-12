@@ -1,4 +1,7 @@
 
+--Team Fortress 2 is required.
+if not IsMounted "tf" then return end
+
 local OldItemTintBind
 local function ItemTintInit(self, mat, values)
 	self.ResultTo = values.resultvar -- Store the name of the variable we want to set

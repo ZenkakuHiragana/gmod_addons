@@ -16,7 +16,7 @@ local PaintQueue = {}
 local InkGroup = {}
 local rootpi = math.sqrt(math.pi) / 2
 local MIN_BOUND = 20 --Ink minimum bounding box scale
-local MIN_BOUND_AREA = 6 --minimum ink bounding box area
+local MIN_BOUND_AREA = 64 --minimum ink bounding box area
 local MAX_DEGREES_DIFFERENCE = 45 --Maximum angle difference between two surfaces
 local MAX_PROCESS_QUEUE_AT_ONCE = 4 --Running QueueCoroutine() at once
 local MAX_INKQUEUE_AT_ONCE = 500 --Processing new ink request at once
@@ -30,7 +30,7 @@ for i = 1, circle_polys do
 end
 
 --[1] = minimum bound, [2] = maximum bound
-local function AddInkRectangle(ink, newink, sz)
+local function AddInkRectangle(ink, sz, newink)
 	local nb, nr = newink.bounds, newink.ratio
 	local n1, n2, n3, n4 = nb[1], nb[2], nb[3], nb[4]
 	for r, z in pairs(ink) do
@@ -106,7 +106,8 @@ function ss:Paint(pos, normal, radius, color, angle, inktype, ratio)
 			
 			local pos2d = To2D(ss, pos, surf.Origins[i], surf.Angles[i])
 			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
-			local inkdata = {
+			local inkdata = 
+			AddInkRectangle(surf.InkCircles[i], ss.InkCounter, {
 				angle = localang,
 				bounds = {bmins.x, bmins.y, bmaxs.x, bmaxs.y},
 				color = color,
@@ -114,8 +115,7 @@ function ss:Paint(pos, normal, radius, color, angle, inktype, ratio)
 				radius = radius,
 				ratio = ratio,
 				texid = inktype,
-			}
-			AddInkRectangle(surf.InkCircles[i], inkdata, ss.InkCounter)
+			})
 			ss.InkCounter = ss.InkCounter + 1
 		end
 	end

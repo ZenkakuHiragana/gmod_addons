@@ -15,6 +15,9 @@ function ENT:SharedInit(mdl)
 	self:SetMoveCollide(MOVECOLLIDE_FLY_SLIDE)
 	self:SetNoDraw(true)
 	self:SetSolidFlags(FSOLID_NOT_STANDABLE)
+	self:AddEFlags(EFL_DONTBLOCKLOS)
+	self:AddEFlags(EFL_DONTWALKON)
+	self:AddEFlags(EFL_NO_PHYSCANNON_INTERACTION)
 end
 
 function ENT:SetupDataTables() --For material proxy.

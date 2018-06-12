@@ -177,6 +177,8 @@ function SWEP:Think()
 		self:DrawShadow(not self.Owner:IsFlagSet(FL_DUCKING))
 	end
 	
+	self.WElements.weapon.bone = self:GetThrowing()
+	and "ValveBiped.Bip01_L_Hand" or "ValveBiped.Bip01_R_Hand"
 	self:ProcessSchedules()
 	self:SharedThinkBase()
 	if isfunction(self.ClientThink) then return self:ClientThink() end

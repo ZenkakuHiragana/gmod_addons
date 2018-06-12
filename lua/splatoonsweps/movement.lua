@@ -1871,8 +1871,8 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 				self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
 			end)
 		end
-	elseif infence then
-		mv:AddKey(IN_DUCK) --Cannot stand while in fence - it's not correct behavior
+	elseif infence then --Cannot stand while in fence
+		mv:AddKey(IN_DUCK) --it's not correct behavior though
 	elseif bit.band(me.m_nFlags[ply], FL_DUCKING) ~= 0 then
 		w.SwimSound:ChangeVolume(0)
 		if SERVER then
@@ -1915,7 +1915,7 @@ end)
 hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 	ply, mv = p, m
 	local w = ss:IsValidInkling(ply)
-	if not w then return end
+	if not (w and (w:GetInFence() or mv:KeyDown(IN_DUCK))) then return end
 	if not ply:Crouching() then
 		if SERVER then
 			w:SetInFence(false)
@@ -1986,10 +1986,8 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 		}
 		t.mins, t.maxs = ply:GetHull()
 		if not util.TraceHull(t).Hit then
-			local vel = math.min(me.m_vecVelocity[ply].z / 2, 100)
-			me.m_vecVelocity[ply].z = 0
-			ply:RemoveFlags(FL_DUCKING)
-			mv:SetVelocity(me.m_vecVelocity[ply] + vector_up * vel)
+			me.m_vecVelocity[ply].z = math.min(me.m_vecVelocity[ply].z / 2, 100)
+			mv:SetVelocity(me.m_vecVelocity[ply])
 		end
 	end
 end)
@@ -2020,18 +2018,12 @@ for _, hookname in ipairs {"CalcMainActivity", "TranslateActivity"} do
 		if not ply:Crouching() then return end
 		local w = ss:IsValidInkling(ply)
 		if not (w and w:GetInFence()) then return end
-		local onground = ply:OnGround()
-		ply:SetMoveType(MOVETYPE_WALK)
-		ply:AddFlags(FL_DUCKING)
 		nest = true
 		ply.m_bWasNoclipping = nil
+		ply:SetMoveType(MOVETYPE_WALK)
 		local res1, res2 = gamemode.Call(hookname, ply, ...)
+		ply:AnimResetGestureSlot(GESTURE_SLOT_CUSTOM)
 		ply:SetMoveType(MOVETYPE_NOCLIP)
-		if onground then
-			ply:AddFlags(FL_ONGROUND)
-		else
-			ply:RemoveFlags(FL_ONGROUND)
-		end
 		return res1, res2
 	end)
 end

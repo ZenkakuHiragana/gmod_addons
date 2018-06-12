@@ -195,6 +195,8 @@ function SWEP:Deploy()
 				ss:SendError("WeaponPlayermodelNotFound", self.Owner)
 			end
 		end
+		
+		if isfunction(self.Owner.SplatColors) then self.Owner:SplatColors() end
 	end
 	
 	return self:SharedDeployBase()

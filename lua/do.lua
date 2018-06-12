@@ -111,4 +111,3 @@ end
 -- end
 
 -- file.Write("shot" .. tostring(i) .. ".txt", write)
--- lua_run for _, p in ipairs(player.GetAll()) do if not p:IsBot() then continue end p:StripWeapons() p:Give "weapon_splattershot" end

@@ -1,7 +1,7 @@
 
 --Debugging code
 
-DebugOverlayTime = .1
+DebugOverlayTime = 5
 DebugOverlayColor = Color(0, 255, 0)
 function DebugAxis(pos, ang, size, ignoreZ)
 	debugoverlay.Axis(pos, ang, size, DebugOverlayTime, ignoreZ)

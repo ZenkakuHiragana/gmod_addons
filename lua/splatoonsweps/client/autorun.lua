@@ -35,7 +35,7 @@ local crashpath = "splatoonsweps/crashdump.txt" -- Existing this means the clien
 local MAX_TRIANGLES = math.floor(32768 / 3)
 local INK_SURFACE_DELTA_NORMAL = .8 --Distance between map surface and ink mesh
 function ss:ClearAllInk()
-	ss.InkQueue = {}
+	table.Empty(ss.InkQueue)
 	local amb = ss.AmbientColor or render.GetAmbientLightColor():ToColor()
 	render.PushRenderTarget(ss.RenderTarget.BaseTexture)
 	render.OverrideAlphaWriteEnable(true, true)
@@ -142,12 +142,6 @@ function ss:PrepareInkSurface(write)
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
 	local u, v, nv, bu, bv, bk = 0, 0, 0 --cursor(u, v), shelf height, rectangle size(u, v), beginning of k
-	function ss:PixelsToUnits(pixels) return pixels * arearatio end
-	function ss:PixelsToUV(pixels) return pixels / rtsize end
-	function ss:UnitsToPixels(units) return units / arearatio end
-	function ss:UnitsToUV(units) return units / convertunit end
-	function ss:UVToPixels(uv) return uv * rtsize end
-	function ss:UVToUnits(uv) return uv * convertunit end
 	for k in SortedPairsByValue(surf.Areas, true) do
 		table.insert(sortedsurfs, k)
 		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2
@@ -200,77 +194,90 @@ function ss:PrepareInkSurface(write)
 	end
 	
 	--Building MeshVertex
-	mesh.Begin(ss.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
-	local function ContinueMesh()
-		if mesh.VertexCount() < MAX_TRIANGLES * 3 then return end
-		mesh.End()
-		mesh.Begin(ss.IMesh[nummeshes + 1], MATERIAL_TRIANGLES,
-		math.min(NumMeshTriangles - MAX_TRIANGLES * nummeshes, MAX_TRIANGLES))
-		nummeshes = nummeshes + 1
-	end
-	
-	for sortedID, k in ipairs(sortedsurfs) do
-		if half and sortedID >= half.id then
-			surf.Angles[k]:RotateAroundAxis(surf.Normals[k], -90)
-			surf.Bounds[k].x, surf.Bounds[k].y, surf.u[k], surf.v[k], surf.Moved[k]
-				= surf.Bounds[k].y, surf.Bounds[k].x, surf.v[k] - dv, surf.u[k], true
-			for _, vertex in ipairs(surf.Vertices[k]) do
-				vertex.u, vertex.v = vertex.v - dv, vertex.u
-			end
-			
-			if ss.Displacements[k] then
-				for i = 0, #ss.Displacements[k].Positions do
-					local vertex = ss.Displacements[k].Positions[i]
-					vertex.u, vertex.v = vertex.v - dv, vertex.u
-				end
-			end
+	if #ss.IMesh > 0 then
+		mesh.Begin(ss.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
+		local function ContinueMesh()
+			if mesh.VertexCount() < MAX_TRIANGLES * 3 then return end
+			mesh.End()
+			mesh.Begin(ss.IMesh[nummeshes + 1], MATERIAL_TRIANGLES,
+			math.min(NumMeshTriangles - MAX_TRIANGLES * nummeshes, MAX_TRIANGLES))
+			nummeshes = nummeshes + 1
 		end
 		
-		surf.u[k], surf.v[k] = surf.u[k] / divuv, surf.v[k] / divuv
-		if ss.Displacements[k] then
-			local verts = ss.Displacements[k].Positions
-			for _, v in pairs(verts) do v.u, v.v = v.u / divuv, v.v / divuv end
-			for _, v in ipairs(surf.Vertices[k]) do v.u, v.v = v.u / divuv, v.v / divuv end
-			for _, t in ipairs(ss.Displacements[k].Triangles) do
-				local tv = {verts[t[1]], verts[t[2]], verts[t[3]]}
-				local n = (tv[1].pos - tv[2].pos):Cross(tv[3].pos - tv[2].pos):GetNormalized()
-				for _, p in ipairs(tv) do
-					mesh.Normal(n)
-					mesh.Position(p.pos + n * INK_SURFACE_DELTA_NORMAL)
-					mesh.TexCoord(0, p.u, p.v)
-					mesh.TexCoord(1, p.u, p.v)
-					mesh.AdvanceVertex()
+		for sortedID, k in ipairs(sortedsurfs) do
+			if half and sortedID >= half.id then
+				surf.Angles[k]:RotateAroundAxis(surf.Normals[k], -90)
+				surf.Bounds[k].x, surf.Bounds[k].y, surf.u[k], surf.v[k], surf.Moved[k]
+					= surf.Bounds[k].y, surf.Bounds[k].x, surf.v[k] - dv, surf.u[k], true
+				for _, vertex in ipairs(surf.Vertices[k]) do
+					vertex.u, vertex.v = vertex.v - dv, vertex.u
 				end
 				
-				ContinueMesh()
+				if ss.Displacements[k] then
+					for i = 0, #ss.Displacements[k].Positions do
+						local vertex = ss.Displacements[k].Positions[i]
+						vertex.u, vertex.v = vertex.v - dv, vertex.u
+					end
+				end
 			end
-			ss.Displacements[k] = nil
-		else
-			for t, v in ipairs(surf.Vertices[k]) do
-				v.u, v.v = v.u / divuv, v.v / divuv
-				if t < 3 then continue end
-				for _, i in ipairs {t - 1, t, 1} do
-					local v = surf.Vertices[k][i]
-					mesh.Normal(surf.Normals[k])
-					mesh.Position(v.pos)
-					mesh.TexCoord(0, v.u, v.v)
-					mesh.TexCoord(1, v.u, v.v)
-					mesh.AdvanceVertex()
+			
+			surf.u[k], surf.v[k] = surf.u[k] / divuv, surf.v[k] / divuv
+			if ss.Displacements[k] then
+				local verts = ss.Displacements[k].Positions
+				for _, v in pairs(verts) do
+					v.u, v.v = v.u / divuv, v.v / divuv
 				end
 				
-				ContinueMesh()
+				for _, v in ipairs(surf.Vertices[k]) do
+					v.u, v.v = v.u / divuv, v.v / divuv
+				end
+				
+				for _, t in ipairs(ss.Displacements[k].Triangles) do
+					local tv = {verts[t[1]], verts[t[2]], verts[t[3]]}
+					local n = (tv[1].pos - tv[2].pos):Cross(tv[3].pos - tv[2].pos):GetNormalized()
+					for _, p in ipairs(tv) do
+						mesh.Normal(n)
+						mesh.Position(p.pos + n * INK_SURFACE_DELTA_NORMAL)
+						mesh.TexCoord(0, p.u, p.v)
+						mesh.TexCoord(1, p.u, p.v)
+						mesh.AdvanceVertex()
+					end
+					
+					ContinueMesh()
+				end
+				ss.Displacements[k] = nil
+			else
+				for t, v in ipairs(surf.Vertices[k]) do
+					v.u, v.v = v.u / divuv, v.v / divuv
+					if t < 3 then continue end
+					for _, i in ipairs {t - 1, t, 1} do
+						local v = surf.Vertices[k][i]
+						mesh.Normal(surf.Normals[k])
+						mesh.Position(v.pos)
+						mesh.TexCoord(0, v.u, v.v)
+						mesh.TexCoord(1, v.u, v.v)
+						mesh.AdvanceVertex()
+					end
+					
+					ContinueMesh()
+				end
 			end
+			surf.Areas[k], surf.Vertices[k] = nil
 		end
-		surf.Areas[k], surf.Vertices[k] = nil
+		mesh.End()
 	end
-	mesh.End()
 	
-	surf.Areas, ss.Displacements, surf.Vertices, surf.AreaBound = nil
 	ss:ClearAllInk()
-	collectgarbage "collect"
-	
-	ss.RenderTarget.Ready = true
 	ss:InitializeMoveEmulation(LocalPlayer())
+	ss.PixelsToUnits = arearatio
+	ss.UVToUnits = convertunit
+	ss.UVToPixels = rtsize
+	ss.UnitsToPixels = 1 / ss.PixelsToUnits
+	ss.UnitsToUV = 1 / ss.UVToUnits
+	ss.PixelsToUV = 1 / ss.UVToPixels
+	surf.Areas, ss.Displacements, surf.Vertices, surf.AreaBound = nil
+	ss.RenderTarget.Ready = true
+	collectgarbage "collect"
 	net.Start "SplatoonSWEPs: Ready to splat"
 	net.SendToServer()
 end
@@ -376,6 +383,7 @@ hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
 	end
 	
 	if drawing then return true end
+	if ply ~= LocalPlayer() then return end
 	render.SetBlend(math.Remap(math.Clamp(
 		weapon:GetPos():DistToSqr(EyePos()) / 100, 0, ss.CameraFadeDistance / 100),
 		0, ss.CameraFadeDistance / 100, 0, 1))

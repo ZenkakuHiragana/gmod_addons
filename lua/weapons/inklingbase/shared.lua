@@ -96,7 +96,6 @@ function SWEP:SharedDeployBase()
 		self.Owner:SetJumpPower(self.JumpPower)
 		self.Owner:SetColor(color_white)
 		self.Owner:SetCrouchedWalkSpeed(.5)
-		if isfunction(self.Owner.SplatColors) then self.Owner:SplatColors() end
 	end
 	
 	if isfunction(self.SharedDeploy) then self:SharedDeploy() end
@@ -117,8 +116,11 @@ end
 --Begin to use special weapon.
 function SWEP:Reload()
 	if self:GetHolstering() then return end
-	if game.SinglePlayer() and self.Owner:IsPlayer() and IsValid(self.Owner) then self:CallOnClient "Reload" end
-	
+	if game.SinglePlayer() and
+	self.Owner:IsPlayer() and
+	IsValid(self.Owner) then
+		self:CallOnClient "Reload"
+	end
 end
 
 function SWEP:CommonFire(isprimary)
@@ -128,7 +130,9 @@ function SWEP:CommonFire(isprimary)
 			start = self.Owner:GetPos(),
 			endpos = self.Owner:GetPos(),
 			mins = plmins, maxs = plmaxs,
-			filter = {self, self.Owner}
+			filter = {self, self.Owner},
+			mask = MASK_PLAYERSOLID,
+			collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 		} .Hit
 	end
 	
@@ -141,17 +145,6 @@ function SWEP:CommonFire(isprimary)
 	
 	if self:GetInk() <= 0 then return false end --Check remaining amount of ink
 	self:SetNextPrimaryFire(CurTime() + Weapon.Delay / laggedvalue)
-	self:MuzzleFlash()
-	
-	if self.Owner:IsPlayer() then
-		local rnda = Weapon.Recoil * -1
-		local rndb = Weapon.Recoil * util.SharedRandom(
-		"SplatoonSWEPs: Weapon base recoil" .. self:EntIndex(), -1, 1, CurTime())
-		self.Owner:ViewPunch(Angle(rnda, rndb, rnda)) --Apply viewmodel punch
-		if math.random() < Weapon.PlayAnimPercent then
-			self.Owner:SetAnimation(PLAYER_ATTACK1)
-		end
-	end
 	
 	return true
 end
@@ -162,8 +155,9 @@ function SWEP:PrimaryAttack()
 	local canattack = self:CommonFire(true)
 	if self.Owner:IsPlayer() then self:CallOnClient "PrimaryAttack" end
 	if self.CannotStandup then return end
-	if isfunction(self.SharedPrimaryAttack) then self:SharedPrimaryAttack(canattack) end
-	if SERVER and isfunction(self.ServerPrimaryAttack) then
+	if isfunction(self.SharedPrimaryAttack) then
+		self:SharedPrimaryAttack(canattack)
+	end if SERVER and isfunction(self.ServerPrimaryAttack) then
 		return self:ServerPrimaryAttack(canattack)
 	elseif CLIENT and isfunction(self.ClientPrimaryAttack) then
 		return self:ClientPrimaryAttack(canattack)
@@ -175,13 +169,38 @@ function SWEP:SecondaryAttack()
 	if self:GetHolstering() then return end
 	local canattack = self:CommonFire(false)
 	if self.Owner:IsPlayer() then self:CallOnClient "SecondaryAttack" end
-	if self.CannotStandup then return end
-	if isfunction(self.SharedSecondaryAttack) then self:SharedSecondaryAttack(canattack) end
-	if SERVER and isfunction(self.ServerSecondaryAttack) then
-		return self:ServerSecondaryAttack(canattack)
-	elseif CLIENT and isfunction(self.ClientSecondaryAttack) then
-		return self:ClientSecondaryAttack(canattack)
-	end
+	if self.CannotStandup or not (canattack and
+	(SERVER or self:IsFirstTimePredicted())) then return end
+	self:SetThrowing(true)
+	self:SetHoldType "grenade"
+	self:AddSchedule(0, function(self, sched)
+		if self.Owner:KeyDown(IN_ATTACK2) then
+			self:SetHoldType "grenade"
+			return
+		elseif not self:GetThrowing() or self.Owner:IsFlagSet(FL_DUCKING) then
+			self:SetThrowing(false)
+			return true
+		end
+		
+		self.Owner:SetAnimation(PLAYER_ATTACK1)
+		self:SetNextSecondaryFire(CurTime() + 1)
+		self:AddSchedule(.6, 1, function(self, sched)
+			self:SetThrowing(self.Owner:KeyDown(IN_ATTACK2))
+			self:SetHoldType(self:GetThrowing() and "grenade" or "passive")
+		end)
+		
+		if isfunction(self.SharedSecondaryAttack) then
+			self:SharedSecondaryAttack(canattack)
+		end if SERVER and isfunction(self.ServerSecondaryAttack) then
+			self:ServerSecondaryAttack(canattack)
+		elseif CLIENT then
+			if isfunction(self.ClientSecondaryAttack) then
+				self:ClientSecondaryAttack(canattack)
+			end
+		end
+		
+		return true
+	end)
 end
 --End of predicted hooks
 
@@ -282,6 +301,7 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Bool", "InWallInk") --If owner is on wall.
 	self:AddNetworkVar("Bool", "OnEnemyInk") --If owner is on enemy ink.
 	self:AddNetworkVar("Bool", "Holstering") --The weapon is being holstered.
+	self:AddNetworkVar("Bool", "Throwing") --Is about to use sub weapon.
 	self:AddNetworkVar("Float", "Ink") --Ink remainig. 0 ~ ss.MaxInkAmount
 	self:AddNetworkVar("Vector", "InkColorProxy") --For material proxy.
 	self:AddNetworkVar("Float", "NextCrouchTime") --Shooting cooldown.

@@ -6,17 +6,15 @@ SWEP.Base = "inklingbase"
 SWEP.PrintName = "Shooter base"
 function SWEP:GetFirePosition()
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
-	local aim = self.Owner:GetAimVector()
-	local col = self.Primary.ColRadius
+	local aim = self.Owner:GetAimVector() * self.Primary.Range
+	local col = ss.vector_one * self.Primary.ColRadius
 	local dp = Vector(self.Primary.FirePosition)
 	dp:Rotate(self.Owner:EyeAngles())
 	local shootpos = self.Owner:GetShootPos()
-	local t = {
-		start = shootpos, endpos = shootpos + aim * self.Primary.Range,
-		filter = {self, self.Owner}, mask = ss.SquidSolidMask,
-		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
-		mins = -ss.vector_one * col, maxs = ss.vector_one * col,
-	}
+	local t = ss.SquidTrace
+	t.start, t.endpos = shootpos, shootpos + aim
+	t.mins, t.maxs = -col, col
+	t.filter = {self, self.Owner}
 	for _, e in pairs(ents.FindAlongRay(t.start, t.endpos, t.mins * 5, t.maxs * 5)) do
 		local w = ss:IsValidInkling(e)
 		if not w or w.ColorCode == self.ColorCode then continue end
@@ -72,11 +70,20 @@ end
 --Playing sounds
 function SWEP:SharedPrimaryAttack(canattack)
 	if not self.CrouchPriority or CLIENT and LocalPlayer() ~= self.Owner then
-		self:SetHoldType(self.HoldType)
+		self:MuzzleFlash()
 		self.InklingSpeed = self.Primary.MoveSpeed
 		if not self:GetOnEnemyInk() then self:SetPlayerSpeed(self.Primary.MoveSpeed) end
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 		if SERVER then self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo)) end
+		if self.Owner:IsPlayer() then
+			local rnda = self.Primary.Recoil * -1
+			local rndb = self.Primary.Recoil * util.SharedRandom(
+			"SplatoonSWEPs: Weapon base recoil" .. self:EntIndex(), -1, 1, CurTime())
+			self.Owner:ViewPunch(Angle(rnda, rndb, rnda)) --Apply viewmodel punch
+			if math.random() < self.Primary.PlayAnimPercent then
+				self.Owner:SetAnimation(PLAYER_ATTACK1)
+			end
+		end
 	end
 	
 	if self:GetInk() <= 0 then
@@ -88,6 +95,9 @@ function SWEP:SharedPrimaryAttack(canattack)
 			self:EmitSound "SplatoonSWEPs.EmptyShot"
 			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
 		end
+		
+		if not self.Primary.TripleShotDelay then return end
+		self:SetTripleShot(0)
 	elseif canattack then
 		self:SetModifyWeaponSize(CurTime())
 		if SERVER or IsFirstTimePredicted() then self:EmitSound(self.ShootSound) end
@@ -122,12 +132,30 @@ end
 
 function SWEP:SharedThink()
 	if self.Owner:IsFlagSet(FL_DUCKING) then
-		self:SetHoldType(self.HoldType)
-	elseif self.Owner:IsPlayer() and self:GetAimTimer() < CurTime() then
-		self:SetHoldType "passive"
-		self.InklingSpeed = self:GetInklingSpeed()
-		if not (self:GetOnEnemyInk() or self:GetInInk()) then
-			self:SetPlayerSpeed(self.InklingSpeed)
+		self:SetHoldType "melee2"
+		if CLIENT then
+			self.WElements.weapon.bone = "ValveBiped.Bip01_R_Hand"
+		end
+	elseif self.Owner:IsPlayer() then
+		if self:GetAimTimer() < CurTime() then
+			if not self:GetThrowing() then
+				self:SetHoldType "passive"
+				if CLIENT then
+					self.WElements.weapon.bone = "ValveBiped.Bip01_R_Hand"
+				end
+			end
+			
+			self.InklingSpeed = self:GetInklingSpeed()
+			if not (self:GetOnEnemyInk() or self:GetInInk()) then
+				self:SetPlayerSpeed(self.InklingSpeed)
+			end
+		else
+			local _, _, dir = self:GetFirePosition()
+			if dir == 3 or dir == 4 then
+				self:SetHoldType "rpg"
+			else
+				self:SetHoldType "crossbow"
+			end
 		end
 	end
 end

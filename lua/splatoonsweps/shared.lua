@@ -36,10 +36,10 @@ end
 function ss:GetBoundingBox(vectors, minbound)
 	local mins = Vector(math.huge, math.huge, math.huge)
 	local maxs = -mins
-	local bound = self.vector_one * (minbound or 0)
+	local bound = ss.vector_one * (minbound or 0)
 	for _, v in ipairs(vectors) do
-		mins = self:MinVector(mins, v - bound)
-		maxs = self:MaxVector(maxs, v + bound)
+		mins = ss:MinVector(mins, v - bound)
+		maxs = ss:MaxVector(maxs, v + bound)
 	end
 	return mins, maxs
 end
@@ -167,14 +167,10 @@ function ss:IsValidInkling(ply)
 end
 
 function ss:CheckFence(ent, pos, endpos, filter, mins, maxs)
-	local t = {
-		start = pos, endpos = endpos,
-		mins = mins, maxs = maxs,
-		filter = filter,
-		mask = ss.SquidSolidMask,
-	}
-	
-	t.mins = mins
+	local t = ss.SquidTrace
+	t.start, t.endpos = pos, endpos
+	t.mins, t.maxs = mins, maxs
+	t.filter = filter
 	if not util.TraceHull(t).Hit then
 		t.mask = MASK_SOLID
 		local tr = util.TraceHull(t)

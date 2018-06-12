@@ -5,6 +5,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	BSP = {},
 	Models = {},
 	NoCollide = {},
+	NumInkEntities = 0,
 	InkCounter = 0,
 	InkShotMaterials = {},
 	PlayersReady = {},

@@ -46,10 +46,10 @@ ss:SetPrimary(SWEP, {
 ss:SetSecondary(SWEP, {
 	Recoil				= .2,
 	TakeAmmo			= .7,	 --Sub weapon consumption[-].
-	PlayAnimPercent		= 30,
+	PlayAnimPercent		= 0,
 	Delay = {
-		Fire			= 30,
-		Reload			= 30,
+		Fire			= 0,
+		Reload			= 0,
 		Crouch			= 10,
 	},
 })

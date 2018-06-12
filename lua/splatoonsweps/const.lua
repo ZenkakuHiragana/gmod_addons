@@ -453,6 +453,13 @@ ss.mDegRandomY = 0 --Crosshair ratio in Splattershot Pro is 2:1, mDegRandom of t
 ss.SpreadJumpMaxVelocity = 32
 ss.SpreadJumpCoefficient = .25
 ss.CameraFadeDistance = 100^2 --Thirdperson model fade distance[units^2]
+ss.SquidTrace = {
+	start = vector_origin, endpos = vector_origin,
+	filter = {}, mask = ss.SquidSolidMask,
+	collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
+	mins = -ss.vector_one, maxs = ss.vector_one,
+}
+
 for key, value in pairs {
 	InklingBaseSpeed = inklingspeed, --Walking speed [Splatoon units/60frame]
 	SquidBaseSpeed = 1.923 * framepersec, --Swimming speed [Splatoon units/60frame]

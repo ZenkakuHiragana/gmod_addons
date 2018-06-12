@@ -76,13 +76,11 @@ function SWEP:DoDrawCrosshair(x, y)
 	local inkcolor = ss:GetColor(self.ColorCode)
 	local pos, dir = self:GetFirePosition()
 	local throughpos = self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range
-	local t = {
-		start = pos, endpos = pos + dir * self.Primary.Range,
-		filter = {self, self.Owner}, mask = ss.SquidSolidMask,
-		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
-		mins = -ss.vector_one * self.Primary.ColRadius,
-		maxs = ss.vector_one * self.Primary.ColRadius,
-	}
+	local t = ss.SquidTrace
+	t.start, t.endpos = pos, pos + dir * self.Primary.Range
+	t.filter = {self, self.Owner}
+	t.maxs = ss.vector_one * self.Primary.ColRadius
+	t.mins = -t.maxs
 	
 	local tr = util.TraceHull(t)
 	local hitentity = IsValid(tr.Entity) and tr.Entity:Health() > 0
