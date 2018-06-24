@@ -1,6 +1,8 @@
 
---Sound script registrations
-if not SplatoonSWEPs then return end
+-- Sound script registrations
+
+local ss = SplatoonSWEPs
+if not ss then return end
 
 -- SplatoonSWEPs.BombAvailable
 -- SplatoonSWEPs_Ink.HitWorld
@@ -12,13 +14,13 @@ if not SplatoonSWEPs then return end
 -- SplatoonSWEPs_Player.SquidJump
 -- SplatoonSWEPs_Player.Swim
 
-SplatoonSWEPs.EnemyInkSound = Sound "splatoonsweps/player/onenemyink.wav"
-SplatoonSWEPs.SwimSound = Sound "splatoonsweps/player/swimloop.wav"
-SplatoonSWEPs.TankEmpty = Sound "splatoonsweps/player/tankempty.wav"
-SplatoonSWEPs.BombAvailable = Sound "splatoonsweps/player/bombavailable.wav"
-SplatoonSWEPs.DealDamage = Sound "splatoonsweps/player/dealdamagenormal.wav"
-SplatoonSWEPs.DealDamageCritical = Sound "splatoonsweps/player/dealdamagecritical.wav"
-SplatoonSWEPs.TakeDamage = Sound "splatoonsweps/player/takedamage.wav"
+ss.EnemyInkSound = Sound "splatoonsweps/player/onenemyink.wav"
+ss.SwimSound = Sound "splatoonsweps/player/swimloop.wav"
+ss.TankEmpty = Sound "splatoonsweps/player/tankempty.wav"
+ss.BombAvailable = Sound "splatoonsweps/player/bombavailable.wav"
+ss.DealDamage = Sound "splatoonsweps/player/dealdamagenormal.wav"
+ss.DealDamageCritical = Sound "splatoonsweps/player/dealdamagecritical.wav"
+ss.TakeDamage = Sound "splatoonsweps/player/takedamage.wav"
 
 sound.Add {
 	channel = CHAN_BODY,

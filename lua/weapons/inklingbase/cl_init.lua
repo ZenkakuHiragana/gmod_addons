@@ -76,8 +76,8 @@ function SWEP:Initialize()
 	self:MakeSquidModel()
 	self.JustUsableTime = CurTime() - 1 --For animation of ink tank light
 	self:SharedInitBase()
-	if isfunction(self.ClientInit) then self:ClientInit() end
-	return self:ClientDeployBase()
+	ss:ProtectedCall(self.ClientInit, self)
+	self:ClientDeployBase()
 end
 
 function SWEP:Deploy()
@@ -112,7 +112,6 @@ function SWEP:ClientDeployBase()
 		self.SurpressDrawingVM = nil
 		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
-		self:ChangeHullDuck()
 		self:UpdateBonePositions(self.Owner:GetViewModel())
 	end
 	
@@ -150,14 +149,16 @@ end
 
 function SWEP:Think()
 	if not IsValid(self.Owner) or self:GetHolstering() then return end
-	local enough = self:GetInk() > self.Secondary.TakeAmmo
-	if not self.EnoughSubWeapon and enough then
-		self.JustUsableTime = CurTime()
-		if self.Owner == LocalPlayer() then
-			surface.PlaySound(ss.BombAvailable)
+	if self:IsFirstTimePredicted() then
+		local enough = self:GetInk() > self.Secondary.TakeAmmo
+		if not self.EnoughSubWeapon and enough then
+			self.JustUsableTime = CurTime() - LocalPlayer():Ping() / 1000
+			if self.Owner == LocalPlayer() then
+				surface.PlaySound(ss.BombAvailable)
+			end
 		end
+		self.EnoughSubWeapon = enough
 	end
-	self.EnoughSubWeapon = enough
 	
 	if IsValid(self.Squid) then
 		if self:GetPMID() == ss.PLAYER.OCTO then
@@ -174,12 +175,12 @@ function SWEP:Think()
 	end
 	
 	if self.BecomeSquid then
-		self:DrawShadow(not self.Owner:IsFlagSet(FL_DUCKING))
+		self:DrawShadow(not self:Crouching())
 	end
 	
 	self.WElements.weapon.bone = self:GetThrowing()
 	and "ValveBiped.Bip01_L_Hand" or "ValveBiped.Bip01_R_Hand"
 	self:ProcessSchedules()
 	self:SharedThinkBase()
-	if isfunction(self.ClientThink) then return self:ClientThink() end
+	ss:ProtectedCall(self.ClientThink, self)
 end

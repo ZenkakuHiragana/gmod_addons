@@ -1,6 +1,6 @@
 
---Player movement emulation for the ability of passing through fences.
---Source codes are taken from source-sdk-2013/mp/src/game/shared/gamemovement.cpp
+-- Player movement emulation for the ability of passing through fences.
+-- Source codes are taken from source-sdk-2013/mp/src/game/shared/gamemovement.cpp
 local ss = SplatoonSWEPs
 if not ss then return end
 ss.MoveEmulation = ss.MoveEmulation or {
@@ -11,6 +11,7 @@ ss.MoveEmulation = ss.MoveEmulation or {
 	m_bCollisionEnabled = {},
 	m_bGameCodeMovedPlayer = {},
 	m_bInDuckJump = {},
+	m_bInFence = {},
 	m_bSlowMovement = {},
 	m_chPreviousTextureType = {},
 	m_chTextureType = {},
@@ -77,9 +78,6 @@ function ss:InitializeMoveEmulation(ply)
 	me.m_outJumpVel[ply] = Vector()
 	me.m_outStepHeight[ply] = 0
 	me.m_outWishVel[ply] = Vector()
-	if SERVER then return end
-	me.m_flInFence = me.m_flInFence or {}
-	me.m_flInFence[ply] = false
 end
 
 local COORD_FRACTIONAL_BITS = 5
@@ -1091,15 +1089,14 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 	local primal_velocity, original_velocity = Vector(me.m_vecVelocity[ply]), Vector(me.m_vecVelocity[ply]) -- Store original velocity
 	local new_velocity = Vector()
 	local a, b = 0, 0
-	local pm --TraceResult
+	local pm -- TraceResult
 	local endpos = Vector()
 	local time_left, allFraction = FT(), 0 -- Total time for this movement operation.
 	local blocked = 0 -- Assume not blocked
 	for bumpcount = 1, numbumps do
 		if me.m_vecVelocity[ply]:LengthSqr() == 0.0 then break end
 		
-		-- Assume we can move all the way from the current origin to the
-		--  end point.
+		-- Assume we can move all the way from the current origin to the end point.
 		endpos = me.m_vecOrigin[ply] + time_left * me.m_vecVelocity[ply]
 		
 		-- See if we can make it from origin to end point.
@@ -1136,7 +1133,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 				-- If we detect getting stuck, don't allow the movement
 				local stuck = TracePlayerBBox(pm.HitPos, pm.HitPos, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT)
 				if stuck.StartSolid or stuck.Fraction ~= 1.0 then
-					--Msg "Player will become stuck!!!\n"
+					-- Msg "Player will become stuck!!!\n"
 					me.m_vecVelocity[ply]:Zero()
 					break
 				end
@@ -1177,7 +1174,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 			-- this shouldn't really happen
 			--  Stop our movement if so.
 			me.m_vecVelocity[ply]:Zero()
-			--print "Too many planes 4"
+			-- print "Too many planes 4"
 			
 			break
 		end
@@ -1252,7 +1249,7 @@ local function TryPlayerMove(pFirstDest, pFirstTrace)
 			--
 			d = me.m_vecVelocity[ply]:Dot(primal_velocity)
 			if d <= 0 then
-				--print "Back"
+				-- print "Back"
 				me.m_vecVelocity[ply]:Zero()
 				break
 			end
@@ -1467,7 +1464,7 @@ local function WalkMove()
 	local spd = me.m_vecVelocity[ply]:Length()
 	if spd < 1.0 then
 		me.m_vecVelocity[ply]:Zero()
-		-- Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
+		-- Now pull the base velocity back out.  Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
 		me.m_vecVelocity[ply]:Sub(me.m_vecBaseVelocity[ply])
 		return
 	end
@@ -1818,9 +1815,9 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	if not w then return end
 	local maxspeed = mv:GetMaxSpeed() * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
 	for v, i in pairs {
-		[mv:GetVelocity()] = true,
+		[mv:GetVelocity()] = true, -- Current velocity
 		[me.m_vecVelocity[ply]] = false,
-	} do --Current velocity
+	} do -- Wall climbing
 		local speed, vz = v:Length2D(), v.z -- Horizontal speed, Z component
 		if w:GetInWallInk() and mv:KeyDown(WALLCLIMB_KEYS) then
 			vz = math.max(math.abs(vz) * -.75, vz + math.min(
@@ -1842,9 +1839,9 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 					mv:AddKey(IN_JUMP)
 				end
 			end
-		end --Wall climbing
+		end
 		
-		if speed > maxspeed then --Limits horizontal speed
+		if speed > maxspeed then -- Limits horizontal speed
 			v:Mul(maxspeed / speed)
 			speed = math.min(speed, maxspeed)
 		end
@@ -1854,8 +1851,8 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 		if i then mv:SetVelocity(v) end
 	end
 	
-	--Send viewmodel animation.
-	local infence = SERVER and w:GetInFence() or CLIENT and me.m_flInFence[ply]
+	-- Send viewmodel animation.
+	local infence = Either(SERVER, w:GetInFence(), me.m_bInFence[ply])
 	if ply:Crouching() then
 		w.SwimSound:ChangeVolume(w:GetInInk() and mv:GetVelocity():Length2D() / w.SquidSpeed or 0)
 		if bit.band(me.m_nFlags[ply], FL_DUCKING) == 0 then
@@ -1871,8 +1868,8 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 				self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
 			end)
 		end
-	elseif infence then --Cannot stand while in fence
-		mv:AddKey(IN_DUCK) --it's not correct behavior though
+	elseif infence then -- Cannot stand while in fence
+		mv:AddKey(IN_DUCK) -- it's not correct behavior though
 	elseif bit.band(me.m_nFlags[ply], FL_DUCKING) ~= 0 then
 		w.SwimSound:ChangeVolume(0)
 		if SERVER then
@@ -1905,13 +1902,13 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	me.m_vecOldAngles[ply] = mv:GetOldAngles()
 	me.m_vecOrigin[ply] = mv:GetOrigin()
 	me.m_vecVelocity[ply] = mv:GetVelocity()
-	if CLIENT then me.m_flInFence[ply] = w:GetInFence() end
+	if CLIENT then me.m_bInFence[ply] = w:GetInFence() end
 	if infence and ply:GetMoveType() == MOVETYPE_NOCLIP then
 		ply:SetMoveType(MOVETYPE_WALK)
 	end
 end)
 
---Squids can go through fences
+-- Squids can go through fences
 hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 	ply, mv = p, m
 	local w = ss:IsValidInkling(ply)
@@ -1920,13 +1917,13 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 		if SERVER then
 			w:SetInFence(false)
 		else
-			me.m_flInFence[ply] = false
+			me.m_bInFence[ply] = false
 		end
 		
 		return
 	end
 	
-	local prevfence = SERVER and w:GetInFence() or CLIENT and me.m_flInFence[ply]
+	local prevfence = Either(SERVER, w:GetInFence(), me.m_bInFence[ply])
 	if not prevfence and ply:GetMoveType() == MOVETYPE_NOCLIP then return end
 	local infence = GetInFence(w, me.m_vecOrigin[ply])
 	local oldpos = Vector(me.m_vecOrigin[ply])
@@ -1943,7 +1940,7 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 	if SERVER then
 		w:SetInFence(infence)
 	else
-		me.m_flInFence[ply] = infence
+		me.m_bInFence[ply] = infence
 	end
 	
 	if not (infence or prevfence) then return end
@@ -2005,7 +2002,7 @@ hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", function(ply, desired)
 	} .Hit)
 	
 	if CLIENT then
-		me.m_flInFence[ply] = w:GetInFence()
+		me.m_bInFence[ply] = w:GetInFence()
 	end
 	
 	return old == w:GetInFence()

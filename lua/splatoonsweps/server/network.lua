@@ -1,14 +1,17 @@
 
---util.AddNetworkString's
+-- util.AddNetworkString's
+
 local ss = SplatoonSWEPs
 if not ss then return end
 
+util.AddNetworkString "SplatoonSWEPs: Client PrimaryAttack"
 util.AddNetworkString "SplatoonSWEPs: DrawInk"
-util.AddNetworkString "SplatoonSWEPs: Send an error message"
-util.AddNetworkString "SplatoonSWEPs: Send ink cleanup"
 util.AddNetworkString "SplatoonSWEPs: Play damage sound"
 util.AddNetworkString "SplatoonSWEPs: Ready to splat"
 util.AddNetworkString "SplatoonSWEPs: Redownload ink data"
+util.AddNetworkString "SplatoonSWEPs: Send an error message"
+util.AddNetworkString "SplatoonSWEPs: Send ink cleanup"
+util.AddNetworkString "SplatoonSWEPs: Shooter Tracer"
 net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 	table.insert(ss.PlayersReady, ply)
 	ss:InitializeMoveEmulation(ply)
@@ -26,8 +29,7 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function(_, ply)
 	net.WriteUInt(size, 16)
 	net.WriteData(chunk, size)
 	net.Send(ply)
-	print("Redownloading ink data to", ply,
-	"(" .. math.floor(startpos / bps) .. "/" .. math.floor(data:len() / bps) .. ")")
+	print("Redownloading ink data to", ply, "(" .. math.floor(startpos / bps) .. "/" .. math.floor(data:len() / bps) .. ")")
 end)
 
 net.Receive("SplatoonSWEPs: Send ink cleanup", function(_, ply)

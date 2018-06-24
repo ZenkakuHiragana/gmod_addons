@@ -71,6 +71,24 @@ if CLIENT then
 	return
 end
 
+-- hook.Remove("PostDrawTranslucentRenderables", "test", function()
+	-- local c = 1000
+	-- render.DrawLine(vector_origin, Vector(c), Color(255, 255, 0), false)
+	-- render.DrawLine(vector_origin, Vector(0, c), Color(255, 255, 0), false)
+	-- render.DrawLine(vector_origin, Vector(c, 0, c), Color(255, 255, 0), false)
+	-- render.DrawLine(Vector(c, c), Vector(c), Color(255, 255, 0), false)
+	-- render.DrawLine(Vector(c, c), Vector(0, c), Color(255, 255, 0), false)
+	-- for k, p in ipairs(surf.Vertices) do
+		-- if k ~= 4107 then continue end
+		-- for i, v in ipairs(p) do
+			-- local v = p[i]
+			-- local w = p[i % #p + 1]
+			-- render.DrawLine(Vector(v.u, v.v) * c, Vector(w.u, w.v) * c, Color(0, 255, 0), false)
+			-- render.DrawLine(v.pos, w.pos, Color(0, 255, 0), false)
+		-- end
+	-- end
+-- end)
+
 -- for p in sp:BSPPairsAll() do
 	-- local surf = p.Surfaces
 	-- for i, max in ipairs(surf.Maxs) do

@@ -185,7 +185,7 @@ function ENT:PhysicsUpdate(phys)
 	nextlen = nextlen + random(-1, 1) * ss.mSplashDrawRadius
 	
 	local droppos = self.InitPos + self.InitDirection * nextlen - vector_up * 6
-	if ss.NumInkEntities > 50 then
+	if ss.NumInkEntities > 10 then
 		local t = ss.SquidTrace
 		t.start, t.endpos = droppos, droppos - vector_up * 32768
 		t.mins, t.maxs = -self.ColBound, self.ColBound
@@ -279,7 +279,7 @@ function ENT:PhysicsCollide(coldata, collider) -- If ink hits something
 		d:SetMaxDamage(self.Damage)
 		d:SetReportedPosition(self:GetPos())
 		d:SetAttacker(IsValid(o) and o or world)
-		d:SetInflictor(IsValid(o) and isfunction(o.GetActiveWeapon) and IsValid(o:GetActiveWeapon()) and o:GetActiveWeapon() or world)
+		d:SetInflictor(Either(IsValid(o), ss:ProtectedCall(o.GetActiveWeapon, o), world))
 		coldata.HitEntity:TakeDamageInfo(d)
 	end
 end

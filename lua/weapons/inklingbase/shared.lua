@@ -26,16 +26,6 @@ local function StopLoopSound(self)
 	end
 end
 
-function SWEP:ChangeHullDuck()
-	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
-	-- if self.BecomeSquid then
-		-- local mins, maxs = self.Owner:GetHullDuck()
-		-- maxs.z = ss.SquidBoundHeight
-		-- self.Owner:SetHullDuck(mins, maxs)
-		-- self.Owner:SetViewOffsetDucked(ss.SquidViewOffset)
-	-- end
-end
-
 function SWEP:ChangeViewModel(act)
 	if self.ViewAnim == act then return end
 	self.ViewAnim = act
@@ -50,17 +40,31 @@ function SWEP:SetPlayerSpeed(spd)
 	self.Owner:SetWalkSpeed(self.MaxSpeed)
 end
 
---Speed on humanoid form = base speed * ability factor
+-- Speed on humanoid form = base speed * ability factor
 function SWEP:GetInklingSpeed()
 	return ss.InklingBaseSpeed
 end
 
---Speed on squid form = base speed * ability factor
+-- Speed on squid form = base speed * ability factor
 function SWEP:GetSquidSpeed()
 	return ss.SquidBaseSpeed
 end
 
---When NPC weapon is picked up by player.
+-- Returns the owner ping in seconds.
+-- Returns 0 if the owner is invalid or an NPC.
+function SWEP:Ping()
+	return self.Owner:IsPlayer() and self.Owner:Ping() / 1000 or 0
+end
+
+function SWEP:Crouching()
+	return Either(self.Owner:IsPlayer(), ss:ProtectedCall(self.Owner.Crouching, self.Owner), self.Owner:IsFlagSet(FL_DUCKING))
+end
+
+function SWEP:GetLaggedMovementValue()
+	return self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
+end
+
+-- When NPC weapon is picked up by player.
 function SWEP:OwnerChanged()
 	if not IsValid(self.Owner) then
 		if SERVER then
@@ -76,12 +80,14 @@ function SWEP:OwnerChanged()
 end
 
 function SWEP:SharedInitBase()
+	self.ValidKey = 0
+	self.OldKey = 0
 	self.SwimSound = CreateSound(self, ss.SwimSound)
 	self.EnemyInkSound = CreateSound(self, ss.EnemyInkSound)
-	if isfunction(self.SharedInit) then return self:SharedInit() end
+	ss:ProtectedCall(self.SharedInit, self)
 end
 
---Predicted hooks
+-- Predicted hooks
 function SWEP:SharedDeployBase()
 	PlayLoopSound(self)
 	self:SetHolstering(false)
@@ -98,22 +104,22 @@ function SWEP:SharedDeployBase()
 		self.Owner:SetCrouchedWalkSpeed(.5)
 	end
 	
-	if isfunction(self.SharedDeploy) then self:SharedDeploy() end
+	ss:ProtectedCall(self.SharedDeploy, self)
 	return true
 end
 
 function SWEP:SharedHolsterBase()
-	if isfunction(self.SharedHolster) then self:SharedHolster() end
+	ss:ProtectedCall(self.SharedHolster, self)
 	self:SetHolstering(true)
 	StopLoopSound(self)
 	return true
 end
 
 function SWEP:SharedThinkBase()
-	if isfunction(self.SharedThink) then return self:SharedThink() end
+	ss:ProtectedCall(self.SharedThink, self)
 end
 
---Begin to use special weapon.
+-- Begin to use special weapon.
 function SWEP:Reload()
 	if self:GetHolstering() then return end
 	if game.SinglePlayer() and
@@ -123,10 +129,11 @@ function SWEP:Reload()
 	end
 end
 
-function SWEP:CommonFire(isprimary)
+function SWEP:CommonFire(Weapon)
+	local lv = self:GetLaggedMovementValue()
 	if self.Owner:IsPlayer() then
 		local plmins, plmaxs = self.Owner:GetHull()
-		self.CannotStandup = self.Owner:Crouching() and util.TraceHull {
+		self.CannotStandup = self:Crouching() and util.TraceHull {
 			start = self.Owner:GetPos(),
 			endpos = self.Owner:GetPos(),
 			mins = plmins, maxs = plmaxs,
@@ -134,50 +141,47 @@ function SWEP:CommonFire(isprimary)
 			mask = MASK_PLAYERSOLID,
 			collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 		} .Hit
+		
+		if self.CannotStandup then return false end
 	end
 	
-	if self.CannotStandup or self.CrouchPriority then return false end
-	local Weapon = isprimary and self.Primary or self.Secondary
-	local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
-	self.ReloadSchedule:SetDelay(Weapon.ReloadDelay / laggedvalue)
-	self.ReloadSchedule.prevtime = CurTime() + Weapon.ReloadDelay / laggedvalue
-	self:SetNextCrouchTime(CurTime() + Weapon.CrouchDelay / laggedvalue)
+	local reloadtime = Weapon.ReloadDelay / lv
+	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
+	self.ReloadSchedule.prevtime = CurTime() + reloadtime
+	self:SetNextCrouchTime(CurTime() + Weapon.CrouchDelay / lv) -- Prevent crouching
 	
-	if self:GetInk() <= 0 then return false end --Check remaining amount of ink
-	self:SetNextPrimaryFire(CurTime() + Weapon.Delay / laggedvalue)
-	
-	return true
+	local hasink = self:GetInk() > 0 -- Ink check
+	if hasink then self:SetNextPrimaryFire(CurTime() + Weapon.Delay / lv) end
+	return hasink
 end
 
---Shoot ink.
-function SWEP:PrimaryAttack()
+function SWEP:PrimaryAttack() -- Shoot ink.
 	if self:GetHolstering() then return end
-	local canattack = self:CommonFire(true)
+	local canattack = self:CommonFire(self.Primary)
 	if self.Owner:IsPlayer() then self:CallOnClient "PrimaryAttack" end
 	if self.CannotStandup then return end
-	if isfunction(self.SharedPrimaryAttack) then
-		self:SharedPrimaryAttack(canattack)
-	end if SERVER and isfunction(self.ServerPrimaryAttack) then
-		return self:ServerPrimaryAttack(canattack)
-	elseif CLIENT and isfunction(self.ClientPrimaryAttack) then
-		return self:ClientPrimaryAttack(canattack)
-	end
+	ss:ProtectedCall(self.SharedPrimaryAttack, self, canattack)
+	ss:ProtectedCall(Either(SERVER, self.ServerPrimaryAttack, self.ClientPrimaryAttack), self, canattack)
+	if CLIENT then return end
+	net.Start "SplatoonSWEPs: Client PrimaryAttack"
+	net.WriteEntity(self.Owner)
+	net.Send(ss.PlayersReady)
 end
 
---Use sub weapon
-function SWEP:SecondaryAttack()
+function SWEP:SecondaryAttack() -- Use sub weapon
 	if self:GetHolstering() then return end
-	local canattack = self:CommonFire(false)
+	local canattack = self:CommonFire(self.Secondary)
 	if self.Owner:IsPlayer() then self:CallOnClient "SecondaryAttack" end
 	if self.CannotStandup or not (canattack and
 	(SERVER or self:IsFirstTimePredicted())) then return end
 	self:SetThrowing(true)
 	self:SetHoldType "grenade"
 	self:AddSchedule(0, function(self, sched)
+		self:SetNextPrimaryFire(CurTime() + 1)
 		if self.Owner:KeyDown(IN_ATTACK2) then
 			self:SetHoldType "grenade"
 			return
-		elseif not self:GetThrowing() or self.Owner:IsFlagSet(FL_DUCKING) then
+		elseif not self:GetThrowing() or self:Crouching() then
 			self:SetThrowing(false)
 			return true
 		end
@@ -189,20 +193,12 @@ function SWEP:SecondaryAttack()
 			self:SetHoldType(self:GetThrowing() and "grenade" or "passive")
 		end)
 		
-		if isfunction(self.SharedSecondaryAttack) then
-			self:SharedSecondaryAttack(canattack)
-		end if SERVER and isfunction(self.ServerSecondaryAttack) then
-			self:ServerSecondaryAttack(canattack)
-		elseif CLIENT then
-			if isfunction(self.ClientSecondaryAttack) then
-				self:ClientSecondaryAttack(canattack)
-			end
-		end
-		
+		ss:ProtectedCall(self.SharedSecondaryAttack, self, canattack)
+		ss:ProtectedCall(Either(SERVER, self.ServerSecondaryAttack, self.ClientSecondaryAttack), self, canattack)
 		return true
 	end)
 end
---End of predicted hooks
+-- End of predicted hooks
 
 local NetworkVarNotifyCallsOnClient = false
 function SWEP:ChangeInInk(name, old, new)
@@ -265,13 +261,13 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	elseif intoink then
 		self.EnemyInkSound:ChangeVolume(1, .5)
 		if self.Owner:IsPlayer() then
-			self:SetPlayerSpeed(self.OnEnemyInkSpeed) --Hard to move
-			self.Owner:SetJumpPower(self.OnEnemyInkJumpPower) --Reduce jump power
+			self:SetPlayerSpeed(self.OnEnemyInkSpeed) -- Hard to move while in enemy ink
+			self.Owner:SetJumpPower(self.OnEnemyInkJumpPower) -- Reduce jump power
 		end
 		
 		if CLIENT then return end
 		self:AddSchedule(200 / ss.ToHammerHealth * ss.FrameToSec, function(self, schedule)
-			if not self:GetOnEnemyInk() then return true end --Enemy ink damage
+			if not self:GetOnEnemyInk() then return true end -- Enemy ink damage
 			local d = DamageInfo()
 			d:SetAttacker(game.GetWorld())
 			d:SetDamage(self.Owner:Health() > self.Owner:GetMaxHealth() / 2 and 1 or 0)
@@ -286,30 +282,29 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 		self.EnemyInkSound:ChangeVolume(0, .5)
 		if self.Owner:IsPlayer() then
 			self:SetPlayerSpeed(self:GetInInk() and self.SquidSpeed or self.InklingSpeed)
-			self.Owner:SetJumpPower(self.JumpPower) --Restore
+			self.Owner:SetJumpPower(self.JumpPower) -- Restore
 		end
 	end
 end
 
-local ReloadMultiply = ss.MaxInkAmount / 10 --Reloading rate(inkling)
-local HealingDelay = 10 / ss.ToHammerHealth --Healing rate(inkling)
+local ReloadMultiply = ss.MaxInkAmount / 10 -- Reloading rate(inkling)
+local HealingDelay = 10 / ss.ToHammerHealth -- Healing rate(inkling)
 function SWEP:SetupDataTables()
-	ss:AddNetworkVar(self)
 	self.FunctionQueue = {}
-	self:AddNetworkVar("Bool", "InInk") --If owner is in ink.
-	self:AddNetworkVar("Bool", "InFence") --If owner is in fence.
-	self:AddNetworkVar("Bool", "InWallInk") --If owner is on wall.
-	self:AddNetworkVar("Bool", "OnEnemyInk") --If owner is on enemy ink.
-	self:AddNetworkVar("Bool", "Holstering") --The weapon is being holstered.
-	self:AddNetworkVar("Bool", "Throwing") --Is about to use sub weapon.
-	self:AddNetworkVar("Float", "Ink") --Ink remainig. 0 ~ ss.MaxInkAmount
-	self:AddNetworkVar("Vector", "InkColorProxy") --For material proxy.
-	self:AddNetworkVar("Float", "NextCrouchTime") --Shooting cooldown.
-	self:AddNetworkVar("Int", "GroundColor") --Surface ink color.
-	self:AddNetworkVar("Int", "PMID") --Playermodel ID
+	self:AddNetworkVar("Bool", "InInk") -- If owner is in ink.
+	self:AddNetworkVar("Bool", "InFence") -- If owner is in fence.
+	self:AddNetworkVar("Bool", "InWallInk") -- If owner is on wall.
+	self:AddNetworkVar("Bool", "OnEnemyInk") -- If owner is on enemy ink.
+	self:AddNetworkVar("Bool", "Holstering") -- The weapon is being holstered.
+	self:AddNetworkVar("Bool", "Throwing") -- Is about to use sub weapon.
+	self:AddNetworkVar("Float", "Ink") -- Ink remainig. 0 to ss.MaxInkAmount
+	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
+	self:AddNetworkVar("Float", "NextCrouchTime") -- Shooting cooldown.
+	self:AddNetworkVar("Int", "GroundColor") -- Surface ink color.
+	self:AddNetworkVar("Int", "PMID") -- Playermodel ID
 	self.HealSchedule = self:AddNetworkSchedule(HealingDelay, function(self, schedule)
-		local canheal = self.CanHealInk and self:GetInInk() --Gradually heals the owner
-		local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
+		local canheal = self.CanHealInk and self:GetInInk() -- Gradually heals the owner
+		local laggedvalue = self:GetLaggedMovementValue()
 		schedule:SetDelay(HealingDelay / (canheal and 8 or 1) / laggedvalue)
 		if not self:GetOnEnemyInk() and (self.CanHealStand or canheal) then
 			self.Owner:SetHealth(math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth()))
@@ -317,9 +312,9 @@ function SWEP:SetupDataTables()
 	end)
 	
 	self.ReloadSchedule = self:AddNetworkSchedule(0, function(self, schedule)
-		local reloadamount = math.max(0, schedule:SinceLastCalled()) --Recharging ink
+		local reloadamount = math.max(0, schedule:SinceLastCalled()) -- Recharging ink
 		local fastreload = self.CanReloadInk and self:GetInInk()
-		local laggedvalue = self.Owner:IsPlayer() and self.Owner:GetLaggedMovementValue() or 1
+		local laggedvalue = self:GetLaggedMovementValue()
 		local mul = ReloadMultiply * (fastreload and 10/3 or 1) * laggedvalue
 		if self.CanReloadStand or fastreload then
 			self:SetInk(math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.MaxInkAmount))
@@ -330,5 +325,5 @@ function SWEP:SetupDataTables()
 	
 	self:NetworkVarNotify("InInk", self.ChangeInInk)
 	self:NetworkVarNotify("OnEnemyInk", self.ChangeOnEnemyInk)
-	if isfunction(self.CustomDataTables) then return self:CustomDataTables() end
+	ss:ProtectedCall(self.CustomDataTables, self)
 end

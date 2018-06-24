@@ -288,10 +288,7 @@ function SWEP:ViewModelDrawn()
 				render.SuppressEngineLighting(true)
 			end
 			
-			if isfunction(self.PreViewModelDrawn) then
-				self:PreViewModelDrawn(model, bone_ent, ang, pos, v, matrix)
-			end
-			
+			ss:ProtectedCall(self.PreViewModelDrawn, self, model, bone_ent, ang, pos, v, matrix)
 			model:EnableMatrix("RenderMultiply", matrix)
 			render.SetColorModulation(v.color.r / 255, v.color.g / 255, v.color.b / 255)
 			render.SetBlend(v.color.a / 255)
@@ -331,8 +328,9 @@ end
 function SWEP:DrawWorldModel()
 	if IsValid(self.Owner) then
 		if self:GetHolstering() then return end
-		if self.Owner:IsPlayer() and self.Owner:Crouching() then
-			if self.BecomeSquid then
+		if self:Crouching() then
+			if self:GetInInk() then return
+			elseif self.BecomeSquid then
 				if IsValid(self.Squid) and not self:GetInInk() then
 					--It seems changing eye position doesn't work.
 					self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
@@ -356,8 +354,6 @@ function SWEP:DrawWorldModel()
 					self.Squid:CreateShadow()
 				end
 				
-				return
-			elseif self:GetInInk() then
 				return
 			end
 		end
@@ -459,10 +455,7 @@ function SWEP:DrawWorldModel()
 				model:SetupBones()
 			end
 			
-			if isfunction(self.PreDrawWorldModel) then
-				self:PreDrawWorldModel(model, bone_ent, pos, ang, v, matrix)
-			end
-			
+			ss:ProtectedCall(self.PreDrawWorldModel, self, model, bone_ent, pos, ang, v, matrix)
 			model:EnableMatrix("RenderMultiply", matrix)
 			render.SetColorModulation(v.color.r / 255, v.color.g / 255, v.color.b / 255)
 			render.SetBlend(v.color.a / 255 * cameradistance)

@@ -1,4 +1,6 @@
 
+-- Weapon names, descriptions, and other texts.
+
 local ss = SplatoonSWEPs
 if not ss then return end
 cvars.AddChangeCallback("gmod_language", function(convar, old, new)

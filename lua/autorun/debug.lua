@@ -1,7 +1,7 @@
 
 --Debugging code
 
-DebugOverlayTime = 5
+DebugOverlayTime = .1
 DebugOverlayColor = Color(0, 255, 0)
 function DebugAxis(pos, ang, size, ignoreZ)
 	debugoverlay.Axis(pos, ang, size, DebugOverlayTime, ignoreZ)
@@ -38,6 +38,12 @@ function DebugPoly(t, ignoreZ)
 end
 function DebugBox(mins, maxs)
 	debugoverlay.Box(vector_origin, mins, maxs, DebugOverlayTime, ColorAlpha(DebugOverlayColor, 64))
+end
+function DebugTrace(t, ignoreZ)
+	debugoverlay.Box(t.start, t.mins, t.maxs, DebugOverlayTime, ColorAlpha(DebugOverlayColor, 64))
+	debugoverlay.Box(t.endpos, t.mins, t.maxs, DebugOverlayTime, ColorAlpha(DebugOverlayColor, 64))
+	debugoverlay.Line(t.start + t.mins, t.endpos + t.mins, DebugOverlayTime, DebugOverlayColor, ignoreZ)
+	debugoverlay.Line(t.start + t.maxs, t.endpos + t.maxs, DebugOverlayTime, DebugOverlayColor, ignoreZ)
 end
 
 local circle_polys = 8

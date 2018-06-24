@@ -1,5 +1,6 @@
 
---Shared library
+-- Shared library
+
 local ss = SplatoonSWEPs
 if not ss then return end
 include "const.lua"
@@ -8,31 +9,31 @@ include "sound.lua"
 include "text.lua"
 include "weapons.lua"
 
-ss.AreaBound = ss.AreaBound or 0
-ss.AspectSum = ss.AspectSum or 0
-ss.AspectSumX = ss.AspectSumX or 0
-ss.AspectSumY = ss.AspectSumY or 0
-ss.Displacements = ss.Displacements or {}
-ss.PlayerHullChanged = ss.PlayerHullChanged or {}
 cleanup.Register(ss.CleanupTypeInk)
+-- Compares each component and returns the smaller one.
+-- Arguments:
+--   Vector a, b	| Two vectors to compare.
+-- Returning:
+--   Vector			| A vector which contains the smaller components.
 function ss:MinVector(a, b)
-	local c = Vector()
-	c.x = math.min(a.x, b.x)
-	c.y = math.min(a.y, b.y)
-	c.z = math.min(a.z, b.z)
-	return c
+	return Vector(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z))
 end
 
+-- Compares each component and returns the larger one.
+-- Arguments:
+--   Vector a, b	| Two vectors to compare.
+-- Returning:
+--   Vector			| A vector which contains the larger components.
 function ss:MaxVector(a, b)
-	local c = Vector()
-	c.x = math.max(a.x, b.x)
-	c.y = math.max(a.y, b.y)
-	c.z = math.max(a.z, b.z)
-	return c
+	return Vector(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z))
 end
 
---number miminum boundary size, table of Vectors
---returning AABB(mins, maxs)
+-- Returns an AABB which contains all given points.
+-- Arguments:
+--   table vectors		| Table of vectors to make an AABB.
+--   number minbound	| Minimum length of AABB.
+-- Returns:
+--   number mins, maxs	| An AABB represented by minimum and maximum vectors.
 function ss:GetBoundingBox(vectors, minbound)
 	local mins = Vector(math.huge, math.huge, math.huge)
 	local maxs = -mins
@@ -44,36 +45,94 @@ function ss:GetBoundingBox(vectors, minbound)
 	return mins, maxs
 end
 
---Vector AABB1(mins, maxs), Vector AABB2(mins, maxs) in world coordinates
---returning boolean, whether or not two AABBs intersect together
+-- Takes two AABBs and returns if they are colliding each other.
+-- Arguments:
+--   Vector mins1, maxs1	| The first AABB.
+--   Vector mins2, maxs2	| The second AABB.
+-- Returning:
+--   bool					| Whether or not the two AABBs intersect each other.
 function ss:CollisionAABB(mins1, maxs1, mins2, maxs2)
 	return mins1.x < maxs2.x and maxs1.x > mins2.x and
 			mins1.y < maxs2.y and maxs1.y > mins2.y and
 			mins1.z < maxs2.z and maxs1.z > mins2.z
 end
 
---Vector AABB1(mins, maxs), Vector AABB2(mins, maxs) in world coordinates
---returning boolean, whether or not two AABBs intersect together
+-- Basically same as SplatoonSWEPs:CollisionAABB(), but ignores Z-component.
+-- Arguments:
+--   Vector mins1, maxs1	| The first AABB.
+--   Vector mins2, maxs2	| The second AABB.
+-- Returning:
+--   bool					| Whether or not the two AABBs intersect each other.
 function ss:CollisionAABB2D(mins1, maxs1, mins2, maxs2)
 	return mins1.x < maxs2.x and maxs1.x > mins2.x and
 			mins1.y < maxs2.y and maxs1.y > mins2.y
 end
 
---Vector(x, y, z), Vector new system origin, Angle new system angle
---returning localized Vector(x, y, 0)
+-- Short for WorldToLocal()
+-- Arguments:
+--   Vector source	| A 3D vector to be converted into 2D space.
+--   Vector orgpos	| The origin of new 2D system.
+--   Angle organg	| The angle of new 2D system.
+-- Returning:
+--   Vector			| A converted 2D vector.
 function ss:To2D(source, orgpos, organg)
 	local localpos = WorldToLocal(source, angle_zero, orgpos, organg)
 	return Vector(localpos.y, localpos.z, 0)
 end
 
---Vector(x, y, 0), Vector system origin in world coordinates, Angle system angle
---returning Vector(x, y, z)
+-- Short for LocalToWorld()
+-- Arguments:
+--   Vector source	| A 2D vector to be converted into 3D space.
+--   Vector orgpos	| The origin of 2D system in world coordinates.
+--   Angle organg	| The angle of 2D system relative to the world.
+-- Returning:
+--   Vector			| A converted 3D vector.
 function ss:To3D(source, orgpos, organg)
 	local localpos = Vector(0, source.x, source.y)
 	return (LocalToWorld(localpos, angle_zero, orgpos, organg))
 end
 
+-- Short for Entity:NetworkVar().
+-- A new function Entity:AddNetworkVar() is created to the given entity.
+-- Argument:
+--   Entity ent	| The entity to add to.
+function ss:AddNetworkVar(ent)
+	ent.NetworkSlot = {
+		String = -1, Bool = -1, Float = -1, Int = -1,
+		Vector = -1, Angle = -1, Entity = -1,
+	}
+	
+	-- Returns how many network slots the entity uses.
+	-- Argument:
+	--   string typeof	| The type to inspect.
+	-- Returning:
+	--   number			| The number of slots the entity uses.
+	function ent:GetLastSlot(typeof) return self.NetworkSlot[typeof] end
+	
+	-- Adds a new network variable to the entity.
+	-- Arguments:
+	--   string typeof	| The variable type.  Same as Entity:NetworkVar().
+	--   string name	| The variable name.
+	-- Returning:
+	--   number			| A new assigned slot.
+	function ent:AddNetworkVar(typeof, name)
+		assert(self.NetworkSlot[typeof] < 31, "SplatoonSWEPs: Tried to use too many network variables!")
+		self.NetworkSlot[typeof] = self.NetworkSlot[typeof] + 1
+		self:NetworkVar(typeof, self.NetworkSlot[typeof], name)
+		return self.NetworkSlot[typeof]
+	end
+end
+
+-- Let the given entity use CurTime() based timer library.
+-- Call it in the header, and put SplatoonSWEPs:ProcessSchedules() in ENT:Think().
+-- Argument:
+--   Entity ent	| The entity to be able to use timer library.
 function ss:AddTimerFramework(ent)
+	ss:AddNetworkVar(ent) -- Required to use Entity:AddNetworkSchedule()
+	
+	-- Reset the interval of the schedule.
+	-- Argument:
+	--   number newdelay	| The new interval.
 	local ScheduleFunc = {}
 	local ScheduleMeta = {__index = ScheduleFunc}
 	function ScheduleFunc:SetDelay(newdelay)
@@ -86,11 +145,19 @@ function ss:AddTimerFramework(ent)
 			self.time = CurTime() + newdelay
 		end
 	end
-
+	
+	-- Returns the time since the schedule has been last called.
 	function ScheduleFunc:SinceLastCalled()
 		return CurTime() - self.prevtime
 	end
-
+	
+	-- Adds an syncronized schedule.
+	-- Arguments:
+	--   number delay	| How long the function should be ran in seconds.
+	--   				| Use 0 to have the function run every time ENT:Think() called.
+	--   function func	| The function to run after the specified delay.
+	-- Returning:
+	--   table			| The created schedule object.
 	function ent:AddNetworkSchedule(delay, func)
 		local schedule = setmetatable({
 			done = 0,
@@ -107,7 +174,15 @@ function ss:AddTimerFramework(ent)
 		table.insert(self.FunctionQueue, schedule)
 		return schedule
 	end
-
+	
+	-- Adds an schedule.
+	-- Arguments:
+	--   number delay	| How long the function should be ran in seconds.
+	--   				| Use 0 to have the function run every time ENT:Think() called.
+	--   number numcall	| The number of times to repeat.  Set to nil or 0 for infinite schedule.
+	--   function func	| The function to run.  Returning true in it to have the schedule stop.
+	-- Returning:
+	--   table			| The created schedule object.
 	function ent:AddSchedule(delay, numcall, func)
 		local schedule = setmetatable({
 			delay = delay,
@@ -121,7 +196,8 @@ function ss:AddTimerFramework(ent)
 		table.insert(self.FunctionQueue, schedule)
 		return schedule
 	end
-
+	
+	-- Makes the registered functions run.  Put it in ENT:Think() for desired use.
 	function ent:ProcessSchedules()
 		for i, s in pairs(self.FunctionQueue) do
 			if isstring(s.time) then
@@ -145,74 +221,59 @@ function ss:AddTimerFramework(ent)
 	end
 end
 
-function ss:AddNetworkVar(ent)
-	ent.NetworkSlot = {
-		String = -1, Bool = -1, Float = -1, Int = -1,
-		Vector = -1, Angle = -1, Entity = -1,
-	}
-	
-	function ent:GetLastSlot(typeof) return self.NetworkSlot[typeof] end
-	function ent:AddNetworkVar(typeof, name)
-		assert(self.NetworkSlot[typeof] < 31, "SplatoonSWEPs: Tried to use too many network vars!")
-		self.NetworkSlot[typeof] = self.NetworkSlot[typeof] + 1
-		self:NetworkVar(typeof, self.NetworkSlot[typeof], name)
-		return self.NetworkSlot[typeof]
-	end
+-- Short for checking isfunction()
+-- Arguments:
+--   function func	| The function to call safely.
+--   vararg			| The arguments to give the function.
+-- Returns:
+--   vararg			| Returning values from the function.
+function ss:ProtectedCall(func, ...)
+	if isfunction(func) then return func(...) end
 end
 
+-- Checks if the given entity is a valid inkling (if it has a SplatoonSWEPs weapon).
+-- Argument:
+--   Entity ply		| The entity to be checked.  It is not always player.
+-- Returning:
+--   Entity			| The weapon the entity has.
+--   nil			| The entity is not an inkling.
 function ss:IsValidInkling(ply)
-	if not (IsValid(ply) and isfunction(ply.GetActiveWeapon)) then return end
-	local weapon = ply:GetActiveWeapon()
-	return IsValid(weapon) and weapon.IsSplatoonWeapon and not weapon:GetHolstering() and weapon or nil
+	if not IsValid(ply) then return end
+	local w = ss:ProtectedCall(ply.GetActiveWeapon, ply)
+	return IsValid(w) and w.IsSplatoonWeapon and not w:GetHolstering() and w or nil
 end
 
-function ss:CheckFence(ent, pos, endpos, filter, mins, maxs)
-	local t = ss.SquidTrace
-	t.start, t.endpos = pos, endpos
-	t.mins, t.maxs = mins, maxs
-	t.filter = filter
-	if not util.TraceHull(t).Hit then
-		t.mask = MASK_SOLID
-		local tr = util.TraceHull(t)
-		if tr.Hit and tr.Entity ~= NULL then
-			return tr.Entity
-		end
-	end
-end
-
---MOUSE1+LCtrl makes crouch, LCtrl+MOUSE1 makes primary attack.
-hook.Add("KeyPress", "SplattonSWEPs: Detect controls", function(ply, button)
+-- MOUSE1+LCtrl makes crouch, LCtrl+MOUSE1 makes primary attack.
+local KeyMask = {[IN_ATTACK] = IN_ATTACK, [IN_DUCK] = IN_DUCK, [IN_ATTACK2] = IN_ATTACK2}
+local EitherKey = bit.bor(IN_ATTACK, IN_DUCK, IN_ATTACK2)
+local NeitherKey = bit.bnot(EitherKey)
+hook.Add("StartCommand", "SplatoonSWEPs: Detect controls", function(ply, cm)
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
-	local attack = bit.band(button, IN_ATTACK) ~= 0
-	local duck = bit.band(button, IN_DUCK) ~= 0
-	w.IsAttackDown = w.IsAttackDown or attack
-	w.CrouchPriority = w.CrouchPriority or w.IsAttackDown and duck
-end)
-hook.Add("KeyRelease", "SplatoonSWEPs: Detect controls", function(ply, button)
-	local w = ss:IsValidInkling(ply)
-	if not w then return end
-	local attack = bit.band(button, IN_ATTACK) ~= 0
-	local duck = bit.band(button, IN_DUCK) ~= 0
-	w.IsAttackDown = w.IsAttackDown and not attack
-	w.CrouchPriority = w.CrouchPriority and not (attack or duck)
+	local keys = bit.band(cm:GetButtons(), EitherKey)
+	w.OldKey, w.ValidKey = keys, KeyMask[keys]
+	or KeyMask[bit.band(keys, bit.bxor(bit.bnot(w.ValidKey),
+	w.ValidKey ~= w.OldKey and w.OldKey or 0))]
+	or KeyMask[bit.band(keys, bit.bnot(w.OldKey))] or 0
+	cm:SetButtons(bit.bor(bit.band(cm:GetButtons(), NeitherKey), w.ValidKey))
+	
+	if not w.TripleShot or w.TripleShot - w:Ping() < CurTime() then return end
+	cm:RemoveKey(EitherKey) -- Nozzlenose cooldown
 end)
 
---Prevent crouching after firing.
+-- Prevent crouching after firing or player is in enemy ink.
 hook.Add("SetupMove", "SplatoonSWEPs: Prevent owner from crouch", function(ply, mv, cm)
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
-	local c = mv:KeyDown(IN_DUCK)
-	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and c and w:GetOnEnemyInk()
-	if (not w.CrouchPriority and c and mv:KeyDown(IN_ATTACK))
-	or CurTime() < w:GetNextCrouchTime() or w.EnemyInkPreventCrouching then
+	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and mv:KeyDown(IN_DUCK) and w:GetOnEnemyInk()
+	if CurTime() < w:GetNextCrouchTime() or w.EnemyInkPreventCrouching then
 		mv:SetButtons(bit.band(mv:GetButtons(), bit.bnot(IN_DUCK)))
 		cm:RemoveKey(IN_DUCK)
 	end
 end)
 
---Overriding footstep sound stops calling other addons' PlayerFootstep hook.
---I decide to replace one of their hook with my function built.
+-- Overriding footstep sound stops calling other PlayerFootstep hooks in other addons.
+-- I decided to replace one of their hook with my function built.
 local FootstepTrace = vector_up * -20
 local hostkey, hostfunc, multisteps = hostkey, hostfunc, multisteps
 for k, v in pairs(hook.GetTable().PlayerFootstep or {}) do
@@ -220,6 +281,7 @@ for k, v in pairs(hook.GetTable().PlayerFootstep or {}) do
 	if isstring(k) then hostkey, hostfunc = k, v end
 end
 
+-- This is my footstep hook.
 local function PlayerFootstep(ply, pos, foot, soundname, volume, filter)
 	local w = ss:IsValidInkling(ply)
 	if not w or not game.SinglePlayer() and SERVER then return end
@@ -243,16 +305,9 @@ if hostkey and hostfunc then
 			return mystep
 		end
 	end
-else
+else -- No footstep hook is there.
 	hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", PlayerFootstep)
 end
-
---Inklings with the same ink color will not collide
--- ^ Set player's team correctly and do Player:SetNoCollideWithTeammates(true)
-
-hook.Add("PhysgunPickup", "SplatoonSWEPs: Ink cannot be grabbed", function(ply, ent)
-	if ent.IsSplatoonProjectile then return false end
-end)
 
 local weaponslot = {
 	weapon_roller = 0,
@@ -275,17 +330,18 @@ hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 			if CLIENT then
 				local icon = "entities/" .. c
 				if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then icon = "weapons/swep" end
-				weapon.WepSelectIcon = surface.GetTextureID(icon)
-				killicon.Add(c, icon, color_white)
+				weapon.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
+				killicon.Add(c, icon, color_white) -- Weapon killicon
 			end
 		end
 		
-		if weapons.Get(c) then
+		if weapons.Get(c) then -- Adds to NPC weapon list
 			list.Add("NPCUsableWeapons", {class = c, title = ss.Text.PrintNames[c]})
 		end
 	end
 end)
 
+-- Inkling playermodels hull change fix
 if not isfunction(FindMetaTable "Player".SplatoonOffsets) then return end
 if SERVER then
 	hook.Remove("KeyPress", "splt_KeyPress")

@@ -45,7 +45,6 @@ function SWEP:Initialize()
 	self:SetNextCrouchTime(CurTime())
 	self:SetInk(ss.MaxInkAmount)
 	self:SetInkColorProxy(ss.vector_one)
-	self:ChangeHullDuck()
 	self:AddSchedule(5 * ss.FrameToSec,
 	function(self, schedule) --Set if player is in ink
 		local filter = {self, self.Owner}
@@ -56,13 +55,13 @@ function SWEP:Initialize()
 		local onink = self:GetGroundColor() >= 0
 		local onourink = self:GetGroundColor() == self.ColorCode
 		
-		self:SetInWallInk(self.Owner:IsFlagSet(FL_DUCKING) and (
+		self:SetInWallInk(self:Crouching() and (
 		ss:GetSurfaceColor(util.QuickTrace(p, fw - right, filter)) == self.ColorCode or
 		ss:GetSurfaceColor(util.QuickTrace(p, fw + right, filter)) == self.ColorCode or
 		ss:GetSurfaceColor(util.QuickTrace(p,-fw - right, filter)) == self.ColorCode or
 		ss:GetSurfaceColor(util.QuickTrace(p,-fw + right, filter)) == self.ColorCode))
 		
-		self:SetInInk(onink and onourink and self.Owner:IsFlagSet(FL_DUCKING) or self:GetInWallInk())
+		self:SetInInk(self:Crouching() and (onink and onourink or self:GetInWallInk()))
 		self:SetOnEnemyInk(onink and not onourink)
 		self.OwnerVelocity = self.Owner:GetVelocity()
 	end)
@@ -91,7 +90,7 @@ function SWEP:Initialize()
 		end)
 	end
 	
-	if isfunction(self.ServerInit) then self:ServerInit() end
+	ss:ProtectedCall(self.ServerInit, self)
 end
 
 function SWEP:OnRemove()
@@ -190,13 +189,12 @@ function SWEP:Deploy()
 					PlayerColor = self:GetInkColorProxy(),
 				}
 				self:ChangePlayermodel(self.PMTable)
-				self:ChangeHullDuck()
 			else
 				ss:SendError("WeaponPlayermodelNotFound", self.Owner)
 			end
 		end
 		
-		if isfunction(self.Owner.SplatColors) then self.Owner:SplatColors() end
+		ss:ProtectedCall(self.Owner.SplatColors, self.Owner)
 	end
 	
 	return self:SharedDeployBase()
@@ -243,5 +241,5 @@ function SWEP:Think()
 	self:ProcessSchedules()
 	self:SharedThinkBase()
 	self:SetClip1(math.max(0, self:GetInk() / ss.MaxInkAmount * 100))
-	if isfunction(self.ServerThink) then return self:ServerThink() end
+	ss:ProtectedCall(self.ServerThink, self)
 end

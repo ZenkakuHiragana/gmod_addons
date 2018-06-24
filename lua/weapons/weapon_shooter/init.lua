@@ -12,8 +12,6 @@ end
 
 function SWEP:ServerInit()
 	self.SplashInitMul = 0
-	self.SplashInitRandom = 0
-	
 	if not self.Primary.TripleShotDelay then return end
 	self:SetNPCMinBurst(1)
 	self:SetNPCMaxBurst(1)
@@ -21,54 +19,63 @@ function SWEP:ServerInit()
 	self:SetNPCMaxRest(self.Primary.TripleShotDelay)
 end
 
---Serverside: create ink projectile.
+-- Serverside: create ink projectile.
 local jumpvelocity = 32
-function SWEP:ServerPrimaryAttack(canattack)
-	if self.CrouchPriority or self:GetInk() <= 0 then return end
-	local p = ents.Create "projectile_ink"
-	if not IsValid(p) then return end
+function SWEP:ServerPrimaryAttack(hasink)
+	if self.CrouchPriority then return end
+	if not hasink then
+		if self.Primary.TripleShotDelay then self.TripleShot = CurTime() end
+		if CurTime() > self.NextPlayEmpty then
+			self:EmitSound "SplatoonSWEPs.EmptyShot"
+			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
+		end
+		
+		return
+	end
 	
-	local SplashInitMul = self.SplashInitMul % self.Primary.SplashPatterns
-	local SplashNumRounded = math[math.random() < .5 and "floor" or "ceil"](self.Primary.SplashNum)
-	local DegRandomX = math.Rand(-self.Primary.SpreadBias, self.Primary.SpreadBias)
+	self:MuzzleFlash()
+	self.InklingSpeed = self.Primary.MoveSpeed
+	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
+	self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
+	if not self:GetOnEnemyInk() then
+		self:SetPlayerSpeed(self.Primary.MoveSpeed)
+	end
+	
+	local DegRandomX = util.SharedRandom("SplatoonSWEPs: Spread", -self.Primary.SpreadBias, self.Primary.SpreadBias)
 	+ math.Remap(math.Clamp(self.Owner:GetVelocity().z * ss.SpreadJumpCoefficient,
 	0, ss.SpreadJumpMaxVelocity), 0, ss.SpreadJumpMaxVelocity, self.Primary.Spread, self.Primary.SpreadJump)
 	
-	local pos, dir, h = self:GetFirePosition()
+	local pos, dir, armpos = self:GetFirePosition()
 	local right = self.Owner:GetRight()
 	local ang = dir:Angle()
 	local angle_initvelocity = Angle(ang)
 	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
-	angle_initvelocity:RotateAroundAxis(right:Cross(dir), math.Rand(-DegRandomX, DegRandomX))
-	angle_initvelocity:RotateAroundAxis(right, math.Rand(-ss.mDegRandomY, ss.mDegRandomY))
-	local InitVelocity = angle_initvelocity:Forward() * self.Primary.InitVelocity
-	p:SetPos(pos)
-	p:SetAngles(ang)
-	p:SetOwner(self.Owner)
-	p:SetInkColorProxy(self:GetInkColorProxy())
-	p.ColorCode = self.ColorCode
-	p.InkYaw = self.Owner:EyeAngles().yaw
-	p.Damage = self.Primary.Damage
-	p.MinDamage = self.Primary.MinDamage
-	p.MinDamageTime = self.Primary.MinDamageTime
-	p.DecreaseDamage = self.Primary.DecreaseDamage
-	p.InkRadius = self.Primary.InkRadius
-	p.MinRadius = self.Primary.MinRadius
-	p.SplashRadius = self.Primary.SplashRadius
-	p.SplashPatterns = self.Primary.SplashPatterns
-	p.SplashNum = SplashNumRounded
-	p.SplashInterval = self.Primary.SplashInterval
-	p.SplashInitMul = SplashInitMul
-	p.SplashRandom = self.SplashInitRandom
-	p.Straight = self.Primary.Straight
-	p.InitVelocity = InitVelocity
-	p.InitVelocityLength = self.Primary.InitVelocity / ss.ToHammerUnitsPerSec
-	p.InkType = math.random(4, 9)
-	p.ColRadius = self.Primary.ColRadius
-	p:Spawn()
-	AddCleanup(p)
-	self.SplashInitRandom = self.SplashInitRandom + (SplashInitMul > 0 and 0 or 1)
+	angle_initvelocity:RotateAroundAxis(right:Cross(dir), util.SharedRandom("SplatoonSWEPs: Spread", -DegRandomX, DegRandomX))
+	angle_initvelocity:RotateAroundAxis(right, util.SharedRandom("SplatoonSWEPs: Spread", -ss.mDegRandomY, ss.mDegRandomY))
+	local initvelocity = angle_initvelocity:Forward() * self.Primary.InitVelocity
+	local splashinit = self.SplashInitMul % self.Primary.SplashPatterns
+	ss:AddInk(self.Owner, pos, initvelocity, self.ColorCode, self.Owner:EyeAngles().yaw,
+	math.random(4, 9), splashinit, self.Primary)
 	self.SplashInitMul = self.SplashInitMul + (self.Primary.TripleShotDelay and 3 or 1)
+	
+	net.Start "SplatoonSWEPs: Shooter Tracer"
+	net.WriteEntity(self.Owner)
+	net.WriteVector(pos)
+	net.WriteVector(angle_initvelocity:Forward())
+	net.WriteFloat(self.Primary.InitVelocity)
+	net.WriteFloat(self.Primary.Straight)
+	net.WriteFloat(self.Primary.Delay / 2)
+	net.WriteUInt(self.ColorCode, ss.COLOR_BITS)
+	net.WriteUInt(splashinit, 4)
+	net.Send(ss.PlayersReady)
+	
+	self:SetHoldType((armpos == 3 or armpos == 4) and "rpg" or "crossbow")
+	if not self.Primary.TripleShotDelay or self.TripleShot > CurTime() then return end
+	self.TripleShot = CurTime() + self.Primary.Delay * 2 + self.Primary.TripleShotDelay
+	local burst = self:AddSchedule(self.Primary.Delay, 2, function(self, schedule)
+		self:PrimaryAttack(true)
+	end)
+	burst.time = CurTime() - self:Ping()
 end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
@@ -76,4 +83,18 @@ function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
 	self:AddSchedule(self.Primary.Delay, 1, function(self, sched)
 		self:PrimaryAttack()
 	end)
+end
+
+function SWEP:ServerThink()
+	if not self.Owner:IsPlayer() then return end
+	if self:Crouching() then self:SetHoldType "melee2" end
+	if self:GetAimTimer() < CurTime() then
+		self.InklingSpeed = self:GetInklingSpeed()
+		if not self:GetThrowing() then self:SetHoldType "passive" end
+		if self:GetOnEnemyInk() or self:GetInInk() then return end
+		self:SetPlayerSpeed(self.InklingSpeed)
+	else
+		local armpos = select(3, self:GetFirePosition())
+		self:SetHoldType((armpos == 3 or armpos == 4) and "rpg" or "crossbow")
+	end
 end

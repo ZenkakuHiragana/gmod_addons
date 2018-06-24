@@ -1,8 +1,9 @@
 
---This lua parses current map.
+-- This lua parses current map.
+
 local ss = SplatoonSWEPs
 if not (ss and ss.BSP) then return end
-local LUMP = { --Lump names. most of these are unused in SplatoonSWEPs.
+local LUMP = { -- Lump names. most of these are unused in SplatoonSWEPs.
 	ENTITIES						=  0,
 	PLANES							=  1,
 	TEXDATA							=  2,
@@ -25,10 +26,10 @@ local LUMP = { --Lump names. most of these are unused in SplatoonSWEPs.
 	BRUSHSIDES						= 19,
 	AREAS							= 20,
 	AREAPORTALS						= 21,
-	PORTALS							= 22, --unused in version 20
+	PORTALS							= 22, -- unused in version 20
 	CLUSTERS						= 23, --
 	PORTALVERTS						= 24, --
-	CLUSTERPORTALS					= 25, --unused in version 20
+	CLUSTERPORTALS					= 25, -- unused in version 20
 	DISPINFO						= 26,
 	ORIGINALFACES					= 27,
 	PHYSDISP						= 28,
@@ -56,10 +57,10 @@ local LUMP = { --Lump names. most of these are unused in SplatoonSWEPs.
 	WATEROVERLAYS					= 50,
 	LIGHTMAPEDGES					= 51,
 	LIGHTMAPPAGEINFOS				= 52,
-	LIGHTING_HDR					= 53, --only used in version 20+ BSP files
+	LIGHTING_HDR					= 53, -- only used in version 20+ BSP files
 	WORLDLIGHTS_HDR					= 54, --
 	LEAF_AMBIENT_LIGHTING_HDR		= 55, --
-	LEAF_AMBIENT_LIGHTING			= 56, --only used in version 20+ BSP files
+	LEAF_AMBIENT_LIGHTING			= 56, -- only used in version 20+ BSP files
 	XZIPPAKFILE						= 57,
 	FACES_HDR						= 58,
 	MAP_FLAGS						= 59,
@@ -100,9 +101,9 @@ end
 
 function bsp:Init()
 	self.bspname = "maps/" .. game.GetMap() .. ".bsp"
-	assert(file.Exists(self.bspname, "GAME"), "attempt to load a non-existent map!")
+	assert(file.Exists(self.bspname, "GAME"), "SplatoonSWEPs: Attempt to load a non-existent map!")
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
-	self.FaceIndex = 0 --Every face has an individual number.
+	self.FaceIndex = 0 -- Every face has an individual number.
 	
 	self:ReadHeader()
 	self:Parse(LUMP.PLANES)
@@ -167,13 +168,13 @@ local function GetRotatedAABB(v2d, angle, disp)
 	return mins, maxs
 end
 
---TODO: if the face is underwater then return end
+-- TODO: if the face is underwater then return end
 local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	if #v3d < 3 or bsp.FaceIndex > 1247232 then return end
 	
 	local surf = ss:FindLeaf(disp or v3d).Surfaces
 	local area, bound, minangle, minmins = math.huge, nil, nil, nil
-	for i, v in ipairs(v2d) do --Get minimum AABB with O(n^2)
+	for i, v in ipairs(v2d) do -- Get minimum AABB with O(n^2)
 		local seg = v2d[i % #v2d + 1] - v
 		local ang = Angle(0, math.deg(math.atan2(seg.y, seg.x)) - 90)
 		local mins, maxs = GetRotatedAABB(v2d, ang, disp)
@@ -222,7 +223,7 @@ local function MakeTriangle(vert)
 	local maxs = -mins
 	local v2d = {}
 	for i, v in ipairs(vert) do
-		mins = ss:MinVector(mins, v) --Calculate bounding box
+		mins = ss:MinVector(mins, v) -- Calculate bounding box
 		maxs = ss:MaxVector(maxs, v)
 		v2d[i] = ss:To2D(v, origin, angle)
 	end
@@ -305,11 +306,11 @@ end,
 	lump.num = math.min(math.floor(lump.length / size) - 1, 2048 - 1)
 	for i = 0, lump.num do
 		lump.data[i] = {}
-		bsp.bsp:Skip(12) --reflectivity
+		bsp.bsp:Skip(12) -- reflectivity
 		local strID = read "Long" * 4
 		lump.data[i].name = ""
 
-		local here = bsp.bsp:Tell() + 8 + 8 --width, height, view_width, view_height
+		local here = bsp.bsp:Tell() + 8 + 8 -- width, height, view_width, view_height
 		bsp.bsp:Seek(strtable.offset + strID)
 		local stroffset = read "Long"
 		bsp.bsp:Seek(strdata.offset + stroffset)
@@ -361,7 +362,7 @@ end,
 		children[i] = {}
 		children[i][1] = read "Long"
 		children[i][2] = read "Long"
-		bsp.bsp:Skip(20) --mins, maxs, firstface, numfaces, area, padding
+		bsp.bsp:Skip(20) -- mins, maxs, firstface, numfaces, area, padding
 	end
 	
 	for i = 0, lump.num do
@@ -427,7 +428,7 @@ end,
 		if materials[texname]:GetString "$surfaceprop" == "metalgrate" then continue end
 		
 		local fullverts, full2d, center = {}, {}, vector_origin
-		for k = 0, numedges do --Fetch all vertices
+		for k = 0, numedges do -- Fetch all vertices
 			fullverts[k] = surfedges.data[firstedge + k]
 			center = center + fullverts[k]
 		end
@@ -437,15 +438,15 @@ end,
 			full2d[k] = ss:To2D(v, center, angle)
 		end
 		
-		local v3d, v2d = {}, {} --Vector3D, 2D
+		local v3d, v2d = {}, {} -- Vector3D, 2D
 		local nf = #full2d + 1
 		local mins = Vector(math.huge, math.huge, math.huge)
 		local maxs = -mins
-		for k = 0, #full2d do --Remove collinear and concave components
+		for k = 0, #full2d do -- Remove collinear and concave components
 			local v2, v3 = full2d[k], fullverts[k]
 			local _next, prev = full2d[(k + 1) % nf], full2d[(k + nf - 1) % nf]
 			local sin = (prev - v2):GetNormalized():Cross((_next - v2):GetNormalized()).z
-			mins = ss:MinVector(mins, v3) --Calculate bounding box
+			mins = ss:MinVector(mins, v3) -- Calculate bounding box
 			maxs = ss:MaxVector(maxs, v3)
 			table.insert(v2d, v2)
 			table.insert(v3d, v3)
@@ -457,7 +458,7 @@ end,
 			bsp.bsp:Seek(dispinfooffset + dispinfo * 176)
 			local startPosition = read "Vector"
 			local DispVertStart = read "Long"
-			bsp.bsp:Skip(4) --DispTriStart
+			bsp.bsp:Skip(4) -- DispTriStart
 			local power = 2^read "Long" + 1
 			local numdists = power^2
 			local dispverts = {}
@@ -469,10 +470,10 @@ end,
 			end
 			bsp.bsp:Seek(here)
 			
-			--DispInfo.startPosition isn't always equal to v3d[1] so let's find correct one
+			-- DispInfo.startPosition isn't always equal to v3d[1] so find correct one
 			do local i, min, start = {}, math.huge, 0
 				for k, v in ipairs(v3d) do
-					mins = ss:MinVector(mins, v) --Calculate bounding box
+					mins = ss:MinVector(mins, v) -- Calculate bounding box
 					maxs = ss:MaxVector(maxs, v)
 					local dist = startPosition:DistToSqr(v)
 					if dist > min then continue end
@@ -488,15 +489,15 @@ end,
 			local div1, div2 -- vector_origin, vector_origin
 			local u1, u2 = v3d[4] - v3d[1], v3d[3] - v3d[2]
 			local v1, v2 = v3d[2] - v3d[1], v3d[3] - v3d[4]
-			for k, v in pairs(dispverts) do --Get the world positions of the displacements
-				x = k % power --0 <= x <= power
-				y = math.floor(k / power) --0 <= y <= power
+			for k, v in pairs(dispverts) do -- Get the world positions of the displacements
+				x = k % power -- 0 <= x <= power
+				y = math.floor(k / power) -- 0 <= y <= power
 				div1, div2 = v1 * y / (power - 1), u1 + v2 * y / (power - 1)
 				div2 = div2 - div1
 				v.origin = div1 + div2 * x / (power - 1)
 				v.pos = startPosition + v.origin + v.vec * v.dist
 				v.pos2d = ss:To2D(v.pos - normal * normal:Dot(v.vec * v.dist), center, angle)
-				mins = ss:MinVector(mins, v.pos) --Calculate bounding box
+				mins = ss:MinVector(mins, v.pos) -- Calculate bounding box
 				maxs = ss:MaxVector(maxs, v.pos)
 				table.insert(isdisp, v.pos)
 				table.insert(isdisp.Positions2D, v.pos2d)
@@ -521,12 +522,12 @@ end,
 	end
 	
 	local props = 0
-	for _, l in ipairs(headers) do --id == "scrp", Static Prop Gamelump
+	for _, l in ipairs(headers) do -- id == "scrp", Static Prop Gamelump
 		if l.id ~= 1936749168 then continue end
 		bsp.bsp:Seek(l.fileofs)
 		local nextlump = l.fileofs + l.filelen
 		local entries = read "Long"
-		local modelnames = {} --Model name dictionary
+		local modelnames = {} -- Model name dictionary
 		for e = 1, entries do
 			modelnames[e] = ""
 			for i = 1, 128 do
@@ -535,7 +536,7 @@ end,
 			end
 		end
 		
-		bsp.bsp:Skip(read "Long" * 2) --Leaf Indices
+		bsp.bsp:Skip(read "Long" * 2) -- Leaf Indices
 		entries = read "Long"
 		local here = bsp.bsp:Tell()
 		local remaining = nextlump - here
@@ -544,7 +545,7 @@ end,
 			bsp.bsp:Seek(here + entrysize * e)
 			local p = {}
 			p.Origin = read "Vector"
-			p.Angles = read "Vector" --(x, y, z) -> (pitch, yaw, roll)
+			p.Angles = read "Vector" -- (x, y, z) -> (pitch, yaw, roll)
 			p.Angles = Angle(p.Angles.x, p.Angles.y, p.Angles.z)
 			p.Angles:Normalize()
 			p.PropType = read "UShort"

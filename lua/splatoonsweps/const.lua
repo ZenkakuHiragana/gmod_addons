@@ -1,5 +1,6 @@
 
---Constant values
+-- Constant values
+
 local ss = SplatoonSWEPs
 if not ss then return end
 
@@ -129,36 +130,36 @@ ss.WeaponClassNames2 = {
 }
 
 ss.TEXTUREFLAGS = {
-	POINTSAMPLE			= 0x00000001, --Low quality, "pixel art" texture filtering.
-	TRILINEAR			= 0x00000002, --Medium quality texture filtering.
-	CLAMPS				= 0x00000004, --Clamp S coordinates.
-	CLAMPT				= 0x00000008, --Clamp T coordinates.
-	ANISOTROPIC			= 0x00000010, --High quality texture filtering.
-	HINT_DXT5			= 0x00000020, --Used in skyboxes.  Make sure edges are seamless.
-	PWL_CORRECTED		= 0x00000040, --Purpose unknown.
-	NORMAL				= 0x00000080, --Texture is a normal map.
-	NOMIP				= 0x00000100, --Render largest mipmap only. (Does not delete existing mipmaps, just disables them.)
-	NOLOD				= 0x00000200, --Not affected by texture resolution settings.
-	ALL_MIPS			= 0x00000400, --No Minimum Mipmap
-	PROCEDURAL			= 0x00000800, --Texture is an procedural texture (code can modify it).
-	ONEBITALPHA			= 0x00001000, --One bit alpha channel used.
-	EIGHTBITALPHA		= 0x00002000, --Eight bit alpha channel used.
-	ENVMAP				= 0x00004000, --Texture is an environment map.
-	RENDERTARGET		= 0x00008000, --Texture is a render target.
-	DEPTHRENDERTARGET	= 0x00010000, --Texture is a depth render target.
+	POINTSAMPLE			= 0x00000001, -- Low quality, "pixel art" texture filtering.
+	TRILINEAR			= 0x00000002, -- Medium quality texture filtering.
+	CLAMPS				= 0x00000004, -- Clamp S coordinates.
+	CLAMPT				= 0x00000008, -- Clamp T coordinates.
+	ANISOTROPIC			= 0x00000010, -- High quality texture filtering.
+	HINT_DXT5			= 0x00000020, -- Used in skyboxes.  Make sure edges are seamless.
+	PWL_CORRECTED		= 0x00000040, -- Purpose unknown.
+	NORMAL				= 0x00000080, -- Texture is a normal map.
+	NOMIP				= 0x00000100, -- Render largest mipmap only. (Does not delete existing mipmaps, just disables them.)
+	NOLOD				= 0x00000200, -- Not affected by texture resolution settings.
+	ALL_MIPS			= 0x00000400, -- No Minimum Mipmap
+	PROCEDURAL			= 0x00000800, -- Texture is an procedural texture (code can modify it).
+	ONEBITALPHA			= 0x00001000, -- One bit alpha channel used.
+	EIGHTBITALPHA		= 0x00002000, -- Eight bit alpha channel used.
+	ENVMAP				= 0x00004000, -- Texture is an environment map.
+	RENDERTARGET		= 0x00008000, -- Texture is a render target.
+	DEPTHRENDERTARGET	= 0x00010000, -- Texture is a depth render target.
 	NODEBUGOVERRIDE		= 0x00020000, --
 	SINGLECOPY			= 0x00040000, --
 	UNUSED_00080000		= 0x00080000, --
-	IMMEDIATE_CLEANUP	= 0x00100000, --Immediately destroy this texture when its refernce count hits zero.
+	IMMEDIATE_CLEANUP	= 0x00100000, -- Immediately destroy this texture when its refernce count hits zero.
 	UNUSED_00200000		= 0x00200000, --
 	UNUSED_00400000		= 0x00400000, --
-	NODEPTHBUFFER		= 0x00800000, --Do not buffer for Video Processing, generally render distance.
+	NODEPTHBUFFER		= 0x00800000, -- Do not buffer for Video Processing, generally render distance.
 	UNUSED_01000000		= 0x01000000, --
-	CLAMPU				= 0x02000000, --Clamp U coordinates (for volumetric textures).
-	VERTEXTEXTURE		= 0x04000000, --Usable as a vertex texture
-	SSBUMP				= 0x08000000, --Texture is a SSBump. (SSB)
+	CLAMPU				= 0x02000000, -- Clamp U coordinates (for volumetric textures).
+	VERTEXTEXTURE		= 0x04000000, -- Usable as a vertex texture
+	SSBUMP				= 0x08000000, -- Texture is a SSBump. (SSB)
 	UNUSED_10000000		= 0x10000000, --
-	BORDER				= 0x20000000, --Clamp to border colour on all texture coordinates.
+	BORDER				= 0x20000000, -- Clamp to border colour on all texture coordinates.
 	UNUSED_40000000		= 0x40000000, --
 	UNUSED_80000000		= 0x80000000, --
 }
@@ -336,7 +337,7 @@ function ss:GetSquidmodel(pmid)
 	return file.Exists(squid, "GAME") and squid or nil
 end
 
---List of available ink colors(25 colors)
+-- List of available ink colors(25 colors)
 ss.InkColors = {
 	HSVToColor(0,	1,	1	),
 	HSVToColor(30,	1,	1	),
@@ -369,39 +370,35 @@ ss.InkColors = {
 }
 
 ss.CrosshairColors = {
-	2, --Red -> Orange
-	1, --Orange -> Red
-	14, --Yellow -> Olive
-	14, --Yellowish green -> Olive
-	15, --Lime -> Green
-	16, --Spring green -> Dark cyan
-	16, --Cyan -> Dark cyan
-	10, --Azure blue -> Light indigo
-	18, --Blue -> Purple
-	9, --Light indigo -> Blue
-	12, --Magenta -> Deep pink
-	11, --Deep pink -> Magenta
+	2, -- Red -> Orange
+	1, -- Orange -> Red
+	14, -- Yellow -> Olive
+	14, -- Yellowish green -> Olive
+	15, -- Lime -> Green
+	16, -- Spring green -> Dark cyan
+	16, -- Cyan -> Dark cyan
+	10, -- Azure blue -> Light indigo
+	18, -- Blue -> Purple
+	9, -- Light indigo -> Blue
+	12, -- Magenta -> Deep pink
+	11, -- Deep pink -> Magenta
 	
-	1, --Maroon -> Red
-	15, --Olive -> Green
-	19, --Green -> Light green
-	10, --Dark cyan -> Light indigo
-	10, --Navy -> Light indigo
-	8, --Purple -> Azure blue
+	1, -- Maroon -> Red
+	15, -- Olive -> Green
+	19, -- Green -> Light green
+	10, -- Dark cyan -> Light indigo
+	10, -- Navy -> Light indigo
+	8, -- Purple -> Azure blue
 	
-	15, --Light green -> Green
-	16, --Light blue -> Dark cyan
-	11, --Pink -> Magenta
+	15, -- Light green -> Green
+	16, -- Light blue -> Dark cyan
+	11, -- Pink -> Magenta
 	
-	22, --Black -> Black
-	23, --Gray -> Gray
-	24, --Light gray -> Light gray
-	25, --White -> White
+	22, -- Black -> Black
+	23, -- Gray -> Gray
+	24, -- Light gray -> Light gray
+	25, -- White -> White
 }
-
-function ss:GetColor(colorid)
-	return ss.InkColors[colorid or math.random(self.MAX_COLORS)]
-end
 
 ss.Materials = {
 	Crosshair = {
@@ -415,7 +412,7 @@ ss.Materials = {
 ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
 ss.MAX_COLORS = #ss.InkColors
-ss.COLOR_BITS = 6
+ss.COLOR_BITS = 5
 ss.SURFACE_INDEX_BITS = 20
 ss.SEND_ERROR_DURATION_BITS = 4
 ss.SEND_ERROR_NOTIFY_BITS = 3
@@ -424,6 +421,10 @@ ss.ViewModel = { -- Viewmodel animations
 	Squid = ACT_VM_HOLSTER, -- Squid form
 	Throwing = ACT_VM_IDLE_LOWERED, -- Throwing sub weapon
 }
+
+function ss:GetColor(colorid)
+	return ss.InkColors[colorid or math.random(ss.MAX_COLORS)]
+end
 
 if game.GetMap() == "gm_inkopolis_b1" then
 	ss.SquidSolidMask = bit.band(MASK_PLAYERSOLID, bit.bnot(CONTENTS_PLAYERCLIP))
@@ -442,17 +443,17 @@ ss.MaxInkAmount = 100
 ss.SquidBoundHeight = 32
 ss.SquidViewOffset = vector_up * 24
 ss.InklingJumpPower = 250
-ss.DisruptoredSpeed = .45 --Disruptor's debuff factor
+ss.DisruptoredSpeed = .45 -- Disruptor's debuff factor
 ss.OnEnemyInkJumpPower = ss.InklingJumpPower * .75
-ss.ToHammerUnits = 2.88 --.1 * 3.28084 * 16 * (1.00965 / 1.5)
+ss.ToHammerUnits = 2.88 -- .1 * 3.28084 * 16 * (1.00965 / 1.5)
 ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec
 ss.ToHammerHealth = 100
 ss.FrameToSec = 1 / framepersec
 ss.SecToFrame = framepersec
-ss.mDegRandomY = 0 --Crosshair ratio in Splattershot Pro is 2:1, mDegRandom of that is 3.00.
+ss.mDegRandomY = .5
 ss.SpreadJumpMaxVelocity = 32
 ss.SpreadJumpCoefficient = .25
-ss.CameraFadeDistance = 100^2 --Thirdperson model fade distance[units^2]
+ss.CameraFadeDistance = 100^2 -- Thirdperson model fade distance[units^2]
 ss.SquidTrace = {
 	start = vector_origin, endpos = vector_origin,
 	filter = {}, mask = ss.SquidSolidMask,
@@ -461,14 +462,14 @@ ss.SquidTrace = {
 }
 
 for key, value in pairs {
-	InklingBaseSpeed = inklingspeed, --Walking speed [Splatoon units/60frame]
-	SquidBaseSpeed = 1.923 * framepersec, --Swimming speed [Splatoon units/60frame]
-	OnEnemyInkSpeed = inklingspeed / 4, --On enemy ink speed[Splatoon units/60frame]
-	mColRadius = 2, --Shooter's ink collision radius[Splatoon units]
-	mPaintNearDistance = 11, --Start decreasing distance[Splatoon units]
-	mPaintFarDistance = 200, --Minimum radius distance[Splatoon units]
-	mSplashDrawRadius = 3, --Ink drop position random spread value[Splatoon units]
-	mSplashColRadius = 1.5, --Ink drop collision radius[Splatoon units]
+	InklingBaseSpeed = inklingspeed, -- Walking speed [Splatoon units/60frame]
+	SquidBaseSpeed = 1.923 * framepersec, -- Swimming speed [Splatoon units/60frame]
+	OnEnemyInkSpeed = inklingspeed / 4, -- On enemy ink speed[Splatoon units/60frame]
+	mColRadius = 2, -- Shooter's ink collision radius[Splatoon units]
+	mPaintNearDistance = 11, -- Start decreasing distance[Splatoon units]
+	mPaintFarDistance = 200, -- Minimum radius distance[Splatoon units]
+	mSplashDrawRadius = 3, -- Ink drop position random spread value[Splatoon units]
+	mSplashColRadius = 1.5, -- Ink drop collision radius[Splatoon units]
 } do
 	ss[key] = value * ss.ToHammerUnits
 end

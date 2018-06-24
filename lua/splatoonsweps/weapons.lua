@@ -1,4 +1,6 @@
 
+-- Functions for weapon settings.
+
 local ss = SplatoonSWEPs
 if not ss then return end
 
@@ -14,10 +16,8 @@ function ss:SetPrimary(weapon, info)
 	p.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
 	p.PlayAnimPercent = info.PlayAnimPercent
 	p.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
+	ss:ProtectedCall(ss.CustomPrimary[weapon.Base], p, info)
 	weapon.Primary = p
-	if isfunction(ss.CustomPrimary[weapon.Base]) then
-		ss.CustomPrimary[weapon.Base](p, info)
-	end
 end
 
 function ss:SetSecondary(weapon, info)
@@ -32,10 +32,8 @@ function ss:SetSecondary(weapon, info)
 	s.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
 	s.PlayAnimPercent = info.PlayAnimPercent
 	s.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
+	ss:ProtectedCall(ss.CustomSecondary[weapon.Base], s, info)
 	weapon.Secondary = s
-	if isfunction(ss.CustomSecondary[weapon.Base]) then
-		ss.CustomSecondary[weapon.Base](s, info)
-	end
 end
 
 ss.CustomPrimary = {}
