@@ -286,9 +286,9 @@ function SWEP:ClientPrimaryAttack(hasink)
 			start = pos,
 		}] = true
 	end
-	DebugPoint(pos, 5, true)
-	if not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end
-	self.ShotDelay = CurTime() + (self.Primary.Delay * 3 + self.Primary.TripleShotDelay) / lv
+	
+	if game.SinglePlayer() or not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end
+	self.ShotDelay = CurTime() + (self.Primary.Delay * 2 + self.Primary.TripleShotDelay) / lv
 	if self.Owner ~= LocalPlayer() then return end
 	self.TripleSchedule = self:AddSchedule(self.Primary.Delay, 2, self.PrimaryAttack)
 end

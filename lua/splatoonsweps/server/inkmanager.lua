@@ -284,7 +284,7 @@ hook.Add("Tick", "SplatoonSWEPs: Simulate ink", coroutine.wrap(function()
 				end
 				
 				ss:Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ink.InkType, ratio)
-			elseif ink.Info.Damage > 0 then -- If ink hits an NPC or something
+			elseif IsValid(t.Entity) and ink.Info.Damage > 0 then -- If ink hits an NPC or something
 				local w = ss:IsValidInkling(t.Entity)
 				if not w or w:GetColorCode() ~= ink.Color then
 					local d, o = DamageInfo(), ink.filter
