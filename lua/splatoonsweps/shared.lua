@@ -129,6 +129,7 @@ end
 --   Entity ent	| The entity to be able to use timer library.
 function ss:AddTimerFramework(ent)
 	ss:AddNetworkVar(ent) -- Required to use Entity:AddNetworkSchedule()
+	ent.FunctionQueue = {}
 	
 	-- Reset the interval of the schedule.
 	-- Argument:
@@ -257,23 +258,22 @@ hook.Add("StartCommand", "SplatoonSWEPs: Detect controls", function(ply, cm)
 	or KeyMask[bit.band(keys, bit.bnot(w.OldKey))] or 0
 	cm:SetButtons(bit.bor(bit.band(cm:GetButtons(), NeitherKey), w.ValidKey))
 	
-	if not w.TripleShot or w.TripleShot - w:Ping() < CurTime() then return end
-	cm:RemoveKey(EitherKey) -- Nozzlenose cooldown
-end)
-
--- Prevent crouching after firing or player is in enemy ink.
-hook.Add("SetupMove", "SplatoonSWEPs: Prevent owner from crouch", function(ply, mv, cm)
-	local w = ss:IsValidInkling(ply)
-	if not w then return end
-	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and mv:KeyDown(IN_DUCK) and w:GetOnEnemyInk()
-	if CurTime() < w:GetNextCrouchTime() or w.EnemyInkPreventCrouching then
-		mv:SetButtons(bit.band(mv:GetButtons(), bit.bnot(IN_DUCK)))
-		cm:RemoveKey(IN_DUCK)
+	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching
+	and w:GetOnEnemyInk() and bit.band(keys, IN_DUCK) > 0
+	if w.EnemyInkPreventCrouching then cm:RemoveKey(IN_DUCK) end
+	
+	if not w.ShotDelay then return end
+	if w.ShotDelay - w:Ping() > CurTime() then
+		cm:RemoveKey(w.DisableKeys or EitherKey) -- Shooter cooldown
+		w.ShotCoolDown = true
+	elseif w.ShotCoolDown and not w.Primary.Automatic then
+		w.ShotCoolDown = bit.band(keys, IN_ATTACK) > 0
+		cm:RemoveKey(IN_ATTACK) -- Shooter semi-auto logic
 	end
 end)
 
 -- Overriding footstep sound stops calling other PlayerFootstep hooks in other addons.
--- I decided to replace one of their hook with my function built.
+-- I decided to have one of their hook run my function.
 local FootstepTrace = vector_up * -20
 local hostkey, hostfunc, multisteps = hostkey, hostfunc, multisteps
 for k, v in pairs(hook.GetTable().PlayerFootstep or {}) do
@@ -285,7 +285,7 @@ end
 local function PlayerFootstep(ply, pos, foot, soundname, volume, filter)
 	local w = ss:IsValidInkling(ply)
 	if not w or not game.SinglePlayer() and SERVER then return end
-	if ply:Crouching() and w.BecomeSquid and w:GetGroundColor() < 0 or
+	if ply:Crouching() and w:GetBecomeSquid() and w:GetGroundColor() < 0 or
 	not ply:Crouching() and w:GetGroundColor() >= 0 then
 		ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		return true
@@ -319,6 +319,8 @@ local weaponslot = {
 	weapon_slosher = 5,
 }
 hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
+	local ssEnabled = GetConVar "sv_splatoonsweps_enabled"
+	if not ssEnabled or not ssEnabled:GetBool() then return end
 	local weaponlist = list.GetForEdit "Weapon"
 	for i, c in ipairs(ss.WeaponClassNames) do
 		for _, weapon in ipairs {weapons.GetStored(c), weaponlist[c]} do

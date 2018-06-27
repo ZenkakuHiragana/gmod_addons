@@ -272,15 +272,12 @@ hook.Add("Tick", "SplatoonSWEPs: Simulate ink", coroutine.wrap(function()
 				continue
 			elseif t.HitWorld then
 				local ratio = 1
-				local radius = math.Remap(math.Clamp(ink.InitPos.z - t.HitPos.z,
-				ss.mPaintNearDistance, ss.mPaintFarDistance),
-				ss.mPaintNearDistance, ss.mPaintFarDistance,
-				ink.MinRadius, ink.InkRadius)
+				local radius = Lerp((ink.InitPos.z - t.HitPos.z) / ss.PaintDistance - ss.PaintFraction, ink.MinRadius, ink.InkRadius)
 				if ink.InkType > 3 and t.HitNormal.z > MAX_COS_DEG_DIFF and lifetime > ink.Info.Straight then
 					local max = ink.Info.InitVelocity * ink.Info.Straight
 					local min = max / 3
-					local actual = t.HitPos:DistToSqr(ink.InitPos)
-					local stretch = math.Remap(math.Clamp(actual, min, max), min, max, 1, 1.5)
+					local actual = t.HitPos:DistToSqr(ink.InitPos) - min
+					local stretch = Lerp(actual / (max - min), 1, 1.5)
 					radius, ratio = radius * stretch, .6 / stretch
 				else
 					ink.InkType = math.random(1, 3)
@@ -289,18 +286,17 @@ hook.Add("Tick", "SplatoonSWEPs: Simulate ink", coroutine.wrap(function()
 				ss:Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ink.InkType, ratio)
 			elseif ink.Info.Damage > 0 then -- If ink hits an NPC or something
 				local w = ss:IsValidInkling(t.Entity)
-				if not w or w.ColorCode ~= ink.Color then
+				if not w or w:GetColorCode() ~= ink.Color then
 					local d, o = DamageInfo(), ink.filter
-					local time = lifetime - ink.Info.DecreaseDamage
-					d:SetDamage(math.Remap(-math.Clamp(time, 0, ink.Info.MinDamageTime),
-					-ink.Info.MinDamageTime, 0, ink.Info.MinDamage, ink.Info.Damage))
+					local frac = (lifetime - ink.Info.DecreaseDamage) / ink.Info.MinDamageTime
+					d:SetDamage(Lerp(1 - frac, ink.Info.MinDamage, ink.Info.Damage))
 					d:SetDamageForce(-t.HitNormal)
 					d:SetDamagePosition(t.HitPos)
 					d:SetDamageType(DMG_GENERIC)
 					d:SetMaxDamage(ink.Info.Damage)
 					d:SetReportedPosition(t.HitPos)
 					d:SetAttacker(IsValid(o) and o or world)
-					d:SetInflictor(Either(IsValid(o), ss:ProtectedCall(o.GetActiveWeapon, o), world))
+					d:SetInflictor(ss:IsValidInkling(o) or world)
 					t.Entity:TakeDamageInfo(d)
 				end
 			end
@@ -317,10 +313,7 @@ end))
 -- local droppos = ink.InitPos + ink.InitDirection * nextlen - vector_up * 6
 -- ink.start, ink.endpos = droppos, droppos - vector_up * 32768
 -- local tr = util.TraceHull(ink)
--- local radius = math.Remap(math.Clamp(ink.InitPos.z - t.HitPos.z,
--- ss.mPaintNearDistance, ss.mPaintFarDistance),
--- ss.mPaintNearDistance, ss.mPaintFarDistance,
--- ink.SplashMinRadius, ink.SplashRadius)
+-- local radius = Lerp((ink.InitPos.z - tr.HitPos.z) / ss.PaintDistance - ss.PaintFraction, ink.SplashMinRadius, ink.SplashRadius)
 -- timer.Simple(math.sqrt(math.abs(t.HitPos.z - tr.HitPos.z) * gravityscale), function()
 	-- ss:Paint(tr.HitPos, tr.HitNormal, radius, ink.Color, ink.Angle, math.random(1, 3), 1)
 -- end)

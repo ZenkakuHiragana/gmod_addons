@@ -2,7 +2,7 @@
 -- Clientside SplatoonSWEPs structure
 
 SplatoonSWEPs = SplatoonSWEPs or {
-	AmbientColor = color_white,	--
+	AmbientColor = color_white,
 	AreaBound = 0,				
 	AspectSum = 0,				
 	AspectSumX = 0,				
@@ -351,13 +351,11 @@ end)
 hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
 	local weapon = ss:IsValidInkling(ply)
 	if not weapon then return end
-	local ShouldDraw = Either(weapon.BecomeSquid, ply:Crouching(), weapon:GetInInk())
+	local ShouldDraw = Either(weapon:GetBecomeSquid(), ply:Crouching(), weapon:GetInInk())
 	ply:DrawShadow(not ShouldDraw)
 	if ShouldDraw then return true end
 	if ply ~= LocalPlayer() then return end
-	render.SetBlend(math.Remap(math.Clamp(
-		weapon:GetPos():DistToSqr(EyePos()) / 100, 0, ss.CameraFadeDistance / 100),
-		0, ss.CameraFadeDistance / 100, 0, 1))
+	render.SetBlend(math.Clamp(weapon:GetPos():DistToSqr(EyePos()) / ss.CameraFadeDistance, 0, 1))
 end)
 
 hook.Add("PostPlayerDraw", "SplatoonSWEPs: Thirdperson player fadeout", function(ply)

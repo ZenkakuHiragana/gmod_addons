@@ -80,8 +80,10 @@ function SWEP:OwnerChanged()
 end
 
 function SWEP:SharedInitBase()
-	self.ValidKey = 0
+	self.DisableKeys = ss.DefaultDisableKeys
 	self.OldKey = 0
+	self.ValidKey = 0
+	self.ShotDelay = CurTime()
 	self.SwimSound = CreateSound(self, ss.SwimSound)
 	self.EnemyInkSound = CreateSound(self, ss.EnemyInkSound)
 	ss:ProtectedCall(self.SharedInit, self)
@@ -91,12 +93,14 @@ end
 function SWEP:SharedDeployBase()
 	PlayLoopSound(self)
 	self:SetHolstering(false)
+	self.ShotDelay = CurTime()
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
 	self.SquidSpeedSqr = self.SquidSpeed^2
 	self.OnEnemyInkSpeed = ss.OnEnemyInkSpeed
 	self.JumpPower = ss.InklingJumpPower
 	self.OnEnemyInkJumpPower = ss.OnEnemyInkJumpPower
+	self.DisableKeys = ss.DefaultDisableKeys
 	if self.Owner:IsPlayer() then
 		self:SetPlayerSpeed(self.InklingSpeed)
 		self.Owner:SetJumpPower(self.JumpPower)
@@ -148,7 +152,6 @@ function SWEP:CommonFire(Weapon)
 	local reloadtime = Weapon.ReloadDelay / lv
 	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
 	self.ReloadSchedule.prevtime = CurTime() + reloadtime
-	self:SetNextCrouchTime(CurTime() + Weapon.CrouchDelay / lv) -- Prevent crouching
 	
 	local hasink = self:GetInk() > 0 -- Ink check
 	if hasink then self:SetNextPrimaryFire(CurTime() + Weapon.Delay / lv) end
@@ -164,7 +167,7 @@ function SWEP:PrimaryAttack() -- Shoot ink.
 	ss:ProtectedCall(Either(SERVER, self.ServerPrimaryAttack, self.ClientPrimaryAttack), self, canattack)
 	if CLIENT then return end
 	net.Start "SplatoonSWEPs: Client PrimaryAttack"
-	net.WriteEntity(self.Owner)
+	net.WriteEntity(self)
 	net.Send(ss.PlayersReady)
 end
 
@@ -271,7 +274,7 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 			local d = DamageInfo()
 			d:SetAttacker(game.GetWorld())
 			d:SetDamage(self.Owner:Health() > self.Owner:GetMaxHealth() / 2 and 1 or 0)
-			d:SetInflictor(self.Owner)
+			d:SetInflictor(game.GetWorld())
 			self.Owner:TakeDamageInfo(d)
 		end)
 		
@@ -290,7 +293,12 @@ end
 local ReloadMultiply = ss.MaxInkAmount / 10 -- Reloading rate(inkling)
 local HealingDelay = 10 / ss.ToHammerHealth -- Healing rate(inkling)
 function SWEP:SetupDataTables()
-	self.FunctionQueue = {}
+	self:AddNetworkVar("Bool", "AvoidWalls")
+	self:AddNetworkVar("Bool", "BecomeSquid")
+	self:AddNetworkVar("Bool", "CanHealStand")
+	self:AddNetworkVar("Bool", "CanHealInk")
+	self:AddNetworkVar("Bool", "CanReloadStand")
+	self:AddNetworkVar("Bool", "CanReloadInk")
 	self:AddNetworkVar("Bool", "InInk") -- If owner is in ink.
 	self:AddNetworkVar("Bool", "InFence") -- If owner is in fence.
 	self:AddNetworkVar("Bool", "InWallInk") -- If owner is on wall.
@@ -298,25 +306,25 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Bool", "Holstering") -- The weapon is being holstered.
 	self:AddNetworkVar("Bool", "Throwing") -- Is about to use sub weapon.
 	self:AddNetworkVar("Float", "Ink") -- Ink remainig. 0 to ss.MaxInkAmount
-	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
-	self:AddNetworkVar("Float", "NextCrouchTime") -- Shooting cooldown.
+	self:AddNetworkVar("Int", "ColorCode")
 	self:AddNetworkVar("Int", "GroundColor") -- Surface ink color.
 	self:AddNetworkVar("Int", "PMID") -- Playermodel ID
+	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
 	self.HealSchedule = self:AddNetworkSchedule(HealingDelay, function(self, schedule)
-		local canheal = self.CanHealInk and self:GetInInk() -- Gradually heals the owner
+		local canheal = self:GetCanHealInk() and self:GetInInk() -- Gradually heals the owner
 		local laggedvalue = self:GetLaggedMovementValue()
 		schedule:SetDelay(HealingDelay / (canheal and 8 or 1) / laggedvalue)
-		if not self:GetOnEnemyInk() and (self.CanHealStand or canheal) then
+		if not self:GetOnEnemyInk() and (self:GetCanHealStand() or canheal) then
 			self.Owner:SetHealth(math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth()))
 		end
 	end)
 	
 	self.ReloadSchedule = self:AddNetworkSchedule(0, function(self, schedule)
 		local reloadamount = math.max(0, schedule:SinceLastCalled()) -- Recharging ink
-		local fastreload = self.CanReloadInk and self:GetInInk()
+		local fastreload = self:GetCanReloadInk() and self:GetInInk()
 		local laggedvalue = self:GetLaggedMovementValue()
 		local mul = ReloadMultiply * (fastreload and 10/3 or 1) * laggedvalue
-		if self.CanReloadStand or fastreload then
+		if self:GetCanReloadStand() or fastreload then
 			self:SetInk(math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.MaxInkAmount))
 		end
 		

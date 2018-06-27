@@ -15,7 +15,7 @@ local FireWeaponMultiplier = 1
 local function ExpandModel(self, model, bone_ent, pos, ang, v, matrix)
 	if v.inktank then return end
 	local fraction = (FireWeaponCooldown - SysTime() + self.ModifyWeaponSize) * FireWeaponMultiplier
-	matrix:Scale(SplatoonSWEPs.vector_one * math.max(1, fraction + 1))
+	matrix:Scale(ss.vector_one * math.max(1, fraction + 1))
 end
 
 SWEP.PreDrawWorldModel = ExpandModel
@@ -84,8 +84,8 @@ function SWEP:DoDrawCrosshair(x, y)
 	if vgui.CursorVisible() then x, y = input.GetCursorPos() end
 	
 	local splt2 = ss:GetConVarBool "NewStyleCrosshair"
-	local color = ss:GetColor(ss.CrosshairColors[self.ColorCode])
-	local inkcolor = ss:GetColor(self.ColorCode)
+	local color = ss:GetColor(ss.CrosshairColors[self:GetColorCode()])
+	local inkcolor = ss:GetColor(self:GetColorCode())
 	local pos, dir = self:GetFirePosition()
 	local throughpos = self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range
 	local through = throughpos:ToScreen()
@@ -101,7 +101,7 @@ function SWEP:DoDrawCrosshair(x, y)
 	local outersize = math.ceil(math.sqrt(ScrW() * ScrH() / outer))
 	if hitentity then
 		local w = ss:IsValidInkling(tr.Entity)
-		if w and w.ColorCode == self.ColorCode then
+		if w and w:GetColorCode() == self:GetColorCode() then
 			hitentity = false
 		end
 	end
@@ -114,9 +114,8 @@ function SWEP:DoDrawCrosshair(x, y)
 	local h = math.ceil(w / 16)
 	local pitch = EyeAngles():Right()
 	local yaw = pitch:Cross(dir)
-	local spreadx = math.Remap(math.Clamp(self.Owner:GetVelocity().z
-	* ss.SpreadJumpCoefficient, 0, ss.SpreadJumpMaxVelocity),
-	0, ss.SpreadJumpMaxVelocity, self.Primary.Spread, self.Primary.SpreadJump)
+	local spreadx = Lerp(self.Owner:GetVelocity().z * ss.SpreadJumpCoefficient
+	/ ss.SpreadJumpMaxVelocity, self.Primary.Spread, self.Primary.SpreadJump)
 	if splt2 then
 		frac = 1
 		lx, ly = through.x, through.y
@@ -214,6 +213,7 @@ function SWEP:DoDrawCrosshair(x, y)
 end
 
 function SWEP:ClientPrimaryAttack(hasink)
+	if not IsValid(self.Owner) then return end
 	if not self.CrouchPriority or LocalPlayer() ~= self.Owner then
 		self.InklingSpeed = self.Primary.MoveSpeed
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
@@ -226,10 +226,13 @@ function SWEP:ClientPrimaryAttack(hasink)
 	end
 	
 	local pos, dir, armpos = self:GetFirePosition()
-	self:SetHoldType((armpos == 3 or armpos == 4) and "rpg" or "crossbow")
+	local delay, lv = self.ShotDelay, self:GetLaggedMovementValue()
+	self.ShotDelay = math.max(self.ShotDelay, CurTime() + self.Primary.CrouchDelay / lv)
+	armpos = armpos == 3 or armpos == 4
+	if self.Owner:IsPlayer() then self:SetHoldType(armpos and "rpg" or "crossbow") end
 	if not self:IsFirstTimePredicted() then return end
 	if not hasink then
-		if self.Primary.TripleShotDelay then self.TripleShot = CurTime() end
+		if self.Primary.TripleShotDelay then self.ShotDelay = CurTime() end
 		if self.Owner == LocalPlayer() and self.PreviousInk then
 			surface.PlaySound(ss.TankEmpty)
 			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
@@ -242,32 +245,39 @@ function SWEP:ClientPrimaryAttack(hasink)
 		return
 	end
 	
-	local DegRandomX = util.SharedRandom("SplatoonSWEPs: Spread", -self.Primary.SpreadBias, self.Primary.SpreadBias)
-	+ math.Remap(math.Clamp(self.Owner:GetVelocity().z * ss.SpreadJumpCoefficient,
-	0, ss.SpreadJumpMaxVelocity), 0, ss.SpreadJumpMaxVelocity, self.Primary.Spread, self.Primary.SpreadJump)
 	local right = self.Owner:GetRight()
 	local ang = dir:Angle()
 	local angle_initvelocity = Angle(ang)
+	local DegRandomX = util.SharedRandom("SplatoonSWEPs: Spread", -self.Primary.SpreadBias, self.Primary.SpreadBias)
+	+ Lerp(self.Owner:GetVelocity().z * ss.SpreadJumpFraction, self.Primary.Spread, self.Primary.SpreadJump)
+	local rx = util.SharedRandom("SplatoonSWEPs: Spread", -DegRandomX, DegRandomX, CurTime())
+	local ry = util.SharedRandom("SplatoonSWEPs: Spread", -ss.mDegRandomY, ss.mDegRandomY, CurTime() / 100)
 	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
-	angle_initvelocity:RotateAroundAxis(right:Cross(dir), util.SharedRandom("SplatoonSWEPs: Spread", -DegRandomX, DegRandomX))
-	angle_initvelocity:RotateAroundAxis(right, util.SharedRandom("SplatoonSWEPs: Spread", -ss.mDegRandomY, ss.mDegRandomY))
+	angle_initvelocity:RotateAroundAxis(right:Cross(dir), rx)
+	angle_initvelocity:RotateAroundAxis(right, ry)
 	local initvelocity = angle_initvelocity:Forward() * self.Primary.InitVelocity
 	
 	self:EmitSound(self.ShootSound)
 	self.ModifyWeaponSize = SysTime()
 	self.PreviousInk = true
 	if self.Owner == LocalPlayer() then
-		local range = self.Primary.InitVelocity * self.Primary.Straight
 		ss.InkTraces[{
-			Color = ss:GetColor(self.ColorCode),
-			ColorCode = self.ColorCode,
+			Appearance = {
+				InitPos = pos,
+				Pos = pos,
+				Speed = self.Primary.InitVelocity,
+				TrailPos = pos,
+				Velocity = initvelocity,
+			},
+			Color = ss:GetColor(self:GetColorCode()),
+			ColorCode = self:GetColorCode(),
 			InitPos = pos,
 			InitTime = CurTime() - self:Ping(),
-			InitVelocity = initvelocity,
-			TrailPos = pos,
-			TrailTime = self.Primary.Delay / 2,
 			Speed = self.Primary.InitVelocity,
 			Straight = self.Primary.Straight,
+			TrailDelay = self.Primary.Delay / 2,
+			TrailTime = RealTime(),
+			Velocity = initvelocity,
 			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 			filter = self.Owner,
 			mask = ss.SquidSolidMask,
@@ -276,12 +286,11 @@ function SWEP:ClientPrimaryAttack(hasink)
 			start = pos,
 		}] = true
 	end
-	
-	if not self.Primary.TripleShotDelay or self.TripleShot > CurTime() then return end
-	self.TripleShot = CurTime() + self.Primary.Delay * 2 + self.Primary.TripleShotDelay
-	self:AddSchedule(self.Primary.Delay, 2, function(self, schedule)
-		self:PrimaryAttack(true)
-	end)
+	DebugPoint(pos, 5, true)
+	if not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end
+	self.ShotDelay = CurTime() + (self.Primary.Delay * 3 + self.Primary.TripleShotDelay) / lv
+	if self.Owner ~= LocalPlayer() then return end
+	self.TripleSchedule = self:AddSchedule(self.Primary.Delay, 2, self.PrimaryAttack)
 end
 
 function SWEP:ClientThink()

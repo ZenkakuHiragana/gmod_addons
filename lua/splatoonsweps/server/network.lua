@@ -4,6 +4,7 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
+util.AddNetworkString "SplatoonSWEPs: Client Deploy"
 util.AddNetworkString "SplatoonSWEPs: Client PrimaryAttack"
 util.AddNetworkString "SplatoonSWEPs: DrawInk"
 util.AddNetworkString "SplatoonSWEPs: Play damage sound"

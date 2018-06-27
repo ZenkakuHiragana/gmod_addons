@@ -85,28 +85,6 @@ function SWEP:Deploy()
 end
 
 function SWEP:ClientDeployBase()
-	if self.Owner:IsPlayer() and not self.Owner:IsBot() then
-		for i, param in ipairs {
-			"InkColor", "BecomeSquid",
-			"CanHealStand", "CanHealInk",
-			"CanReloadStand", "CanReloadInk",
-			"AvoidWalls",
-		} do
-			local value = ss:GetConVarInt(param)
-			if i == 1 then
-				self.ColorCode = value
-			else
-				self[param] = value > 0
-			end
-		end
-	else
-		self.CanHealStand = true
-		self.CanHealInk = true
-		self.CanReloadStand = true
-		self.CanReloadInk = true
-		self.ColorCode = math.floor(util.SharedRandom("SplatoonSWEPs: BotColorCode", 1, ss.MAX_COLORS, CurTime()))
-	end
-	
 	if not IsValid(self.Owner) then return end
 	if self.Owner:IsPlayer() then
 		self.SurpressDrawingVM = nil
@@ -125,7 +103,7 @@ function SWEP:Holster()
 		self.SurpressDrawingVM = true
 		local vm = self.Owner:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
-		if self.BecomeSquid and self.HullDuckMins then
+		if self:GetBecomeSquid() and self.HullDuckMins then
 			self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 			self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 		end
@@ -174,7 +152,7 @@ function SWEP:Think()
 		self:MakeSquidModel()
 	end
 	
-	if self.BecomeSquid then
+	if self:GetBecomeSquid() then
 		self:DrawShadow(not self:Crouching())
 	end
 	

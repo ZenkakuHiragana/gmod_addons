@@ -11,10 +11,11 @@ function ss:SetPrimary(weapon, info)
 	p.Automatic = info.IsAutomatic or false
 	p.Ammo = "Ink"
 	p.Delay = info.Delay.Fire * ss.FrameToSec
+	p.FirePosition = info.FirePosition
+	p.MuzzlePosition = info.MuzzlePosition
 	p.Recoil = info.Recoil or .2
 	p.ReloadDelay = info.Delay.Reload * ss.FrameToSec
 	p.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
-	p.PlayAnimPercent = info.PlayAnimPercent
 	p.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
 	ss:ProtectedCall(ss.CustomPrimary[weapon.Base], p, info)
 	weapon.Primary = p
@@ -30,7 +31,6 @@ function ss:SetSecondary(weapon, info)
 	s.Recoil = info.Recoil or .2
 	s.ReloadDelay = info.Delay.Reload * ss.FrameToSec
 	s.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
-	s.PlayAnimPercent = info.PlayAnimPercent
 	s.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
 	ss:ProtectedCall(ss.CustomSecondary[weapon.Base], s, info)
 	weapon.Secondary = s
@@ -55,10 +55,9 @@ function ss.CustomPrimary.weapon_shooter(p, info)
 	p.MinDamageTime = info.Delay.MinDamage * ss.FrameToSec
 	p.DecreaseDamage = info.Delay.DecreaseDamage * ss.FrameToSec
 	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
-	p.FirePosition = info.FirePosition
 	p.AimDuration = info.Delay.Aim * ss.FrameToSec
 	p.ColRadius = info.ColRadius or ss.mColRadius
-	p.Range = p.InitVelocity * (p.Straight + 2.5 * ss.FrameToSec)
+	p.Range = p.InitVelocity * (p.Straight)
 	p.RangeSqr = p.Range^2
 	
 	if not info.Delay.TripleShot then return end

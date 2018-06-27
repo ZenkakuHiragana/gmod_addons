@@ -4,11 +4,15 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 net.Receive("SplatoonSWEPs: Client PrimaryAttack", function()
-	local owner = net.ReadEntity()
-	if owner == LocalPlayer() then return end
-	local w = ss:IsValidInkling(owner)
-	if not w then return end
+	local w = net.ReadEntity()
+	if not IsValid(w) or w.Owner == LocalPlayer() then return end
 	w:PrimaryAttack()
+end)
+
+net.Receive("SplatoonSWEPs: Client Deploy", function()
+	local w = net.ReadEntity()
+	if not IsValid(w) or w.Owner == LocalPlayer() then return end
+	w:Deploy()
 end)
 
 net.Receive("SplatoonSWEPs: DrawInk", function()
@@ -61,15 +65,22 @@ net.Receive("SplatoonSWEPs: Shooter Tracer", function()
 	local color = net.ReadUInt(ss.COLOR_BITS)
 	local splashinit = net.ReadUInt(4)
 	ss.InkTraces[{
+		Appearance = {
+			InitPos = pos,
+			Pos = pos,
+			Speed = speed,
+			TrailPos = pos,
+			Velocity = dir * speed,
+		},
 		Color = ss:GetColor(color),
 		ColorCode = color,
 		InitPos = pos,
 		InitTime = CurTime() - LocalPlayer():Ping() / 1000,
-		InitVelocity = dir * speed,
 		Speed = speed,
 		Straight = straight,
-		TrailPos = pos,
-		TrailTime = trailtime,
+		TrailDelay = trailtime,
+		TrailTime = RealTime(),
+		Velocity = dir * speed,
 		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 		filter = owner,
 		mask = ss.SquidSolidMask,

@@ -240,15 +240,15 @@ hook.Add("GetFallDamage", "SplatoonSWEPs: Inklings don't take fall damage.", fun
 end)
 
 hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, dmg)
-	local atk = dmg:GetAttacker()
-	if atk ~= game.GetWorld() and not (IsValid(atk) and ent:Health() > 0 and ss:IsValidInkling(atk)) then return end
-	if atk.IsSplatoonProjectile then return true end
+	if ent:Health() <= 0 then return end
 	local entweapon = ss:IsValidInkling(ent)
 	if not entweapon then return end
-	if entweapon.ColorCode == dmg:GetInflictor().ColorCode then return true end
+	local atk = dmg:GetAttacker()
+	local inf = dmg:GetInflictor()
+	if not (IsValid(atk) and inf.IsSplatoonWeapon) then return end
+	if entweapon:GetColorCode() == inf:GetColorCode() then return true end
 	entweapon.HealSchedule:SetDelay(45 * ss.FrameToSec)
-	if ent:IsPlayer() and IsValid(dmg:GetInflictor())
-		and dmg:GetInflictor().IsSplatoonWeapon then
+	if ent:IsPlayer() then
 		net.Start "SplatoonSWEPs: Play damage sound"
 		net.Send(ent)
 	end

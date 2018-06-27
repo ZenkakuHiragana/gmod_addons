@@ -4,6 +4,7 @@ if not ss then return end
 
 SWEP.Base = "inklingbase"
 SWEP.PrintName = "Shooter base"
+local FirePosition = 10
 function SWEP:GetFirePosition(aim, ang, shootpos)
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
 	if not aim then
@@ -14,14 +15,14 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	end
 	
 	local col = ss.vector_one * self.Primary.ColRadius
-	local dp = Vector(self.Primary.FirePosition) dp:Rotate(ang)
+	local dp = -Vector(0, FirePosition, FirePosition) dp:Rotate(ang)
 	local t = ss.SquidTrace
 	t.start, t.endpos = shootpos, shootpos + aim
 	t.mins, t.maxs = -col, col
 	t.filter = {self, self.Owner}
 	for _, e in pairs(ents.FindAlongRay(t.start, t.endpos, t.mins * 5, t.maxs * 5)) do
 		local w = ss:IsValidInkling(e)
-		if not w or w.ColorCode == self.ColorCode then continue end
+		if not w or w:GetColorCode() == self:GetColorCode() then continue end
 		table.insert(t.filter, e)
 		table.insert(t.filter, w)
 	end
@@ -33,14 +34,14 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	
 	t.start, t.endpos = pos, tr.HitPos
 	local trtest = util.TraceHull(t)
-	if self.AvoidWalls and tr.HitPos:DistToSqr(shootpos) > trtest.HitPos:DistToSqr(pos) * 9 then
+	if self:GetAvoidWalls() and tr.HitPos:DistToSqr(shootpos) > trtest.HitPos:DistToSqr(pos) * 9 then
 		for dir, negate in ipairs {false, "y", "z", "yz", 0} do --right, left, up
 			if negate then
 				if negate == 0 then
-					dp = vector_up * self.Primary.FirePosition.z
+					dp = vector_up * -FirePosition
 					pos = shootpos
 				else
-					dp = Vector(self.Primary.FirePosition)
+					dp = -Vector(0, FirePosition, FirePosition)
 					for i = 1, negate:len() do
 						local s = negate:sub(i, i)
 						dp[s] = -dp[s]
@@ -65,8 +66,16 @@ end
 function SWEP:SharedInit()
 	self.NextPlayEmpty = CurTime()
 	self:SetAimTimer(CurTime())
-	if not self.Primary.TripleShotDelay then return end
-	self.TripleShot = CurTime()
+	if not self.Primary.TripleShotDelay then
+		self.DisableKeys = bit.bor(IN_DUCK, IN_ATTACK2)
+	else
+		self.TripleSchedule = {done = 2}
+	end
+end
+
+function SWEP:SharedDeploy()
+	if self.Primary.TripleShotDelay then return end
+	self.DisableKeys = bit.bor(IN_DUCK, IN_ATTACK2)
 end
 
 function SWEP:CustomDataTables()

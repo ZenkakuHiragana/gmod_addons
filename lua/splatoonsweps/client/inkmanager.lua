@@ -152,96 +152,116 @@ hook.Add("Tick", "SplatoonSWEPs: Register ink clientside", coroutine.wrap(functi
 	end
 end))
 
+local TrailLagTime = 10 * ss.FrameToSec
+local TrailMergeTime = 20 * ss.FrameToSec
 hook.Add("PreDrawTranslucentRenderables", "SplatoonSWEPs: Draw ink", DrawMeshes)
 hook.Add("PreDrawTranslucentRenderables", "SplatoonSWEPs: Fix EyePos", EyePos)
 hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", function()
 	if not rt.Ready then return end
-	local ct = CurTime()
+	local ct, rtime = CurTime(), RealTime()
 	for ink in pairs(ss.InkTraces) do
 		local lifetime = math.max(0, ct - ink.InitTime)
+		local trailtime = lifetime - ink.TrailDelay
+		local App = ink.Appearance -- Effect position fix
+		local w = ss:IsValidInkling(ink.filter)
+		if w and lifetime < ink.Straight + DecreaseFrame then
+			local wt = ((ink.filter ~= LocalPlayer() or ink.filter:ShouldDrawLocalPlayer())
+			and w.WElements or w.VElements).weapon
+			local ent = wt.modelEnt
+			if IsValid(ent) then
+				local time = ink.Straight + DecreaseFrame / 2
+				local straightpos = ink.InitPos + ink.Velocity * time
+				local mp = w.Primary.MuzzlePosition
+				local pos, ang = ent:GetPos(), ent:GetAngles()
+				mp = Vector(mp.x * wt.size.x, mp.y * wt.size.y, mp.z * wt.size.z)
+				App.InitPos = LocalToWorld(mp, angle_zero, pos, ang)
+				App.Velocity = (straightpos - App.InitPos) / time
+				App.Speed = App.Velocity:Length()
+				if trailtime < 0 then App.TrailPos = App.InitPos end
+			end
+		end
+		
 		if lifetime < ink.Straight then -- Goes straight
-			ink.endpos = ink.InitPos + ink.InitVelocity * lifetime
-			ink.start = ink.InitPos + ink.InitVelocity * math.max(0, lifetime - ss.FrameToSec)
+			ink.endpos = ink.InitPos + ink.Velocity * lifetime
+			ink.start = ink.InitPos + ink.Velocity * math.max(0, lifetime - ss.FrameToSec)
+			App.Pos = App.InitPos + App.Velocity * lifetime
 		elseif lifetime > ink.Straight + DecreaseFrame then -- Falls straight
-			local pos = ink.InitPos + ink.InitVelocity * (ink.Straight + DecreaseFrame / 2)
+			local time = ink.Straight + DecreaseFrame / 2
 			local falltime = lifetime - ink.Straight - DecreaseFrame
+			local pos = ink.InitPos + ink.Velocity * time
+			local tpspos = App.InitPos + App.Velocity * time
 			ink.endpos = pos + physenv.GetGravity() * falltime * falltime / 2
+			App.Pos = tpspos + physenv.GetGravity() * falltime * falltime / 2
 			falltime = math.max(falltime - ss.FrameToSec, 0)
 			ink.start = pos + physenv.GetGravity() * falltime * falltime / 2
 		else
-			local time = lifetime - ink.Straight
-			ink.endpos = ink.InitPos + ink.InitVelocity * (ink.Straight + time / 2)
-			time = time - ss.FrameToSec
-			ink.start = ink.InitPos + ink.InitVelocity * (ink.Straight + time / (time > 0 and 2 or 1))
+			local t = lifetime - ink.Straight -- 0 <= t <= DecreaseFrame
+			local time = ink.Straight + t / 2
+			ink.endpos = ink.InitPos + ink.Velocity * time
+			App.Pos = App.InitPos + App.Velocity * time
+			t = t - ss.FrameToSec
+			ink.start = ink.InitPos + ink.Velocity * (ink.Straight + t / (t > 0 and 2 or 1))
 		end
 		
-		lifetime = lifetime - ink.TrailTime
-		if lifetime > 0 then -- Second trajectory starts
-			if not ink.TrailVelocity then
-				ink.TrailVelocity = ink.InitVelocity
+		if trailtime > 0 then -- Second trajectory starts
+			if not App.TrailVelocity then
+				App.TrailVelocity = App.Velocity
 				if IsValid(ink.filter) then
 					local aimvector = ss:ProtectedCall(ink.filter.GetAimVector, ink.filter) or ink.filter:GetForward()
-					ink.TrailVelocity = aimvector * ink.Speed
+					App.TrailVelocity = aimvector * App.Speed
 				end
-				ink.TrailVelocity = LerpVector(.125, ink.InitVelocity, ink.TrailVelocity)
 			end
 			
-			if lifetime < ink.Straight then -- Goes straight
-				ink.TrailPos = ink.InitPos + ink.TrailVelocity * lifetime
-			elseif lifetime > ink.Straight + DecreaseFrame then -- Falls straight
-				local pos = ink.InitPos + ink.TrailVelocity * (ink.Straight + DecreaseFrame / 2)
-				local falltime = lifetime - ink.Straight - DecreaseFrame
-				ink.TrailPos = pos + physenv.GetGravity() * falltime * falltime / 2
+			if trailtime < ink.Straight then -- Goes straight
+				App.TrailPos = App.InitPos + App.TrailVelocity * trailtime
+			elseif trailtime > ink.Straight + DecreaseFrame then -- Falls straight
+				local time = ink.Straight + DecreaseFrame / 2
+				local pos = App.InitPos + App.TrailVelocity * time
+				local falltime = trailtime - ink.Straight - DecreaseFrame
+				App.TrailPos = pos + physenv.GetGravity() * 1.5 * falltime * falltime / 2
 			else
-				local time = lifetime - ink.Straight
-				ink.TrailPos = ink.InitPos + ink.TrailVelocity * (ink.Straight + time / 2)
+				local time = ink.Straight + (trailtime - ink.Straight) / 2
+				App.TrailPos = App.InitPos + App.TrailVelocity * time
 			end
+			
+			App.TrailPos = LerpVector(math.Clamp(
+			(trailtime - ink.Straight) / TrailMergeTime, 0, .75), App.TrailPos, App.Pos)
 		end
 		
-		local t = util.TraceHull(ink)
-		local mean = (ink.start + ink.endpos) / 2
-		render.SetColorMaterial()
-		render.DrawSphere(mean, ss.mColRadius, 8, 8, ink.Color)
-		-- render.DrawBox(ink.start, ink.InitVelocity:Angle(), ink.mins, ink.maxs, ink.Color, true)
-		-- render.DrawBox(mean, ink.InitVelocity:Angle(), ink.mins, ink.maxs, ink.Color, true)
-		-- render.DrawBox(ink.endpos, ink.InitVelocity:Angle(), ink.mins, ink.maxs, ink.Color, true)
+		local radius = Lerp(lifetime / ink.Straight, ss.mColRadius / 5, ss.mColRadius)
+		local dir = ink.endpos - ink.start
+		local f = App.Pos -- Forward position
+		local mean, a = f - dir / 2, App.Velocity:Angle()
+		local r, u = mean + a:Right() * radius, mean + a:Up() * radius
+		local l, d = mean * 2 - r, mean * 2 - u
+		local tr = util.TraceHull(ink)
+		local frac = math.Clamp((rtime - ink.TrailTime) / TrailLagTime, 0, 1)
+		local trpos = LerpVector(frac, App.InitPos, App.TrailPos)
 		
-		local a = ink.InitVelocity:Angle()
-		local f, b = ink.endpos - mean, ink.start - mean
-		local r, u = a:Right() * ss.mColRadius, a:Up() * ss.mColRadius
-		local l, d = -r, -u
-		-- f:Mul(10) -- b:Mul(10)
-		l, r, u, d = l + mean, r + mean, u + mean, d + mean
-		mesh.Begin(MATERIAL_TRIANGLES, 10)
+		render.SetColorMaterial()
+		mesh.Begin(MATERIAL_TRIANGLES, 5)
 		for s, t in pairs {[l] = u, [u] = r, [r] = d, [d] = l} do
-			for _, v in ipairs {f + mean, s, t} do
+			for _, v in ipairs {trpos, s, t} do
 				mesh.Color(ink.Color.r, ink.Color.g, ink.Color.b, 255)
 				mesh.Position(v)
 				mesh.AdvanceVertex()
 			end
-			for _, v in ipairs {1, t, s} do
-				mesh.Color(ink.Color.r, ink.Color.g, ink.Color.b, 255)
-				mesh.Position(v == 1 and ((s == r or s == d) and b + mean or ink.TrailPos) or v)
-				mesh.AdvanceVertex()
-			end
-		end
-		for _, v in ipairs {ink.TrailPos, l, ink.start, ink.TrailPos, ink.start, r} do
-			mesh.Color(ink.Color.r, ink.Color.g, ink.Color.b, 255)
-			mesh.Position(v)
-			mesh.AdvanceVertex()
 		end
 		mesh.End()
+		render.DrawSphere(mean, radius, 8, 8, ink.Color)
 		
-		if not t.Hit then
-			ink.start = t.HitPos
+		if not tr.Hit then
+			ink.start = tr.HitPos
 			continue
-		elseif t.HitWorld then
+		elseif tr.HitWorld then
 			-- World hit effect here
-		elseif IsValid(t.Entity) and t.Entity:Health() > 0 then
+		elseif IsValid(tr.Entity) and tr.Entity:Health() > 0 then
 			-- Entity hit effect here
-			local ent = ss:IsValidInkling(t.Entity)
-			if not ent or ent.ColorCode ~= ink.ColorCode then
-				surface.PlaySound(ink.IsCritical and ss.DealDamageCritical or ss.DealDamage)
+			if ink.filter == LocalPlayer() then
+				local ent = ss:IsValidInkling(tr.Entity)
+				if not ent or ent:GetColorCode() ~= ink.ColorCode then
+					surface.PlaySound(ink.IsCritical and ss.DealDamageCritical or ss.DealDamage)
+				end
 			end
 		end
 		

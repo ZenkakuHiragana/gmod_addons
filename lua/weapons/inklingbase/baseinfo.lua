@@ -35,7 +35,6 @@ SWEP.m_WeaponDeploySpeed = 5
 ss:SetPrimary(SWEP, {
 	Recoil				= .2,	--Viewmodel recoil intensity
 	TakeAmmo			= .01,	--Ink consumption per fire[-].
-	PlayAnimPercent		= 0,	--Play PLAYER_ATTACK1 animation frequency[%].
 	Delay = {
 		Fire			= 6,	--Fire rate in frames.
 		Reload			= 30,	--Start reloading after firing weapon[frames].
@@ -46,7 +45,6 @@ ss:SetPrimary(SWEP, {
 ss:SetSecondary(SWEP, {
 	Recoil				= .2,
 	TakeAmmo			= .7,	 --Sub weapon consumption[-].
-	PlayAnimPercent		= 0,
 	Delay = {
 		Fire			= 0,
 		Reload			= 0,

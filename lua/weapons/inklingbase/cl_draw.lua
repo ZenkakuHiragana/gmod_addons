@@ -230,7 +230,7 @@ function SWEP:MakeSquidModel(id)
 		end
 	elseif not self.ErrorSquidModel then
 		self.ErrorSquidModel = true
-		if self.BecomeSquid then
+		if self:GetBecomeSquid() then
 			self:PopupError "WeaponSquidModelNotFound"
 		end
 	end
@@ -330,7 +330,7 @@ function SWEP:DrawWorldModel()
 		if self:GetHolstering() then return end
 		if self:Crouching() then
 			if self:GetInInk() then return
-			elseif self.BecomeSquid then
+			elseif self:GetBecomeSquid() then
 				if IsValid(self.Squid) and not self:GetInInk() then
 					--It seems changing eye position doesn't work.
 					self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
@@ -367,9 +367,7 @@ function SWEP:DrawWorldModel()
 	
 	local cameradistance = 1
 	if self.Owner == LocalPlayer() then
-		cameradistance = math.Remap(math.Clamp(
-		self:GetPos():DistToSqr(EyePos()), 0, ss.CameraFadeDistance),
-		0, ss.CameraFadeDistance, 0, 1)
+		cameradistance = math.Clamp(self:GetPos():DistToSqr(EyePos()) / ss.CameraFadeDistance, 0, 1)
 	end
 	
 	for k, name in pairs(self.wRenderOrder) do

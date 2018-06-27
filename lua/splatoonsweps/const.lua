@@ -443,9 +443,10 @@ ss.MaxInkAmount = 100
 ss.SquidBoundHeight = 32
 ss.SquidViewOffset = vector_up * 24
 ss.InklingJumpPower = 250
+ss.DefaultDisableKeys = bit.bor(IN_ATTACK, IN_DUCK, IN_ATTACK2)
 ss.DisruptoredSpeed = .45 -- Disruptor's debuff factor
 ss.OnEnemyInkJumpPower = ss.InklingJumpPower * .75
-ss.ToHammerUnits = 2.88 -- .1 * 3.28084 * 16 * (1.00965 / 1.5)
+ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) --2.88
 ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec
 ss.ToHammerHealth = 100
 ss.FrameToSec = 1 / framepersec
@@ -453,6 +454,7 @@ ss.SecToFrame = framepersec
 ss.mDegRandomY = .5
 ss.SpreadJumpMaxVelocity = 32
 ss.SpreadJumpCoefficient = .25
+ss.SpreadJumpFraction = ss.SpreadJumpCoefficient / ss.SpreadJumpMaxVelocity
 ss.CameraFadeDistance = 100^2 -- Thirdperson model fade distance[units^2]
 ss.SquidTrace = {
 	start = vector_origin, endpos = vector_origin,
@@ -473,3 +475,6 @@ for key, value in pairs {
 } do
 	ss[key] = value * ss.ToHammerUnits
 end
+
+ss.PaintDistance = ss.mPaintFarDistance - ss.mPaintNearDistance
+ss.PaintFraction = ss.mPaintNearDistance / ss.PaintDistance

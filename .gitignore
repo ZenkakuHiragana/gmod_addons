@@ -226,3 +226,4 @@ lua/entities/ent_test.lua
 lua/weapons/weapon_sandbox.lua
 lua/do.lua
 lua/autorun/debug.lua
+lua/autorun/debug.lua

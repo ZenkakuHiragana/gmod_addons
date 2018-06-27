@@ -42,24 +42,24 @@ function SWEP:Initialize()
 	self.ViewAnim = ACT_VM_IDLE
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
-	self:SetNextCrouchTime(CurTime())
 	self:SetInk(ss.MaxInkAmount)
 	self:SetInkColorProxy(ss.vector_one)
 	self:AddSchedule(5 * ss.FrameToSec,
 	function(self, schedule) --Set if player is in ink
-		local filter = {self, self.Owner}
 		local ang = Angle(0, self.Owner:GetAngles().yaw)
+		local c = self:GetColorCode()
+		local filter = {self, self.Owner}
 		local p = self.Owner:WorldSpaceCenter()
 		local fw, right = ang:Forward() * InkTraceLength, ang:Right() * InkTraceLength
 		self:SetGroundColor(ss:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, filter)) or -1)
 		local onink = self:GetGroundColor() >= 0
-		local onourink = self:GetGroundColor() == self.ColorCode
+		local onourink = self:GetGroundColor() == c
 		
 		self:SetInWallInk(self:Crouching() and (
-		ss:GetSurfaceColor(util.QuickTrace(p, fw - right, filter)) == self.ColorCode or
-		ss:GetSurfaceColor(util.QuickTrace(p, fw + right, filter)) == self.ColorCode or
-		ss:GetSurfaceColor(util.QuickTrace(p,-fw - right, filter)) == self.ColorCode or
-		ss:GetSurfaceColor(util.QuickTrace(p,-fw + right, filter)) == self.ColorCode))
+		ss:GetSurfaceColor(util.QuickTrace(p, fw - right, filter)) == c or
+		ss:GetSurfaceColor(util.QuickTrace(p, fw + right, filter)) == c or
+		ss:GetSurfaceColor(util.QuickTrace(p,-fw - right, filter)) == c or
+		ss:GetSurfaceColor(util.QuickTrace(p,-fw + right, filter)) == c))
 		
 		self:SetInInk(self:Crouching() and (onink and onourink or self:GetInWallInk()))
 		self:SetOnEnemyInk(onink and not onourink)
@@ -103,15 +103,8 @@ end
 
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
-	if self.Owner:IsPlayer() then
-		self:CallOnClient "ClientDeployBase"
-		self:SetHoldType "passive"
-	end
-	
-	ss.NoCollide[self.Owner] = {}
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
-	self:SetNextCrouchTime(CurTime())
 	self.OwnerVelocity = self.Owner:GetVelocity()
 	self.ViewAnim = ACT_VM_IDLE
 	if self.Owner:IsPlayer() and not self.Owner:IsBot() then
@@ -125,21 +118,31 @@ function SWEP:Deploy()
 			if i == 1 then
 				self:SetPMID(value)
 			elseif i == 2 then
-				self.ColorCode = value
+				self:SetColorCode(value)
 			else
-				self[param] = value > 0
+				self["Set" .. param](self, value > 0)
 			end
 		end
 	else
 		self:SetPMID(table.Random(ss.PLAYER))
-		self.CanHealStand = true
-		self.CanHealInk = true
-		self.CanReloadStand = true
-		self.CanReloadInk = true
-		self.ColorCode = math.floor(util.SharedRandom("SplatoonSWEPs: BotColorCode", 1, ss.MAX_COLORS, CurTime()))
+		self:SetAvoidWalls(true)
+		self:SetBecomeSquid(true)
+		self:SetCanHealStand(true)
+		self:SetCanHealInk(true)
+		self:SetCanReloadStand(true)
+		self:SetCanReloadInk(true)
+		self:SetColorCode(math.random(ss.MAX_COLORS))
 	end
 	
-	self.Color = ss:GetColor(self.ColorCode)
+	if self.Owner:IsPlayer() then
+		net.Start "SplatoonSWEPs: Client Deploy"
+		net.WriteEntity(self)
+		net.Send(ss.PlayersReady)
+		self:CallOnClient "ClientDeployBase"
+		self:SetHoldType "passive"
+	end
+	
+	self.Color = ss:GetColor(self:GetColorCode())
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 	self.SquidAvailable = tobool(ss:GetSquidmodel(self:GetPMID()))
 	if self.Owner:IsPlayer() then
