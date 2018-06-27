@@ -57,8 +57,7 @@ function ss.CustomPrimary.weapon_shooter(p, info)
 	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
 	p.AimDuration = info.Delay.Aim * ss.FrameToSec
 	p.ColRadius = info.ColRadius or ss.mColRadius
-	p.Range = p.InitVelocity * (p.Straight)
-	p.RangeSqr = p.Range^2
+	p.Range = p.InitVelocity * (p.Straight + 2 * ss.FrameToSec)
 	
 	if not info.Delay.TripleShot then return end
 	p.TripleShotDelay = info.Delay.TripleShot * ss.FrameToSec
