@@ -175,25 +175,23 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 	if self:GetHolstering() then return end
 	local canattack = self:CommonFire(self.Secondary)
 	if self.Owner:IsPlayer() then self:CallOnClient "SecondaryAttack" end
-	if self.CannotStandup or not (canattack and
-	(SERVER or self:IsFirstTimePredicted())) then return end
+	if self.CannotStandup or not (canattack and (SERVER or self:IsFirstTimePredicted())) then return end
 	self:SetThrowing(true)
 	self:SetHoldType "grenade"
 	self:AddSchedule(0, function(self, sched)
 		self:SetNextPrimaryFire(CurTime() + 1)
-		if self.Owner:KeyDown(IN_ATTACK2) then
-			self:SetHoldType "grenade"
-			return
-		elseif not self:GetThrowing() or self:Crouching() then
+		self:SetNextSecondaryFire(CurTime() + 1)
+		if not self:GetThrowing() or self:Crouching() then
 			self:SetThrowing(false)
 			return true
+		elseif self.Owner:KeyDown(IN_ATTACK2) then
+			self:SetHoldType "grenade"
+			return
 		end
 		
 		self.Owner:SetAnimation(PLAYER_ATTACK1)
-		self:SetNextSecondaryFire(CurTime() + 1)
 		self:AddSchedule(.6, 1, function(self, sched)
-			self:SetThrowing(self.Owner:KeyDown(IN_ATTACK2))
-			self:SetHoldType(self:GetThrowing() and "grenade" or "passive")
+			self:SetThrowing(false)
 		end)
 		
 		ss:ProtectedCall(self.SharedSecondaryAttack, self, canattack)
@@ -203,10 +201,10 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 end
 -- End of predicted hooks
 
-local NetworkVarNotifyCallsOnClient = false
+local NetworkVarNotifyCalledOnClient = false
 function SWEP:ChangeInInk(name, old, new)
 	if self:GetHolstering() then return end
-	if not NetworkVarNotifyCallsOnClient then
+	if not NetworkVarNotifyCalledOnClient then
 		if SERVER then
 			if IsValid(self.Owner) and self.Owner:IsPlayer() then
 				self:CallOnClient("ChangeInInk", table.concat({name, tostring(old), tostring(new)}, " "))
@@ -245,7 +243,7 @@ end
 
 function SWEP:ChangeOnEnemyInk(name, old, new)
 	if self:GetHolstering() then return end
-	if not NetworkVarNotifyCallsOnClient then
+	if not NetworkVarNotifyCalledOnClient then
 		if SERVER then
 			if IsValid(self.Owner) and self.Owner:IsPlayer() then
 				self:CallOnClient("ChangeOnEnemyInk", table.concat({name, tostring(old), tostring(new)}, " "))
