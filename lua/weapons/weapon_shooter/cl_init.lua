@@ -298,9 +298,7 @@ function SWEP:ClientThink()
 	if self:Crouching() then
 		self:SetHoldType "melee2"
 		self.WElements.weapon.bone = "ValveBiped.Bip01_R_Hand"
-	end
-	
-	if self:GetAimTimer() < CurTime() then
+	elseif self:GetAimTimer() < CurTime() then
 		self.InklingSpeed = self:GetInklingSpeed()
 		if not self:GetThrowing() then
 			self:SetHoldType "passive"

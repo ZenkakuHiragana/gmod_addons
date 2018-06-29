@@ -88,8 +88,8 @@ end
 
 function SWEP:ServerThink()
 	if not self.Owner:IsPlayer() then return end
-	if self:Crouching() then self:SetHoldType "melee2" end
-	if self:GetAimTimer() < CurTime() then
+	if self:Crouching() then self:SetHoldType "melee2"
+	elseif self:GetAimTimer() < CurTime() then
 		self.InklingSpeed = self:GetInklingSpeed()
 		if not self:GetThrowing() then self:SetHoldType "passive" end
 		if self:GetOnEnemyInk() or self:GetInInk() then return end
