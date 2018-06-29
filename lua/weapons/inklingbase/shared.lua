@@ -272,7 +272,7 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 			local d = DamageInfo()
 			d:SetAttacker(game.GetWorld())
 			d:SetDamage(self.Owner:Health() > self.Owner:GetMaxHealth() / 2 and 1 or 0)
-			d:SetInflictor(game.GetWorld())
+			d:SetInflictor(self)
 			self.Owner:TakeDamageInfo(d)
 		end)
 		
