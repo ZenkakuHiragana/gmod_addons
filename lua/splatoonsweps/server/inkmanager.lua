@@ -14,7 +14,6 @@ local POINT_BOUND = ss.vector_one * .1
 local reference_polys = {}
 local reference_vert = Vector(1)
 local rootpi = math.sqrt(math.pi) / 2
-local world = game.GetWorld()
 local circle_polys = 360 / 12
 local DecreaseFrame = 4 * ss.FrameToSec
 local dropdata = {
@@ -220,7 +219,7 @@ end
 -- Physics simulation for ink trajectory.
 -- The first some frames(1/60 sec.) ink flies without gravity.
 -- After that, ink decelerates horizontally and is affected by gravity.
-hook.Add("Tick", "SplatoonSWEPs: Simulate ink", coroutine.wrap(function()
+local process = coroutine.create(function()
 	while true do
 		local done = 0
 		local ct = CurTime()
@@ -295,8 +294,8 @@ hook.Add("Tick", "SplatoonSWEPs: Simulate ink", coroutine.wrap(function()
 					d:SetDamageType(DMG_GENERIC)
 					d:SetMaxDamage(ink.Info.Damage)
 					d:SetReportedPosition(t.HitPos)
-					d:SetAttacker(IsValid(o) and o or world)
-					d:SetInflictor(ss:IsValidInkling(o) or world)
+					d:SetAttacker(IsValid(o) and o or game.GetWorld())
+					d:SetInflictor(ss:IsValidInkling(o) or game.GetWorld())
 					t.Entity:TakeDamageInfo(d)
 				end
 			end
@@ -306,7 +305,13 @@ hook.Add("Tick", "SplatoonSWEPs: Simulate ink", coroutine.wrap(function()
 		
 		coroutine.yield()
 	end
-end))
+end)
+
+hook.Add("Tick", "SplatoonSWEPs: Simulate ink", function()
+	if coroutine.status(process) == "dead" then return end
+	local ok, msg = coroutine.resume(process)
+	if not ok then ErrorNoHalt(msg) end
+end)
 
 -- Using timer to coroutine.create drops
 -- local gravityscale = 2 / physenv.GetGravity():Length()

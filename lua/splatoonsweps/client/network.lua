@@ -6,13 +6,13 @@ if not ss then return end
 net.Receive("SplatoonSWEPs: Client PrimaryAttack", function()
 	local w = net.ReadEntity()
 	if not IsValid(w) or w.Owner == LocalPlayer() then return end
-	w:PrimaryAttack()
+	ss:ProtectedCall(w.PrimaryAttack, w)
 end)
 
 net.Receive("SplatoonSWEPs: Client Deploy", function()
 	local w = net.ReadEntity()
 	if not IsValid(w) or w.Owner == LocalPlayer() then return end
-	w:Deploy()
+	ss:ProtectedCall(w.Deploy, w)
 end)
 
 net.Receive("SplatoonSWEPs: DrawInk", function()

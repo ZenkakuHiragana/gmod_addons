@@ -7,7 +7,8 @@ local function ItemTintInit(self, mat, values)
 	self.ResultTo = values.resultvar -- Store the name of the variable we want to set
 end
 
-if steamworks.ShouldMountAddon "135491961" then
+for _, a in ipairs(engine.GetAddons()) do
+	if a.wsid ~= 135491961 then continue end
 	include "matproxy/tf2itempaint.lua" -- Hat Painter & Crit Glow Tools conflicts
 	ItemTintInit = matproxy.ProxyList.ItemTintColor.init -- So take some workaround
 	OldItemTintBind = matproxy.ProxyList.ItemTintColor.bind
