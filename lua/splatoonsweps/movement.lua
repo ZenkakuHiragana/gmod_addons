@@ -1809,10 +1809,26 @@ local function GetInFence(w, oldpos, newpos)
 	return tr.Entity ~= NULL and util.TraceHull(t).Entity == NULL
 end
 
+-- GM:StartCommand is called both serverside/clientside on singleplayer/multiplayer, before GM:Move hook.
+local AttackMask = bit.bnot(IN_ATTACK)
+local DuckMask = bit.bnot(IN_DUCK)
+hook.Add("StartCommand", "SplatoonSWEPs: Control input", function(p, cm)
+	local w = ss:IsValidInkling(p)
+	if not w then return end
+	w.OldButtons = w.Buttons
+	w.Buttons = cm:GetButtons()
+	w:CheckButtons()
+end)
+
 hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	ply, mv = p, m
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
+	w:CheckButtons()
+	if w.PreventCrouching or w.EnemyInkPreventCrouching then
+		mv:SetButtons(bit.band(mv:GetButtons(), DuckMask))
+	end
+	
 	local maxspeed = mv:GetMaxSpeed() * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
 	for v, i in pairs {
 		[mv:GetVelocity()] = true, -- Current velocity
@@ -1912,7 +1928,8 @@ end)
 hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 	ply, mv = p, m
 	local w = ss:IsValidInkling(ply)
-	if not (w and (w:GetInFence() or mv:KeyDown(IN_DUCK))) then return end
+	if not w then return end
+	if not (w:GetInFence() or mv:KeyDown(IN_DUCK)) then return end
 	if not ply:Crouching() then
 		if SERVER then
 			w:SetInFence(false)

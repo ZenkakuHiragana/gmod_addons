@@ -1,7 +1,9 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
+local KeyMask = {IN_ATTACK, IN_DUCK, IN_ATTACK2}
 ss:AddTimerFramework(SWEP)
+
 local function PlayLoopSound(self)
 	if not self.SwimSound:IsPlaying() then
 		self.SwimSound:Play()
@@ -24,6 +26,27 @@ local function StopLoopSound(self)
 		self.EnemyInkSound:ChangeVolume(0)
 		self.EnemyInkSound:Stop()
 	end
+end
+
+function SWEP:CheckButtons(key)
+	if not self.Owner:IsPlayer() then return end
+	local neutral = true
+	local keytable, keytime = {}, {}
+	for _, k in ipairs(KeyMask) do
+		local last = bit.band(self.OldButtons, k) == 0
+		if bit.band(self.Buttons, k) > 0 then
+			if last then self.LastKeyDown[k] = CurTime() end
+			table.insert(keytime, self.LastKeyDown[k])
+		end
+		
+		neutral = neutral and last
+		keytable[self.LastKeyDown[k]] = k -- [Last time key down] = key
+	end
+	
+	self.ValidKey = keytable[math.max(unpack(keytime))] or 0
+	self.EnemyInkPreventCrouching = self.EnemyInkPreventCrouching and self:GetOnEnemyInk() and bit.band(self.Buttons, IN_DUCK) > 0
+	self.PreventCrouching = self.ValidKey ~= IN_DUCK or CurTime() < self.Cooldown - self:Ping()
+	return self.ValidKey == key
 end
 
 function SWEP:ChangeViewModel(act)
@@ -80,12 +103,14 @@ function SWEP:OwnerChanged()
 end
 
 function SWEP:SharedInitBase()
-	self.DisableKeys = ss.DefaultDisableKeys
-	self.OldKey = 0
-	self.ValidKey = 0
-	self.ShotDelay = CurTime()
+	self.Cooldown = CurTime()
 	self.SwimSound = CreateSound(self, ss.SwimSound)
 	self.EnemyInkSound = CreateSound(self, ss.EnemyInkSound)
+	self.Buttons, self.OldButtons = 0, 0
+	self.LastKeyDown = {}
+	for _, k in ipairs(KeyMask) do
+		self.LastKeyDown[k] = CurTime()
+	end
 	ss:ProtectedCall(self.SharedInit, self)
 end
 
@@ -93,14 +118,13 @@ end
 function SWEP:SharedDeployBase()
 	PlayLoopSound(self)
 	self:SetHolstering(false)
-	self.ShotDelay = CurTime()
+	self.Cooldown = CurTime()
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
 	self.SquidSpeedSqr = self.SquidSpeed^2
 	self.OnEnemyInkSpeed = ss.OnEnemyInkSpeed
 	self.JumpPower = ss.InklingJumpPower
 	self.OnEnemyInkJumpPower = ss.OnEnemyInkJumpPower
-	self.DisableKeys = ss.DefaultDisableKeys
 	if self.Owner:IsPlayer() then
 		self:SetPlayerSpeed(self.InklingSpeed)
 		self.Owner:SetJumpPower(self.JumpPower)
@@ -134,7 +158,6 @@ function SWEP:Reload()
 end
 
 function SWEP:CommonFire(Weapon)
-	local lv = self:GetLaggedMovementValue()
 	if self.Owner:IsPlayer() then
 		local plmins, plmaxs = self.Owner:GetHull()
 		self.CannotStandup = self:Crouching() and util.TraceHull {
@@ -149,22 +172,23 @@ function SWEP:CommonFire(Weapon)
 		if self.CannotStandup then return false end
 	end
 	
-	local reloadtime = Weapon.ReloadDelay / lv
-	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
-	self.ReloadSchedule.prevtime = CurTime() + reloadtime
-	
-	local hasink = self:GetInk() > 0 -- Ink check
-	if hasink then self:SetNextPrimaryFire(CurTime() + Weapon.Delay / lv) end
-	return hasink
+	return self:GetInk() > 0 -- Ink check
 end
 
-function SWEP:PrimaryAttack() -- Shoot ink.
+function SWEP:PrimaryAttack(auto) -- Shoot ink.
 	if self:GetHolstering() then return end
-	local canattack = self:CommonFire(self.Primary)
+	local can = self:CommonFire(self.Primary)
+	local lv = self:GetLaggedMovementValue()
+	local reloadtime = self.Primary.ReloadDelay / lv
+	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
+	self.ReloadSchedule.prevtime = CurTime() + reloadtime
+	if can then self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / lv) end
+	if not auto and CurTime() < self.Cooldown or not (auto or self:CheckButtons(IN_ATTACK)) then return end
 	if self.Owner:IsPlayer() then self:CallOnClient "PrimaryAttack" end
 	if self.CannotStandup then return end
-	ss:ProtectedCall(self.SharedPrimaryAttack, self, canattack)
-	ss:ProtectedCall(Either(SERVER, self.ServerPrimaryAttack, self.ClientPrimaryAttack), self, canattack)
+	
+	ss:ProtectedCall(self.SharedPrimaryAttack, self, can, auto)
+	ss:ProtectedCall(Either(SERVER, self.ServerPrimaryAttack, self.ClientPrimaryAttack), self, can, auto)
 	if CLIENT then return end
 	net.Start "SplatoonSWEPs: Client PrimaryAttack"
 	net.WriteEntity(self)
@@ -173,29 +197,34 @@ end
 
 function SWEP:SecondaryAttack() -- Use sub weapon
 	if self:GetHolstering() then return end
-	local canattack = self:CommonFire(self.Secondary)
+	local can = self:CommonFire(self.Secondary)
+	if CurTime() < self.Cooldown or not self:CheckButtons(IN_ATTACK2) then return end
 	if self.Owner:IsPlayer() then self:CallOnClient "SecondaryAttack" end
-	if self.CannotStandup or not (canattack and (SERVER or self:IsFirstTimePredicted())) then return end
+	if self.CannotStandup or not can then return end
 	self:SetThrowing(true)
 	self:SetHoldType "grenade"
+	self.Owner:AnimResetGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD)
 	self:AddSchedule(0, function(self, sched)
-		self:SetNextPrimaryFire(CurTime() + 1)
-		self:SetNextSecondaryFire(CurTime() + 1)
-		if not self:GetThrowing() or self:Crouching() then
-			self:SetThrowing(false)
-			return true
-		elseif self.Owner:KeyDown(IN_ATTACK2) then
-			self:SetHoldType "grenade"
-			return
+		self:SetHoldType "grenade"
+		self:CheckButtons()
+		if bit.band(self.Buttons, IN_ATTACK2) > 0 then
+			self:SetThrowing(self.ValidKey == IN_ATTACK2)
+			return self.ValidKey ~= IN_ATTACK2
 		end
 		
+		if SERVER then SuppressHostEvents(self.Owner) end
+		local time = CurTime() + self.Secondary.Delay
+		self.Cooldown = time
+		self:SetNextPrimaryFire(time)
+		self:SetNextSecondaryFire(time)
 		self.Owner:SetAnimation(PLAYER_ATTACK1)
-		self:AddSchedule(.6, 1, function(self, sched)
+		self:AddSchedule(self.Secondary.Delay, 1, function(self, sched)
 			self:SetThrowing(false)
 		end)
 		
 		ss:ProtectedCall(self.SharedSecondaryAttack, self, canattack)
 		ss:ProtectedCall(Either(SERVER, self.ServerSecondaryAttack, self.ClientSecondaryAttack), self, canattack)
+		if SERVER then SuppressHostEvents() end
 		return true
 	end)
 end

@@ -160,7 +160,7 @@ function ss:GetSurfaceColor(tr)
 	end
 end
 
--- Make a ink bullet for shooter.
+-- Make an ink bullet for shooter.
 -- Arguments:
 --   Entity owner				| The owner of fired ink.
 --   Vector pos					| Initial position of ink.
@@ -252,8 +252,7 @@ local process = coroutine.create(function()
 			if ink.SplashCount <= ink.SplashNum then -- Creates an ink drop
 				local len = (ink.endpos - ink.InitPos):Length2D()
 				local nextlen = ink.SplashCount * ink.Info.SplashInterval + ink.SplashInit
-				while len >= nextlen do
-					-- Create drops
+				while len >= nextlen do -- Create drops
 					dropdata.InkRadius = ink.SplashRadius
 					dropdata.MinRadius = ink.SplashMinRadius
 					ss:AddInk(ink.filter, ink.InitPos + ink.InitDirection

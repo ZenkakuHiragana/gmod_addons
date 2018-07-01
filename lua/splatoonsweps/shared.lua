@@ -8,8 +8,8 @@ include "movement.lua"
 include "sound.lua"
 include "text.lua"
 include "weapons.lua"
-
 cleanup.Register(ss.CleanupTypeInk)
+
 -- Compares each component and returns the smaller one.
 -- Arguments:
 --   Vector a, b	| Two vectors to compare.
@@ -97,6 +97,7 @@ end
 -- Argument:
 --   Entity ent	| The entity to add to.
 function ss:AddNetworkVar(ent)
+	if ent.NetworkSlot then return end
 	ent.NetworkSlot = {
 		String = -1, Bool = -1, Float = -1, Int = -1,
 		Vector = -1, Angle = -1, Entity = -1,
@@ -128,6 +129,8 @@ end
 -- Argument:
 --   Entity ent	| The entity to be able to use timer library.
 function ss:AddTimerFramework(ent)
+	if ent.FunctionQueue then return end
+	
 	ss:AddNetworkVar(ent) -- Required to use Entity:AddNetworkSchedule()
 	ent.FunctionQueue = {}
 	
@@ -244,34 +247,6 @@ function ss:IsValidInkling(ply)
 	return IsValid(w) and w.IsSplatoonWeapon and not w:GetHolstering() and w or nil
 end
 
--- MOUSE1+LCtrl makes crouch, LCtrl+MOUSE1 makes primary attack.
-local KeyMask = {[IN_ATTACK] = IN_ATTACK, [IN_DUCK] = IN_DUCK, [IN_ATTACK2] = IN_ATTACK2}
-local EitherKey = bit.bor(IN_ATTACK, IN_DUCK, IN_ATTACK2)
-local NeitherKey = bit.bnot(EitherKey)
-hook.Add("StartCommand", "SplatoonSWEPs: Detect controls", function(ply, cm)
-	local w = ss:IsValidInkling(ply)
-	if not w then return end
-	local keys = bit.band(cm:GetButtons(), EitherKey)
-	w.OldKey, w.ValidKey = keys, KeyMask[keys]
-	or KeyMask[bit.band(keys, bit.bxor(bit.bnot(w.ValidKey),
-	w.ValidKey ~= w.OldKey and w.OldKey or 0))]
-	or KeyMask[bit.band(keys, bit.bnot(w.OldKey))] or 0
-	cm:SetButtons(bit.bor(bit.band(cm:GetButtons(), NeitherKey), w.ValidKey))
-	
-	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching
-	and w:GetOnEnemyInk() and bit.band(keys, IN_DUCK) > 0
-	if w.EnemyInkPreventCrouching then cm:RemoveKey(IN_DUCK) end
-	
-	if not w.ShotDelay then return end
-	if w.ShotDelay - w:Ping() > CurTime() then
-		cm:RemoveKey(w.DisableKeys or EitherKey) -- Shooter cooldown
-		w.ShotCoolDown = true
-	elseif w.ShotCoolDown and not w.Primary.Automatic then
-		w.ShotCoolDown = bit.band(keys, IN_ATTACK) > 0
-		cm:RemoveKey(IN_ATTACK) -- Shooter semi-auto logic
-	end
-end)
-
 -- Overriding footstep sound stops calling other PlayerFootstep hooks in other addons.
 -- I decided to have one of their hook run my function.
 local FootstepTrace = vector_up * -20
@@ -327,7 +302,7 @@ hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 			weapon.Category = ss.Text.Category
 			weapon.PrintName = ss.Text.PrintNames[c]
 			weapon.Spawnable = true
-			weapon.Slot = weaponslot[weapon.Base] or 0
+			weapon.Slot = weapon.Base.Slot or weaponslot[weapon.Base] or 0
 			weapon.SlotPos = i
 			if CLIENT then
 				local icon = "entities/" .. c

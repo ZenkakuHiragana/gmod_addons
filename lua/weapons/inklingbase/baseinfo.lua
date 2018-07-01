@@ -43,11 +43,12 @@ ss:SetPrimary(SWEP, {
 })
 
 ss:SetSecondary(SWEP, {
+	IsAutomatic			= true,
 	Recoil				= .2,
 	TakeAmmo			= .7,	 --Sub weapon consumption[-].
 	Delay = {
-		Fire			= 0,
-		Reload			= 0,
-		Crouch			= 10,
+		Fire			= 30,
+		Reload			= 40,
+		Crouch			= 30,
 	},
 })

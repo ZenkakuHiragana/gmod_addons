@@ -21,10 +21,11 @@ end
 
 -- Serverside: create ink projectile.
 local jumpvelocity = 32
-function SWEP:ServerPrimaryAttack(hasink)
-	if self.CrouchPriority then return end
+function SWEP:ServerPrimaryAttack(hasink, auto)
+	if not IsValid(self.Owner) then return end
 	local lv = self:GetLaggedMovementValue()
-	self.ShotDelay = math.max(self.ShotDelay, CurTime() + self.Primary.CrouchDelay / lv)
+	self.Cooldown = math.max(self.Cooldown, CurTime()
+	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
 	self:MuzzleFlash()
 	self.InklingSpeed = self.Primary.MoveSpeed
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
@@ -34,7 +35,7 @@ function SWEP:ServerPrimaryAttack(hasink)
 	end
 	
 	if not hasink then
-		if self.Primary.TripleShotDelay then self.ShotDelay = CurTime() end
+		if self.Primary.TripleShotDelay then self.Cooldown = CurTime() end
 		if CurTime() > self.NextPlayEmpty then
 			self:EmitSound "SplatoonSWEPs.EmptyShot"
 			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
@@ -74,7 +75,7 @@ function SWEP:ServerPrimaryAttack(hasink)
 	armpos = armpos == 3 or armpos == 4
 	if self.Owner:IsPlayer() then self:SetHoldType(armpos and "rpg" or "crossbow") end
 	if not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end
-	self.ShotDelay = CurTime() + (self.Primary.Delay * 2 + self.Primary.TripleShotDelay) / lv
+	self.Cooldown = CurTime() + (self.Primary.Delay * 2 + self.Primary.TripleShotDelay) / lv
 	self.TripleSchedule = self:AddSchedule(self.Primary.Delay, 2, self.PrimaryAttack)
 	self.TripleSchedule.time = self.TripleSchedule.time - self:Ping()
 end
@@ -88,14 +89,18 @@ end
 
 function SWEP:ServerThink()
 	if not self.Owner:IsPlayer() then return end
-	if self:Crouching() then self:SetHoldType "melee2"
+	SuppressHostEvents(self.Owner)
+	if not self:GetThrowing() and self:Crouching() then
+		self:SetHoldType "melee2"
 	elseif self:GetAimTimer() < CurTime() then
 		self.InklingSpeed = self:GetInklingSpeed()
 		if not self:GetThrowing() then self:SetHoldType "passive" end
-		if self:GetOnEnemyInk() or self:GetInInk() then return end
-		self:SetPlayerSpeed(self.InklingSpeed)
-	else
+		if not (self:GetOnEnemyInk() or self:GetInInk()) then
+			self:SetPlayerSpeed(self.InklingSpeed)
+		end
+	elseif not self:GetThrowing() then
 		local armpos = select(3, self:GetFirePosition())
 		self:SetHoldType((armpos == 3 or armpos == 4) and "rpg" or "crossbow")
 	end
+	SuppressHostEvents()
 end

@@ -66,16 +66,8 @@ end
 function SWEP:SharedInit()
 	self.NextPlayEmpty = CurTime()
 	self:SetAimTimer(CurTime())
-	if not self.Primary.TripleShotDelay then
-		self.DisableKeys = bit.bor(IN_DUCK, IN_ATTACK2)
-	else
-		self.TripleSchedule = {done = 2}
-	end
-end
-
-function SWEP:SharedDeploy()
-	if self.Primary.TripleShotDelay then return end
-	self.DisableKeys = bit.bor(IN_DUCK, IN_ATTACK2)
+	if not self.Primary.TripleShotDelay then return end
+	self.TripleSchedule = {done = 2}
 end
 
 function SWEP:CustomDataTables()

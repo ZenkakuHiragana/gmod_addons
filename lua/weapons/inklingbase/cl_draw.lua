@@ -272,16 +272,14 @@ function SWEP:ViewModelDrawn()
 				end
 			end
 			
-			if v.skin and v.skin ~= model:GetSkin() then
-				model:SetSkin(v.skin)
+			local skin = name == "weapon" and self.Skin or v.skin
+			if skin and skin ~= model:GetSkin() then
+				model:SetSkin(skin)
 			end
 			
-			if v.bodygroup then
-				for k, v in pairs(v.bodygroup) do
-					if model:GetBodygroup(k) ~= v then
-						model:SetBodygroup(k, v)
-					end
-				end
+			for k, v in pairs(name == "weapon" and self.Bodygroup or v.bodygroup or {}) do
+				if model:GetBodygroup(k) == v then continue end
+				model:SetBodygroup(k, v)
 			end
 			
 			if v.surpresslightning then
@@ -414,16 +412,14 @@ function SWEP:DrawWorldModel()
 				end
 			end
 			
-			if v.skin and v.skin ~= model:GetSkin() then
-				model:SetSkin(v.skin)
+			local skin = name == "weapon" and self.Skin or v.skin
+			if skin and skin ~= model:GetSkin() then
+				model:SetSkin(skin)
 			end
 			
-			if v.bodygroup then
-				for k, v in pairs(v.bodygroup) do
-					if model:GetBodygroup(k) ~= v then
-						model:SetBodygroup(k, v)
-					end
-				end
+			for k, v in pairs(name == "weapon" and self.Bodygroup or v.bodygroup or {}) do
+				if model:GetBodygroup(k) == v then continue end
+				model:SetBodygroup(k, v)
 			end
 			
 			if v.surpresslightning then

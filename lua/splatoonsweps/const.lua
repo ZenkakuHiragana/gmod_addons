@@ -443,7 +443,6 @@ ss.MaxInkAmount = 100
 ss.SquidBoundHeight = 32
 ss.SquidViewOffset = vector_up * 24
 ss.InklingJumpPower = 250
-ss.DefaultDisableKeys = bit.bor(IN_ATTACK, IN_DUCK, IN_ATTACK2)
 ss.DisruptoredSpeed = .45 -- Disruptor's debuff factor
 ss.OnEnemyInkJumpPower = ss.InklingJumpPower * .75
 ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) --2.88

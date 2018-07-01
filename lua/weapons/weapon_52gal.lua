@@ -4,6 +4,9 @@ local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.52"
+SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/52_96_gal/52_96_gal.mdl"
+SWEP.SubWeapon = "splashwall"
+SWEP.SpecialWeapon = "killerwail"
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity
@@ -35,41 +38,31 @@ ss:SetPrimary(SWEP, {
 
 ss:SetViewModelMods(SWEP, {
 	["ValveBiped.Bip01_L_Finger0"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
 		angle = Angle(25, -40, 0)
 	},
 	["Base"] = {
-		scale = Vector(1, 1, 1),
 		pos = Vector(-31, 26.5, -31),
 		angle = Angle(1, 0, 0)
 	},
 	["ValveBiped.Bip01_L_Clavicle"] = {
-		scale = Vector(1, 1, 1),
 		pos = Vector(1.5, 0, 2.5),
-		angle = Angle(0, 0, 0)
 	},
 	["ValveBiped.Bip01_Spine4"] = {
-		scale = Vector(1, 1, 1),
 		pos = Vector(-30, 26, 30),
 		angle = Angle(0, -8, 0)
 	},
 	["ValveBiped.Bip01_L_Hand"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
 		angle = Angle(0, 28, -13)
 	},
 })
 
 ss:SetViewModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/52_96_gal/52_96_gal.mdl",
 	pos = Vector(2.8, -24, -7),
 	angle = Angle(13, 80, 90),
 	size = Vector(0.56, 0.56, 0.56),
 })
 
 ss:SetWorldModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/52_96_gal/52_96_gal.mdl",
 	pos = Vector(5, 0.6, 0.5),
 	angle = Angle(0, 1, 180),
 })
