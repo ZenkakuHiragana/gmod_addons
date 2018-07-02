@@ -90,17 +90,19 @@ end
 function SWEP:ServerThink()
 	if not self.Owner:IsPlayer() then return end
 	SuppressHostEvents(self.Owner)
+	local ht = self:GetHoldType()
 	if not self:GetThrowing() and self:Crouching() then
-		self:SetHoldType "melee2"
+		if ht ~= "melee2" then self:SetHoldType "melee2" end
 	elseif self:GetAimTimer() < CurTime() then
 		self.InklingSpeed = self:GetInklingSpeed()
-		if not self:GetThrowing() then self:SetHoldType "passive" end
+		if not self:GetThrowing() and ht ~= "passive" then self:SetHoldType "passive" end
 		if not (self:GetOnEnemyInk() or self:GetInInk()) then
 			self:SetPlayerSpeed(self.InklingSpeed)
 		end
 	elseif not self:GetThrowing() then
 		local armpos = select(3, self:GetFirePosition())
-		self:SetHoldType((armpos == 3 or armpos == 4) and "rpg" or "crossbow")
+		local holdtype = (armpos == 3 or armpos == 4) and "rpg" or "crossbow"
+		if ht ~= holdtype then self:SetHoldType(holdtype) end
 	end
 	SuppressHostEvents()
 end

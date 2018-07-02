@@ -12,10 +12,6 @@ function SWEP:PopupError(msg)
 	notification.AddLegacy(msg, NOTIFY_ERROR, 10)
 end
 
-function SWEP:IsFirstTimePredicted()
-	return game.SinglePlayer() or IsFirstTimePredicted() or self.Owner ~= LocalPlayer()
-end
-
 --Fully copies the table, meaning all tables inside this table are copied too and so on
 --(normal table.Copy copies only their reference).
 --Does not copy entities of course, only copies their reference.

@@ -243,6 +243,7 @@ function SWEP:Think()
 	
 	self:ProcessSchedules()
 	self:SharedThinkBase()
-	self:SetClip1(math.max(0, self:GetInk() / ss.MaxInkAmount * 100))
+	local clip = math.max(0, self:GetInk() / ss.MaxInkAmount * 100)
+	if self:Clip1() ~= clip then self:SetClip1(clip) end
 	ss:ProtectedCall(self.ServerThink, self)
 end

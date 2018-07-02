@@ -227,8 +227,6 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	
 	local pos, dir, armpos = self:GetFirePosition()
 	local delay, lv = self.Cooldown, self:GetLaggedMovementValue()
-	self.Cooldown = math.max(self.Cooldown, CurTime()
-	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
 	armpos = armpos == 3 or armpos == 4
 	if self.Owner:IsPlayer() then self:SetHoldType(armpos and "rpg" or "crossbow") end
 	if not self:IsFirstTimePredicted() then return end
@@ -261,6 +259,8 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	self:EmitSound(self.ShootSound)
 	self.ModifyWeaponSize = SysTime()
 	self.PreviousInk = true
+	self.Cooldown = math.max(self.Cooldown, CurTime()
+	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
 	if self.Owner == LocalPlayer() then
 		ss.InkTraces[{
 			Appearance = {

@@ -140,19 +140,45 @@ function ss:AddTimerFramework(ent)
 	local ScheduleFunc = {}
 	local ScheduleMeta = {__index = ScheduleFunc}
 	function ScheduleFunc:SetDelay(newdelay)
-		self.prevtime = CurTime()
-		if isstring(self.time) then
+		if isstring(self.delay) then
 			self.weapon["Set" .. self.delay](self.weapon, newdelay)
-			self.weapon["Set" .. self.time](self.weapon, CurTime() + newdelay)
 		else
 			self.delay = newdelay
+		end
+		
+		if isstring(self.prevtime) then
+			self.weapon["Set" .. self.prevtime](self.weapon, CurTime())
+		else
+			self.prevtime = CurTime()
+		end
+		
+		if isstring(self.time) then
+			self.weapon["Set" .. self.time](self.weapon, CurTime() + newdelay)
+		else
 			self.time = CurTime() + newdelay
+		end
+	end
+	
+	-- Returns the current interval of the schedule.
+	function ScheduleFunc:GetDelay()
+		return isstring(self.delay) and self.weapon["Get" .. self.delay](self.weapon) or self.delay
+	end
+	
+	-- Set a time for SinceLastCalled()
+	-- Argument:
+	--   number newtime	| Relative to CurTime()
+	function ScheduleFunc:SetLastCalled(newtime)
+		if isstring(self.prevtime) then
+			self.weapon["Set" .. self.prevtime](self.weapon, CurTime() + newtime)
+		else
+			self.prevtime = CurTime() + newtime
 		end
 	end
 	
 	-- Returns the time since the schedule has been last called.
 	function ScheduleFunc:SinceLastCalled()
-		return CurTime() - self.prevtime
+		return CurTime() - (isstring(self.prevtime) and
+		self.weapon["Get" .. self.prevtime](self.weapon) or self.prevtime)
 	end
 	
 	-- Adds an syncronized schedule.
@@ -166,15 +192,17 @@ function ss:AddTimerFramework(ent)
 		local schedule = setmetatable({
 			done = 0,
 			func = func,
-			prevtime = CurTime(),
 			weapon = self,
 		}, ScheduleMeta)
-		schedule.time = "Timer" .. tostring(self:GetLastSlot "Float")
-		self:AddNetworkVar("Float", schedule.time)
-		self["Set" .. schedule.time](self, CurTime())
 		schedule.delay = "TimerDelay" .. tostring(self:GetLastSlot "Float")
 		self:AddNetworkVar("Float", schedule.delay)
 		self["Set" .. schedule.delay](self, delay)
+		schedule.prevtime = "TimerPrevious" .. tostring(self:GetLastSlot "Float")
+		self:AddNetworkVar("Float", schedule.prevtime)
+		self["Set" .. schedule.prevtime](self, CurTime())
+		schedule.time = "Timer" .. tostring(self:GetLastSlot "Float")
+		self:AddNetworkVar("Float", schedule.time)
+		self["Set" .. schedule.time](self, CurTime())
 		table.insert(self.FunctionQueue, schedule)
 		return schedule
 	end
@@ -206,8 +234,9 @@ function ss:AddTimerFramework(ent)
 		for i, s in pairs(self.FunctionQueue) do
 			if isstring(s.time) then
 				if CurTime() > self["Get" .. s.time](self) then
-					s.func(self, s)
-					s.prevtime = CurTime()
+					local remove = s.func(self, s)
+					if remove then self.FunctionQueue[i] = nil end
+					self["Set" .. s.prevtime](self, CurTime())
 					self["Set" .. s.time](self, CurTime() + self["Get" .. s.delay](self))
 				end
 			elseif CurTime() > s.time then
@@ -302,7 +331,7 @@ hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 			weapon.Category = ss.Text.Category
 			weapon.PrintName = ss.Text.PrintNames[c]
 			weapon.Spawnable = true
-			weapon.Slot = weapon.Base.Slot or weaponslot[weapon.Base] or 0
+			weapon.Slot = weaponslot[weapon.Base]
 			weapon.SlotPos = i
 			if CLIENT then
 				local icon = "entities/" .. c
@@ -310,6 +339,11 @@ hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 				weapon.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
 				killicon.Add(c, icon, color_white) -- Weapon killicon
 			end
+			
+			if weapon.Slot then continue end
+			local base = weapons.Get(weapon.Base)
+			if not base then weapon.Slot = 0 continue end
+			weapon.Slot = base.Slot or 0
 		end
 		
 		if weapons.Get(c) then -- Adds to NPC weapon list
