@@ -326,28 +326,42 @@ hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 	local ssEnabled = GetConVar "sv_splatoonsweps_enabled"
 	if not ssEnabled or not ssEnabled:GetBool() then return end
 	local weaponlist = list.GetForEdit "Weapon"
-	for i, c in ipairs(ss.WeaponClassNames) do
-		for _, weapon in ipairs {weapons.GetStored(c), weaponlist[c]} do
-			weapon.Category = ss.Text.Category
-			weapon.PrintName = ss.Text.PrintNames[c]
-			weapon.Spawnable = true
-			weapon.Slot = weaponslot[weapon.Base]
-			weapon.SlotPos = i
-			if CLIENT then
-				local icon = "entities/" .. c
-				if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then icon = "weapons/swep" end
-				weapon.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
-				killicon.Add(c, icon, color_white) -- Weapon killicon
+	for loop = 1, 2 do
+		for i, c in ipairs(ss.WeaponClassNames) do
+			for _, weapon in ipairs {weapons.GetStored(c), weaponlist[c]} do
+				for _, v in ipairs(weapon.Variations or {}) do
+					v.Base = c
+					weapons.Register(v, v.ClassName)
+				end
+				
+				weapon.Category = ss.Text.Category
+				weapon.PrintName = ss.Text.PrintNames[c]
+				weapon.Spawnable = true
+				weapon.Slot = weaponslot[weapon.Base]
+				weapon.SlotPos = i
+				weapon.Variations = nil
+				
+				if CLIENT then
+					local icon = "entities/" .. c
+					if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then
+						icon = "weapons/swep"
+					end
+					if not killicon.Exists(c) then
+						killicon.Add(c, icon, color_white) -- Weapon killicon
+					end
+					
+					weapon.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
+				end
+				
+				if not weapon.Slot then
+					local base = weapons.Get(weapon.Base)
+					weapon.Slot = base and base.Slot or 0
+				end
 			end
 			
-			if weapon.Slot then continue end
-			local base = weapons.Get(weapon.Base)
-			if not base then weapon.Slot = 0 continue end
-			weapon.Slot = base.Slot or 0
-		end
-		
-		if weapons.Get(c) then -- Adds to NPC weapon list
-			list.Add("NPCUsableWeapons", {class = c, title = ss.Text.PrintNames[c]})
+			if loop == 2 and weapons.Get(c) then -- Adds to NPC weapon list
+				list.Add("NPCUsableWeapons", {class = c, title = ss.Text.PrintNames[c]})
+			end
 		end
 	end
 end)

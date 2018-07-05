@@ -5,8 +5,15 @@ if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.96"
 SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/52_96_gal/52_96_gal.mdl"
-SWEP.SubWeapon = "sprinkler"
-SWEP.SpecialWeapon = "echolocator"
+SWEP.Sub = "sprinkler"
+SWEP.Special = "echolocator"
+SWEP.Variations = {{
+	ClassName = "weapon_96gal_deco",
+	Sub = "splashwall",
+	Special = "kraken",
+	Skin = 3,
+}}
+
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity
@@ -37,22 +44,16 @@ ss:SetPrimary(SWEP, {
 })
 
 ss:SetViewModelMods(SWEP, {
-	["ValveBiped.Bip01_L_Finger0"] = {
-		angle = Angle(25, -40, 0)
-	},
 	["Base"] = {
 		pos = Vector(-31, 26.5, -31),
 		angle = Angle(1, 0, 0)
 	},
-	["ValveBiped.Bip01_L_Clavicle"] = {
-		pos = Vector(1.5, 0, 2.5),
-	},
+	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(1.5, 0, 2.5)},
+	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(25, -40, 0)},
+	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 28, -13)},
 	["ValveBiped.Bip01_Spine4"] = {
 		pos = Vector(-30, 26, 30),
 		angle = Angle(0, -8, 0)
-	},
-	["ValveBiped.Bip01_L_Hand"] = {
-		angle = Angle(0, 28, -13)
 	},
 })
 

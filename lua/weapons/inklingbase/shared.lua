@@ -55,12 +55,13 @@ function SWEP:CheckButtons(key)
 	
 	self.ValidKey = keytable[math.max(unpack(keytime))] or 0
 	self.EnemyInkPreventCrouching = self.EnemyInkPreventCrouching and self:GetOnEnemyInk() and bit.band(self.Buttons, IN_DUCK) > 0
-	self.PreventCrouching = self.ValidKey ~= IN_DUCK or CurTime() < self.Cooldown
+	self.PreventCrouching = self.ValidKey ~= 0 and self.ValidKey ~= IN_DUCK or CurTime() < self.Cooldown
 	return self.ValidKey == key
 end
 
 function SWEP:ChangeViewModel(act)
-	if self.ViewAnim == act then return end
+	if not act then act = self.ViewAnim
+	elseif self.ViewAnim == act then return end
 	self.ViewAnim = act
 	self:SendWeaponAnim(act)
 end
@@ -190,7 +191,7 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if self:CheckCannotStandup() then return end
 	if CurTime() < self:GetNextPrimaryFire() then return end
 	if not auto and self:IsFirstTimePredicted() and CurTime() < self.Cooldown then return end
-	if not auto and not self:CheckButtons(IN_ATTACK) then return end
+	if not auto and self:IsFirstTimePredicted() and not self:CheckButtons(IN_ATTACK) then return end
 	if auto and SERVER then SuppressHostEvents(self.Owner) end
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self.CannotStandup

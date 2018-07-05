@@ -216,7 +216,7 @@ end
 function SWEP:ClientPrimaryAttack(hasink, auto)
 	if not IsValid(self.Owner) then return end
 	self.InklingSpeed = self.Primary.MoveSpeed
-	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
+	self:SetAimTimer(math.max(self:GetAimTimer(), CurTime() + self.Primary.AimDuration))
 	if self.Owner == LocalPlayer() then self.AimTimer = self:GetAimTimer() end
 	if not self:GetOnEnemyInk() then self:SetPlayerSpeed(self.Primary.MoveSpeed) end
 	if self:IsFirstTimePredicted() and hasink and self.Owner:IsPlayer() then
@@ -290,7 +290,9 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	
 	if game.SinglePlayer() or not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end
 	self.Cooldown = CurTime() + (self.Primary.Delay * 2 + self.Primary.TripleShotDelay) / lv
+	self:SetAimTimer(self.Cooldown)
 	if self.Owner ~= LocalPlayer() then return end
+	self.AimTimer = self:GetAimTimer()
 	self.TripleSchedule = self:AddSchedule(self.Primary.Delay, 2, self.PrimaryAttack)
 end
 

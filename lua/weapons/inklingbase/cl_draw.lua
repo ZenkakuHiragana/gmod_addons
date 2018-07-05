@@ -120,12 +120,8 @@ function SWEP:GetBoneOrientation(basetab, tab, ent, bone_override)
 	else
 		bone = ent:LookupBone(bone_override or tab.bone)
 		if not bone then return end
-		
-		pos, ang = Vector(), Angle()
 		local m = ent:GetBoneMatrix(bone)
-		if m then
-			pos, ang = m:GetTranslation(), m:GetAngles()
-		end
+		pos, ang = m and m:GetTranslation(), m and m:GetAngles()
 		
 		if IsValid(self.Owner) and self.Owner:IsPlayer() and 
 			ent == self.Owner:GetViewModel() and self.ViewModelFlip then

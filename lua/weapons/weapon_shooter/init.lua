@@ -76,8 +76,8 @@ function SWEP:ServerPrimaryAttack(hasink, auto)
 	if self.Owner:IsPlayer() then self:SetHoldType(armpos and "rpg" or "crossbow") end
 	if not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end
 	self.Cooldown = CurTime() + (self.Primary.Delay * 2 + self.Primary.TripleShotDelay) / lv
+	self:SetAimTimer(self.Cooldown)
 	self.TripleSchedule = self:AddSchedule(self.Primary.Delay, 2, self.PrimaryAttack)
-	self.TripleSchedule.time = self.TripleSchedule.time - self:Ping()
 end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)

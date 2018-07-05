@@ -4,6 +4,24 @@ local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.Aerospray"
+SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/aerospray/aerospray.mdl"
+SWEP.Sub = "seeker"
+SWEP.Special = "inkzooka"
+SWEP.Variations = {
+	{
+		ClassName = "weapon_aerospray_rg",
+		Sub = "inkmine",
+		Special = "inkstrike",
+		Skin = 2,
+	},
+	{
+		ClassName = "weapon_aerospray_pg",
+		Sub = "burstbomb",
+		Special = "kraken",
+		Skin = 4,
+	},
+}
+
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity
@@ -34,32 +52,21 @@ ss:SetPrimary(SWEP, {
 })
 
 ss:SetViewModelMods(SWEP, {
-	["Base"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(-30, 30, -30),
-		angle = Angle(0, 0, 0)
-	},
-	["ValveBiped.Bip01_L_Clavicle"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(2.397, -2, 2),
-		angle = Angle(0, 0, 0)
-	},
+	["Base"] = {pos = Vector(-30, 30, -30)},
+	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2.397, -2, 2)},
 	["ValveBiped.Bip01_Spine4"] = {
-		scale = Vector(1, 1, 1),
 		pos = Vector(-31, 25, 30),
 		angle = Angle(0, -8, -2)
 	},
 })
 
 ss:SetViewModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/aerospray/aerospray.mdl",
 	pos = Vector(8, -26, -6),
 	angle = Angle(13, 80, 90),
 	size = Vector(0.56, 0.56, 0.56),
 })
 
 ss:SetWorldModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/aerospray/aerospray.mdl",
 	pos = Vector(11, 1, -4),
 	angle = Angle(0, 10, 180),
 })

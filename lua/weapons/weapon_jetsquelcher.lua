@@ -4,6 +4,16 @@ local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.Jet"
+SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/squelcher/squelcher.mdl"
+SWEP.Sub = "splashwall"
+SWEP.Special = "inkstrike"
+SWEP.Variations = {{
+	ClassName = "weapon_jetsquelcher_custom",
+	Sub = "burstbomb",
+	Special = "kraken",
+	Bodygroup = {1},
+}}
+
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity
@@ -34,42 +44,26 @@ ss:SetPrimary(SWEP, {
 })
 
 ss:SetViewModelMods(SWEP, {
-	["ValveBiped.Bip01_L_Finger0"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
-		angle = Angle(7, -27, 0)
-	},
 	["Base"] = {
-		scale = Vector(1, 1, 1),
 		pos = Vector(-33, 27, -30.5),
-		angle = Angle(1, 0, 0)
+		angle = Angle(1, 0, 0),
 	},
-	["ValveBiped.Bip01_L_Clavicle"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(2, -2, 2),
-		angle = Angle(0, 0, 0)
-	},
+	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2, -2, 2)},
+	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(7, -27, 0)},
+	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 23, -12)},
 	["ValveBiped.Bip01_Spine4"] = {
-		scale = Vector(1, 1, 1),
 		pos = Vector(-30, 27, 30),
-		angle = Angle(0, -8, 0)
-	},
-	["ValveBiped.Bip01_L_Hand"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
-		angle = Angle(0, 23, -12)
+		angle = Angle(0, -8, 0),
 	},
 })
 
 ss:SetViewModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/squelcher/squelcher.mdl",
 	pos = Vector(3.7, -24.3, -7.2),
 	angle = Angle(13, 80, 90),
 	size = Vector(0.56, 0.56, 0.56),
 })
 
 ss:SetWorldModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/squelcher/squelcher.mdl",
 	pos = Vector(4, 0.6, 0.5),
 	angle = Angle(0, 1, 180),
 })

@@ -4,6 +4,16 @@ local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.L-3"
+SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/nozzlenose/nozzlenose.mdl"
+SWEP.Sub = "disruptor"
+SWEP.Special = "killerwail"
+SWEP.Variations = {{
+	ClassName = "weapon_l3nozzlenose_d",
+	Sub = "burstbomb",
+	Special = "kraken",
+	Bodygroup = {1},
+}}
+
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= false,				-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity
@@ -36,41 +46,25 @@ ss:SetPrimary(SWEP, {
 
 ss:SetViewModelMods(SWEP, {
 	["Base"] = {
-		scale = Vector(1, 1, 1),
 		pos = Vector(-30, 26, -30),
 		angle = Angle(1, 0, 0),
 	},
+	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(1, 0, 2)},
+	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(50, -40, 0)},
+	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 28, -30)},
 	["ValveBiped.Bip01_Spine4"] = {
-		scale = Vector(1, 1, 1),
 		pos = Vector(-30, 24.5, 29),
 		angle = Angle(0, -8, 0),
 	},
-	["ValveBiped.Bip01_L_Finger0"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
-		angle = Angle(50, -40, 0),
-	},
-	["ValveBiped.Bip01_L_Clavicle"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(1, 0, 2),
-		angle = Angle(0, 0, 0),
-	},
-	["ValveBiped.Bip01_L_Hand"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
-		angle = Angle(0, 28, -30),
-	}
 })
 
 ss:SetViewModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/nozzlenose/nozzlenose.mdl",
 	pos = Vector(2.8, -23, -7),
 	angle = Angle(12, 85, 90),
 	size = Vector(0.56, 0.56, 0.56),
 })
 
 ss:SetWorldModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/nozzlenose/nozzlenose.mdl",
 	pos = Vector(4, 0.6, 0),
 	angle = Angle(0, 1, 180),
 })

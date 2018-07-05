@@ -196,6 +196,7 @@ function ss:AddInk(owner, pos, velocity, color, angle, inktype, splashinit, info
 		InkType = inktype,
 		InkRadius = info.InkRadius,
 		MinRadius = info.MinRadius,
+		Ping = ping,
 		Range = info.InitVelocity * info.Straight,
 		SplashCount = 0,
 		SplashInit = info.SplashInterval / info.SplashPatterns * splashinit,
@@ -286,7 +287,7 @@ local process = coroutine.create(function()
 				local w = ss:IsValidInkling(t.Entity)
 				if not w or w:GetColorCode() ~= ink.Color then
 					local d, o = DamageInfo(), ink.filter
-					local frac = (lifetime - ink.Info.DecreaseDamage) / ink.Info.MinDamageTime
+					local frac = (lifetime - ink.Info.DecreaseDamage - ink.Ping) / ink.Info.MinDamageTime
 					d:SetDamage(Lerp(1 - frac, ink.Info.MinDamage, ink.Info.Damage))
 					d:SetDamageForce(-t.HitNormal)
 					d:SetDamagePosition(t.HitPos)

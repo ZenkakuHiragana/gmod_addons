@@ -1870,13 +1870,17 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	-- Send viewmodel animation.
 	local infence = Either(SERVER, w:GetInFence(), me.m_bInFence[ply])
 	if ply:Crouching() then
-		w.SwimSound:ChangeVolume(w:GetInInk() and mv:GetVelocity():Length2D() / w.SquidSpeed or 0)
-		if bit.band(me.m_nFlags[ply], FL_DUCKING) == 0 then
+		w.SwimSound:ChangeVolume(w:GetInInk() and math.Clamp(mv:GetVelocity():Length() / w.SquidSpeed, 0, 1) or 0)
+		if not w.OldCrouching then
 			ply:RemoveAllDecals()
-			if SERVER then
+			if SERVER then SuppressHostEvents(ply) end
+			if SERVER or w:IsFirstTimePredicted() then
 				w:ChangeViewModel(ss.ViewModel.Squid)
-				ply:EmitSound "SplatoonSWEPs_Player.ToSquid"
+				w:EmitSound "SplatoonSWEPs_Player.ToSquid"
+			else
+				w:ChangeViewModel()
 			end
+			if SERVER then SuppressHostEvents() end
 		end
 		
 		if w:GetOnEnemyInk() then
@@ -1886,12 +1890,16 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 		end
 	elseif infence then -- Cannot stand while in fence
 		mv:AddKey(IN_DUCK) -- it's not correct behavior though
-	elseif bit.band(me.m_nFlags[ply], FL_DUCKING) ~= 0 then
+	elseif not ply:Crouching() and w.OldCrouching then
 		w.SwimSound:ChangeVolume(0)
-		if SERVER then
+		if SERVER then SuppressHostEvents(ply) end
+		if SERVER or w:IsFirstTimePredicted() then
 			w:ChangeViewModel(ss.ViewModel.Standing)
-			ply:EmitSound "SplatoonSWEPs_Player.ToHuman"
+			w:EmitSound "SplatoonSWEPs_Player.ToHuman"
+		else
+			w:ChangeViewModel()
 		end
+		if SERVER then SuppressHostEvents() end
 	end
 	
 	w.OnOutofInk = w:GetInWallInk()
@@ -1918,6 +1926,7 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	me.m_vecOldAngles[ply] = mv:GetOldAngles()
 	me.m_vecOrigin[ply] = mv:GetOrigin()
 	me.m_vecVelocity[ply] = mv:GetVelocity()
+	if SERVER or w:IsFirstTimePredicted() then w.OldCrouching = ply:Crouching() end
 	if CLIENT then me.m_bInFence[ply] = w:GetInFence() end
 	if infence and ply:GetMoveType() == MOVETYPE_NOCLIP then
 		ply:SetMoveType(MOVETYPE_WALK)
@@ -2007,6 +2016,7 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 end)
 
 hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", function(ply, desired)
+	if desired then return end
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
 	

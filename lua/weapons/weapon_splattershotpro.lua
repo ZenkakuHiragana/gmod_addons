@@ -4,6 +4,24 @@ local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.SplattershotPro"
+SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/splattershot_pro/splattershot_pro.mdl"
+SWEP.Sub = "splatbomb"
+SWEP.Special = "inkstrike"
+SWEP.Variations = {
+	{
+		ClassName = "weapon_splattershotpro_forge",
+		Sub = "pointsensor",
+		Special = "inkzooka",
+		Skin = 3,
+	},
+	{
+		ClassName = "weapon_splattershotpro_berry",
+		Sub = "suctionbomb",
+		Special = "bombrush",
+		Skin = 4,
+	},
+}
+
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity
@@ -34,57 +52,26 @@ ss:SetPrimary(SWEP, {
 })
 
 ss:SetViewModelMods(SWEP, {
-	["Base"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(-30, 30, -30),
-		angle = Angle(0, 0, 0),
-	},
+	["Base"] = {pos = Vector(-30, 30, -30)},
+	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2.397, -2, 2)},
+	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(7, -27, 0)},
+	["ValveBiped.Bip01_L_Finger1"] = {angle = Angle(0, -10, 0)},
+	["ValveBiped.Bip01_L_Finger2"] = {angle = Angle(0, -10, 0)},
+	["ValveBiped.Bip01_L_Finger3"] = {angle = Angle(0, -5, 0)},
+	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 23, -12)},
 	["ValveBiped.Bip01_Spine4"] = {
-		scale = Vector(1, 1, 1),
 		pos = Vector(-30, 27.5, 30),
 		angle = Angle(0, -8, -0),
 	},
-	["ValveBiped.Bip01_L_Finger0"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
-		angle = Angle(7, -27, 0),
-	},
-	["ValveBiped.Bip01_L_Finger1"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
-		angle = Angle(0, -10, 0),
-	},
-	["ValveBiped.Bip01_L_Finger2"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
-		angle = Angle(0, -10, 0),
-	},
-	["ValveBiped.Bip01_L_Finger3"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
-		angle = Angle(0, -5, 0),
-	},
-	["ValveBiped.Bip01_L_Clavicle"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(2.397, -2, 2),
-		angle = Angle(0, 0, 0),
-	},
-	["ValveBiped.Bip01_L_Hand"] = {
-		scale = Vector(1, 1, 1),
-		pos = Vector(0, 0, 0),
-		angle = Angle(0, 23, -12),
-	}
 })
 
 ss:SetViewModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/splattershot_pro/splattershot_pro.mdl",
 	pos = Vector(3.5, -22.8, -7),
 	angle = Angle(12.736, 80, 90),
 	size = Vector(0.56, 0.56, 0.56),
 })
 
 ss:SetWorldModel(SWEP, {
-	model = "models/props_splatoon/weapons/primaries/splattershot_pro/splattershot_pro.mdl",
 	pos = Vector(4, 0.6, 0.5),
 	angle = Angle(0, 1, 180),
 })
