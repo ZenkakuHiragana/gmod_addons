@@ -73,3 +73,16 @@ end
 function SWEP:CustomDataTables()
 	self:AddNetworkVar("Float", "AimTimer")
 end
+
+function SWEP:CustomActivity()
+	local at = self:GetAimTimer()
+	if CLIENT and LocalPlayer() == self.Owner then at = at - self:Ping() end
+	if CurTime() > at then return end
+	local aimpos = select(3, self:GetFirePosition())
+	aimpos = aimpos == 3 or aimpos == 4
+	return aimpos and "rpg" or "crossbow"
+end
+
+function SWEP:GetMoveSpeed()
+	return CurTime() < self:GetAimTimer() and self.Primary.MoveSpeed or nil
+end

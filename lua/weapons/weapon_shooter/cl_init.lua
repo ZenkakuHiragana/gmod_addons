@@ -38,7 +38,6 @@ SWEP.IronSightsPos = {
 function SWEP:ClientInit()
 	self.oldpos = Vector()
 	self.p, self.y, self.r = 0, 0, 0
-	self.AimTimer = CurTime()
 	self.ModifyWeaponSize = SysTime() - 1
 	self.ViewPunch = Angle()
 	self.ViewPunchVel = Angle()
@@ -215,20 +214,10 @@ end
 
 function SWEP:ClientPrimaryAttack(hasink, auto)
 	if not IsValid(self.Owner) then return end
-	self.InklingSpeed = self.Primary.MoveSpeed
-	self:SetAimTimer(math.max(self:GetAimTimer(), CurTime() + self.Primary.AimDuration))
-	if self.Owner == LocalPlayer() then self.AimTimer = self:GetAimTimer() end
-	if not self:GetOnEnemyInk() then self:SetPlayerSpeed(self.Primary.MoveSpeed) end
-	if self:IsFirstTimePredicted() and hasink and self.Owner:IsPlayer() then
-		local rnda = self.Primary.Recoil * -1
-		local rndb = self.Primary.Recoil * math.Rand(-1, 1)
-		self.ViewPunch = Angle(rnda, rndb, rnda)
-	end
-	
-	local pos, dir, armpos = self:GetFirePosition()
+	local pos, dir = self:GetFirePosition()
 	local delay, lv = self.Cooldown, self:GetLaggedMovementValue()
-	armpos = armpos == 3 or armpos == 4
-	if self.Owner:IsPlayer() then self:SetHoldType(armpos and "rpg" or "crossbow") end
+	self:SetAimTimer(math.max(self:GetAimTimer(), CurTime() + self.Primary.AimDuration))
+	self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
 	if not self:IsFirstTimePredicted() then return end
 	if not hasink then
 		if self.Primary.TripleShotDelay then self.Cooldown = CurTime() end
@@ -244,6 +233,12 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 		return
 	end
 	
+	if self.Owner:IsPlayer() then
+		local rnda = self.Primary.Recoil * -1
+		local rndb = self.Primary.Recoil * math.Rand(-1, 1)
+		self.ViewPunch = Angle(rnda, rndb, rnda)
+	end
+	
 	local right = self.Owner:GetRight()
 	local ang = dir:Angle()
 	local angle_initvelocity = Angle(ang)
@@ -256,12 +251,13 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	angle_initvelocity:RotateAroundAxis(right, ry)
 	local initvelocity = angle_initvelocity:Forward() * self.Primary.InitVelocity
 	
-	self:EmitSound(self.ShootSound)
+	self.Owner:MuzzleFlash()
 	self.ModifyWeaponSize = SysTime()
 	self.PreviousInk = true
 	self.Cooldown = math.max(self.Cooldown, CurTime()
 	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
 	if self.Owner == LocalPlayer() then
+		self:EmitSound(self.ShootSound)
 		ss.InkTraces[{
 			Appearance = {
 				InitPos = pos,
@@ -292,27 +288,5 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	self.Cooldown = CurTime() + (self.Primary.Delay * 2 + self.Primary.TripleShotDelay) / lv
 	self:SetAimTimer(self.Cooldown)
 	if self.Owner ~= LocalPlayer() then return end
-	self.AimTimer = self:GetAimTimer()
 	self.TripleSchedule = self:AddSchedule(self.Primary.Delay, 2, self.PrimaryAttack)
-end
-
-function SWEP:ClientThink()
-	if not self.Owner:IsPlayer() then return end
-	local aimtimer = self.Owner == LocalPlayer() and self.AimTimer or self:GetAimTimer()
-	if not self:GetThrowing() and self:Crouching() then
-		self:SetHoldType "melee2"
-		self.WElements.weapon.bone = "ValveBiped.Bip01_R_Hand"
-	elseif aimtimer < CurTime() then
-		self.InklingSpeed = self:GetInklingSpeed()
-		if not self:GetThrowing() then
-			self:SetHoldType "passive"
-			self.WElements.weapon.bone = "ValveBiped.Bip01_R_Hand"
-		end
-		
-		if self:GetOnEnemyInk() or self:GetInInk() then return end
-		self:SetPlayerSpeed(self.InklingSpeed)
-	elseif not self:GetThrowing() then
-		local armpos = select(3, self:GetFirePosition())
-		self:SetHoldType((armpos == 3 or armpos == 4) and "rpg" or "crossbow")
-	end
 end

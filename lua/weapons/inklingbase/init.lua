@@ -68,8 +68,6 @@ function SWEP:Initialize()
 	
 	self:SharedInitBase()
 	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
-		self.HoldType = "smg"
-		self:SetHoldType(self.HoldType)
 		self:SetSaveValue("m_fMinRange1", 0)
 		self:SetSaveValue("m_fMinRange2", 0)
 		self:SetSaveValue("m_fMaxRange1", self.Primary.Range)
@@ -139,7 +137,6 @@ function SWEP:Deploy()
 		net.WriteEntity(self)
 		net.Send(ss.PlayersReady)
 		self:CallOnClient "ClientDeployBase"
-		self:SetHoldType "passive"
 	end
 	
 	self.Color = ss:GetColor(self:GetColorCode())
@@ -241,9 +238,9 @@ function SWEP:Think()
 		self:ChangePlayermodel(self.PMTable)
 	end
 	
-	self:ProcessSchedules()
-	self:SharedThinkBase()
 	local clip = math.max(0, self:GetInk() / ss.MaxInkAmount * 100)
 	if self:Clip1() ~= clip then self:SetClip1(clip) end
+	self:ProcessSchedules()
+	self:SharedThinkBase()
 	ss:ProtectedCall(self.ServerThink, self)
 end

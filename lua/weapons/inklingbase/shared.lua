@@ -1,9 +1,11 @@
 
+include "sh_anim.lua"
+
 local ss = SplatoonSWEPs
 if not ss then return end
-local KeyMask = {IN_ATTACK, IN_DUCK, IN_ATTACK2}
-ss:AddTimerFramework(SWEP)
 
+ss:AddTimerFramework(SWEP)
+local KeyMask = {IN_ATTACK, IN_DUCK, IN_ATTACK2}
 local function PlayLoopSound(self)
 	if not self.SwimSound:IsPlaying() then
 		self.SwimSound:Play()
@@ -66,14 +68,6 @@ function SWEP:ChangeViewModel(act)
 	self:SendWeaponAnim(act)
 end
 
-function SWEP:SetPlayerSpeed(spd)
-	self.MaxSpeed = spd
-	if not self.Owner:IsPlayer() then return end
-	if self.Owner:GetMaxSpeed() ~= spd then self.Owner:SetMaxSpeed(spd) end
-	if self.Owner:GetRunSpeed() ~= spd then self.Owner:SetRunSpeed(spd) end
-	if self.Owner:GetWalkSpeed() ~= spd then self.Owner:SetWalkSpeed(spd) end
-end
-
 -- Speed on humanoid form = base speed * ability factor
 function SWEP:GetInklingSpeed()
 	return ss.InklingBaseSpeed
@@ -124,6 +118,14 @@ function SWEP:SharedInitBase()
 	for _, k in ipairs(KeyMask) do
 		self.LastKeyDown[k] = CurTime()
 	end
+	
+	local translate = {}
+	for _, t in ipairs {"crossbow", "grenade", "melee2", "passive", "rpg"} do
+		self:SetWeaponHoldType(t)
+		translate[t] = self.ActivityTranslate
+	end
+	
+	self.Translate = translate
 	ss:ProtectedCall(self.SharedInit, self)
 end
 
@@ -139,7 +141,6 @@ function SWEP:SharedDeployBase()
 	self.JumpPower = ss.InklingJumpPower
 	self.OnEnemyInkJumpPower = ss.OnEnemyInkJumpPower
 	if self.Owner:IsPlayer() then
-		self:SetPlayerSpeed(self.InklingSpeed)
 		self.Owner:SetJumpPower(self.JumpPower)
 		self.Owner:SetColor(color_white)
 		self.Owner:SetCrouchedWalkSpeed(.5)
@@ -189,10 +190,9 @@ end
 function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if self:GetHolstering() then return end
 	if self:CheckCannotStandup() then return end
-	if CurTime() < self:GetNextPrimaryFire() then return end
 	if not auto and self:IsFirstTimePredicted() and CurTime() < self.Cooldown then return end
 	if not auto and self:IsFirstTimePredicted() and not self:CheckButtons(IN_ATTACK) then return end
-	if auto and SERVER then SuppressHostEvents(self.Owner) end
+	if SERVER then SuppressHostEvents(self.Owner) end
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self.CannotStandup
 	local lv = self:GetLaggedMovementValue()
@@ -205,8 +205,9 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if CLIENT then return end
 	net.Start "SplatoonSWEPs: Client PrimaryAttack"
 	net.WriteEntity(self)
+	net.WriteBool(tobool(auto))
 	net.Send(ss.PlayersReady)
-	if auto then SuppressHostEvents() end
+	SuppressHostEvents()
 end
 
 function SWEP:SecondaryAttack() -- Use sub weapon
@@ -216,10 +217,7 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 	if not self:CheckButtons(IN_ATTACK2) then return end
 	if self.Owner:IsPlayer() then self:CallOnClient "SecondaryAttack" end
 	self:SetThrowing(true)
-	self:SetHoldType "grenade"
-	self.Owner:AnimResetGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD)
 	self:AddSchedule(0, function(self, sched)
-		self:SetHoldType "grenade"
 		self:CheckButtons()
 		if bit.band(self.Buttons, IN_ATTACK2) > 0 then
 			self:SetThrowing(self.ValidKey == IN_ATTACK2)
@@ -264,11 +262,6 @@ function SWEP:ChangeInInk(name, old, new)
 		end
 	end
 	
-	if self.Owner:IsPlayer() then
-		self.Owner:SetCrouchedWalkSpeed(intoink and 1 or .5)
-		self:SetPlayerSpeed(intoink and self.SquidSpeed or self.InklingSpeed)
-	end
-	
 	if CLIENT then return end
 	if intoink then
 		if self.Owner:IsPlayer() then self.Owner:SetDSP(14) end
@@ -305,7 +298,6 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	if intoink then
 		self.EnemyInkSound:ChangeVolume(1, .5)
 		if self.Owner:IsPlayer() then
-			self:SetPlayerSpeed(self.OnEnemyInkSpeed) -- Hard to move while in enemy ink
 			self.Owner:SetJumpPower(self.OnEnemyInkJumpPower) -- Reduce jump power
 		end
 		
@@ -325,7 +317,6 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	else
 		self.EnemyInkSound:ChangeVolume(0, .5)
 		if self.Owner:IsPlayer() then
-			self:SetPlayerSpeed(self:GetInInk() and self.SquidSpeed or self.InklingSpeed)
 			self.Owner:SetJumpPower(self.JumpPower) -- Restore
 		end
 	end

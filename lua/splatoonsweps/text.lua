@@ -3,10 +3,6 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
-cvars.AddChangeCallback("gmod_language", function(convar, old, new)
-	CompileFile "splatoonsweps/text.lua" ()
-end, "SplatoonSWEPs: OnLanguageChanged")
-
 function ss:GetColorName(colorid)
 	return ss.Text.ColorNames[colorid or math.random(self.MAX_COLORS)]
 end

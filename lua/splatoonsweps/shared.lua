@@ -322,7 +322,7 @@ local weaponslot = {
 	weapon_scope = 4,
 	weapon_slosher = 5,
 }
-hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
+local function RegisterWeapons()
 	local ssEnabled = GetConVar "sv_splatoonsweps_enabled"
 	if not ssEnabled or not ssEnabled:GetBool() then return end
 	local weaponlist = list.GetForEdit "Weapon"
@@ -364,7 +364,13 @@ hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", function()
 			end
 		end
 	end
-end)
+end
+
+hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", RegisterWeapons)
+hook.Add("OnReloaded", "SplatoonSWEPs: Set weapon classes", RegisterWeapons)
+cvars.AddChangeCallback("gmod_language", function(convar, old, new)
+	CompileFile "splatoonsweps/text.lua" ()
+end, "SplatoonSWEPs: OnLanguageChanged")
 
 -- Inkling playermodels hull change fix
 if not isfunction(FindMetaTable "Player".SplatoonOffsets) then return end

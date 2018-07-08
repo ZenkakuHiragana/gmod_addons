@@ -26,13 +26,8 @@ function SWEP:ServerPrimaryAttack(hasink, auto)
 	local lv = self:GetLaggedMovementValue()
 	self.Cooldown = math.max(self.Cooldown, CurTime()
 	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
-	self:MuzzleFlash()
-	self.InklingSpeed = self.Primary.MoveSpeed
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 	self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
-	if not self:GetOnEnemyInk() then
-		self:SetPlayerSpeed(self.Primary.MoveSpeed)
-	end
 	
 	if not hasink then
 		if self.Primary.TripleShotDelay then self.Cooldown = CurTime() end
@@ -44,7 +39,7 @@ function SWEP:ServerPrimaryAttack(hasink, auto)
 		return
 	end
 	
-	local pos, dir, armpos = self:GetFirePosition()
+	local pos, dir = self:GetFirePosition()
 	local right = self.Owner:GetRight()
 	local ang = dir:Angle()
 	local angle_initvelocity = Angle(ang)
@@ -57,9 +52,10 @@ function SWEP:ServerPrimaryAttack(hasink, auto)
 	angle_initvelocity:RotateAroundAxis(right, ry)
 	local initvelocity = angle_initvelocity:Forward() * self.Primary.InitVelocity
 	local splashinit = self.SplashInitMul % self.Primary.SplashPatterns
-	ss:AddInk(self.Owner, pos, initvelocity, self:GetColorCode(), self.Owner:EyeAngles().yaw,
-	math.random(4, 9), splashinit, self.Primary)
+	ss:AddInk(self.Owner, pos, initvelocity, self:GetColorCode(),
+	self.Owner:EyeAngles().yaw, math.random(4, 9), splashinit, self.Primary)
 	self.SplashInitMul = self.SplashInitMul + (self.Primary.TripleShotDelay and 3 or 1)
+	self:EmitSound(self.ShootSound)
 	
 	net.Start "SplatoonSWEPs: Shooter Tracer"
 	net.WriteEntity(self.Owner)
@@ -72,8 +68,6 @@ function SWEP:ServerPrimaryAttack(hasink, auto)
 	net.WriteUInt(splashinit, 4)
 	net.Send(ss.PlayersReady)
 	
-	armpos = armpos == 3 or armpos == 4
-	if self.Owner:IsPlayer() then self:SetHoldType(armpos and "rpg" or "crossbow") end
 	if not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end
 	self.Cooldown = CurTime() + (self.Primary.Delay * 2 + self.Primary.TripleShotDelay) / lv
 	self:SetAimTimer(self.Cooldown)
@@ -85,24 +79,4 @@ function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
 	self:AddSchedule(self.Primary.Delay, 1, function(self, sched)
 		self:PrimaryAttack()
 	end)
-end
-
-function SWEP:ServerThink()
-	if not self.Owner:IsPlayer() then return end
-	SuppressHostEvents(self.Owner)
-	local ht = self:GetHoldType()
-	if not self:GetThrowing() and self:Crouching() then
-		if ht ~= "melee2" then self:SetHoldType "melee2" end
-	elseif self:GetAimTimer() < CurTime() then
-		self.InklingSpeed = self:GetInklingSpeed()
-		if not self:GetThrowing() and ht ~= "passive" then self:SetHoldType "passive" end
-		if not (self:GetOnEnemyInk() or self:GetInInk()) then
-			self:SetPlayerSpeed(self.InklingSpeed)
-		end
-	elseif not self:GetThrowing() then
-		local armpos = select(3, self:GetFirePosition())
-		local holdtype = (armpos == 3 or armpos == 4) and "rpg" or "crossbow"
-		if ht ~= holdtype then self:SetHoldType(holdtype) end
-	end
-	SuppressHostEvents()
 end

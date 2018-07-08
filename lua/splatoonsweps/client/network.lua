@@ -6,7 +6,8 @@ if not ss then return end
 net.Receive("SplatoonSWEPs: Client PrimaryAttack", function()
 	local w = net.ReadEntity()
 	if not IsValid(w) or w.Owner == LocalPlayer() then return end
-	ss:ProtectedCall(w.PrimaryAttack, w)
+	local auto = net.ReadBool()
+	ss:ProtectedCall(w.PrimaryAttack, w, auto)
 end)
 
 net.Receive("SplatoonSWEPs: Client Deploy", function()
@@ -57,6 +58,8 @@ end)
 net.Receive("SplatoonSWEPs: Shooter Tracer", function()
 	local owner = net.ReadEntity()
 	if owner == LocalPlayer() then return end
+	local w = ss:IsValidInkling(owner)
+	if not w then return end
 	local pos = net.ReadVector()
 	local dir = net.ReadVector()
 	local speed = net.ReadFloat()
@@ -75,7 +78,7 @@ net.Receive("SplatoonSWEPs: Shooter Tracer", function()
 		Color = ss:GetColor(color),
 		ColorCode = color,
 		InitPos = pos,
-		InitTime = CurTime() - LocalPlayer():Ping() / 1000,
+		InitTime = CurTime() - w:Ping(),
 		Speed = speed,
 		Straight = straight,
 		TrailDelay = trailtime,

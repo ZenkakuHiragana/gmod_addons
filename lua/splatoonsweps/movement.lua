@@ -1825,11 +1825,17 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	local w = ss:IsValidInkling(ply)
 	if not w then return end
 	w:CheckButtons()
-	if w.PreventCrouching or w.EnemyInkPreventCrouching then
+	if (SERVER or ply:OnGround()) and (w.PreventCrouching or w.EnemyInkPreventCrouching) then
 		mv:SetButtons(bit.band(mv:GetButtons(), DuckMask))
 	end
 	
-	local maxspeed = mv:GetMaxSpeed() * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
+	local maxspeed = w.InklingSpeed
+	maxspeed = ss:ProtectedCall(w.GetMoveSpeed, w) or maxspeed
+	maxspeed = w:GetInInk() and w.SquidSpeed or maxspeed
+	maxspeed = w:GetOnEnemyInk() and w.OnEnemyInkSpeed or maxspeed
+	maxspeed = maxspeed * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
+	mv:SetMaxSpeed(maxspeed)
+	
 	for v, i in pairs {
 		[mv:GetVelocity()] = true, -- Current velocity
 		[me.m_vecVelocity[ply]] = false,
