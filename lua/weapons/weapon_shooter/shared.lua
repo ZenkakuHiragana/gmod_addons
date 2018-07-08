@@ -83,6 +83,6 @@ function SWEP:CustomActivity()
 	return aimpos and "rpg" or "crossbow"
 end
 
-function SWEP:GetMoveSpeed()
+function SWEP:CustomMoveSpeed()
 	return CurTime() < self:GetAimTimer() and self.Primary.MoveSpeed or nil
 end

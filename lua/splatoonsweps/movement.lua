@@ -1830,11 +1830,12 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	end
 	
 	local maxspeed = w.InklingSpeed
-	maxspeed = ss:ProtectedCall(w.GetMoveSpeed, w) or maxspeed
+	maxspeed = ss:ProtectedCall(w.CustomMoveSpeed, w) or maxspeed
 	maxspeed = w:GetInInk() and w.SquidSpeed or maxspeed
 	maxspeed = w:GetOnEnemyInk() and w.OnEnemyInkSpeed or maxspeed
 	maxspeed = maxspeed * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
 	mv:SetMaxSpeed(maxspeed)
+	mv:SetMaxClientSpeed(maxspeed)
 	
 	for v, i in pairs {
 		[mv:GetVelocity()] = true, -- Current velocity

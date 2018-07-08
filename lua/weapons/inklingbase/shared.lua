@@ -136,7 +136,6 @@ function SWEP:SharedDeployBase()
 	self.Cooldown = CurTime()
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
-	self.SquidSpeedSqr = self.SquidSpeed^2
 	self.OnEnemyInkSpeed = ss.OnEnemyInkSpeed
 	self.JumpPower = ss.InklingJumpPower
 	self.OnEnemyInkJumpPower = ss.OnEnemyInkJumpPower
@@ -220,8 +219,11 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 	self:AddSchedule(0, function(self, sched)
 		self:CheckButtons()
 		if bit.band(self.Buttons, IN_ATTACK2) > 0 then
-			self:SetThrowing(self.ValidKey == IN_ATTACK2)
-			return self.ValidKey ~= IN_ATTACK2
+			if self.ValidKey == IN_ATTACK2 then return end
+			if self.ValidKey == IN_DUCK then
+				self:SetThrowing(false)
+				return true
+			end
 		end
 		
 		if SERVER then SuppressHostEvents(self.Owner) end
