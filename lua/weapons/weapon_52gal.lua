@@ -44,10 +44,7 @@ ss:SetPrimary(SWEP, {
 })
 
 ss:SetViewModelMods(SWEP, {
-	["Base"] = {
-		pos = Vector(-31, 26.5, -31),
-		angle = Angle(1, 0, 0)
-	},
+	["Base"] = {pos = Vector(-31, 26.5, -31)},
 	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(1.5, 0, 2.5)},
 	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(25, -40, 0)},
 	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 28, -13)},

@@ -357,6 +357,7 @@ ss.Text.Options = {
 }
 ss.Text.CVarDescription = {
 	Enabled = "Enables or disables SplatoonSWEPs.",
+	DoomStyle = "Enables Aim down sights.  Weapon accuracy will not be better.",
 	[[Your ink color.  Available values are:
 ]] .. TableToString(ss.Text.ColorNames),
 	[[Your thirdperson model.  Available values are:
@@ -473,6 +474,7 @@ if lang == "ja" then
 	}
 	ss.Text.CVarDescription = {
 	Enabled = "SplatoonSWEPsを有効化するかどうか。",
+	DoomStyle = "ADSを有効にする。ただし、命中率は上昇しない。",
 	[[インクの色を設定する。使用可能な値は以下の通り。:
 ]] .. TableToString(ss.Text.ColorNames),
 	[[三人称モデル。使用可能な値は以下の通り。:

@@ -48,7 +48,10 @@ function SWEP:GetViewModelPosition(pos, ang)
 	if not IsValid(self.Owner) then return pos, ang end
 	
 	local armpos = 1
-	if ss:GetConVarBool "MoveViewmodel" and not self:Crouching() then
+	local ads = GetConVar "cl_splatoonsweps_doomstyle"
+	if ads and ads:GetBool() then
+		armpos = 5
+	elseif ss:GetConVarBool "MoveViewmodel" and not self:Crouching() then
 		local x, y = ScrW() / 2, ScrH() / 2
 		if vgui.CursorVisible() then x, y = input.GetCursorPos() end
 		armpos = select(3, self:GetFirePosition(self.Primary.Range * gui.ScreenToVector(x, y), RenderAngles(), EyePos()))
