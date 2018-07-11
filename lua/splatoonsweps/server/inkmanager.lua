@@ -220,6 +220,8 @@ end
 -- Physics simulation for ink trajectory.
 -- The first some frames(1/60 sec.) ink flies without gravity.
 -- After that, ink decelerates horizontally and is affected by gravity.
+local PaintDistance = ss.mPaintFarDistance - ss.mPaintNearDistance
+local PaintFraction = ss.mPaintNearDistance / PaintDistance
 local process = coroutine.create(function()
 	while true do
 		local done = 0
@@ -271,7 +273,7 @@ local process = coroutine.create(function()
 				continue
 			elseif t.HitWorld then
 				local ratio = 1
-				local radius = Lerp((ink.InitPos.z - t.HitPos.z) / ss.PaintDistance - ss.PaintFraction, ink.MinRadius, ink.InkRadius)
+				local radius = Lerp((ink.InitPos.z - t.HitPos.z) / PaintDistance - PaintFraction, ink.MinRadius, ink.InkRadius)
 				if ink.InkType > 3 and t.HitNormal.z > MAX_COS_DEG_DIFF and lifetime > ink.Info.Straight then
 					local max = ink.Info.InitVelocity * ink.Info.Straight
 					local min = max / 3
@@ -318,7 +320,7 @@ end)
 -- local droppos = ink.InitPos + ink.InitDirection * nextlen - vector_up * 6
 -- ink.start, ink.endpos = droppos, droppos - vector_up * 32768
 -- local tr = util.TraceHull(ink)
--- local radius = Lerp((ink.InitPos.z - tr.HitPos.z) / ss.PaintDistance - ss.PaintFraction, ink.SplashMinRadius, ink.SplashRadius)
+-- local radius = Lerp((ink.InitPos.z - tr.HitPos.z) / PaintDistance - PaintFraction, ink.SplashMinRadius, ink.SplashRadius)
 -- timer.Simple(math.sqrt(math.abs(t.HitPos.z - tr.HitPos.z) * gravityscale), function()
 	-- ss:Paint(tr.HitPos, tr.HitNormal, radius, ink.Color, ink.Angle, math.random(1, 3), 1)
 -- end)

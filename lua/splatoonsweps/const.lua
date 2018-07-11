@@ -445,15 +445,17 @@ ss.SquidViewOffset = vector_up * 24
 ss.InklingJumpPower = 250
 ss.DisruptoredSpeed = .45 -- Disruptor's debuff factor
 ss.OnEnemyInkJumpPower = ss.InklingJumpPower * .75
-ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) --2.88
-ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec
-ss.ToHammerHealth = 100
-ss.FrameToSec = 1 / framepersec
-ss.SecToFrame = framepersec
-ss.mDegRandomY = .5
-ss.SpreadJumpMaxVelocity = 32
-ss.SpreadJumpCoefficient = .25
+ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) -- = 2.88 Constants for unit conversion
+ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec --
+ss.ToHammerHealth = 100 --
+ss.FrameToSec = 1 / framepersec --
+ss.SecToFrame = framepersec --
+ss.mDegRandomY = .5 -- Shooter spread angle, yaw (need to be validated)
+ss.ShooterTrailDelay = 2 * ss.FrameToSec -- Time to start moving shooter trail.
+ss.SpreadJumpMaxVelocity = 32 -- Shooter spread angle expansion by jumping.
+ss.SpreadJumpCoefficient = .25 --   Angle expansion : Player's Z-velocity
 ss.SpreadJumpFraction = ss.SpreadJumpCoefficient / ss.SpreadJumpMaxVelocity
+ss.SquidSpeedOutofInk = .45 -- Squid speed coefficient if it is out of ink.
 ss.CameraFadeDistance = 100^2 -- Thirdperson model fade distance[units^2]
 ss.SquidTrace = {
 	start = vector_origin, endpos = vector_origin,
@@ -474,6 +476,3 @@ for key, value in pairs {
 } do
 	ss[key] = value * ss.ToHammerUnits
 end
-
-ss.PaintDistance = ss.mPaintFarDistance - ss.mPaintNearDistance
-ss.PaintFraction = ss.mPaintNearDistance / ss.PaintDistance

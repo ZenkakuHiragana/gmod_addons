@@ -64,7 +64,6 @@ net.Receive("SplatoonSWEPs: Shooter Tracer", function()
 	local dir = net.ReadVector()
 	local speed = net.ReadFloat()
 	local straight = net.ReadFloat()
-	local trailtime = net.ReadFloat()
 	local color = net.ReadUInt(ss.COLOR_BITS)
 	local splashinit = net.ReadUInt(4)
 	ss.InkTraces[{
@@ -81,7 +80,7 @@ net.Receive("SplatoonSWEPs: Shooter Tracer", function()
 		InitTime = CurTime() - w:Ping(),
 		Speed = speed,
 		Straight = straight,
-		TrailDelay = trailtime,
+		TrailDelay = ss.ShooterTrailDelay,
 		TrailTime = RealTime(),
 		Velocity = dir * speed,
 		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,

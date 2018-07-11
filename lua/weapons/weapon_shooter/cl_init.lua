@@ -3,13 +3,13 @@ local ss = SplatoonSWEPs
 if not ss then return end
 include "shared.lua"
 
---Custom functions executed before weapon model is drawn.
---  model | Weapon model(Clientside Entity)
---  bone_ent | Owner entity
---  pos, ang | Position and angle of weapon model
---  v | Viewmodel/Worldmodel element table
---  matrix | VMatrix for scaling
---When the weapon is fired, it slightly expands.  This is maximum time to get back to normal size.
+-- Custom functions executed before weapon model is drawn.
+--   model | Weapon model(Clientside Entity)
+--   bone_ent | Owner entity
+--   pos, ang | Position and angle of weapon model
+--   v | Viewmodel/Worldmodel element table
+--   matrix | VMatrix for scaling
+-- When the weapon is fired, it slightly expands.  This is maximum time to get back to normal size.
 local FireWeaponCooldown = 0.1
 local FireWeaponMultiplier = 1
 local function ExpandModel(self, model, bone_ent, pos, ang, v, matrix)
@@ -21,18 +21,18 @@ end
 SWEP.PreDrawWorldModel = ExpandModel
 SWEP.PreViewModelDrawn = ExpandModel
 SWEP.IronSightsAng = {
-	Vector(), --normal
-	Vector(0, -20, 0), --left
-	Vector(0, 0, -75), --top-right
-	Vector(-15, -15, 15), --top-left
-	Vector(0, -13.3, 0), --center
+	Vector(), -- normal
+	Vector(0, -20, 0), -- left
+	Vector(0, 0, -75), -- top-right
+	Vector(-15, -15, 15), -- top-left
+	Vector(0, -13.3, 0), -- center
 }
 SWEP.IronSightsPos = {
-	Vector(), --normal
-	Vector(-20, -4, 0), --left
-	Vector(), --top-right
-	Vector(-20, -4, 8), --top-left
-	Vector(-13.3, 0, -1), --center
+	Vector(), -- normal
+	Vector(-20, -4, 0), -- left
+	Vector(), -- top-right
+	Vector(-20, -4, 8), -- top-left
+	Vector(-13.3, 0, -1), -- center
 }
 
 function SWEP:ClientInit()
@@ -50,7 +50,12 @@ function SWEP:GetViewModelPosition(pos, ang)
 	local armpos = 1
 	local ads = GetConVar "cl_splatoonsweps_doomstyle"
 	if ads and ads:GetBool() then
-		armpos = 5
+		local da = self.IronSightsAng[5] or Vector() -- center
+		ang:RotateAroundAxis(ang:Right(), da.x) -- pitch
+		ang:RotateAroundAxis(ang:Up(), da.y) -- yaw
+		ang:RotateAroundAxis(ang:Forward(), da.z) -- roll
+		local dp = self.IronSightsPos[5] or Vector()
+		return pos + dp.x * ang:Right() + dp.y * ang:Forward() + dp.z * ang:Up(), ang
 	elseif ss:GetConVarBool "MoveViewmodel" and not self:Crouching() then
 		local x, y = ScrW() / 2, ScrH() / 2
 		if vgui.CursorVisible() then x, y = input.GetCursorPos() end
@@ -75,11 +80,11 @@ function SWEP:GetViewModelPosition(pos, ang)
 	return pos + self.oldpos, da
 end
 
-local dot = 1920 * 1080 / 8^2 --Measuring screenshot
-local inner = 1920 * 1080 / 64^2 --Texture size / 2
-local outer = 1920 * 1080 / 64^2 --Texture size / 2
-local outerhitsize = 1920 * 1080 / 72^2 --Texture size / 2
-local lines = 1920 * 1080 / 32^2 --Just a random value
+local dot = 1920 * 1080 / 8^2 -- Measuring screenshot
+local inner = 1920 * 1080 / 64^2 -- Texture size / 2
+local outer = 1920 * 1080 / 64^2 -- Texture size / 2
+local outerhitsize = 1920 * 1080 / 72^2 -- Texture size / 2
+local lines = 1920 * 1080 / 32^2 -- Just a random value
 local color_circle = Color(0, 0, 0, 64)
 local color_nohit = Color(255, 255, 255, 64)
 function SWEP:DoDrawCrosshair(x, y)
@@ -150,8 +155,8 @@ function SWEP:DoDrawCrosshair(x, y)
 		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
 	end
 	
-	--Hit cross pattern, background
-	local lp = (1.4 - tr.Fraction) * outersize / 2 --line position
+	-- Hit cross pattern, background
+	local lp = (1.4 - tr.Fraction) * outersize / 2 -- line position
 	if hitentity then
 		surface.SetMaterial(ss.Materials.Crosshair.Line)
 		surface.SetDrawColor(color_black)
@@ -163,7 +168,7 @@ function SWEP:DoDrawCrosshair(x, y)
 		end
 	end
 	
-	--Outer circle
+	-- Outer circle
 	surface.SetMaterial(ss.Materials.Crosshair.Outer)
 	if hitentity then
 		local outersizehit = math.ceil(math.sqrt(ScrW() * ScrH() / outerhitsize))
@@ -178,7 +183,7 @@ function SWEP:DoDrawCrosshair(x, y)
 		surface.DrawTexturedRect(through.x - outersize / 2, through.y - outersize / 2, outersize, outersize)
 	end
 	
-	--Hit cross pattern, foreground
+	-- Hit cross pattern, foreground
 	if hitentity then
 		for mat, col in pairs {[""] = color_white, Color = inkcolor} do
 			surface.SetMaterial(ss.Materials.Crosshair["Line" .. mat])
@@ -192,7 +197,7 @@ function SWEP:DoDrawCrosshair(x, y)
 		end
 	end
 	
-	--Inner circle
+	-- Inner circle
 	surface.SetMaterial(ss.Materials.Crosshair.Inner)
 	surface.SetDrawColor(tr.Hit and color_white or color_nohit)
 	s = math.ceil(math.sqrt(ScrW() * ScrH() / inner))
@@ -202,7 +207,7 @@ function SWEP:DoDrawCrosshair(x, y)
 		surface.DrawTexturedRect(through.x - s / 2, through.y - s / 2, s, s)
 	end
 	
-	--Center circle
+	-- Center circle
 	local s = math.ceil(math.sqrt(ScrW() * ScrH() / dot))
 	surface.SetMaterial(ss.Materials.Crosshair.Dot)
 	surface.SetDrawColor(color_white)
@@ -275,7 +280,7 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 			InitTime = CurTime() - self:Ping(),
 			Speed = self.Primary.InitVelocity,
 			Straight = self.Primary.Straight,
-			TrailDelay = self.Primary.Delay / 2,
+			TrailDelay = ss.ShooterTrailDelay,
 			TrailTime = RealTime(),
 			Velocity = initvelocity,
 			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
