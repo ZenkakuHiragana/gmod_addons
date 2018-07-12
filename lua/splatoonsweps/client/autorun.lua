@@ -8,15 +8,21 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	AspectSumX = 0,				
 	AspectSumY = 0,				
 	Displacements = {},			
-	IMesh = {},					
+	IMesh = {},
+	InkCounter = 0,
+	InkShotMaterials = {},
 	InkTraces = {},				
-	InkQueue = {},				
+	InkQueue = {},
+	Models = {},
 	PlayerHullChanged = {},		
 	RenderTarget = {},			
 	SequentialSurfaces = {		
 		Angles = {},
 		Areas = {},
 		Bounds = {},
+		InkCircles = {},
+		Maxs = {},
+		Mins = {},
 		Moved = {},
 		Normals = {},
 		Origins = {},
@@ -41,10 +47,91 @@ local rt = ss.RenderTarget
 local crashpath = "splatoonsweps/crashdump.txt" -- Existing this means the client crashed before.
 local MAX_TRIANGLES = math.floor(32768 / 3) -- mesh library limitation
 local INK_SURFACE_DELTA_NORMAL = .8 -- Distance between map surface and ink mesh
+local PLANES, NODES, LEAFS, MODELS = 1, 5, 10, 14 -- Lump index
+local function GenerateBSPTree()
+	local mapfile = "maps/" .. game.GetMap() .. ".bsp"
+	assert(file.Exists(mapfile, "GAME"), "SplatoonSWEPs: Attempt to load a non-existent map!")
+	
+	local bsp = file.Open(mapfile, "rb", "GAME")
+	local header = {lumps = {}}
+	
+	local size = 16
+	for _, i in ipairs {PLANES, NODES, LEAFS, MODELS} do
+		bsp:Seek(i * size + 8) -- Reading header
+		header.lumps[i] = {}
+		header.lumps[i].data = {}
+		header.lumps[i].offset = bsp:ReadLong()
+		header.lumps[i].length = bsp:ReadLong()
+	end
+	
+	local planes = header.lumps[PLANES]
+	size = 20
+	bsp:Seek(planes.offset)
+	planes.num = math.min(math.floor(planes.length / size) - 1, 65536 - 1)
+	for i = 0, planes.num do
+		local x = bsp:ReadFloat()
+		local y = bsp:ReadFloat()
+		local z = bsp:ReadFloat()
+		planes.data[i] = {}
+		planes.data[i].normal = Vector(x, y, z)
+		planes.data[i].distance = bsp:ReadFloat()
+		bsp:Skip(4) -- type
+	end
+	
+	local leafs = header.lumps[LEAFS]
+	local size = 32
+	bsp:Seek(leafs.offset)
+	leafs.num = math.floor(leafs.length / size) - 1
+	for i = 0, leafs.num do
+		leafs.data[i] = {}
+		leafs.data[i].Surfaces = {}
+	end
+	
+	local children = {}
+	local nodes = header.lumps[NODES]
+	bsp:Seek(nodes.offset)
+	nodes.num = math.min(math.floor(nodes.length / size) - 1, 65536 - 1)
+	for i = 0, nodes.num do
+		nodes.data[i] = {}
+		nodes.data[i].ChildNodes = {}
+		nodes.data[i].Surfaces = {}
+		nodes.data[i].Separator = planes.data[bsp:ReadLong()]
+		children[i] = {}
+		children[i][1] = bsp:ReadLong()
+		children[i][2] = bsp:ReadLong()
+		bsp:Skip(20) -- mins, maxs, firstface, numfaces, area, padding
+	end
+	
+	for i = 0, nodes.num do
+		for k = 1, 2 do
+			local child = children[i][k]
+			if child < 0 then
+				child, leafs.data[-child - 1] = leafs.data[-child - 1]
+			else
+				child = nodes.data[child]
+			end
+			nodes.data[i].ChildNodes[k] = child
+		end
+	end
+	
+	local models = header.lumps[MODELS]
+	bsp:Seek(models.offset)
+	size = 4 * 12
+	models.num = math.floor(models.length / size) - 1
+	for i = 0, models.num do
+		bsp:Skip(12 * 3)
+		table.insert(ss.Models, nodes.data[bsp:ReadLong()])
+		bsp:Skip(8)
+	end
+	
+	bsp:Close()
+end
 
 CreateClientConVar("cl_splatoonsweps_doomstyle", "0", false, false, ss.Text.CVarDescription.DoomStyle)
 CreateConVar("sv_splatoonsweps_ff", "0", CVarFlags, ss.Text.CVarDescription.FF)
 function ss:PrepareInkSurface(write)
+	GenerateBSPTree()
+	
 	local path = "splatoonsweps/" .. game.GetMap() .. "_decompress.txt"
 	file.Write(path, util.Decompress(write:sub(5))) -- First 4 bytes are map CRC.  Remove them.
 	local data = file.Open("data/" .. path, "rb", "GAME")
@@ -74,16 +161,25 @@ function ss:PrepareInkSurface(write)
 		z = data:ReadFloat()
 		surf.Origins[i] = Vector(x, y, z)
 		surf.Vertices[i] = {}
+		surf.InkCircles[i] = {}
+		surf.Mins[i] = Vector(math.huge, math.huge, math.huge)
+		surf.Maxs[i] = -surf.Mins[i]
 		for __ = 1, data:ReadUShort() do
 			x = data:ReadFloat()
 			y = data:ReadFloat()
 			z = data:ReadFloat()
-			table.insert(surf.Vertices[i], Vector(x, y, z))
+			local v = Vector(x, y, z)
+			table.insert(surf.Vertices[i], v)
+			surf.Mins[i] = ss:MinVector(surf.Mins[i], v)
+			surf.Maxs[i] = ss:MaxVector(surf.Maxs[i], v)
 		end
+		
+		ss:FindLeaf(surf.Vertices[i]).Surfaces[i] = true
 	end
 	
 	for _ = 1, numdisps do
 		local i = data:ReadUShort()
+		local positions = {}
 		local power = 2^(data:ReadByte() + 1) + 1
 		local disp = {Positions = {}, Triangles = {}}
 		for k = 0, data:ReadUShort() do
@@ -98,6 +194,9 @@ function ss:PrepareInkSurface(write)
 			v.vec = Vector(x, y, z)
 			v.dist = data:ReadFloat()
 			disp.Positions[k] = v
+			surf.Mins[i] = ss:MinVector(surf.Mins[i], v.pos)
+			surf.Maxs[i] = ss:MaxVector(surf.Maxs[i], v.pos)
+			table.insert(positions, v.pos)
 			
 			local invert = Either(k % 2 == 0, 1, 0) --Generate triangles from displacement mesh.
 			if k % power < power - 1 and math.floor(k / power) < power - 1 then
@@ -107,6 +206,7 @@ function ss:PrepareInkSurface(write)
 		end
 		
 		ss.Displacements[i] = disp
+		ss:FindLeaf(positions).Surfaces[i] = true
 	end
 	
 	data:Close()
@@ -229,7 +329,8 @@ function ss:PrepareInkSurface(write)
 					
 					ContinueMesh()
 				end
-				ss.Displacements[k] = nil
+				
+				ss.Displacements[k] = true
 			else
 				for t, v in ipairs(surf.Vertices[k]) do
 					v.u, v.v = v.u / divuv, v.v / divuv
@@ -259,7 +360,7 @@ function ss:PrepareInkSurface(write)
 	ss.UnitsToPixels = 1 / ss.PixelsToUnits
 	ss.UnitsToUV = 1 / ss.UVToUnits
 	ss.PixelsToUV = 1 / ss.UVToPixels
-	surf.Areas, ss.Displacements, surf.Vertices, surf.AreaBound = nil
+	surf.Areas, surf.Vertices, surf.AreaBound = nil
 	ss.RenderTarget.Ready = true
 	collectgarbage "collect"
 	net.Start "SplatoonSWEPs: Ready to splat"

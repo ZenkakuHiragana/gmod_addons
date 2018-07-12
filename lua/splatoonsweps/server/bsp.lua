@@ -134,7 +134,6 @@ function bsp:ReadHeader()
 	for i = 0, 63 do
 		self.header.lumps[i] = {}
 		self.header.lumps[i].data = {}
-		self.header.lumps[i].parsed = false
 		self.header.lumps[i].offset = read "Long"
 		self.header.lumps[i].length = read "Long"
 		self.bsp:Skip(8)
@@ -262,7 +261,7 @@ end,
 		lump.data[i] = {}
 		lump.data[i].normal = read "Vector"
 		lump.data[i].distance = read "Float"
-		bsp.bsp:Skip(4) --type
+		bsp.bsp:Skip(4) -- type
 	end
 end,
 
@@ -593,6 +592,5 @@ function bsp:Parse(parse_type)
 	if parse_type and lump and isfunction(ParseFunction[parse_type]) then
 		self.bsp:Seek(lump.offset)
 		ParseFunction[parse_type](lump)
-		lump.parsed = true
 	end
 end

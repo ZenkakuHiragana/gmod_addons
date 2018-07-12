@@ -35,8 +35,6 @@ function SWEP:ChangePlayermodel(data)
 	end
 end
 
-local InkTraceLength = 20
-local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:Initialize()
 	self.OwnerVelocity = vector_origin
 	self.ViewAnim = ACT_VM_IDLE
@@ -44,29 +42,8 @@ function SWEP:Initialize()
 	self:SetOnEnemyInk(false)
 	self:SetInk(ss.MaxInkAmount)
 	self:SetInkColorProxy(ss.vector_one)
-	self:AddSchedule(5 * ss.FrameToSec,
-	function(self, schedule) --Set if player is in ink
-		local ang = Angle(0, self.Owner:GetAngles().yaw)
-		local c = self:GetColorCode()
-		local filter = {self, self.Owner}
-		local p = self.Owner:WorldSpaceCenter()
-		local fw, right = ang:Forward() * InkTraceLength, ang:Right() * InkTraceLength
-		self:SetGroundColor(ss:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, filter)) or -1)
-		local onink = self:GetGroundColor() >= 0
-		local onourink = self:GetGroundColor() == c
-		
-		self:SetInWallInk(self:Crouching() and (
-		ss:GetSurfaceColor(util.QuickTrace(p, fw - right, filter)) == c or
-		ss:GetSurfaceColor(util.QuickTrace(p, fw + right, filter)) == c or
-		ss:GetSurfaceColor(util.QuickTrace(p,-fw - right, filter)) == c or
-		ss:GetSurfaceColor(util.QuickTrace(p,-fw + right, filter)) == c))
-		
-		self:SetInInk(self:Crouching() and (onink and onourink or self:GetInWallInk()))
-		self:SetOnEnemyInk(onink and not onourink)
-		self.OwnerVelocity = self.Owner:GetVelocity()
-	end)
-	
 	self:SharedInitBase()
+	self:AddSchedule(0, self.UpdateInkState)
 	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
 		self:SetSaveValue("m_fMinRange1", 0)
 		self:SetSaveValue("m_fMinRange2", 0)
@@ -209,10 +186,10 @@ function SWEP:Holster()
 	self.PMTable = nil
 	if self.Owner:IsPlayer() then
 		self.Owner:SetDSP(1)
-		if istable(self.BackupPlayerInfo) then --Restores owner's information.
+		if istable(self.BackupPlayerInfo) then -- Restores owner's information.
 			self:ChangePlayermodel(self.BackupPlayerInfo.Playermodel)
 			self.Owner:SetColor(self.BackupPlayerInfo.Color)
-		--	self.Owner:RemoveFlags(self.Owner:GetFlags()) --Restores no target flag and something.
+		--	self.Owner:RemoveFlags(self.Owner:GetFlags()) -- Restores no target flag and something.
 		--	self.Owner:AddFlags(self.BackupPlayerInfo.Flags)
 			self.Owner:SetJumpPower(self.BackupPlayerInfo.JumpPower)
 			self.Owner:SetRenderMode(self.BackupPlayerInfo.RenderMode)

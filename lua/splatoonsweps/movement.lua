@@ -1829,7 +1829,7 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 		mv:SetButtons(bit.band(mv:GetButtons(), DuckMask))
 	end
 	
-	local maxspeed = w.InklingSpeed
+	local maxspeed = w.InklingSpeed -- Max speed clip
 	maxspeed = ss:ProtectedCall(w.CustomMoveSpeed, w) or maxspeed
 	maxspeed = maxspeed * Either(ply:Crouching(), ss.SquidSpeedOutofInk, 1)
 	maxspeed = w:GetInInk() and w.SquidSpeed or maxspeed
@@ -1837,6 +1837,8 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	maxspeed = maxspeed * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
 	mv:SetMaxSpeed(maxspeed)
 	mv:SetMaxClientSpeed(maxspeed)
+	
+	if CLIENT then w:UpdateInkState() end -- Ink state prediction
 	
 	for v, i in pairs {
 		[mv:GetVelocity()] = true, -- Current velocity
@@ -1871,7 +1873,7 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 		end
 		
 		v.z = w.OnOutofInk and not w:GetInWallInk()
-		and math.min(vz, ply:GetJumpPower() / 2) or vz
+		and math.min(vz, ply:GetJumpPower() * .7) or vz
 		if i then mv:SetVelocity(v) end
 	end
 	

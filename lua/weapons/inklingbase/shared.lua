@@ -109,6 +109,29 @@ function SWEP:OwnerChanged()
 	end
 end
 
+local InkTraceLength = 20
+local InkTraceDown = -vector_up * InkTraceLength
+function SWEP:UpdateInkState() -- Set if player is in ink
+	local ang = Angle(0, self.Owner:GetAngles().yaw)
+	local c = self:GetColorCode()
+	local filter = {self, self.Owner}
+	local p = self.Owner:WorldSpaceCenter()
+	local fw, right = ang:Forward() * InkTraceLength, ang:Right() * InkTraceLength
+	self:SetGroundColor(ss:GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, filter)) or -1)
+	local onink = self:GetGroundColor() >= 0
+	local onourink = self:GetGroundColor() == c
+	
+	self:SetInWallInk(self:Crouching() and (
+	ss:GetSurfaceColor(util.QuickTrace(p, fw - right, filter)) == c or
+	ss:GetSurfaceColor(util.QuickTrace(p, fw + right, filter)) == c or
+	ss:GetSurfaceColor(util.QuickTrace(p,-fw - right, filter)) == c or
+	ss:GetSurfaceColor(util.QuickTrace(p,-fw + right, filter)) == c))
+	
+	self:SetInInk(self:Crouching() and (onink and onourink or self:GetInWallInk()))
+	self:SetOnEnemyInk(onink and not onourink)
+	self.OwnerVelocity = self.Owner:GetVelocity()
+end
+
 function SWEP:SharedInitBase()
 	self.Cooldown = CurTime()
 	self.SwimSound = CreateSound(self, ss.SwimSound)

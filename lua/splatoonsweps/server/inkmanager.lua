@@ -9,7 +9,6 @@ local MAX_DEGREES_DIFFERENCE = 45 -- Maximum angle difference between two surfac
 local MAX_COS_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) -- Used by filtering process
 local MAX_INK_SIM_AT_ONCE = 60 -- Calculating ink trajectory at once
 local MIN_BOUND = 20 -- Ink minimum bounding box scale
-local MIN_BOUND_AREA = 64 -- minimum ink bounding box area
 local POINT_BOUND = ss.vector_one * .1
 local reference_polys = {}
 local reference_vert = Vector(1)
@@ -35,46 +34,6 @@ local dropdata = {
 for i = 1, circle_polys do
 	table.insert(reference_polys, Vector(reference_vert))
 	reference_vert:Rotate(Angle(0, circle_polys))
-end
-
--- [1] = minimum bound, [2] = maximum bound
-local function AddInkRectangle(ink, sz, newink)
-	local nb, nr = newink.bounds, newink.ratio
-	local n1, n2, n3, n4 = nb[1], nb[2], nb[3], nb[4]
-	for r, z in pairs(ink) do
-		local bounds, lr = r.bounds, r.lastratio
-		if not next(bounds) then
-			if lr > .6 then
-				ink[r] = nil
-			else
-				r.lastratio = lr + 1e-4
-			end
-		else
-			for b in pairs(bounds) do
-				local b1, b2, b3, b4 = b[1], b[2], b[3], b[4]
-				if (b3 - b1) * (b4 - b2) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
-				if n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2 then continue end
-				r.lastratio, r.bounds[b] = nr
-				local x, y = {n1, n3, b1, b3}, {n2, n4, b2, b4} table.sort(x) table.sort(y)
-				local x1, x2, x3, x4, y1, y2, y3, y4
-					= x[1], x[2], x[3], x[4], y[1], y[2], y[3], y[4]
-				local t = {
-					{x1, y1, x2, y2}, {x2, y1, x3, y2}, {x3, y1, x4, y2},
-					{x1, y2, x2, y3}, {x2, y2, x3, y3}, {x3, y2, x4, y3},
-					{x1, y3, x2, y4}, {x2, y3, x3, y4}, {x3, y3, x4, y4},
-				}
-				for i = 1, 9 do
-					local c = t[i]
-					local c1, c2, c3, c4 = c[1], c[2], c[3], c[4]
-					r.bounds[c] = b1 < c3 and b3 > c1 and b2 < c4 and b4 > c2 and
-						(n1 >= c3 or n3 <= c1 or n2 >= c4 or n4 <= c2) or nil
-				end
-			end
-		end
-	end
-	
-	newink.bounds = {[nb] = true}
-	ink[newink] = sz
 end
 
 -- Draws ink.
@@ -113,7 +72,7 @@ function ss:Paint(pos, normal, radius, color, angle, inktype, ratio)
 			
 			local pos2d = ss:To2D(pos, surf.Origins[i], surf.Angles[i])
 			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
-			AddInkRectangle(surf.InkCircles[i], ss.InkCounter, {
+			ss:AddInkRectangle(surf.InkCircles[i], ss.InkCounter, {
 				angle = localang,
 				bounds = {bmins.x, bmins.y, bmaxs.x, bmaxs.y},
 				color = color,
@@ -272,6 +231,9 @@ local process = coroutine.create(function()
 				ink.start = t.HitPos
 				continue
 			elseif t.HitWorld then
+				ink.endpos = t.HitPos - t.HitNormal * ink.Info.ColRadius * 2
+				t = util.TraceLine(ink)
+				
 				local ratio = 1
 				local radius = Lerp((ink.InitPos.z - t.HitPos.z) / PaintDistance - PaintFraction, ink.MinRadius, ink.InkRadius)
 				if ink.InkType > 3 and t.HitNormal.z > MAX_COS_DEG_DIFF and lifetime > ink.Info.Straight then

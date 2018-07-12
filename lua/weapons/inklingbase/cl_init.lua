@@ -12,9 +12,9 @@ function SWEP:PopupError(msg)
 	notification.AddLegacy(msg, NOTIFY_ERROR, 10)
 end
 
---Fully copies the table, meaning all tables inside this table are copied too and so on
---(normal table.Copy copies only their reference).
---Does not copy entities of course, only copies their reference.
+-- Fully copies the table, meaning all tables inside this table are copied too and so on
+-- (normal table.Copy copies only their reference).
+-- Does not copy entities of course, only copies their reference.
 local function FullCopy(t)
 	if not istable(t) then return t end
 	
@@ -39,7 +39,7 @@ local function FullCopy(t)
 end
 
 function SWEP:Initialize()
-	--we build a render order because sprites need to be drawn after models
+	-- we build a render order because sprites need to be drawn after models
 	self.vRenderOrder = {}
 	self.wRenderOrder = {}
 	for k, v in pairs(self.VElements) do
@@ -58,19 +58,19 @@ function SWEP:Initialize()
 		end
 	end
 	
-	--Create a new table for every weapon instance
+	-- Create a new table for every weapon instance
 	self.VElements = FullCopy(self.VElements)
 	self.WElements = FullCopy(self.WElements)
 	self.ViewModelBoneMods = FullCopy(self.ViewModelBoneMods)
-	self:CreateModels(self.VElements) --create viewmodels
-	self:CreateModels(self.WElements) --create worldmodels
+	self:CreateModels(self.VElements) -- create viewmodels
+	self:CreateModels(self.WElements) -- create worldmodels
 	
-	--Our initialize code
+	-- Our initialize code
 	self.EnoughSubWeapon = true
 	self.PreviousInk = true
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:MakeSquidModel()
-	self.JustUsableTime = CurTime() - 1 --For animation of ink tank light
+	self.JustUsableTime = CurTime() - 1 -- For animation of ink tank light
 	self:SharedInitBase()
 	ss:ProtectedCall(self.ClientInit, self)
 	self:ClientDeployBase()
@@ -108,7 +108,7 @@ function SWEP:Holster()
 	return self:SharedHolsterBase()
 end
 
---It's important to remove CSEnt with CSEnt:Remove() when it's no longer needed.
+-- It's important to remove CSEnt with CSEnt:Remove() when it's no longer needed.
 function SWEP:OnRemove()
 	for k, v in pairs(self.VElements) do
 		if IsValid(v.modelEnt) then v.modelEnt:Remove() end

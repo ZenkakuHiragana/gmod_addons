@@ -30,39 +30,6 @@ local CVarFlags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
 local CVarEnabled = CreateConVar("sv_splatoonsweps_enabled", "1", CVarFlags, ss.Text.CVarDescription.Enabled)
 if CVarEnabled and not CVarEnabled:GetBool() then SplatoonSWEPs = nil return end
 CreateConVar("sv_splatoonsweps_ff", "0", CVarFlags, ss.Text.CVarDescription.FF)
-for i = 1, 9 do
-	local mask = {}
-	local masktxt = file.Open("data/splatoonsweps/shot" .. tostring(i) .. ".txt", "rb", "GAME")
-	mask.width = masktxt:ReadByte()
-	mask.height = masktxt:ReadByte()
-	for p = 1, mask.width * mask.height do
-		mask[p] = masktxt:Read(1) == "1"
-	end
-	
-	ss.InkShotMaterials[i] = mask
-	masktxt:Close()
-end
-
--- Arguments:
---   table vertices	| Vertices of face
---   Vector normal	| Normal of plane
---   number dist	| Distance from plane to origin
--- Returns:
---   Positive value | Face is in positive side of the plane
---   Negative value | Face is in negative side of the plane
---   0              | Face intersects with the plane
-local PlaneThickness = 0.2
-local function AcrossPlane(vertices, normal, dist)
-	local sign
-	for i, v in ipairs(vertices) do --for each vertices of face
-		local dot = normal:Dot(v) - dist
-		if math.abs(dot) > PlaneThickness then
-			if sign and sign * dot < 0 then return 0 end
-			sign = (sign or 0) + dot
-		end
-	end
-	return sign or 0
-end
 
 -- Clears all ink in the world.
 -- Sends a net message to clear ink on clientside.
@@ -78,51 +45,6 @@ function ss:ClearAllInk()
 	end
 	
 	collectgarbage "collect"
-end
-
-
-function ss:FindLeaf(vertices, modelindex)
-	local node = ss.Models[modelindex or 1]
-	while node.Separator do
-		local sign = AcrossPlane(vertices, node.Separator.normal, node.Separator.distance)
-		if sign == 0 then return node end
-		node = node.ChildNodes[sign > 0 and 1 or 2]
-	end
-	return node
-end
-
--- Finds BSP nodes/leaves which includes the given face.
--- Use as an iterator function:
---   for nodes in SplatoonSWEPs:BSPPairs {table of vertices} ... end
--- Arguments:
---   table vertices		| Table of Vertices which represents the face.
---   number modelindex	| BSP tree index.  Optional.
--- Returns:
---   function			| An iterator function.
-function ss:BSPPairs(vertices, modelindex)
-	return function(queue, old)
-		if old.Separator then
-			local sign = AcrossPlane(vertices, old.Separator.normal, old.Separator.distance)
-			if sign >= 0 then table.insert(queue, old.ChildNodes[1]) end
-			if sign <= 0 then table.insert(queue, old.ChildNodes[2]) end
-		end
-		return table.remove(queue, 1)
-	end, {ss.Models[modelindex or 1]}, {}
-end
-
--- Returns an iterator function which covers all nodes in map BSP tree.
--- Argument:
---   number modelindex	| BSP tree index.  Optional.
--- Returning:
---   function			| An iterator function.
-function ss:BSPPairsAll(modelindex)
-	return function(queue, old)
-		if old and old.ChildNodes then
-			table.insert(queue, old.ChildNodes[1])
-			table.insert(queue, old.ChildNodes[2])
-		end
-		return table.remove(queue, 1)
-	end, {ss.Models[modelindex or 1]}
 end
 
 -- Calls notification.AddLegacy serverside.

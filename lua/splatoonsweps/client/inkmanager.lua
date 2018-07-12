@@ -48,14 +48,18 @@ local function GetLight(p, n)
 end
 
 function ss:ClearAllInk()
-	ss.InkQueue, ss.InkTraces = {}, {}
+	ss.InkCounter, ss.InkQueue, ss.InkTraces = 0, {}, {}
 	local amb = ss.AmbientColor
 	if not amb then
 		amb = render.GetAmbientLightColor():ToColor()
 		ss.AmbientColor = amb
 	end
 	
-	render.PushRenderTarget(ss.RenderTarget.BaseTexture)
+	for i = 1, #surf.InkCircles do
+		surf.InkCircles[i] = {}
+	end
+	
+	render.PushRenderTarget(rt.BaseTexture)
 	render.OverrideAlphaWriteEnable(true, true)
 	render.ClearDepth()
 	render.ClearStencil()
@@ -63,7 +67,7 @@ function ss:ClearAllInk()
 	render.OverrideColorWriteEnable(false)
 	render.PopRenderTarget()
 	
-	render.PushRenderTarget(ss.RenderTarget.Normalmap)
+	render.PushRenderTarget(rt.Normalmap)
 	render.OverrideAlphaWriteEnable(true, true)
 	render.ClearDepth()
 	render.ClearStencil()
@@ -71,25 +75,78 @@ function ss:ClearAllInk()
 	render.OverrideAlphaWriteEnable(false)
 	render.PopRenderTarget()
 	
-	render.PushRenderTarget(ss.RenderTarget.Lightmap)
+	render.PushRenderTarget(rt.Lightmap)
 	render.ClearDepth()
 	render.ClearStencil()
 	render.Clear(amb.r, amb.g, amb.b, 255)
 	render.PopRenderTarget()
 end
 
-hook.Add("Tick", "SplatoonSWEPs: Register ink clientside", coroutine.wrap(function()
+-- Takes a TraceResult and returns ink color of its HitPos.
+-- Argument:
+--   TraceResult tr	| A TraceResult structure to pick up a position.
+-- Returning:
+--   number			| The ink color of the specified position.
+--   nil			| If there is no ink, returns nil.
+local MAX_DEGREES_DIFFERENCE = 45 -- Maximum angle difference between two surfaces
+local MAX_COS_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) -- Used by filtering process
+local POINT_BOUND = ss.vector_one * .1
+local rootpi = math.sqrt(math.pi) / 2
+function ss:GetSurfaceColor(tr)
+	if not tr.Hit then return end
+	for node in ss:BSPPairs {tr.HitPos} do
+		for i in pairs(node.Surfaces) do
+			if surf.Normals[i]:Dot(tr.HitNormal) <= MAX_COS_DEG_DIFF * (ss.Displacements[i] and .5 or 1) or not
+			ss:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
+			local p2d = ss:To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
+			for r in SortedPairsByValue(surf.InkCircles[i], true) do
+				local t = ss.InkShotMaterials[r.texid]
+				local w, h = t.width, t.height
+				local p = (p2d - r.pos) / r.radius
+				p:Rotate(Angle(0, r.angle)) -- (-1, -1) <= (x, y) <= (1, 1)
+				if -1 > p.x or p.x > 1 or -1 > p.y or p.y > 1 then continue end
+				p = (p + ss.vector_one) / 2 -- (0, 0) <= (x, y) <= (1, 1)
+				p.y = p.y * h -- 0 <= y <= h
+				p.x = p.x - (1 - r.ratio) / 2 -- 0 <= x <= r.ratio
+				p.x = p.x / r.ratio * w -- 0 <= x <= w
+				p.x, p.y = math.Round(p.x), math.Round(p.y)
+				if 0 < p.x and p.x < w and 0 < p.y and p.y < h and t[(p.y - 1) * w + p.x] then
+					return r.color
+				end
+			end
+		end
+	end
+end
+
+local tick = coroutine.create(function()
 	local Angles, Origins, Normals, Moved = surf.Angles, surf.Origins, surf.Normals, surf.Moved
-	while not ss.RenderTarget.Ready do coroutine.yield() end
+	while not rt.Ready do coroutine.yield() end
 	while true do
 		local done = 0
 		for q in pairs(ss.InkQueue) do
 			q.done, done = q.done + 1, done + 1
-			if q.done > 5 then ss.InkQueue[q] = nil end
 			local angle, origin, normal, moved = Angles[q.n], Origins[q.n], Normals[q.n], Moved[q.n]
+			local pos2d = ss:To2D(q.pos, origin, angle)
+			if q.done > 5 then
+				local rectsize = q.r * rootpi
+				local sizevec = Vector(rectsize, rectsize)
+				local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
+				ss:AddInkRectangle(surf.InkCircles[q.n], ss.InkCounter, {
+					angle = q.inkangle,
+					bounds = {bmins.x, bmins.y, bmaxs.x, bmaxs.y},
+					color = q.c,
+					pos = pos2d,
+					radius = q.r,
+					ratio = q.ratio,
+					texid = q.t,
+				})
+				ss.InkCounter = ss.InkCounter + 1
+				ss.InkQueue[q] = nil
+			end
+			
+			pos2d = pos2d * ss.UnitsToPixels
 			local bound = surf.Bounds[q.n] * ss.UnitsToPixels
 			local color = ss:GetColor(q.c)
-			local pos2d = ss:To2D(q.pos, origin, angle) * ss.UnitsToPixels
 			local r = math.Round(q.r * ss.UnitsToPixels)
 			local uvorg = Vector(surf.u[q.n], surf.v[q.n]) * ss.UVToPixels
 			if moved then pos2d.x, q.inkangle = -pos2d.x, -q.inkangle - 90 end
@@ -150,7 +207,13 @@ hook.Add("Tick", "SplatoonSWEPs: Register ink clientside", coroutine.wrap(functi
 		
 		coroutine.yield()
 	end
-end))
+end)
+
+hook.Add("Tick", "SplatoonSWEPs: Register ink clientside", function()
+	if coroutine.status(tick) == "dead" then return end
+	local ok, msg = coroutine.resume(tick)
+	if not ok then ErrorNoHalt(msg) end
+end)
 
 local TrailLagTime = 10 * ss.FrameToSec
 local TrailMergeTime = 20 * ss.FrameToSec

@@ -10,6 +10,91 @@ include "text.lua"
 include "weapons.lua"
 cleanup.Register(ss.CleanupTypeInk)
 
+for i = 1, 9 do
+	local mask = {}
+	local masktxt = file.Open("data/splatoonsweps/shot" .. tostring(i) .. ".txt", "rb", "GAME")
+	mask.width = masktxt:ReadByte()
+	mask.height = masktxt:ReadByte()
+	for p = 1, mask.width * mask.height do
+		mask[p] = masktxt:Read(1) == "1"
+	end
+	
+	ss.InkShotMaterials[i] = mask
+	masktxt:Close()
+end
+
+-- Returns which sides the polygon specified by given vertices is.
+-- Arguments:
+--   table vertices	| Vertices of the face
+--   Vector normal	| Normal of plane
+--   number dist	| Distance from plane to origin
+-- Returns:
+--   Positive value | Face is in positive side of the plane
+--   Negative value | Face is in negative side of the plane
+--   0              | Face intersects with the plane
+local PlaneThickness = 0.2
+local function AcrossPlane(vertices, normal, dist)
+	local sign
+	for i, v in ipairs(vertices) do --for each vertices of face
+		local dot = normal:Dot(v) - dist
+		if math.abs(dot) > PlaneThickness then
+			if sign and sign * dot < 0 then return 0 end
+			sign = (sign or 0) + dot
+		end
+	end
+	return sign or 0
+end
+
+-- Returns which node the polygon specified by given vertices is in.
+-- Arguments:
+--   table vertices    | Vertices of the face
+--   number modelindex | BSP tree index.  Optional.
+-- Returning:
+--   table node        | The node which contains the face.
+function ss:FindLeaf(vertices, modelindex)
+	local node = ss.Models[modelindex or 1]
+	while node.Separator do
+		local sign = AcrossPlane(vertices, node.Separator.normal, node.Separator.distance)
+		if sign == 0 then return node end
+		node = node.ChildNodes[sign > 0 and 1 or 2]
+	end
+	return node
+end
+
+-- Finds BSP nodes/leaves which includes the given face.
+-- Use as an iterator function:
+--   for nodes in SplatoonSWEPs:BSPPairs {table of vertices} ... end
+-- Arguments:
+--   table vertices		| Table of Vertices which represents the face.
+--   number modelindex	| BSP tree index.  Optional.
+-- Returns:
+--   function			| An iterator function.
+function ss:BSPPairs(vertices, modelindex)
+	return function(queue, old)
+		if old.Separator then
+			local sign = AcrossPlane(vertices, old.Separator.normal, old.Separator.distance)
+			if sign >= 0 then table.insert(queue, old.ChildNodes[1]) end
+			if sign <= 0 then table.insert(queue, old.ChildNodes[2]) end
+		end
+		return table.remove(queue, 1)
+	end, {ss.Models[modelindex or 1]}, {}
+end
+
+-- Returns an iterator function which covers all nodes in map BSP tree.
+-- Argument:
+--   number modelindex	| BSP tree index.  Optional.
+-- Returning:
+--   function			| An iterator function.
+function ss:BSPPairsAll(modelindex)
+	return function(queue, old)
+		if old and old.ChildNodes then
+			table.insert(queue, old.ChildNodes[1])
+			table.insert(queue, old.ChildNodes[2])
+		end
+		return table.remove(queue, 1)
+	end, {ss.Models[modelindex or 1]}
+end
+
 -- Compares each component and returns the smaller one.
 -- Arguments:
 --   Vector a, b	| Two vectors to compare.
@@ -90,6 +175,58 @@ end
 function ss:To3D(source, orgpos, organg)
 	local localpos = Vector(0, source.x, source.y)
 	return (LocalToWorld(localpos, angle_zero, orgpos, organg))
+end
+
+-- Records a new ink to ink history.
+-- Arguments:
+--   table ink       | Ink history table. node.Surfaces.InkCircle or SequentialSurfaces.InkCircle
+--   number sz       | Ink surface Z-position.
+--   table newink    | A table which describes the new ink.
+--     number angle  | Ink pattern angle in degrees.
+--     table bounds  | Ink bounding box, {min.x, min.y, max.x, max.y}
+--     number color  | Color code.
+--     Vector pos    | Ink position in surface-related system.
+--     number radius | Ink characteristic radius.
+--     number ratio  | Ink aspect ratio.
+--     number texid  | Ink pattern ID.
+local MIN_BOUND_AREA = 64 -- minimum ink bounding box area
+function ss:AddInkRectangle(ink, sz, newink)
+	local nb, nr = newink.bounds, newink.ratio
+	local n1, n2, n3, n4 = nb[1], nb[2], nb[3], nb[4] -- 1, 2 = min, 3, 4 = max
+	for r, z in pairs(ink) do
+		local bounds, lr = r.bounds, r.lastratio
+		if not next(bounds) then
+			if lr > .6 then
+				ink[r] = nil
+			else
+				r.lastratio = lr + 1e-4
+			end
+		else
+			for b in pairs(bounds) do
+				local b1, b2, b3, b4 = b[1], b[2], b[3], b[4]
+				if (b3 - b1) * (b4 - b2) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
+				if n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2 then continue end
+				r.lastratio, r.bounds[b] = nr
+				local x, y = {n1, n3, b1, b3}, {n2, n4, b2, b4} table.sort(x) table.sort(y)
+				local x1, x2, x3, x4, y1, y2, y3, y4
+					= x[1], x[2], x[3], x[4], y[1], y[2], y[3], y[4]
+				local t = {
+					{x1, y1, x2, y2}, {x2, y1, x3, y2}, {x3, y1, x4, y2},
+					{x1, y2, x2, y3}, {x2, y2, x3, y3}, {x3, y2, x4, y3},
+					{x1, y3, x2, y4}, {x2, y3, x3, y4}, {x3, y3, x4, y4},
+				}
+				for i = 1, 9 do
+					local c = t[i]
+					local c1, c2, c3, c4 = c[1], c[2], c[3], c[4]
+					r.bounds[c] = b1 < c3 and b3 > c1 and b2 < c4 and b4 > c2 and
+						(n1 >= c3 or n3 <= c1 or n2 >= c4 or n4 <= c2) or nil
+				end
+			end
+		end
+	end
+	
+	newink.bounds = {[nb] = true}
+	ink[newink] = sz
 end
 
 -- Short for Entity:NetworkVar().
