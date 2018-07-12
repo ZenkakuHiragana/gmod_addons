@@ -58,6 +58,10 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			ent:SetSequence "idle_fist"
 			ent.GetPlayerColor = GetColor
 			ent.GetInkColorProxy = GetColor
+			if ss.CheckSplatoonPlayermodels[model] and isfunction(LocalPlayer().SplatColors) then
+				ent.GetInfoNum = LocalPlayer().GetInfoNum
+				LocalPlayer().SplatColors(ent)
+			end
 			
 			local issquid = ss.CheckSplatoonPlayermodels[model]
 			local mins, maxs = ent:GetRenderBounds()

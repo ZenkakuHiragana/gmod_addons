@@ -425,6 +425,23 @@ function ss:IsAlly(c1, c2)
 	return not (CVarFF and CVarFF:GetBool()) and c1 == c2
 end
 
+-- Time to run EmitSound() is a little complicated.
+-- Argument:
+--   Entity ply    | Player to suppress.
+function ss:ShouldSuppress(ply)
+	if CLIENT or game.SinglePlayer() then return end
+	SuppressHostEvents(ply)
+end
+
+-- Time to run EmitSound() is a little complicated.
+-- Argument:
+--   Entity ent    | Entity to emit sound.
+--   string track  | Sound to be played.
+function ss:ShouldEmitSound(ent, track)
+	if CLIENT or game.SinglePlayer() then return end
+	ent:EmitSound(track)
+end
+
 -- Overriding footstep sound stops calling other PlayerFootstep hooks in other addons.
 -- I decided to have one of their hook run my function.
 local FootstepTrace = vector_up * -20

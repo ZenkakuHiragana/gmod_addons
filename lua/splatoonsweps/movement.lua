@@ -1887,14 +1887,14 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 		w.SwimSound:ChangeVolume(w:GetInInk() and math.Clamp(mv:GetVelocity():Length() / w.SquidSpeed, 0, 1) or 0)
 		if not w.OldCrouching then
 			ply:RemoveAllDecals()
-			if SERVER then SuppressHostEvents(ply) end
+			ss:ShouldSuppress(ply)
 			if SERVER or w:IsFirstTimePredicted() then
 				w:ChangeViewModel(ss.ViewModel.Squid)
 				w:EmitSound "SplatoonSWEPs_Player.ToSquid"
 			else
 				w:ChangeViewModel()
 			end
-			if SERVER then SuppressHostEvents() end
+			ss:ShouldSuppress()
 		end
 		
 		if w:GetOnEnemyInk() then
@@ -1906,14 +1906,14 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 		mv:AddKey(IN_DUCK) -- it's not correct behavior though
 	elseif not ply:Crouching() and w.OldCrouching then
 		w.SwimSound:ChangeVolume(0)
-		if SERVER then SuppressHostEvents(ply) end
+		ss:ShouldSuppress(ply)
 		if SERVER or w:IsFirstTimePredicted() then
 			w:ChangeViewModel(ss.ViewModel.Standing)
 			w:EmitSound "SplatoonSWEPs_Player.ToHuman"
 		else
 			w:ChangeViewModel()
 		end
-		if SERVER then SuppressHostEvents() end
+		ss:ShouldSuppress()
 	end
 	
 	w.OnOutofInk = w:GetInWallInk()

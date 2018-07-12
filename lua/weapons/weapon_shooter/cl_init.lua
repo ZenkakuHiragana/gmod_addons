@@ -264,7 +264,7 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	self.PreviousInk = true
 	self.Cooldown = math.max(self.Cooldown, CurTime()
 	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
-	if self.Owner == LocalPlayer() then
+	if self.Owner == LocalPlayer() or game.SinglePlayer() then
 		self:EmitSound(self.ShootSound)
 		ss.InkTraces[{
 			Appearance = {

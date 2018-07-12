@@ -5,14 +5,14 @@ local ss = SplatoonSWEPs
 if not ss then return end
 net.Receive("SplatoonSWEPs: Client PrimaryAttack", function()
 	local w = net.ReadEntity()
-	if not IsValid(w) or w.Owner == LocalPlayer() then return end
+	if not IsValid(w) or not game.SinglePlayer() and w.Owner == LocalPlayer() then return end
 	local auto = net.ReadBool()
 	ss:ProtectedCall(w.PrimaryAttack, w, auto)
 end)
 
 net.Receive("SplatoonSWEPs: Client Deploy", function()
 	local w = net.ReadEntity()
-	if not IsValid(w) or w.Owner == LocalPlayer() then return end
+	if not IsValid(w) or not game.SinglePlayer() and w.Owner == LocalPlayer() then return end
 	ss:ProtectedCall(w.Deploy, w)
 end)
 

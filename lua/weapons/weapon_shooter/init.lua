@@ -32,7 +32,7 @@ function SWEP:ServerPrimaryAttack(hasink, auto)
 	if not hasink then
 		if self.Primary.TripleShotDelay then self.Cooldown = CurTime() end
 		if CurTime() > self.NextPlayEmpty then
-			self:EmitSound "SplatoonSWEPs.EmptyShot"
+			ss:ShouldEmitSound(self, "SplatoonSWEPs.EmptyShot")
 			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
 		end
 		
@@ -55,7 +55,7 @@ function SWEP:ServerPrimaryAttack(hasink, auto)
 	ss:AddInk(self.Owner, pos, initvelocity, self:GetColorCode(),
 	self.Owner:EyeAngles().yaw, math.random(4, 9), splashinit, self.Primary)
 	self.SplashInitMul = self.SplashInitMul + (self.Primary.TripleShotDelay and 3 or 1)
-	self:EmitSound(self.ShootSound)
+	ss:ShouldEmitSound(self, self.ShootSound)
 	
 	net.Start "SplatoonSWEPs: Shooter Tracer"
 	net.WriteEntity(self.Owner)

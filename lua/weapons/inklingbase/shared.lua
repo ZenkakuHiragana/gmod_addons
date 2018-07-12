@@ -40,7 +40,7 @@ end
 
 function SWEP:CheckButtons(key)
 	if not IsValid(self.Owner) then return end
-	if not self.Owner:IsPlayer() then return end
+	if not self.Owner:IsPlayer() then return true end
 	if not self:IsMine() then return true end
 	local neutral = true
 	local keytable, keytime = {}, {}
@@ -143,7 +143,7 @@ function SWEP:SharedInitBase()
 	end
 	
 	local translate = {}
-	for _, t in ipairs {"crossbow", "grenade", "melee2", "passive", "rpg"} do
+	for _, t in ipairs {"crossbow", "grenade", "melee2", "passive", "rpg", "smg"} do
 		self:SetWeaponHoldType(t)
 		translate[t] = self.ActivityTranslate
 	end
@@ -214,11 +214,11 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if self:CheckCannotStandup() then return end
 	if not auto and self:IsFirstTimePredicted() and CurTime() < self.Cooldown then return end
 	if not auto and self:IsFirstTimePredicted() and not self:CheckButtons(IN_ATTACK) then return end
-	if SERVER then SuppressHostEvents(self.Owner) end
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self.CannotStandup
 	local lv = self:GetLaggedMovementValue()
 	local reloadtime = self.Primary.ReloadDelay / lv
+	ss:ShouldSuppress(self.Owner)
 	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
 	self.ReloadSchedule:SetLastCalled(CurTime() + reloadtime)
 	self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / lv)
@@ -229,7 +229,7 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	net.WriteEntity(self)
 	net.WriteBool(tobool(auto))
 	net.Send(ss.PlayersReady)
-	SuppressHostEvents()
+	ss:ShouldSuppress()
 end
 
 function SWEP:SecondaryAttack() -- Use sub weapon
@@ -249,8 +249,8 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 			end
 		end
 		
-		if SERVER then SuppressHostEvents(self.Owner) end
 		local time = CurTime() + self.Secondary.Delay
+		ss:ShouldSuppress(self.Owner)
 		self.Cooldown = time
 		self:SetNextPrimaryFire(time)
 		self:SetNextSecondaryFire(time)
@@ -263,7 +263,7 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 		local able = hasink and not self:CheckCannotStandup()
 		ss:ProtectedCall(self.SharedSecondaryAttack, self, able)
 		ss:ProtectedCall(Either(SERVER, self.ServerSecondaryAttack, self.ClientSecondaryAttack), self, able)
-		if SERVER then SuppressHostEvents() end
+		ss:ShouldSuppress()
 		return true
 	end)
 end
