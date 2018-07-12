@@ -32,11 +32,10 @@ include "splatoonsweps/shared.lua"
 include "splatoonsweps/text.lua"
 include "userinfo.lua"
 
-local CvarEnabled = CreateConVar("sv_splatoonsweps_enabled",
-"1", {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE},
-SplatoonSWEPs.Text.CVarDescription.Enabled)
-if CvarEnabled and not CvarEnabled:GetBool() then SplatoonSWEPs = nil return end
 local ss = SplatoonSWEPs
+local CVarFlags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
+local CVarEnabled = CreateConVar("sv_splatoonsweps_enabled", "1", CVarFlags, ss.Text.CVarDescription.Enabled)
+if CVarEnabled and not CVarEnabled:GetBool() then SplatoonSWEPs = nil return end
 local surf = ss.SequentialSurfaces
 local rt = ss.RenderTarget
 local crashpath = "splatoonsweps/crashdump.txt" -- Existing this means the client crashed before.
@@ -44,6 +43,7 @@ local MAX_TRIANGLES = math.floor(32768 / 3) -- mesh library limitation
 local INK_SURFACE_DELTA_NORMAL = .8 -- Distance between map surface and ink mesh
 
 CreateClientConVar("cl_splatoonsweps_doomstyle", "0", false, false, ss.Text.CVarDescription.DoomStyle)
+CreateConVar("sv_splatoonsweps_ff", "0", CVarFlags, ss.Text.CVarDescription.FF)
 function ss:PrepareInkSurface(write)
 	local path = "splatoonsweps/" .. game.GetMap() .. "_decompress.txt"
 	file.Write(path, util.Decompress(write:sub(5))) -- First 4 bytes are map CRC.  Remove them.

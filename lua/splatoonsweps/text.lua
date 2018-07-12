@@ -356,8 +356,9 @@ ss.Text.Options = {
 	"Move Viewmodel",
 }
 ss.Text.CVarDescription = {
-	Enabled = "Enables or disables SplatoonSWEPs.",
-	DoomStyle = "Enables Aim down sights.  Weapon accuracy will not be better.",
+	DoomStyle = "Enables Aim down sights.  Weapon accuracy will not be better. (1: enabled, 0: disabled)",
+	Enabled = "Enables or disables SplatoonSWEPs. (1: enabled, 0: disabled)",
+	FF = "Enables friendly fire. (1: enabled, 0: disabled)",
 	[[Your ink color.  Available values are:
 ]] .. TableToString(ss.Text.ColorNames),
 	[[Your thirdperson model.  Available values are:
@@ -473,8 +474,9 @@ if lang == "ja" then
 		"ビューモデルを動かす",
 	}
 	ss.Text.CVarDescription = {
-	Enabled = "SplatoonSWEPsを有効化するかどうか。",
-	DoomStyle = "ADSを有効にする。ただし、命中率は上昇しない。",
+	DoomStyle = "ADSを有効にする。ただし、命中率は上昇しない。 (1: する 0: しない)",
+	Enabled = "SplatoonSWEPsを有効化するかどうか。 (1: する 0: しない)",
+	FF = "同士討ちを有効にする。 (1: する 0: しない)",
 	[[インクの色を設定する。使用可能な値は以下の通り。:
 ]] .. TableToString(ss.Text.ColorNames),
 	[[三人称モデル。使用可能な値は以下の通り。:

@@ -259,7 +259,7 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 			-- Entity hit effect here
 			if ink.filter == LocalPlayer() then
 				local ent = ss:IsValidInkling(tr.Entity)
-				if not ent or ent:GetColorCode() ~= ink.ColorCode then
+				if not (ent and ss:IsAlly(ent, ink.ColorCode)) then
 					surface.PlaySound(ink.IsCritical and ss.DealDamageCritical or ss.DealDamage)
 				end
 			end

@@ -22,7 +22,7 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	t.filter = {self, self.Owner}
 	for _, e in pairs(ents.FindAlongRay(t.start, t.endpos, t.mins * 5, t.maxs * 5)) do
 		local w = ss:IsValidInkling(e)
-		if not w or w:GetColorCode() == self:GetColorCode() then continue end
+		if not w or ss:IsAlly(w, self) then continue end
 		table.insert(t.filter, e)
 		table.insert(t.filter, w)
 	end

@@ -109,7 +109,7 @@ function SWEP:DoDrawCrosshair(x, y)
 	local outersize = math.ceil(math.sqrt(ScrW() * ScrH() / outer))
 	if hitentity then
 		local w = ss:IsValidInkling(tr.Entity)
-		if w and w:GetColorCode() == self:GetColorCode() then
+		if w and ss:IsAlly(w, self) then
 			hitentity = false
 		end
 	end

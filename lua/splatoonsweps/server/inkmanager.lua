@@ -287,7 +287,7 @@ local process = coroutine.create(function()
 				ss:Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ink.InkType, ratio)
 			elseif IsValid(t.Entity) and ink.Info.Damage > 0 then -- If ink hits an NPC or something
 				local w = ss:IsValidInkling(t.Entity)
-				if not w or w:GetColorCode() ~= ink.Color then
+				if not (w and ss:IsAlly(w, ink.Color)) then
 					local d, o = DamageInfo(), ink.filter
 					local frac = (lifetime - ink.Info.DecreaseDamage - ink.Ping) / ink.Info.MinDamageTime
 					d:SetDamage(Lerp(1 - frac, ink.Info.MinDamage, ink.Info.Damage))

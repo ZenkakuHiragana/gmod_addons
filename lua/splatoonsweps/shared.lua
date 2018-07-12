@@ -276,6 +276,18 @@ function ss:IsValidInkling(ply)
 	return IsValid(w) and w.IsSplatoonWeapon and not w:GetHolstering() and w or nil
 end
 
+-- Checks if the given two colors are the same, considering FF setting.
+-- Arguments:
+--   number c1, c2 | The colors to be compared.  Can also be Splatoon weapons.
+-- Returning:
+--   bool          | The colors are the same.
+function ss:IsAlly(c1, c2)
+	c1 = isentity(c1) and ss:ProtectedCall(c1.GetColorCode, c1) or c1
+	c2 = isentity(c2) and ss:ProtectedCall(c2.GetColorCode, c2) or c2
+	local CVarFF = GetConVar "sv_splatoonsweps_ff"
+	return not (CVarFF and CVarFF:GetBool()) and c1 == c2
+end
+
 -- Overriding footstep sound stops calling other PlayerFootstep hooks in other addons.
 -- I decided to have one of their hook run my function.
 local FootstepTrace = vector_up * -20

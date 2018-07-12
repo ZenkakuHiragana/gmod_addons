@@ -192,6 +192,8 @@ function SWEP:Deploy()
 			else
 				ss:SendError("WeaponPlayermodelNotFound", self.Owner)
 			end
+		else
+			self.Owner:SetPlayerColor(self:GetInkColorProxy())
 		end
 		
 		ss:ProtectedCall(self.Owner.SplatColors, self.Owner)

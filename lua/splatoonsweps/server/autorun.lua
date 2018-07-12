@@ -25,11 +25,11 @@ include "network.lua"
 include "splatoonsweps/shared.lua"
 include "splatoonsweps/text.lua"
 
-local CvarEnabled = CreateConVar("sv_splatoonsweps_enabled",
-"1", {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE},
-SplatoonSWEPs.Text.CVarDescription.Enabled)
-if CvarEnabled and not CvarEnabled:GetBool() then SplatoonSWEPs = nil return end
-local collectgarbage, ipairs, pairs, ss = collectgarbage, ipairs, pairs, SplatoonSWEPs
+local ss = SplatoonSWEPs
+local CVarFlags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
+local CVarEnabled = CreateConVar("sv_splatoonsweps_enabled", "1", CVarFlags, ss.Text.CVarDescription.Enabled)
+if CVarEnabled and not CVarEnabled:GetBool() then SplatoonSWEPs = nil return end
+CreateConVar("sv_splatoonsweps_ff", "0", CVarFlags, ss.Text.CVarDescription.FF)
 for i = 1, 9 do
 	local mask = {}
 	local masktxt = file.Open("data/splatoonsweps/shot" .. tostring(i) .. ".txt", "rb", "GAME")
@@ -246,7 +246,7 @@ hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, 
 	local atk = dmg:GetAttacker()
 	local inf = dmg:GetInflictor()
 	if not (IsValid(atk) and inf.IsSplatoonWeapon) then return end
-	if entweapon:GetColorCode() == inf:GetColorCode() then return true end
+	if ss:IsAlly(entweapon, inf) then return true end
 	entweapon.HealSchedule:SetDelay(45 * ss.FrameToSec)
 	if ent:IsPlayer() then
 		net.Start "SplatoonSWEPs: Play damage sound"
