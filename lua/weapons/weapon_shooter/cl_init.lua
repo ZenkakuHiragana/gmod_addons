@@ -225,7 +225,10 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	local pos, dir = self:GetFirePosition()
 	local delay, lv = self.Cooldown, self:GetLaggedMovementValue()
 	self:SetAimTimer(math.max(self:GetAimTimer(), CurTime() + self.Primary.AimDuration))
-	self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
+	if self:IsFirstTimePredicted() or self:CheckButtons(IN_ATTACK) then
+		self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
+	end
+	
 	if not self:IsFirstTimePredicted() then return end
 	if not hasink then
 		if self.Primary.TripleShotDelay then self.Cooldown = CurTime() end
