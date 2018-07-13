@@ -18,7 +18,7 @@ local function TableToString(t)
 end
 
 local lang = GetConVar "gmod_language" :GetString()
-local WeaponNames = {
+local WeaponNames = { -- English
 	".52 Gal",
 	".52 Gal Deco",
 	".96 Gal",
@@ -84,7 +84,7 @@ local WeaponNames = {
 	"Sloshing Machine",
 	"Sloshing Machine Neo",
 	"Splash-o-matic",
-	"Splash-o-matic Neo",
+	"Neo Splash-o-matic",
 	"Splat Charger",
 	"Kelp Splat Charger",
 	"Bento Splat Charger",
@@ -103,7 +103,7 @@ local WeaponNames = {
 	"Forge Splattershot Pro",
 	"Berry Splattershot Pro",
 	"Sploosh-o-matic",
-	"Sploosh-o-matic Neo",
+	"Neo Sploosh-o-matic",
 	"Sploosh-o-matic 7",
 	"Classic Squiffer",
 	"Fresh Squiffer",
@@ -112,7 +112,7 @@ local WeaponNames = {
 	"Tri-Slosher Nouveau",
 }
 
-WeaponNames.ja = {
+WeaponNames.ja = { -- Japanese
 	".52ガロン",
 	".52ガロンデコ",
 	".96ガロン",
@@ -177,8 +177,8 @@ WeaponNames.ja = {
 	"バケットスロッシャーソーダ",
 	"スクリュースロッシャー",
 	"スクリュースロッシャーネオ",
-	"シャープシューター",
-	"シャープシューターネオ",
+	"シャープマーカー",
+	"シャープマーカーネオ",
 	"スプラチャージャー",
 	"スプラチャージャーワカメ",
 	"スプラチャージャーベントー",
@@ -204,6 +204,570 @@ WeaponNames.ja = {
 	"スクイックリンβ",
 	"ヒッセン",
 	"ヒッセン・ヒュー",
+}
+
+WeaponNames.de = { -- German
+	".52 Gallon",
+	".52 Gallon Deko",
+	".96 Gallon",
+	".96 Gallon Deko",
+	"Airbrush MG",
+	"Airbrush PG",
+	"Airbrush RG",
+	nil, -- Bamboozler 14 Mk Ⅰ
+	nil, -- Bamboozler 14 Mk Ⅱ
+	nil, -- Bamboozler 14 Mk Ⅲ
+	nil, -- Blaster
+	nil, -- Custom Blaster
+	nil, -- Carbon Roller
+	nil, -- Carbon Roller Deco
+	"Dual-Platscher",
+	"Dual-Platscher SE",
+	nil, -- Dynamo Roller
+	nil, -- Gold Dynamo Roller
+	nil, -- Tempered Dynamo Roller
+	nil, -- E-liter 3K
+	nil, -- Custom E-liter 3K
+	nil, -- E-liter 3K Scope
+	nil, -- Custom E-liter 3K Scope
+	"S3 Tintenwerfer",
+	"S3 Tintenwerfer D",
+	"S3 Tintenwerfer Kirsch",
+	nil, -- Heavy Splatling
+	nil, -- Heavy Splatling Deco
+	nil, -- Heavy Splatling Remix
+	nil, -- Hero Charger Replica
+	nil, -- Hero Roller Replica
+	"Heldenwaffe Replik",
+	nil, -- Hydra Splatling
+	nil, -- Custom Hydra Splatling
+	nil, -- Inkbrush
+	nil, -- Inkbrush Nouveau
+	nil, -- Permanent Inkbrush
+	"Platscher",
+	"Platscher SE",
+	"L3 Tintenwerfer",
+	"L3 Tintenwerfer D",
+	nil, -- Luna Blaster
+	nil, -- Luna Blaster Neo
+	nil, -- Mini Splatling
+	nil, -- Refurbished Mini Splatling
+	nil, -- Zink Mini Splatling
+	"N-ZAP83",
+	"N-ZAP85",
+	"N-ZAP89",
+	nil, -- Octobrush
+	nil, -- Octobrush Nouveau
+	"Oktowaffe Replik",
+	nil, -- Range Blaster
+	nil, -- Custom Range Blaster
+	nil, -- Grim Range Blaster
+	nil, -- Rapid Blaster
+	nil, -- Rapid Blaster Deco
+	nil, -- Rapid Blaster Pro
+	nil, -- Rapid Blaster Pro Deco
+	nil, -- Slosher
+	nil, -- Slosher Deco
+	nil, -- Soda Slosher
+	nil, -- Sloshing Machine
+	nil, -- Sloshing Machine Neo
+	"Fein-Disperser",
+	"Fein-Disperser Neo",
+	nil, -- Splat Charger
+	nil, -- Kelp Splat Charger
+	nil, -- Bento Splat Charger
+	nil, -- Splat Roller
+	nil, -- Krak-On Splat Roller
+	nil, -- CoroCoro Splat Roller
+	nil, -- Splatterscope
+	nil, -- Kelp Splatterscope
+	nil, -- Bento Splatterscope
+	"Kleckser",
+	"Tentatek-Kleckser",
+	"Wasabi-Kleckser",
+	"Junior-Kleckser",
+	"Junior-Kleckser Plus",
+	"Profi-Kleckser",
+	"Focus-Profi-Kleckser",
+	"Beeren-Profi-Kleckser",
+	"Disperser",
+	"Disperser Neo",
+	"Disperser 7",
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+}
+
+WeaponNames["es-ES"] = { -- Spanish (NOE)
+	"Salpicadora 2000",
+	"Salpicadora 2000 DX",
+	"Salpicadora 3000",
+	"Salpicadora 3000 DX",
+	"Aerógrafo pro",
+	"Aerógrafo Extra",
+	"Aerógrafo plus",
+	nil, -- Bamboozler 14 Mk Ⅰ
+	nil, -- Bamboozler 14 Mk Ⅱ
+	nil, -- Bamboozler 14 Mk Ⅲ
+	nil, -- Blaster
+	nil, -- Custom Blaster
+	nil, -- Carbon Roller
+	nil, -- Carbon Roller Deco
+	"Barredora Doble",
+	"Barredora Doble SP",
+	nil, -- Dynamo Roller
+	nil, -- Gold Dynamo Roller
+	nil, -- Tempered Dynamo Roller
+	nil, -- E-liter 3K
+	nil, -- Custom E-liter 3K
+	nil, -- E-liter 3K Scope
+	nil, -- Custom E-liter 3K Scope
+	"Tintambor pesado",
+	"Tintambor pesado D",
+	"Tintambor pesado cereza",
+	nil, -- Heavy Splatling
+	nil, -- Heavy Splatling Deco
+	nil, -- Heavy Splatling Remix
+	nil, -- Hero Charger Replica
+	nil, -- Hero Roller Replica
+	"Pistola de Élite (réplica)",
+	nil, -- Hydra Splatling
+	nil, -- Custom Hydra Splatling
+	nil, -- Inkbrush
+	nil, -- Inkbrush Nouveau
+	nil, -- Permanent Inkbrush
+	"Megabarredora",
+	"Megabarredora SP",
+	"Tintambor ligero",
+	"Tintambor ligero D",
+	nil, -- Luna Blaster
+	nil, -- Luna Blaster Neo
+	nil, -- Mini Splatling
+	nil, -- Refurbished Mini Splatling
+	nil, -- Zink Mini Splatling
+	"N-ZAP 83",
+	"N-ZAP 85",
+	"N-ZAP 89",
+	nil, -- Octobrush
+	nil, -- Octobrush Nouveau
+	"Pistola octariana (réplica)",
+	nil, -- Range Blaster
+	nil, -- Custom Range Blaster
+	nil, -- Grim Range Blaster
+	nil, -- Rapid Blaster
+	nil, -- Rapid Blaster Deco
+	nil, -- Rapid Blaster Pro
+	nil, -- Rapid Blaster Pro Deco
+	nil, -- Slosher
+	nil, -- Slosher Deco
+	nil, -- Soda Slosher
+	nil, -- Sloshing Machine
+	nil, -- Sloshing Machine Neo
+	"Marcador fino",
+	"Marcador fino neo",
+	nil, -- Splat Charger
+	nil, -- Kelp Splat Charger
+	nil, -- Bento Splat Charger
+	nil, -- Splat Roller
+	nil, -- Krak-On Splat Roller
+	nil, -- CoroCoro Splat Roller
+	nil, -- Splatterscope
+	nil, -- Kelp Splatterscope
+	nil, -- Bento Splatterscope
+	"Lanzatintas",
+	"Lanzatintas B",
+	"Lanzatintas wasabi",
+	"Lanzatintas novato",
+	"Lanzatintas novato B",
+	"Lanzatintas plus",
+	"Lanzatintas plus B",
+	"Lanzatintas plus frambuesa",
+	"Marcador",
+	"Marcador neo",
+	"Marcador versátil",
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+}
+
+WeaponNames.fr = { -- French (NOE)
+	"Calibre 2000",
+	"Calibre 2000 chic",
+	"Calibre 3000",
+	"Calibre 3000 chic",
+	"Aérogun",
+	"Aérogun select",
+	"Aérogun premium",
+	nil, -- Bamboozler 14 Mk Ⅰ
+	nil, -- Bamboozler 14 Mk Ⅱ
+	nil, -- Bamboozler 14 Mk Ⅲ
+	nil, -- Blaster
+	nil, -- Custom Blaster
+	nil, -- Carbon Roller
+	nil, -- Carbon Roller Deco
+	"Nettoyeur duo",
+	"Nettoyeur duo modifié",
+	nil, -- Dynamo Roller
+	nil, -- Gold Dynamo Roller
+	nil, -- Tempered Dynamo Roller
+	nil, -- E-liter 3K
+	nil, -- Custom E-liter 3K
+	nil, -- E-liter 3K Scope
+	nil, -- Custom E-liter 3K Scope
+	"Arroseur lourd",
+	"Arroseur lourd Cétacé",
+	"Arroseur lourd Cerise",
+	nil, -- Heavy Splatling
+	nil, -- Heavy Splatling Deco
+	nil, -- Heavy Splatling Remix
+	nil, -- Hero Charger Replica
+	nil, -- Hero Roller Replica
+	"Lanceur héroïque (réplique)",
+	nil, -- Hydra Splatling
+	nil, -- Custom Hydra Splatling
+	nil, -- Inkbrush
+	nil, -- Inkbrush Nouveau
+	nil, -- Permanent Inkbrush
+	"Nettoyeur XL",
+	"Nettoyeur XL modifié",
+	"Arroseur léger",
+	"Arroseur léger Cétacé",
+	nil, -- Luna Blaster
+	nil, -- Luna Blaster Neo
+	nil, -- Mini Splatling
+	nil, -- Refurbished Mini Splatling
+	nil, -- Zink Mini Splatling
+	"N-ZAP 83",
+	"N-ZAP 85",
+	"N-ZAP 89",
+	nil, -- Octobrush
+	nil, -- Octobrush Nouveau
+	"Lanceur Octaling (réplique)",
+	nil, -- Range Blaster
+	nil, -- Custom Range Blaster
+	nil, -- Grim Range Blaster
+	nil, -- Rapid Blaster
+	nil, -- Rapid Blaster Deco
+	nil, -- Rapid Blaster Pro
+	nil, -- Rapid Blaster Pro Deco
+	nil, -- Slosher
+	nil, -- Slosher Deco
+	nil, -- Soda Slosher
+	nil, -- Sloshing Machine
+	nil, -- Sloshing Machine Neo
+	"Marqueur léger",
+	"Marqueur léger Néo",
+	nil, -- Splat Charger
+	nil, -- Kelp Splat Charger
+	nil, -- Bento Splat Charger
+	nil, -- Splat Roller
+	nil, -- Krak-On Splat Roller
+	nil, -- CoroCoro Splat Roller
+	nil, -- Splatterscope
+	nil, -- Kelp Splatterscope
+	nil, -- Bento Splatterscope
+	"Liquidateur",
+	"Liquidateur griffé",
+	"Liquidateur Wasabi",
+	"Liquidateur Jr.",
+	"Liquidateur Sr.",
+	"Liquidateur pro",
+	"Liquidateur pro griffé",
+	"Liquidateur pro Framboise",
+	"Marqueur lourd",
+	"Marqueur lourd Néo",
+	"Marqueur lourd 7",
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+}
+
+WeaponNames.it = { -- Italian
+	"Calibro 2000",
+	"Calibro 2000 DX",
+	"Calibro 3000",
+	"Calibro 3000 DX",
+	"Aerografo",
+	"Aerografo deluxe",
+	"Aerografo élite",
+	nil, -- Bamboozler 14 Mk Ⅰ
+	nil, -- Bamboozler 14 Mk Ⅱ
+	nil, -- Bamboozler 14 Mk Ⅲ
+	nil, -- Blaster
+	nil, -- Custom Blaster
+	nil, -- Carbon Roller
+	nil, -- Carbon Roller Deco
+	"Sweeper duo",
+	"Sweeper duo CM",
+	nil, -- Dynamo Roller
+	nil, -- Gold Dynamo Roller
+	nil, -- Tempered Dynamo Roller
+	nil, -- E-liter 3K
+	nil, -- Custom E-liter 3K
+	nil, -- E-liter 3K Scope
+	nil, -- Custom E-liter 3K Scope
+	"Triplete",
+	"Triplete D",
+	"Triplete ciliegia",
+	nil, -- Heavy Splatling
+	nil, -- Heavy Splatling Deco
+	nil, -- Heavy Splatling Remix
+	nil, -- Hero Charger Replica
+	nil, -- Hero Roller Replica
+	"Pistola élite replica",
+	nil, -- Hydra Splatling
+	nil, -- Custom Hydra Splatling
+	nil, -- Inkbrush
+	nil, -- Inkbrush Nouveau
+	nil, -- Permanent Inkbrush
+	"Sweeper",
+	"Sweeper CM",
+	"Triplete compatto",
+	"Triplete compatto D",
+	nil, -- Luna Blaster
+	nil, -- Luna Blaster Neo
+	nil, -- Mini Splatling
+	nil, -- Refurbished Mini Splatling
+	nil, -- Zink Mini Splatling
+	"N-ZAP83",
+	"N-ZAP85",
+	"N-ZAP89",
+	nil, -- Octobrush
+	nil, -- Octobrush Nouveau
+	"Octosplasher replica",
+	nil, -- Range Blaster
+	nil, -- Custom Range Blaster
+	nil, -- Grim Range Blaster
+	nil, -- Rapid Blaster
+	nil, -- Rapid Blaster Deco
+	nil, -- Rapid Blaster Pro
+	nil, -- Rapid Blaster Pro Deco
+	nil, -- Slosher
+	nil, -- Slosher Deco
+	nil, -- Soda Slosher
+	nil, -- Sloshing Machine
+	nil, -- Sloshing Machine Neo
+	"Marker d'assalto",
+	"Marker d'assalto Neo",
+	nil, -- Splat Charger
+	nil, -- Kelp Splat Charger
+	nil, -- Bento Splat Charger
+	nil, -- Splat Roller
+	nil, -- Krak-On Splat Roller
+	nil, -- CoroCoro Splat Roller
+	nil, -- Splatterscope
+	nil, -- Kelp Splatterscope
+	nil, -- Bento Splatterscope
+	"Splasher",
+	"Splasher logo",
+	"Splasher wasabi",
+	"Sparacolore recluta",
+	"Sparacolore logo",
+	"Splasher élite",
+	"Splasher élite logo",
+	"Splasher élite viola",
+	"Marker",
+	"Marker neo",
+	"Marker multi",
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+}
+
+WeaponNames.nl = { -- Dutch
+	".52 Kaliter",
+	".52 Kaliter Deco",
+	".96 Kaliter",
+	".96 Kaliter Deco",
+	"Kladderwerper",
+	nil, -- Aerospray PG
+	"Kladderwerper Pro",
+	nil, -- Bamboozler 14 Mk Ⅰ
+	nil, -- Bamboozler 14 Mk Ⅱ
+	nil, -- Bamboozler 14 Mk Ⅲ
+	nil, -- Blaster
+	nil, -- Custom Blaster
+	nil, -- Carbon Roller
+	nil, -- Carbon Roller Deco
+	"Dubbelplonzers",
+	"Gemodde Dubbelplonzers",
+	nil, -- Dynamo Roller
+	nil, -- Gold Dynamo Roller
+	nil, -- Tempered Dynamo Roller
+	nil, -- E-liter 3K
+	nil, -- Custom E-liter 3K
+	nil, -- E-liter 3K Scope
+	nil, -- Custom E-liter 3K Scope
+	"H-3 Langsnuit",
+	"H-3 Langsnuit D",
+	nil, -- Cherry H-3 Nozzlenose
+	nil, -- Heavy Splatling
+	nil, -- Heavy Splatling Deco
+	nil, -- Heavy Splatling Remix
+	nil, -- Hero Charger Replica
+	nil, -- Hero Roller Replica
+	"Heldenspetter (replica)",
+	nil, -- Hydra Splatling
+	nil, -- Custom Hydra Splatling
+	nil, -- Inkbrush
+	nil, -- Inkbrush Nouveau
+	nil, -- Permanent Inkbrush
+	"Straalplonzer",
+	"Gemodde Straalplonzer",
+	"L-3 Stompsnuit",
+	"L-3 Stompsnuit D",
+	nil, -- Luna Blaster
+	nil, -- Luna Blaster Neo
+	nil, -- Mini Splatling
+	nil, -- Refurbished Mini Splatling
+	nil, -- Zink Mini Splatling
+	"N-ZAP '83",
+	"N-ZAP '85",
+	"N-ZAP '89",
+	nil, -- Octobrush
+	nil, -- Octobrush Nouveau
+	nil, -- Octoshot Replica
+	nil, -- Range Blaster
+	nil, -- Custom Range Blaster
+	nil, -- Grim Range Blaster
+	nil, -- Rapid Blaster
+	nil, -- Rapid Blaster Deco
+	nil, -- Rapid Blaster Pro
+	nil, -- Rapid Blaster Pro Deco
+	nil, -- Slosher
+	nil, -- Slosher Deco
+	nil, -- Soda Slosher
+	nil, -- Sloshing Machine
+	nil, -- Sloshing Machine Neo
+	"Spetterspuit",
+	"Spetterspuit Neo",
+	nil, -- Splat Charger
+	nil, -- Kelp Splat Charger
+	nil, -- Bento Splat Charger
+	nil, -- Splat Roller
+	nil, -- Krak-On Splat Roller
+	nil, -- CoroCoro Splat Roller
+	nil, -- Splatterscope
+	nil, -- Kelp Splatterscope
+	nil, -- Bento Splatterscope
+	"Superspetter",
+	"Tentatek Superspetter",
+	"Wasabi Superspetter",
+	"Superspetter jr.",
+	"Gemodde Superspetter jr.",
+	"Superspetter Pro",
+	"Forge Superspetter Pro",
+	nil, -- Berry Splattershot Pro
+	"Spettertuit",
+	"Spettertuit Neo",
+	"Spettertuit 7",
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+}
+
+WeaponNames.ru = { -- Russian
+	"Струевик .52",
+	"Струевик .52 «Деко»",
+	"Струевик .96",
+	"Струевик .96 «Деко»",
+	"Аэроспрей",
+	nil,
+	"Аэроспрей ДЕЛЮКС",
+	nil, -- Bamboozler 14 Mk Ⅰ
+	nil, -- Bamboozler 14 Mk Ⅱ
+	nil, -- Bamboozler 14 Mk Ⅲ
+	nil, -- Blaster
+	nil, -- Custom Blaster
+	nil, -- Carbon Roller
+	nil, -- Carbon Roller Deco
+	nil, -- Dual Squelcher
+	nil, -- Custom Dual Squelcher
+	nil, -- Dynamo Roller
+	nil, -- Gold Dynamo Roller
+	nil, -- Tempered Dynamo Roller
+	nil, -- E-liter 3K
+	nil, -- Custom E-liter 3K
+	nil, -- E-liter 3K Scope
+	nil, -- Custom E-liter 3K Scope
+	"Тяжелый каплетрон",
+	nil, -- H-3 Nozzlenose D
+	"Cherry H-3 Nozzlenose",
+	nil, -- Heavy Splatling
+	nil, -- Heavy Splatling Deco
+	nil, -- Heavy Splatling Remix
+	nil, -- Hero Charger Replica
+	nil, -- Hero Roller Replica
+	"Каплестрел-004 (клон)",
+	nil, -- Hydra Splatling
+	nil, -- Custom Hydra Splatling
+	nil, -- Inkbrush
+	nil, -- Inkbrush Nouveau
+	nil, -- Permanent Inkbrush
+	"Плескарь",
+	"Плескарь «Понт»",
+	"Каплетрон-компакт",
+	"L-3 Nozzlenose D",
+	nil, -- Luna Blaster
+	nil, -- Luna Blaster Neo
+	nil, -- Mini Splatling
+	nil, -- Refurbished Mini Splatling
+	nil, -- Zink Mini Splatling
+	"N-ZAP 83",
+	"N-ZAP 85",
+	"N-ZAP 89",
+	nil, -- Octobrush
+	nil, -- Octobrush Nouveau
+	nil, -- Octoshot Replica
+	nil, -- Range Blaster
+	nil, -- Custom Range Blaster
+	nil, -- Grim Range Blaster
+	nil, -- Rapid Blaster
+	nil, -- Rapid Blaster Deco
+	nil, -- Rapid Blaster Pro
+	nil, -- Rapid Blaster Pro Deco
+	nil, -- Slosher
+	nil, -- Slosher Deco
+	nil, -- Soda Slosher
+	nil, -- Sloshing Machine
+	nil, -- Sloshing Machine Neo
+	"Плюхомет",
+	nil, -- Neo Splash-o-matic
+	nil, -- Splat Charger
+	nil, -- Kelp Splat Charger
+	nil, -- Bento Splat Charger
+	nil, -- Splat Roller
+	nil, -- Krak-On Splat Roller
+	nil, -- CoroCoro Splat Roller
+	nil, -- Splatterscope
+	nil, -- Kelp Splatterscope
+	nil, -- Bento Splatterscope
+	"Каплестрел",
+	"Каплестрел «Щуччи»",
+	"Каплестрел «Wasabi»",
+	"Каплестрел-У",
+	"Каплестрел-У 2.0",
+	"Каплестрел ПРО",
+	"Каплестрел ПРО «Блиц»",
+	nil, -- Berry Splattershot Pro
+	"Плюхотрон",
+	nil, -- Neo Sploosh-o-matic
+	nil, -- Sploosh-o-matic 7
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
 }
 
 local WeaponNames2 = {
@@ -518,8 +1082,9 @@ if lang == "ja" then
 しゃがみ: イカになる]]
 end
 
+local WeaponNameTable = WeaponNames[lang] or WeaponNames
 for i, c in ipairs(ss.WeaponClassNames) do
-	ss.Text.PrintNames[c] = (WeaponNames[lang] or WeaponNames)[i]
+	ss.Text.PrintNames[c] = WeaponNameTable[i] or WeaponNames[i]
 end
 
 if SERVER then return end

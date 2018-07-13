@@ -224,9 +224,11 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	if not IsValid(self.Owner) then return end
 	local pos, dir = self:GetFirePosition()
 	local delay, lv = self.Cooldown, self:GetLaggedMovementValue()
-	self:SetAimTimer(math.max(self:GetAimTimer(), CurTime() + self.Primary.AimDuration))
-	if self:IsFirstTimePredicted() or self:CheckButtons(IN_ATTACK) then
-		self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
+	if not game.SinglePlayer() then
+		self:SetAimTimer(math.max(self:GetAimTimer(), CurTime() + self.Primary.AimDuration))
+		if self:IsFirstTimePredicted() or self:CheckButtons(IN_ATTACK) then
+			self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
+		end
 	end
 	
 	if not self:IsFirstTimePredicted() then return end

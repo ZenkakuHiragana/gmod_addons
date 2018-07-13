@@ -29,7 +29,7 @@ ss:SetPrimary(SWEP, {
 	SplashInterval		= 117,					-- Make an interval on each splash[Splatoon units]
 	Spread				= 12,					-- Aim cone[deg]
 	SpreadJump			= 18,					-- Aim cone while jumping[deg]
-	SpreadBias			= .25,					-- Aim cone random component[deg]
+	SpreadBias			= .4,					-- Aim cone random component[deg]
 	MoveSpeed			= .72000003,			-- Walk speed while shooting[Splatoon units/frame]
 	InitVelocity		= 22,					-- Ink initial velocity[Splatoon units/frame]	
 	Delay = {
@@ -46,7 +46,7 @@ ss:SetPrimary(SWEP, {
 ss:SetViewModelMods(SWEP, {
 	["Base"] = {pos = Vector(-30, 30, -30)},
 	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2.397, -2, 2)},
-	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(7, -27, 0)},
+	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(7, -32, 0)},
 	["ValveBiped.Bip01_L_Finger1"] = {angle = Angle(5, 10, 0)},
 	["ValveBiped.Bip01_L_Finger11"] = {angle = Angle(0, -15, 0)},
 	["ValveBiped.Bip01_L_Finger12"] = {angle = Angle(0, -15, 0)},

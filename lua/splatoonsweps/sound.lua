@@ -204,7 +204,7 @@ sound.Add { -- Splash-o-matic / Neo
 	level = WeaponSoundLevel,
 	sound = "splatoonsweps/weapons/shooter/splash-o-matic.mp3",
 	volume = WeaponSoundVolume,
-	pitch = WeaponSoundPitch,
+	pitch = {95, 115}, -- +5 Pitch
 }
 
 sound.Add { -- Splattershot / Tentatek / Wasabi
