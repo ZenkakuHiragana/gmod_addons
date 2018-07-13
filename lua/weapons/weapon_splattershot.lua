@@ -20,6 +20,22 @@ SWEP.Variations = {
 		Special = "inkstrike",
 		Skin = 6,
 	},
+	{
+		ClassName = "weapon_heroshot",
+		MuzzlePosition = Vector(20, 0, 7.5),
+		WeaponModelName = Model "models/props_splatoon/weapons/primaries/hero_shot/hero_shot.mdl",
+		ViewModelPos = Vector(4, -23, -7.2),
+		ViewModelAng = Angle(12.736, 75, 90),
+	},
+	{
+		ClassName = "weapon_octoshot",
+		ShootSound = "SplatoonSWEPs.Octoshot",
+		MuzzlePosition = Vector(20, 0, 0.3),
+		WeaponModelName = Model "models/props_splatoon/weapons/primaries/octoshot/octoshot.mdl",
+		ViewModelPos = Vector(6, -24.3, -7.1),
+		WorldModelPos = Vector(4, 0.6, -4.5),
+		WorldModelAng = Angle(0, 5, 180),
+	},
 }
 
 ss:SetPrimary(SWEP, {

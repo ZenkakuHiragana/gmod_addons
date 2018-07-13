@@ -132,11 +132,12 @@ function SWEP:GetBoneOrientation(basetab, tab, ent, bone_override)
 	return pos, ang
 end
 
-function SWEP:RecreateModel(v)
-	if not util.IsModelLoaded(v.model) then return end
-	v.modelEnt = ClientsideModel(v.model, RENDERGROUP_BOTH)
+function SWEP:RecreateModel(v, modelname)
+	local modelname = modelname or v.model ~= "" and v.model
+	if not (modelname and util.IsModelLoaded(modelname)) then return end
+	v.modelEnt = ClientsideModel(modelname, RENDERGROUP_BOTH)
 	if IsValid(v.modelEnt) then
-		v.createdModel = v.model
+		v.createdModel = modelname
 		v.modelEnt:SetPos(self:GetPos())
 		v.modelEnt:SetAngles(self:GetAngles())
 		v.modelEnt:SetParent(self)
@@ -162,11 +163,10 @@ function SWEP:CreateModels(t)
 	-- Create the clientside models here because Garry says we can't do it in the render hook
 	local errormodelshown, errormaterialshown = false, false
 	for k, v in pairs(t) do
-		if v.type == "Model" and v.model and v.model ~= "" and
-			(not IsValid(v.modelEnt) or v.createdModel ~= v.model) then
-			
-			if file.Exists(v.model, "GAME") then
-				self:RecreateModel(v)
+		local modelname = k == "weapon" and self.WeaponModelName or v.model ~= "" and v.model
+		if v.type == "Model" and modelname and (not IsValid(v.modelEnt) or v.createdModel ~= modelname) then
+			if file.Exists(modelname, "GAME") then
+				self:RecreateModel(v, modelname)
 			elseif not errormodelshown then
 				self:PopupError "WeaponModelNotFound"
 				errormodelshown = true
@@ -251,10 +251,12 @@ function SWEP:ViewModelDrawn()
 		if v.type == "Model" then
 			if not (IsValid(v.modelEnt) or self:RecreateModel(v)) then continue end
 			local model = v.modelEnt
-			model:SetPos(pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z)
-			ang:RotateAroundAxis(ang:Up(), v.angle.y)
-			ang:RotateAroundAxis(ang:Right(), v.angle.p)
-			ang:RotateAroundAxis(ang:Forward(), v.angle.r)
+			local da = name == "weapon" and self.ViewModelAng or v.angle or Angle()
+			local dp = name == "weapon" and self.ViewModelPos or v.pos or Vector()
+			model:SetPos(pos + ang:Forward() * dp.x + ang:Right() * dp.y + ang:Up() * dp.z)
+			ang:RotateAroundAxis(ang:Up(), da.y)
+			ang:RotateAroundAxis(ang:Right(), da.p)
+			ang:RotateAroundAxis(ang:Forward(), da.r)
 			model:SetAngles(ang)
 			
 			local matrix = Matrix()
@@ -384,16 +386,18 @@ function SWEP:DrawWorldModel()
 		if v.type == "Model" then
 			if not (IsValid(v.modelEnt) or self:RecreateModel(v)) then continue end
 			local model = v.modelEnt
+			local da = name == "weapon" and self.WorldModelAng or v.angle or Angle()
+			local dp = name == "weapon" and self.WorldModelPos or v.pos or Vector()
 			if name ~= "weapon" or v.bone ~= "ValveBiped.Bip01_L_Hand" then
-				model:SetPos(pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z)
-				ang:RotateAroundAxis(ang:Up(), v.angle.y)
-				ang:RotateAroundAxis(ang:Right(), v.angle.p)
-				ang:RotateAroundAxis(ang:Forward(), v.angle.r)
+				model:SetPos(pos + ang:Forward() * dp.x + ang:Right() * dp.y + ang:Up() * dp.z)
+				ang:RotateAroundAxis(ang:Up(), da.y)
+				ang:RotateAroundAxis(ang:Right(), da.p)
+				ang:RotateAroundAxis(ang:Forward(), da.r)
 			else
-				model:SetPos(pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y - ang:Up() * v.pos.z)
-				ang:RotateAroundAxis(ang:Up(), v.angle.y)
-				ang:RotateAroundAxis(ang:Right(), v.angle.p)
-				ang:RotateAroundAxis(ang:Forward(), v.angle.r + 180)
+				model:SetPos(pos + ang:Forward() * dp.x + ang:Right() * dp.y - ang:Up() * dp.z)
+				ang:RotateAroundAxis(ang:Up(), da.y)
+				ang:RotateAroundAxis(ang:Right(), da.p)
+				ang:RotateAroundAxis(ang:Forward(), da.r + 180)
 			end
 			model:SetAngles(ang)
 			

@@ -269,32 +269,34 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	self.PreviousInk = true
 	self.Cooldown = math.max(self.Cooldown, CurTime()
 	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
-	if self.Owner == LocalPlayer() or game.SinglePlayer() then
+	if self.Owner == LocalPlayer() then
 		self:EmitSound(self.ShootSound)
-		ss.InkTraces[{
-			Appearance = {
+		if not game.SinglePlayer() then
+			ss.InkTraces[{
+				Appearance = {
+					InitPos = pos,
+					Pos = pos,
+					Speed = self.Primary.InitVelocity,
+					TrailPos = pos,
+					Velocity = initvelocity,
+				},
+				Color = ss:GetColor(self:GetColorCode()),
+				ColorCode = self:GetColorCode(),
 				InitPos = pos,
-				Pos = pos,
+				InitTime = CurTime() - self:Ping(),
 				Speed = self.Primary.InitVelocity,
-				TrailPos = pos,
+				Straight = self.Primary.Straight,
+				TrailDelay = ss.ShooterTrailDelay,
+				TrailTime = RealTime(),
 				Velocity = initvelocity,
-			},
-			Color = ss:GetColor(self:GetColorCode()),
-			ColorCode = self:GetColorCode(),
-			InitPos = pos,
-			InitTime = CurTime() - self:Ping(),
-			Speed = self.Primary.InitVelocity,
-			Straight = self.Primary.Straight,
-			TrailDelay = ss.ShooterTrailDelay,
-			TrailTime = RealTime(),
-			Velocity = initvelocity,
-			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
-			filter = self.Owner,
-			mask = ss.SquidSolidMask,
-			maxs = ss.vector_one * ss.mColRadius,
-			mins = -ss.vector_one * ss.mColRadius,
-			start = pos,
-		}] = true
+				collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
+				filter = self.Owner,
+				mask = ss.SquidSolidMask,
+				maxs = ss.vector_one * ss.mColRadius,
+				mins = -ss.vector_one * ss.mColRadius,
+				start = pos,
+			}] = true
+		end
 	end
 	
 	if game.SinglePlayer() or not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end

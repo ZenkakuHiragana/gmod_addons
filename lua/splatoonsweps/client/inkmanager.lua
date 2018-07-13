@@ -234,7 +234,7 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 			if IsValid(ent) then
 				local time = ink.Straight + DecreaseFrame / 2
 				local straightpos = ink.InitPos + ink.Velocity * time
-				local mp = w.Primary.MuzzlePosition
+				local mp = w.MuzzlePosition
 				local pos, ang = ent:GetPos(), ent:GetAngles()
 				mp = Vector(mp.x * wt.size.x, mp.y * wt.size.y, mp.z * wt.size.z)
 				App.InitPos = LocalToWorld(mp, angle_zero, pos, ang)

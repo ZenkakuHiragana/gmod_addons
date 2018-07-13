@@ -57,7 +57,7 @@ end)
 
 net.Receive("SplatoonSWEPs: Shooter Tracer", function()
 	local owner = net.ReadEntity()
-	if owner == LocalPlayer() then return end
+	if owner == LocalPlayer() and not game.SinglePlayer() then return end
 	local w = ss:IsValidInkling(owner)
 	if not w then return end
 	local pos = net.ReadVector()

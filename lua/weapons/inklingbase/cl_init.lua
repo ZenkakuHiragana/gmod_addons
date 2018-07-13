@@ -42,19 +42,17 @@ function SWEP:Initialize()
 	-- we build a render order because sprites need to be drawn after models
 	self.vRenderOrder = {}
 	self.wRenderOrder = {}
-	for k, v in pairs(self.VElements) do
-		if v.type == "Model" then
-			table.insert(self.vRenderOrder, 1, k)
-		elseif v.type == "Sprite" or v.type == "Quad" then
-			table.insert(self.vRenderOrder, k)
-		end
-	end
-
-	for k, v in pairs(self.WElements) do
-		if v.type == "Model" then
-			table.insert(self.wRenderOrder, 1, k)
-		elseif v.type == "Sprite" or v.type == "Quad" then
-			table.insert(self.wRenderOrder, k)
+	
+	for e, r in pairs {
+		[self.VElements] = self.vRenderOrder,
+		[self.WElements] = self.wRenderOrder,
+	} do
+		for k, v in pairs(e) do
+			if v.type == "Model" then
+				table.insert(r, 1, k)
+			elseif v.type == "Sprite" or v.type == "Quad" then
+				table.insert(r, k)
+			end
 		end
 	end
 	

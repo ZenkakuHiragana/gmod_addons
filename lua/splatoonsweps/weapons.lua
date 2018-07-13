@@ -12,12 +12,12 @@ function ss:SetPrimary(weapon, info)
 	p.Ammo = "Ink"
 	p.Delay = info.Delay.Fire * ss.FrameToSec
 	p.FirePosition = info.FirePosition
-	p.MuzzlePosition = info.MuzzlePosition
 	p.Recoil = info.Recoil or .2
 	p.ReloadDelay = info.Delay.Reload * ss.FrameToSec
 	p.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
 	p.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
 	ss:ProtectedCall(ss.CustomPrimary[weapon.Base], p, info)
+	weapon.MuzzlePosition = info.MuzzlePosition
 	weapon.Primary = p
 end
 

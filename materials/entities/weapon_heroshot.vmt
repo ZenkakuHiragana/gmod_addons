@@ -1,6 +1,6 @@
 "UnlitGeneric"
 {
-	"$basetexture" "entities/heroshotreplica"
+	"$basetexture" "entities/weapon_heroshot"
 	"$nolod" 1
 	"$vertexalpha" 1
 	"$vertexcolor" 1

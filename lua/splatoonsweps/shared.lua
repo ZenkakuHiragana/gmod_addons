@@ -512,6 +512,7 @@ local function RegisterWeapons()
 					if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then
 						icon = "weapons/swep"
 					end
+					
 					if not killicon.Exists(c) then
 						killicon.Add(c, icon, color_white) -- Weapon killicon
 					end
