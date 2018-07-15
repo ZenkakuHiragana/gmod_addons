@@ -318,6 +318,7 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 			continue
 		elseif tr.HitWorld then
 			-- World hit effect here
+			game.GetWorld():EmitSound "SplatoonSWEPs_Ink.HitWorld"
 		elseif IsValid(tr.Entity) and tr.Entity:Health() > 0 then
 			-- Entity hit effect here
 			if ink.filter == LocalPlayer() then

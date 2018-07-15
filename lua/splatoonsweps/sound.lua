@@ -21,6 +21,7 @@ ss.BombAvailable = Sound "splatoonsweps/player/bombavailable.wav"
 ss.DealDamage = Sound "splatoonsweps/player/dealdamagenormal.wav"
 ss.DealDamageCritical = Sound "splatoonsweps/player/dealdamagecritical.wav"
 ss.TakeDamage = Sound "splatoonsweps/player/takedamage.wav"
+ss.ChargerAim = Sound "splatoonsweps/weapons/charger/aim.wav"
 
 sound.Add {
 	channel = CHAN_BODY,
@@ -65,6 +66,24 @@ sound.Add {
 	sound = "splatoonsweps/player/emptyshot.wav",
 	volume = 1,
 	pitch = {85, 95},
+}
+
+sound.Add {
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.ChargerPreFire",
+	level = 75,
+	sound = "splatoonsweps/weapons/charger/prefire.wav",
+	volume = 1,
+	pitch = 100,
+}
+
+sound.Add {
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.ChargerBeep",
+	level = 75,
+	sound = "splatoonsweps/weapons/charger/beep.mp3",
+	volume = 1,
+	pitch = 100,
 }
 
 for _, soundData in ipairs {
@@ -248,6 +267,71 @@ sound.Add { -- N-Zap 85 / 89 / 83
 	name = "SplatoonSWEPs.Zap",
 	level = WeaponSoundLevel,
 	sound = "splatoonsweps/weapons/shooter/zap.wav",
+	volume = WeaponSoundVolume,
+	pitch = WeaponSoundPitch,
+}
+
+----------------------------------------
+
+sound.Add { -- Splat Charger / Kelp / Bento
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.SplatCharger",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/charger/splatcharger0.wav",
+	volume = WeaponSoundVolume,
+	pitch = WeaponSoundPitch,
+}
+
+sound.Add { -- Splat Charger / Kelp / Bento, Fully charged
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.SplatChargerFull",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/charger/splatcharger1.mp3",
+	volume = WeaponSoundVolume,
+	pitch = WeaponSoundPitch,
+}
+
+sound.Add { -- E-Liter 3K / Custom
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.Eliter3K",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/charger/eliter0.mp3",
+	volume = WeaponSoundVolume,
+	pitch = WeaponSoundPitch,
+}
+
+sound.Add { -- E-Liter 3K / Custom, Fully charged
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.Eliter3KFull",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/charger/eliter1.mp3",
+	volume = WeaponSoundVolume,
+	pitch = WeaponSoundPitch,
+}
+
+sound.Add { -- Classic Squiffer / New / Fresh
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.Squiffer",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/charger/squiffer.mp3",
+	volume = WeaponSoundVolume,
+	pitch = WeaponSoundPitch,
+}
+
+sound.Add { -- Bamboozler Mk.I / Mk.II / MK.III
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.Bamboozler",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/charger/bamboozler0.mp3",
+	volume = WeaponSoundVolume,
+	pitch = WeaponSoundPitch,
+}
+
+sound.Add { -- Bamboozler Mk.I / Mk.II / MK.III, Fully charged
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.BamboozlerFull",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/charger/bamboozler1.mp3",
 	volume = WeaponSoundVolume,
 	pitch = WeaponSoundPitch,
 }
