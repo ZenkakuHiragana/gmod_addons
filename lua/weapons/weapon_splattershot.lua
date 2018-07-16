@@ -32,7 +32,8 @@ SWEP.Variations = {
 		ShootSound = "SplatoonSWEPs.Octoshot",
 		MuzzlePosition = Vector(20, 0, 0.3),
 		WeaponModelName = Model "models/props_splatoon/weapons/primaries/octoshot/octoshot.mdl",
-		ViewModelPos = Vector(6, -24.3, -7.1),
+		ViewModelPos = Vector(6.2, -24.3, -7.1),
+		ViewModelAng = Angle(14, 77, 90),
 		WorldModelPos = Vector(4, 0.6, -4.5),
 		WorldModelAng = Angle(0, 5, 180),
 	},
@@ -68,19 +69,18 @@ ss:SetPrimary(SWEP, {
 })
 
 ss:SetViewModelMods(SWEP, {
-	["Base"] = {pos = Vector(-30, 30, -30)},
 	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2, -2, 2)},
-	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(7, -27, 0)},
+	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(7, -31, 0)},
 	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 23, -12)},
 	["ValveBiped.Bip01_Spine4"] = {
-		pos = Vector(-30, 26, 30),
-		angle = Angle(0, -8, -1),
+		pos = Vector(0, -4, 0),
+		angle = Angle(0, -8, -3),
 	},
 })
 
 ss:SetViewModel(SWEP, {
-	pos = Vector(3.5, -24.3, -7.2),
-	angle = Angle(12.736, 80, 90),
+	pos = Vector(3.3, -23.5, -7.2),
+	angle = Angle(12.736, 79, 90),
 	size = Vector(0.56, 0.56, 0.56),
 })
 

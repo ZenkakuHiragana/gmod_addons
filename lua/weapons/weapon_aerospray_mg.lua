@@ -52,17 +52,27 @@ ss:SetPrimary(SWEP, {
 })
 
 ss:SetViewModelMods(SWEP, {
-	["Base"] = {pos = Vector(-30, 30, -30)},
-	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2.397, -2, 2)},
+	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2, -1.5, 2)},
+	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 28, -13)},
+	["ValveBiped.Bip01_R_Clavicle"] = {pos = Vector(0, 0, 0)},
+	["ValveBiped.Bip01_R_Finger1"] = {angle = Angle(-8, -20, 0)},
+	["ValveBiped.Bip01_R_Finger11"] = {angle = Angle(8, 25, 0)},
+	["ValveBiped.Bip01_R_Finger12"] = {angle = Angle(0, -60, 0)},
+	["ValveBiped.Bip01_R_Finger2"] = {angle = Angle(0, -30, 0)},
+	["ValveBiped.Bip01_R_Finger22"] = {angle = Angle(0, 45, 0)},
+	["ValveBiped.Bip01_R_Finger3"] = {angle = Angle(0, -20, 0)},
+	["ValveBiped.Bip01_R_Finger32"] = {angle = Angle(0, 20, 0)},
+	["ValveBiped.Bip01_R_Finger4"] = {angle = Angle(0, -40, 0)},
+	["ValveBiped.Bip01_R_Finger41"] = {angle = Angle(0, 20, 0)},
 	["ValveBiped.Bip01_Spine4"] = {
-		pos = Vector(-31, 25, 30),
-		angle = Angle(0, -8, -2)
+		pos = Vector(-5, -6, 0),
+		angle = Angle(0, -10, 10),
 	},
 })
 
 ss:SetViewModel(SWEP, {
-	pos = Vector(8, -26, -6),
-	angle = Angle(13, 80, 90),
+	pos = Vector(6.1, -26, -7),
+	angle = Angle(0, 80, 90),
 	size = Vector(0.56, 0.56, 0.56),
 })
 

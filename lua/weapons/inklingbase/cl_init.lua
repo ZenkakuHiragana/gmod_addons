@@ -87,6 +87,7 @@ function SWEP:ClientDeployBase()
 		self:UpdateBonePositions(self.Owner:GetViewModel())
 	end
 	
+	self.InkColor = ss:GetColor(self:GetColorCode())
 	return self:SharedDeployBase()
 end
 
