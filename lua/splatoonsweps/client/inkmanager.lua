@@ -215,6 +215,7 @@ hook.Add("Tick", "SplatoonSWEPs: Register ink clientside", function()
 	if not ok then ErrorNoHalt(msg) end
 end)
 
+local term = 10 * ss.FrameToSec -- Time to reach terminal velocity
 local TrailLagTime = 10 * ss.FrameToSec
 local TrailMergeTime = 20 * ss.FrameToSec
 hook.Add("PreDrawTranslucentRenderables", "SplatoonSWEPs: Draw ink", DrawMeshes)
@@ -222,6 +223,7 @@ hook.Add("PreDrawTranslucentRenderables", "SplatoonSWEPs: Fix EyePos", EyePos)
 hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", function()
 	if not rt.Ready then return end
 	local ct, rtime = CurTime(), RealTime()
+	local g = physenv.GetGravity() * 15
 	for ink in pairs(ss.InkTraces) do
 		local lifetime = math.max(0, ct - ink.InitTime)
 		local trailtime = lifetime - ink.TrailDelay
@@ -250,13 +252,21 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 			App.Pos = App.InitPos + App.Velocity * lifetime
 		elseif lifetime > ink.Straight + DecreaseFrame then -- Falls straight
 			local time = ink.Straight + DecreaseFrame / 2
-			local falltime = lifetime - ink.Straight - DecreaseFrame
+			local falltime = math.max(lifetime - ink.Straight - DecreaseFrame, 0)
 			local pos = ink.InitPos + ink.Velocity * time
 			local tpspos = App.InitPos + App.Velocity * time
-			ink.endpos = pos + physenv.GetGravity() * falltime * falltime / 2
-			App.Pos = tpspos + physenv.GetGravity() * falltime * falltime / 2
-			falltime = math.max(falltime - ss.FrameToSec, 0)
-			ink.start = pos + physenv.GetGravity() * falltime * falltime / 2
+			if falltime > term then
+				local v = g * term
+				ink.endpos = pos - v * term / 2 + v * falltime
+				App.Pos = tpspos - v * term / 2 + v * falltime
+				falltime = math.max(falltime - ss.FrameToSec, 0)
+				ink.start = pos - v * term / 2 + v * falltime
+			else
+				ink.endpos = pos + g * falltime * falltime / 2
+				App.Pos = tpspos + g * falltime * falltime / 2
+				falltime = math.max(falltime - ss.FrameToSec, 0)
+				ink.start = pos + g * falltime * falltime / 2
+			end
 		else
 			local t = lifetime - ink.Straight -- 0 <= t <= DecreaseFrame
 			local time = ink.Straight + t / 2
@@ -280,8 +290,13 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 			elseif trailtime > ink.Straight + DecreaseFrame then -- Falls straight
 				local time = ink.Straight + DecreaseFrame / 2
 				local pos = App.InitPos + App.TrailVelocity * time
-				local falltime = trailtime - ink.Straight - DecreaseFrame
-				App.TrailPos = pos + physenv.GetGravity() * 1.5 * falltime * falltime / 2
+				local falltime = math.max(trailtime - ink.Straight - DecreaseFrame, 0)
+				if falltime > term then
+					local v = g * term
+					App.TrailPos = pos - v * term / 2 + v * falltime
+				else
+					App.TrailPos = pos + g * 1.5 * falltime * falltime / 2
+				end
 			else
 				local time = ink.Straight + (trailtime - ink.Straight) / 2
 				App.TrailPos = App.InitPos + App.TrailVelocity * time
@@ -318,7 +333,7 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 			continue
 		elseif tr.HitWorld then
 			-- World hit effect here
-			game.GetWorld():EmitSound "SplatoonSWEPs_Ink.HitWorld"
+			sound.Play("SplatoonSWEPs_Ink.HitWorld", tr.HitPos)
 		elseif IsValid(tr.Entity) and tr.Entity:Health() > 0 then
 			-- Entity hit effect here
 			if ink.filter == LocalPlayer() then

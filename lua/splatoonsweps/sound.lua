@@ -90,7 +90,7 @@ for _, soundData in ipairs {
 	{
 		channel = CHAN_BODY,
 		name = "SplatoonSWEPs_Ink.HitWorld",
-		level = 60,
+		level = 75,
 		sound = "splatoonsweps/ink/hit",
 		volume = 1,
 		pitch = 100,

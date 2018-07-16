@@ -20,6 +20,7 @@ local dropdata = {
 	MinDamage = 0,
 	MinDamageTime = 0,
 	DecreaseDamage = 0,
+	InitTime = 0,
 	InkRadius = 10,
 	MinRadius = 10,
 	ColRadius = ss.mColRadius,
@@ -151,7 +152,7 @@ function ss:AddInk(owner, pos, velocity, color, angle, inktype, splashinit, info
 		Info = info,
 		InitDirection = velocity:GetNormalized(),
 		InitPos = pos,
-		InitTime = CurTime() - ping,
+		InitTime = info.InitTime or CurTime() - ping,
 		InkType = inktype,
 		InkRadius = info.InkRadius,
 		MinRadius = info.MinRadius,
@@ -179,12 +180,15 @@ end
 -- Physics simulation for ink trajectory.
 -- The first some frames(1/60 sec.) ink flies without gravity.
 -- After that, ink decelerates horizontally and is affected by gravity.
+local term = 10 * ss.FrameToSec -- Time to reach terminal velocity
+local SplashDistance = 50 * ss.ToHammerUnits -- Transition between drop and splash [Splatoon units]
 local PaintDistance = ss.mPaintFarDistance - ss.mPaintNearDistance
 local PaintFraction = ss.mPaintNearDistance / PaintDistance
 local process = coroutine.create(function()
 	while true do
 		local done = 0
 		local ct = CurTime()
+		local g = physenv.GetGravity() * 15
 		for ink in pairs(ss.InkQueue) do
 			done = done + 1
 			if done % MAX_INK_SIM_AT_ONCE == 0 then coroutine.yield() end
@@ -196,10 +200,17 @@ local process = coroutine.create(function()
 				ink.start = ink.InitPos + ink.Velocity * math.max(0, lifetime - ss.FrameToSec)
 			elseif lifetime > ink.Info.Straight + DecreaseFrame then -- Falls straight
 				local pos = ink.InitPos + ink.Velocity * (ink.Info.Straight + DecreaseFrame / 2)
-				local falltime = lifetime - ink.Info.Straight - DecreaseFrame
-				ink.endpos = pos + physenv.GetGravity() * falltime * falltime / 2
-				falltime = math.max(falltime - ss.FrameToSec, 0)
-				ink.start = pos + physenv.GetGravity() * falltime * falltime / 2
+				local falltime = math.max(lifetime - ink.Info.Straight - DecreaseFrame, 0)
+				if falltime > term then
+					local v = g * term
+					ink.endpos = pos - v * term / 2 + v * falltime
+					falltime = math.max(falltime - ss.FrameToSec, 0)
+					ink.start = pos - v * term / 2 + v * falltime
+				else
+					ink.endpos = pos + g * falltime * falltime / 2
+					falltime = math.max(falltime - ss.FrameToSec, 0)
+					ink.start = pos + g * falltime * falltime / 2
+				end
 			else
 				local time = lifetime - ink.Info.Straight
 				ink.endpos = ink.InitPos + ink.Velocity * (ink.Info.Straight + time / 2)
@@ -216,7 +227,8 @@ local process = coroutine.create(function()
 				local nextlen = ink.SplashCount * ink.Info.SplashInterval + ink.SplashInit
 				while len >= nextlen do -- Create drops
 					dropdata.InkRadius = ink.SplashRadius
-					dropdata.MinRadius = ink.SplashMinRadius
+					dropdata.MinRadius = ink.SplashRadius
+					dropdata.InitTime = CurTime() - DecreaseFrame
 					ss:AddInk(ink.filter, ink.InitPos + ink.InitDirection
 					* (nextlen + math.random(-1, 1) * ss.mSplashDrawRadius),
 					Vector(), ink.Color, ink.Angle, 1, 0, dropdata)
@@ -235,15 +247,19 @@ local process = coroutine.create(function()
 				t = util.TraceLine(ink)
 				
 				local ratio = 1
-				local radius = Lerp((ink.InitPos.z - t.HitPos.z) / PaintDistance - PaintFraction, ink.MinRadius, ink.InkRadius)
-				if ink.InkType > 3 and t.HitNormal.z > MAX_COS_DEG_DIFF and lifetime > ink.Info.Straight then
-					local max = ink.Info.InitVelocity * ink.Info.Straight
-					local min = max / 3
-					local actual = t.HitPos:DistToSqr(ink.InitPos) - min
-					local stretch = Lerp(actual / (max - min), 1, 1.5)
-					radius, ratio = radius * stretch, .6 / stretch
+				local radius = ink.InkRadius
+				if ink.InkType > 3 and t.HitNormal.z > MAX_COS_DEG_DIFF then
+					local actual = t.HitPos - ink.InitPos actual = actual:Length2D()
+					local min = SplashDistance + ss.mPaintNearDistance
+					if actual > min then
+						local max = ss.mPaintFarDistance
+						local stretch = (actual - min) / max + 0.5
+						radius, ratio = radius * (stretch + 0.5), 0.5 / stretch
+					else
+						ink.InkType = math.random(3)
+					end
 				else
-					ink.InkType = math.random(1, 3)
+					ink.InkType = math.random(3)
 				end
 				
 				ss:Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ink.InkType, ratio)
