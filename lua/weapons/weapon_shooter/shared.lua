@@ -4,12 +4,14 @@ if not ss then return end
 
 SWEP.Base = "inklingbase"
 SWEP.PrintName = "Shooter base"
+
 local FirePosition = 10
+function SWEP:GetRange() return self.Primary.Range end
 function SWEP:GetFirePosition(aim, ang, shootpos)
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
 	if not aim then
 		local aimvector = ss:ProtectedCall(self.Owner.GetAimVector, self.Owner) or self.Owner:GetForward()
-		aim = self.Primary.Range * aimvector
+		aim = self:GetRange() * aimvector
 		ang = self.Owner:EyeAngles()
 		shootpos = ss:ProtectedCall(self.Owner.GetShootPos, self.Owner) or self.Owner:WorldSpaceCenter()
 	end

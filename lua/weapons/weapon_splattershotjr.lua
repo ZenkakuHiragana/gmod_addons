@@ -16,16 +16,16 @@ SWEP.Variations = {{
 
 ss:SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
-	Recoil				= .2,					-- Viewmodel recoil intensity
+	Recoil				= .2,					-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .005,					-- Ink consumption per fire[-]
-	MuzzlePosition		= Vector(17, 0, 6),		-- Thirdperson muzzle position in local coord.
+	MuzzlePosition		= Vector(17, 0, 6),		-- Thirdperson muzzle position in local coord.[Hammer units]
 	Damage				= .245,					-- Maximum damage[-]
 	MinDamage			= .1225,				-- Minimum damage[-]
 	InkRadius			= 21,					-- Painting radius[Splatoon units]
 	MinRadius			= 18.5,					-- Minimum painting radius[Splatoon units]
 	SplashRadius		= 13.19999981,			-- Painting radius[Splatoon units]
-	SplashPatterns		= 8,					-- Paint patterns
-	SplashNum			= 1,					-- Number of splashes
+	SplashPatterns		= 8,					-- Paint patterns[-]
+	SplashNum			= 1,					-- Number of splashes[-]
 	SplashInterval		= 117,					-- Make an interval on each splash[Splatoon units]
 	Spread				= 12,					-- Aim cone[deg]
 	SpreadJump			= 18,					-- Aim cone while jumping[deg]
@@ -36,7 +36,7 @@ ss:SetPrimary(SWEP, {
 		Aim				= 20,					-- Change hold type[frames]
 		Fire			= 5,					-- Fire rate[frames]
 		Reload			= 20,					-- Start reloading after firing weapon[frames]
-		Crouch			= 6,					-- Can't crouch for some frames after firing
+		Crouch			= 6,					-- Cannot crouch for some frames after firing[frames]
 		Straight		= 3,					-- Ink goes without gravity[frames]
 		MinDamage		= 15,					-- Deals minimum damage[frames]
 		DecreaseDamage	= 8,					-- Start decreasing damage[frames]

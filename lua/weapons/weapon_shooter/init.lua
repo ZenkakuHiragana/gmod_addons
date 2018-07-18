@@ -4,12 +4,6 @@ if not ss then return end
 AddCSLuaFile "shared.lua"
 include "shared.lua"
 
-local function AddCleanup(e)
-	for _, p in ipairs(player.GetAll()) do
-		cleanup.Add(p, ss.CleanupTypeInk, e)
-	end
-end
-
 function SWEP:ServerInit()
 	self.SplashInitMul = 0
 	if not self.Primary.TripleShotDelay then return end

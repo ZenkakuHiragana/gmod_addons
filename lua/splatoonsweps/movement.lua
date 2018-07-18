@@ -1812,14 +1812,6 @@ end
 -- GM:StartCommand is called both serverside/clientside on singleplayer/multiplayer, before GM:Move hook.
 local AttackMask = bit.bnot(IN_ATTACK)
 local DuckMask = bit.bnot(IN_DUCK)
-hook.Add("StartCommand", "SplatoonSWEPs: Control input", function(p, cm)
-	local w = ss:IsValidInkling(p)
-	if not w then return end
-	w.OldButtons = w.Buttons
-	w.Buttons = cm:GetButtons()
-	w:CheckButtons()
-end)
-
 hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	ply, mv = p, m
 	local w = ss:IsValidInkling(ply)
@@ -1838,10 +1830,12 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 		maxspeed = maxspeed * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
 		mv:SetMaxSpeed(maxspeed)
 		mv:SetMaxClientSpeed(maxspeed)
-		ply:SetWalkSpeed(maxspeed)
+		ply:SetMaxSpeed(maxspeed)
 		ply:SetRunSpeed(maxspeed)
+		ply:SetWalkSpeed(maxspeed)
 	end
 	
+	ply:SetJumpPower(w:GetOnEnemyInk() and w.OnEnemyInkJumpPower or w.JumpPower)
 	if CLIENT then w:UpdateInkState() end -- Ink state prediction
 	
 	for v, i in pairs {

@@ -7,26 +7,22 @@ if not ss then return end
 ss:AddTimerFramework(SWEP)
 local KeyMask = {IN_ATTACK, IN_DUCK, IN_ATTACK2}
 local function PlayLoopSound(self)
-	if not self.SwimSound:IsPlaying() then
-		self.SwimSound:Play()
-		self.SwimSound:ChangeVolume(0)
-	end
-	
-	if not self.EnemyInkSound:IsPlaying() then
-		self.EnemyInkSound:Play()
-		self.EnemyInkSound:ChangeVolume(0)
+	local playlist = {self.SwimSound, self.EnemyInkSound}
+	ss:ProtectedCall(self.AddPlaylist, self, playlist)
+	for _, s in ipairs(playlist) do
+		if s:IsPlaying() then continue end
+		s:Play()
+		s:ChangeVolume(0)
 	end
 end
 
 local function StopLoopSound(self)
-	if self.SwimSound:IsPlaying() then
-		self.SwimSound:ChangeVolume(0)
-		self.SwimSound:Stop()
-	end
-	
-	if self.EnemyInkSound:IsPlaying() then
-		self.EnemyInkSound:ChangeVolume(0)
-		self.EnemyInkSound:Stop()
+	local playlist = {self.SwimSound, self.EnemyInkSound}
+	ss:ProtectedCall(self.AddPlaylist, self, playlist)
+	for _, s in ipairs(playlist) do
+		if not s:IsPlaying() then continue end
+		s:ChangeVolume(0)
+		s:Stop()
 	end
 end
 
@@ -38,27 +34,57 @@ function SWEP:IsFirstTimePredicted()
 	return SERVER or game.SinglePlayer() or IsFirstTimePredicted() or self.Owner ~= LocalPlayer()
 end
 
-function SWEP:CheckButtons(key)
-	if not IsValid(self.Owner) then return end
-	if not self.Owner:IsPlayer() then return true end
-	if not self:IsMine() then return true end
-	local neutral = true
-	local keytable, keytime = {}, {}
-	for _, k in ipairs(KeyMask) do
-		local last = bit.band(self.OldButtons, k) == 0
-		if bit.band(self.Buttons, k) > 0 then
-			if last then self.LastKeyDown[k] = CurTime() end
-			table.insert(keytime, self.LastKeyDown[k])
+if game.SinglePlayer() then	
+	hook.Add("StartCommand", "SplatoonSWEPs: SinglePlayer key check", function(ply, cm)
+		local w = ss:IsValidInkling(ply)
+		if not w then return end
+		w.OldButtons = w.Buttons
+		w.Buttons = cm:GetButtons()
+		w:CheckButtons()
+	end)
+	
+	function SWEP:CheckButtons(key)
+		if not IsValid(self.Owner) then return end
+		if not self.Owner:IsPlayer() then return true end
+		if not self:IsMine() then return true end
+		local neutral = true
+		local keytable, keytime = {}, {}
+		for _, k in ipairs(KeyMask) do
+			local last = bit.band(self.OldButtons, k) == 0
+			if bit.band(self.Buttons, k) > 0 then
+				if last then self.LastKeyDown[k] = CurTime() end
+				table.insert(keytime, self.LastKeyDown[k])
+			end
+			
+			neutral = neutral and last
+			keytable[self.LastKeyDown[k]] = k -- [Last time key down] = key
 		end
 		
-		neutral = neutral and last
-		keytable[self.LastKeyDown[k]] = k -- [Last time key down] = key
+		self.ValidKey = keytable[math.max(unpack(keytime))] or 0
+		self.EnemyInkPreventCrouching = self.EnemyInkPreventCrouching and self:GetOnEnemyInk() and bit.band(self.Buttons, IN_DUCK) > 0
+		self.PreventCrouching = self.ValidKey ~= 0 and self.ValidKey ~= IN_DUCK or CurTime() < self.Cooldown
+		return self.ValidKey == key
 	end
-	
-	self.ValidKey = keytable[math.max(unpack(keytime))] or 0
-	self.EnemyInkPreventCrouching = self.EnemyInkPreventCrouching and self:GetOnEnemyInk() and bit.band(self.Buttons, IN_DUCK) > 0
-	self.PreventCrouching = self.ValidKey ~= 0 and self.ValidKey ~= IN_DUCK or CurTime() < self.Cooldown
-	return self.ValidKey == key
+else
+	function SWEP:CheckButtons(key)
+		if not IsValid(self.Owner) then return end
+		if not self.Owner:IsPlayer() then return true end
+		if not self:IsMine() then return true end
+		local neutral = true
+		local keytable, keytime = {}, {}
+		for _, k in ipairs(KeyMask) do
+			if self.Owner:KeyPressed(k) then self.LastKeyDown[k] = CurTime() end
+			if self.Owner:KeyDown(k) then table.insert(keytime, self.LastKeyDown[k]) end
+			
+			neutral = neutral and not self.Owner:KeyDownLast(k)
+			keytable[self.LastKeyDown[k]] = k -- [Last time key down] = key
+		end
+		
+		self.ValidKey = keytable[math.max(unpack(keytime))] or 0
+		self.EnemyInkPreventCrouching = self.EnemyInkPreventCrouching and self:GetOnEnemyInk() and self.Owner:KeyDown(IN_DUCK)
+		self.PreventCrouching = self.ValidKey ~= 0 and self.ValidKey ~= IN_DUCK or CurTime() < self.Cooldown
+		return self.ValidKey == key
+	end
 end
 
 function SWEP:ChangeViewModel(act)
@@ -136,16 +162,19 @@ function SWEP:SharedInitBase()
 	self.Cooldown = CurTime()
 	self.SwimSound = CreateSound(self, ss.SwimSound)
 	self.EnemyInkSound = CreateSound(self, ss.EnemyInkSound)
-	self.Buttons, self.OldButtons = 0, 0
 	self.LastKeyDown = {}
 	for _, k in ipairs(KeyMask) do
 		self.LastKeyDown[k] = CurTime()
 	end
 	
 	local translate = {}
-	for _, t in ipairs {"crossbow", "grenade", "melee2", "passive", "rpg", "smg"} do
+	for _, t in ipairs {"crossbow", "grenade", "melee2", "passive", "rpg", "shotgun", "smg"} do
 		self:SetWeaponHoldType(t)
 		translate[t] = self.ActivityTranslate
+	end
+	
+	if game.SinglePlayer() then 
+		self.Buttons, self.OldButtons = 0, 0
 	end
 	
 	self.Translate = translate
@@ -212,6 +241,7 @@ end
 function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if self:GetHolstering() then return end
 	if self:CheckCannotStandup() then return end
+	if self:GetThrowing() and self:CheckButtons(IN_ATTACK2) then return end
 	if not auto and self:IsFirstTimePredicted() and CurTime() < self.Cooldown then return end
 	if not auto and self:IsFirstTimePredicted() and not self:CheckButtons(IN_ATTACK) then return end
 	local hasink = self:GetInk() > 0
@@ -237,14 +267,20 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 	if self:CheckCannotStandup() then return end
 	if CurTime() < self.Cooldown then return end
 	if not self:CheckButtons(IN_ATTACK2) then return end
-	if self.Owner:IsPlayer() then self:CallOnClient "SecondaryAttack" end
 	self:SetThrowing(true)
-	self:AddSchedule(0, function(self, sched)
+	if not self:IsFirstTimePredicted() then return end
+	if self.ThrowSchedule then return end
+	if self.HoldType ~= "grenade" then
+		self.Owner:AnimResetGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD)
+	end
+	
+	self.ThrowSchedule = self:AddSchedule(0, function(self, sched)
 		self:CheckButtons()
-		if bit.band(self.Buttons, IN_ATTACK2) > 0 then
+		if self.Owner:KeyDown(IN_ATTACK2) then
 			if self.ValidKey == IN_ATTACK2 then return end
 			if self.ValidKey == IN_DUCK then
 				self:SetThrowing(false)
+				self.ThrowSchedule = nil
 				return true
 			end
 		end
@@ -252,6 +288,7 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 		local time = CurTime() + self.Secondary.Delay
 		ss:ShouldSuppress(self.Owner)
 		self.Cooldown = time
+		self.ThrowSchedule = nil
 		self:SetNextPrimaryFire(time)
 		self:SetNextSecondaryFire(time)
 		self.Owner:SetAnimation(PLAYER_ATTACK1)
@@ -266,8 +303,18 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 		ss:ShouldSuppress()
 		return true
 	end)
+	
+	if CLIENT then return end
+	net.Start "SplatoonSWEPs: Client SecondaryAttack"
+	net.WriteEntity(self)
+	net.Send(ss.PlayersReady)
 end
 -- End of predicted hooks
+
+function SWEP:FireAnimationEvent(pos, ang, event, options)
+	-- Disables animation based muzzle event and thirdperson muzzle flash
+	if event == 21 or event == 22 or event == 5003 or options == "COMBINE MUZZLE" then return true end
+end
 
 local NetworkVarNotifyNOTCalledOnClient = true
 function SWEP:ChangeInInk(name, old, new)
@@ -322,9 +369,6 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	
 	if intoink then
 		self.EnemyInkSound:ChangeVolume(1, .5)
-		if self.Owner:IsPlayer() then
-			self.Owner:SetJumpPower(self.OnEnemyInkJumpPower) -- Reduce jump power
-		end
 		
 		if CLIENT then return end
 		self:AddSchedule(200 / ss.ToHammerHealth * ss.FrameToSec, function(self, schedule)
@@ -341,9 +385,6 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 		end)
 	else
 		self.EnemyInkSound:ChangeVolume(0, .5)
-		if self.Owner:IsPlayer() then
-			self.Owner:SetJumpPower(self.JumpPower) -- Restore
-		end
 	end
 end
 

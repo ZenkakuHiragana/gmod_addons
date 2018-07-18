@@ -113,7 +113,6 @@ function SWEP:Deploy()
 		net.Start "SplatoonSWEPs: Client Deploy"
 		net.WriteEntity(self)
 		net.Send(ss.PlayersReady)
-		self:CallOnClient "ClientDeployBase"
 	end
 	
 	self.Color = ss:GetColor(self:GetColorCode())
@@ -217,8 +216,6 @@ function SWEP:Think()
 		self:ChangePlayermodel(self.PMTable)
 	end
 	
-	local clip = math.max(0, self:GetInk() / ss.MaxInkAmount * 100)
-	if self:Clip1() ~= clip then self:SetClip1(clip) end
 	self:ProcessSchedules()
 	self:SharedThinkBase()
 	ss:ProtectedCall(self.ServerThink, self)

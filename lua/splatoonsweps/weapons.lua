@@ -10,7 +10,7 @@ function ss:SetPrimary(weapon, info)
 	p.DefaultClip = ss.MaxInkAmount
 	p.Automatic = info.IsAutomatic or false
 	p.Ammo = "Ink"
-	p.Delay = info.Delay.Fire * ss.FrameToSec
+	p.Delay = (info.Delay.Fire or 0) * ss.FrameToSec
 	p.FirePosition = info.FirePosition
 	p.Recoil = info.Recoil or .2
 	p.ReloadDelay = info.Delay.Reload * ss.FrameToSec
@@ -61,6 +61,30 @@ function ss.CustomPrimary.weapon_shooter(p, info)
 	
 	if not info.Delay.TripleShot then return end
 	p.TripleShotDelay = info.Delay.TripleShot * ss.FrameToSec
+end
+
+function ss.CustomPrimary.weapon_charger(p, info)
+	p.EmptyChargeMul = info.EmptyChargeMul
+	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
+	p.JumpPower = info.JumpMul * ss.InklingJumpPower
+	p.MinRange = info.MinRange * ss.ToHammerUnits
+	p.MaxRange = info.MaxRange * ss.ToHammerUnits
+	p.Range = (info.FullRange or info.MaxRange) * ss.ToHammerUnits
+	p.MinVelocity = info.MinVelocity * ss.ToHammerUnitsPerSec
+	p.MaxVelocity = info.MaxVelocity * ss.ToHammerUnitsPerSec
+	p.InitVelocity = (info.FullVelocity or info.MaxVelocity) * ss.ToHammerUnitsPerSec
+	p.MinDamage = info.MinDamage * ss.ToHammerHealth
+	p.MaxDamage = info.MaxDamage * ss.ToHammerHealth
+	p.Damage = (info.FullDamage or info.MaxDamage) * ss.ToHammerHealth
+	p.MinChargeTime = info.Delay.MinCharge * ss.FrameToSec
+	p.MaxChargeTime = info.Delay.MaxCharge * ss.FrameToSec
+	p.MinColRadius = info.MinColRadius or ss.mColRadius
+	p.ColRadius = info.MaxColRadius or ss.mColRadius
+	p.Spread = info.Spread or 0
+	p.SpreadJump = info.SpreadJump or 0
+	p.SpreadBias = info.SpreadBias or 0
+	p.AimDuration = info.Delay.Aim * ss.FrameToSec
+	p.Automatic = true
 end
 
 function ss:SetViewModelMods(weapon, mods)

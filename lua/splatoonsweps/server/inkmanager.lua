@@ -145,18 +145,16 @@ end
 --     number Straight			|   Time to start falling in seconds.
 function ss:AddInk(owner, pos, velocity, color, angle, inktype, splashinit, info)
 	local w = ss:IsValidInkling(owner)
-	local ping = w and w:Ping() or 0
 	local t = {
 		Angle = angle,
 		Color = color,
 		Info = info,
 		InitDirection = velocity:GetNormalized(),
 		InitPos = pos,
-		InitTime = info.InitTime or CurTime() - ping,
+		InitTime = info.InitTime or CurTime(),
 		InkType = inktype,
 		InkRadius = info.InkRadius,
 		MinRadius = info.MinRadius,
-		Ping = ping,
 		Range = info.InitVelocity * info.Straight,
 		SplashCount = 0,
 		SplashInit = info.SplashInterval / info.SplashPatterns * splashinit,
@@ -267,7 +265,7 @@ local process = coroutine.create(function()
 				local w = ss:IsValidInkling(t.Entity)
 				if not (w and ss:IsAlly(w, ink.Color)) then
 					local d, o = DamageInfo(), ink.filter
-					local frac = (lifetime - ink.Info.DecreaseDamage - ink.Ping) / ink.Info.MinDamageTime
+					local frac = (lifetime - ink.Info.DecreaseDamage) / ink.Info.MinDamageTime
 					d:SetDamage(Lerp(1 - frac, ink.Info.MinDamage, ink.Info.Damage))
 					d:SetDamageForce(-t.HitNormal)
 					d:SetDamagePosition(t.HitPos)

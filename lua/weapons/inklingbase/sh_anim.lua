@@ -57,10 +57,10 @@ function SWEP:TranslateActivity(act)
 		return self.ActivityTranslateAI[act] or -1
 	end
 	
-	local holdtype = "passive"
+	local holdtype = ss:ProtectedCall(self.CustomActivity, self) or "passive"
 	if self:Crouching() then holdtype = "melee2" end
 	if self:GetThrowing() then holdtype = "grenade" end
-	holdtype = ss:ProtectedCall(self.CustomActivity, self) or holdtype
+	self.HoldType = holdtype
 	
 	local translate = self.Translate[holdtype]
 	if not translate then return -1 end

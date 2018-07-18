@@ -491,12 +491,8 @@ SWEP.DrawWorldModelTranslucent = SWEP.DrawWorldModel
 function SWEP:CustomAmmoDisplay()
 	self.AmmoDisplay = self.AmmoDisplay or {}
 	self.AmmoDisplay.Draw = true
-	
-	if self.Primary.ClipSize > 0 then
-		self.AmmoDisplay.PrimaryClip = self:GetInk() / ss.MaxInkAmount * 100
-		self.AmmoDisplay.PrimaryAmmo = 100
-	end
-	
+	self.AmmoDisplay.PrimaryClip = self:GetInk() / ss.MaxInkAmount * 100
+	self.AmmoDisplay.PrimaryAmmo = ss:ProtectedCall(self.DisplayAmmo, self) or ss.MaxInkAmount
 	return self.AmmoDisplay
 end
 
@@ -516,4 +512,12 @@ function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
 	
 	-- Draw weapon info box
 	self:PrintWeaponInfo(x + wide + 20, y + tall, alpha)
+end
+
+function SWEP:DoDrawCrosshair(x, y)
+	if not ss:GetConVarBool "DrawCrosshair" then return end
+	if vgui.CursorVisible() then x, y = input.GetCursorPos() end
+	
+	return ss:ProtectedCall(self.DrawCrosshair, self, x, y,
+	ss:ProtectedCall(self.SetupDrawCrosshair, self, x, y))
 end

@@ -6,6 +6,7 @@ if not ss then return end
 
 util.AddNetworkString "SplatoonSWEPs: Client Deploy"
 util.AddNetworkString "SplatoonSWEPs: Client PrimaryAttack"
+util.AddNetworkString "SplatoonSWEPs: Client SecondaryAttack"
 util.AddNetworkString "SplatoonSWEPs: DrawInk"
 util.AddNetworkString "SplatoonSWEPs: Play damage sound"
 util.AddNetworkString "SplatoonSWEPs: Ready to splat"

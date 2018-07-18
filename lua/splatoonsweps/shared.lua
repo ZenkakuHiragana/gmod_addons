@@ -488,7 +488,7 @@ local weaponslot = {
 	weapon_scope = 4,
 	weapon_slosher = 5,
 }
-local function RegisterWeapons()
+local function RegisterWeapons(isreloaded)
 	local ssEnabled = GetConVar "sv_splatoonsweps_enabled"
 	if not ssEnabled or not ssEnabled:GetBool() then return end
 	local weaponlist = list.GetForEdit "Weapon"
@@ -526,7 +526,7 @@ local function RegisterWeapons()
 				end
 			end
 			
-			if loop == 2 and weapons.Get(c) then -- Adds to NPC weapon list
+			if not isreloaded and loop == 2 and weapons.Get(c) then -- Adds to NPC weapon list
 				list.Add("NPCUsableWeapons", {class = c, title = ss.Text.PrintNames[c]})
 			end
 		end
@@ -534,7 +534,7 @@ local function RegisterWeapons()
 end
 
 hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", RegisterWeapons)
-hook.Add("OnReloaded", "SplatoonSWEPs: Set weapon classes", RegisterWeapons)
+hook.Add("OnReloaded", "SplatoonSWEPs: Set weapon classes", function() RegisterWeapons(true) end)
 cvars.AddChangeCallback("gmod_language", function(convar, old, new)
 	CompileFile "splatoonsweps/text.lua" ()
 end, "SplatoonSWEPs: OnLanguageChanged")
