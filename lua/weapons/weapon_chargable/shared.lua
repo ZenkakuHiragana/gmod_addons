@@ -19,8 +19,8 @@ ss:SetViewModelMods(SWEP, {
 	["ValveBiped.Bip01_L_Finger4"] = {angle = Angle(0, -20, 0)},
 	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(1, 20, 0)},
 	["ValveBiped.Bip01_Spine4"] = {
-		pos = Vector(-2.5, -4, 0),
-		angle = Angle(0, -10, 0),
+		pos = Vector(0, 0, 0),
+		angle = Angle(0, -2, -7),
 	},
 })
 
@@ -62,9 +62,92 @@ ss:SetPrimary(SWEP, {
 	},
 })
 SWEP.Base = "weapon_shooter"
+
+SWEP.WElements.guide = {
+	type = "Quad",
+	bone = "ValveBiped.Bip01_R_Hand",
+	rel = "",
+	pos = Vector(0, 0, 0),
+	angle = Angle(0, 0, 0),
+	size = 1,
+}
+SWEP.VElements.guide = SWEP.WElements.guide
+
+local function GetLerp(frac, min, max, full)
+	return frac < 1 and Lerp(frac, min, max) or full
+end
+
+function SWEP:GetColRadius()
+	return GetLerp(self:GetChargeProgress(), self.Primary.MinColRadius, self.Primary.ColRadius, self.Primary.ColRadius)
+end
+
 function SWEP:GetRange()
-	local frac = self:GetChargeProgress(true)
-	return frac < 1 and Lerp(frac, self.Primary.MinRange, self.Primary.MaxRange) or self.Primary.Range
+	return GetLerp(self:GetChargeProgress(true), self.Primary.MinRange, self.Primary.MaxRange, self.Primary.Range)
+end
+
+local beam = Material "trails/smoke"
+local beamlight = Material "sprites/physbeama"
+local sprite = Material "sprites/gmdm_pickups/light"
+local cubic = Matrix {
+	{2, -2, 1, 1},
+	{-3, 3, -2, -1},
+	{0, 0, 1, 0},
+	{1, 0, 0, 0},
+}
+local interp = 30
+function SWEP.WElements.guide.draw_func(self)
+	local prog = self:GetChargeProgress(true)
+	if prog == 0 then return end
+	
+	local shootpos, dir = self:GetFirePosition()
+	local pos, ang = self:GetMuzzlePosition()
+	local col = ss.vector_one * self:GetColRadius()
+	local range = self:GetRange()
+	local tb = ss.SquidTrace
+	tb.start, tb.endpos, tb.mins, tb.maxs, tb.filter
+	= pos, shootpos + dir * range, -col, col, {self, self.Owner}
+	if util.TraceHull(tb).StartSolid then return end
+	
+	tb.start = shootpos
+	local tr = util.TraceHull(tb)
+	local texpos, dp = prog * tr.Fraction * 2 / interp, CurTime() / 5
+	local length = tr.HitPos:Distance(pos)
+	local aimang = self.Owner:EyeAngles() aimang:Normalize()
+	
+	if self:IsCarriedByLocalPlayer() and not self.Owner:ShouldDrawLocalPlayer() then
+		local enddir = tr.HitPos - EyePos() enddir:Normalize()
+		local aimdir = EyeAngles():Forward()
+		tr.HitPos = EyePos() + LerpVector(self.ViewModelFOV / self.Owner:GetFOV(), aimdir, enddir) * tr.HitPos:Distance(EyePos())
+	end
+	
+	ang = ang:Forward() * length * (math.abs(aimang.pitch) + 10) / 100
+	dir = dir * length
+	local p1, q1, mpos = pos, dp, Matrix {
+		{pos.x, pos.y, pos.z, 0},
+		{tr.HitPos.x, tr.HitPos.y, tr.HitPos.z, 0},
+		{ang.x, ang.y, ang.z, 0},
+		{dir.x, dir.y, dir.z, 0},
+	}
+	
+	for t = 0, interp do
+		t = t / interp
+		local t2, t3 = t^2, t^3
+		local p2, q2 = Matrix {
+			{t3, t2, t, 1},
+			{t3, t2, t, 1},
+			{t3, t2, t, 1},
+			{t3, t2, t, 1},
+		} * cubic * mpos, q1 + texpos
+		p2 = Vector(p2:GetField(1, 1), p2:GetField(2, 2), p2:GetField(3, 3))
+		render.SetMaterial(beam)
+		render.DrawBeam(p1, p2, 1, q1, q2, self.InkColor)
+		render.SetMaterial(beamlight)
+		render.DrawBeam(p1, p2, 3, q1, q2, self.InkColor)
+		p1, q1 = p2, q2
+	end
+	
+	render.SetMaterial(sprite)
+	render.DrawSprite(tr.HitPos, 16, 16, self.InkColor)
 end
 
 function SWEP:GetChargeProgress(ping)
@@ -77,6 +160,7 @@ function SWEP:ResetCharge()
 	self:SetCharge(math.huge)
 	self:SetChargeFlag(false)
 	self.JumpPower = ss.InklingJumpPower
+	self.PrevCharge = 0
 	
 	if SERVER or not self:IsFirstTimePredicted() then return end
 	self.AimSound:Stop()
@@ -84,7 +168,10 @@ end
 
 function SWEP:AddPlaylist(p) table.insert(p, self.AimSound) end
 function SWEP:SharedInit()
+	self.AirTimeFraction = 1 - 1 / self.Primary.EmptyChargeMul
 	self.gap = self.Primary.MinChargeTime / self.Primary.MaxChargeTime
+	self.LastThink = CurTime()
+	self.PrevCharge = 0
 	self:SetAimTimer(CurTime())
 	self:SetCharge(math.huge)
 end
@@ -106,23 +193,31 @@ function SWEP:SharedPrimaryAttack()
 	if self:GetChargeFlag() then return end
 	if self:GetCharge() < math.huge then return end
 	if SERVER then
-		self:SetCharge(CurTime())
-		self:SetChargeFlag(true)
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
-		ss:ShouldEmitSound(self, "SplatoonSWEPs.ChargerPreFire")
-	elseif not game.SinglePlayer() and self.Owner == LocalPlayer() then
 		self:SetCharge(CurTime())
 		self:SetChargeFlag(true)
+		ss:ShouldEmitSound(self, "SplatoonSWEPs.ChargerPreFire")
+	elseif not game.SinglePlayer() and self:IsCarriedByLocalPlayer() then
 		self:SetAimTimer(math.max(self:GetAimTimer(), CurTime() + self.Primary.AimDuration))
+		self:SetCharge(CurTime())
+		self:SetChargeFlag(true)
+	else
+		local rb = ss.vector_one * self.Primary.Range
+		self:SetRenderBounds(-rb, rb)
 	end
 	
-	if SERVER and game.SinglePlayer() or CLIENT and self.Owner == LocalPlayer() then
+	if SERVER and game.SinglePlayer() or CLIENT and self:IsCarriedByLocalPlayer() then
 		self:EmitSound "SplatoonSWEPs.ChargerPreFire"
 	end
 end
 
 function SWEP:SharedThink()
 	if self:IsMine() and not self:GetChargeFlag() then return end
+	
+	if self:IsFirstTimePredicted() and not self.Owner:OnGround() and CurTime() - self:GetCharge() > self.Primary.MinChargeTime + FrameTime() then
+		self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
+	end
+	
 	local time = CurTime() + self.Primary.AimDuration
 	local prog = self:GetChargeProgress()
 	if self:GetChargeFlag() then
@@ -135,8 +230,15 @@ function SWEP:SharedThink()
 	if not self:IsMine() then
 		local fire = self.PrevChargeFlag and not self:GetThrowing()
 		self.PrevChargeFlag = self:GetChargeFlag()
-		if self:GetChargeFlag() then self.PrevCharge = prog return end
-		if fire then prog = self.PrevCharge end
+		if self:GetChargeFlag() then
+			self.PrevCharge = math.max(self.PrevCharge, prog)
+			return
+		end
+		
+		if fire then prog = math.max(self.PrevCharge, prog) end
+		local max = self.MaxRenderBounds or Vector(-19, -27, -10)
+		local min = self.MinRenderBounds or Vector(27, 19, 14)
+		self:SetRenderBounds(min, max)
 	end
 	
 	if CLIENT and self:IsFirstTimePredicted() then
@@ -148,11 +250,11 @@ function SWEP:SharedThink()
 			self.AimSound:Stop()
 		end
 		
-		if self.Owner == LocalPlayer() and self.PrevCharge < 1 and prog == 1 then
+		if self:IsCarriedByLocalPlayer() and self.PrevCharge < 1 and prog == 1 then
 			surface.PlaySound(ss.ChargerBeep)
 		end
 		
-		self.PrevCharge = prog
+		self.PrevCharge = math.max(self.PrevCharge, prog)
 	end
 	
 	if prog == 0 then return end

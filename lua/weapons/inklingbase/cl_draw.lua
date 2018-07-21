@@ -301,15 +301,15 @@ function SWEP:ViewModelDrawn()
 			render.SetMaterial(sprite)
 			render.DrawSprite(drawpos, v.size.x, v.size.y, v.color)
 			
-		elseif v.type == "Quad" and v.draw_func then
+		elseif v.type == "Quad" and isfunction(v.draw_func) then
 			local drawpos = pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z
 			ang:RotateAroundAxis(ang:Up(), v.angle.y)
 			ang:RotateAroundAxis(ang:Right(), v.angle.p)
 			ang:RotateAroundAxis(ang:Forward(), v.angle.r)
 			
-			cam.Start3D2D(drawpos, ang, v.size)
+			if v.is2d then cam.Start3D2D(drawpos, ang, v.size) end
 			v.draw_func(self)
-			cam.End3D2D()
+			if v.is2d then cam.End3D2D() end
 		end
 	end
 end
@@ -358,11 +358,11 @@ function SWEP:DrawWorldModel()
 	self:SetupBones()
 	local bone_ent = self.Owner -- when the weapon is dropped
 	if not IsValid(bone_ent) then bone_ent = self end
-	if self.Owner ~= LocalPlayer() then self:Think() end
+	if not self:IsCarriedByLocalPlayer() then self:Think() end
 	if not self.WElements then return end
 	
 	local cameradistance = 1
-	if self.Owner == LocalPlayer() then
+	if self:IsCarriedByLocalPlayer() then
 		cameradistance = math.Clamp(self:GetPos():DistToSqr(EyePos()) / ss.CameraFadeDistance, 0, 1)
 	end
 	
@@ -473,15 +473,15 @@ function SWEP:DrawWorldModel()
 			sprite:SetFloat("$alpha", a or 1)
 			sprite:SetFloat("$translucent", t or 0)
 			
-		elseif v.type == "Quad" and v.draw_func then
+		elseif v.type == "Quad" and isfunction(v.draw_func) then
 			local drawpos = pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z
 			ang:RotateAroundAxis(ang:Up(), v.angle.y)
 			ang:RotateAroundAxis(ang:Right(), v.angle.p)
 			ang:RotateAroundAxis(ang:Forward(), v.angle.r)
 			
-			cam.Start3D2D(drawpos, ang, v.size)
+			if v.is2d then cam.Start3D2D(drawpos, ang, v.size) end
 			v.draw_func(self)
-			cam.End3D2D()
+			if v.is2d then cam.End3D2D() end
 		end
 	end
 end

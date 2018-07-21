@@ -78,7 +78,7 @@ end
 
 function SWEP:CustomActivity()
 	local at = self:GetAimTimer()
-	if CLIENT and LocalPlayer() == self.Owner then at = at - self:Ping() end
+	if CLIENT and self:IsCarriedByLocalPlayer() then at = at - self:Ping() end
 	if CurTime() > at then return end
 	local aimpos = select(3, self:GetFirePosition())
 	aimpos = aimpos == 3 or aimpos == 4

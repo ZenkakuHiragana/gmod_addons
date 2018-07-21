@@ -74,8 +74,8 @@ function SWEP:Initialize()
 	self:ClientDeployBase()
 end
 
-function SWEP:Deploy()
-	if self:IsFirstTimePredicted() then return self:ClientDeployBase() end
+function SWEP:Deploy(forced)
+	if self:IsFirstTimePredicted() or forced then return self:ClientDeployBase() end
 end
 
 function SWEP:ClientDeployBase()
@@ -87,11 +87,11 @@ function SWEP:ClientDeployBase()
 		self:UpdateBonePositions(self.Owner:GetViewModel())
 	end
 	
-	if self.Owner == LocalPlayer() then
-		self:SetColorCode(ss:GetConVarInt "InkColor")
-	end
+	timer.Simple(0, function()
+		if not IsValid(self) then return end
+		self.InkColor = ss:GetColor(self:GetColorCode())
+	end)
 	
-	self.InkColor = ss:GetColor(self:GetColorCode())
 	return self:SharedDeployBase()
 end
 
@@ -130,7 +130,7 @@ function SWEP:Think()
 		local enough = self:GetInk() > self.Secondary.TakeAmmo
 		if not self.EnoughSubWeapon and enough then
 			self.JustUsableTime = CurTime() - LocalPlayer():Ping() / 1000
-			if self.Owner == LocalPlayer() then
+			if self:IsCarriedByLocalPlayer() then
 				surface.PlaySound(ss.BombAvailable)
 			end
 		end

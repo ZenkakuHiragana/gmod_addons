@@ -15,8 +15,8 @@ SWEP.Crosshair = {
 }
 
 function SWEP:ClientInit()
-	self.PrevCharge = 0
 	self.AimSound = CreateSound(self, ss.ChargerAim)
+	self.MinRenderBounds, self.MaxRenderBounds = self:GetRenderBounds()
 	self.BaseClass.ClientInit(self)
 end
 

@@ -230,20 +230,12 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 		local App = ink.Appearance -- Effect position fix
 		local w = ss:IsValidInkling(ink.filter)
 		if w and lifetime < ink.Straight + DecreaseFrame then
-			local wt = ((ink.filter ~= LocalPlayer() or ink.filter:ShouldDrawLocalPlayer())
-			and w.WElements or w.VElements).weapon
-			local ent = wt.modelEnt
-			if IsValid(ent) then
-				local time = ink.Straight + DecreaseFrame / 2
-				local straightpos = ink.InitPos + ink.Velocity * time
-				local mp = w.MuzzlePosition
-				local pos, ang = ent:GetPos(), ent:GetAngles()
-				mp = Vector(mp.x * wt.size.x, mp.y * wt.size.y, mp.z * wt.size.z)
-				App.InitPos = LocalToWorld(mp, angle_zero, pos, ang)
-				App.Velocity = (straightpos - App.InitPos) / time
-				App.Speed = App.Velocity:Length()
-				if trailtime < 0 then App.TrailPos = App.InitPos end
-			end
+			local time = ink.Straight + DecreaseFrame / 2
+			local straightpos = ink.InitPos + ink.Velocity * time
+			App.InitPos = w:GetMuzzlePosition()
+			App.Velocity = (straightpos - App.InitPos) / time
+			App.Speed = App.Velocity:Length()
+			if trailtime < 0 then App.TrailPos = App.InitPos end
 		end
 		
 		if lifetime < ink.Straight then -- Goes straight

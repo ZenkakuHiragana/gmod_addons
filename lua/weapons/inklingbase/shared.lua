@@ -27,11 +27,11 @@ local function StopLoopSound(self)
 end
 
 function SWEP:IsMine()
-	return SERVER or LocalPlayer() == self.Owner
+	return SERVER or self:IsCarriedByLocalPlayer()
 end
 
 function SWEP:IsFirstTimePredicted()
-	return SERVER or game.SinglePlayer() or IsFirstTimePredicted() or self.Owner ~= LocalPlayer()
+	return SERVER or game.SinglePlayer() or IsFirstTimePredicted() or not self:IsCarriedByLocalPlayer()
 end
 
 if game.SinglePlayer() then	
@@ -324,8 +324,7 @@ function SWEP:ChangeInInk(name, old, new)
 	end
 	
 	old, new = tobool(old), tobool(new)
-	local outofink = old and not new
-	local intoink = not old and new
+	local outofink, intoink = old and not new, not old and new
 	if outofink == intoink then return end
 	if NetworkVarNotifyNOTCalledOnClient then
 		if not self:IsFirstTimePredicted() then return end
@@ -357,8 +356,7 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	end
 	
 	old, new = tobool(old), tobool(new)
-	local outofink = old and not new
-	local intoink = not old and new
+	local outofink, intoink = old and not new, not old and new
 	if outofink == intoink then return end
 	if NetworkVarNotifyNOTCalledOnClient then
 		if not self:IsFirstTimePredicted() then return end

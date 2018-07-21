@@ -22,17 +22,17 @@ SWEP.PreDrawWorldModel = ExpandModel
 SWEP.PreViewModelDrawn = ExpandModel
 SWEP.IronSightsAng = {
 	Vector(), -- normal
-	Vector(0, -20, 0), -- left
+	Vector(0, -5, 0), -- left
 	Vector(0, 0, -75), -- top-right
-	Vector(-15, -15, 15), -- top-left
-	Vector(0, -13.3, 0), -- center
+	Vector(-7, -8, 15), -- top-left
+	Vector(0, -3.25, 0), -- center
 }
 SWEP.IronSightsPos = {
 	Vector(), -- normal
-	Vector(-20, -4, 0), -- left
+	Vector(-18, -4, 0), -- left
 	Vector(), -- top-right
-	Vector(-20, -4, 8), -- top-left
-	Vector(-13.3, 0, -1), -- center
+	Vector(-18, -4, 8), -- top-left
+	Vector(-10, 0, -1), -- center
 }
 
 local crosshairalpha = 64
@@ -60,6 +60,17 @@ function SWEP:ClientInit()
 	self.ModifyWeaponSize = SysTime() - 1
 	self.ViewPunch = Angle()
 	self.ViewPunchVel = Angle()
+end
+
+function SWEP:GetMuzzlePosition()
+	local tps = self:IsCarriedByLocalPlayer() and not self.Owner:ShouldDrawLocalPlayer()
+	local wt = (tps and self.VElements or self.WElements).weapon
+	local ent = wt.modelEnt
+	if not IsValid(ent) then return self:GetPos() end
+	local mp = self.MuzzlePosition or vector_origin
+	local pos, ang = ent:GetPos(), ent:GetAngles()
+	mp = Vector(mp.x * wt.size.x, mp.y * wt.size.y, mp.z * wt.size.z)
+	return LocalToWorld(mp, angle_zero, pos, ang)
 end
 
 function SWEP:GetCrosshairTrace(t)
@@ -283,7 +294,7 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	if not self:IsFirstTimePredicted() then return end
 	if not hasink then
 		if self.Primary.TripleShotDelay then self.Cooldown = CurTime() end
-		if self.Owner == LocalPlayer() and self.PreviousInk then
+		if self:IsCarriedByLocalPlayer() and self.PreviousInk then
 			surface.PlaySound(ss.TankEmpty)
 			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
 			self.PreviousInk = false
@@ -318,11 +329,11 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	self.PreviousInk = true
 	self.Cooldown = math.max(self.Cooldown, CurTime()
 	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
-	if self.Owner == LocalPlayer() or game.SinglePlayer() and not self.Owner:IsPlayer() then
+	if self:IsCarriedByLocalPlayer() or game.SinglePlayer() and not self.Owner:IsPlayer() then
 		self:EmitSound(self.ShootSound)
 	end
 	
-	if self.Owner == LocalPlayer() and not game.SinglePlayer() then
+	if self:IsCarriedByLocalPlayer() and not game.SinglePlayer() then
 		ss.InkTraces[{
 			Appearance = {
 				InitPos = pos,
@@ -352,6 +363,6 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	if game.SinglePlayer() or not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end
 	self.Cooldown = CurTime() + (self.Primary.Delay * 2 + self.Primary.TripleShotDelay) / lv
 	self:SetAimTimer(self.Cooldown)
-	if self.Owner ~= LocalPlayer() then return end
+	if not self:IsCarriedByLocalPlayer() then return end
 	self.TripleSchedule = self:AddSchedule(self.Primary.Delay, 2, self.PrimaryAttack)
 end

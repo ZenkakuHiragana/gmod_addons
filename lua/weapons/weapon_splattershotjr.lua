@@ -55,8 +55,8 @@ ss:SetViewModelMods(SWEP, {
 	["ValveBiped.Bip01_L_Finger41"] = {angle = Angle(0, 5, 0)},
 	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 23, -12)},
 	["ValveBiped.Bip01_Spine4"] = {
-		pos = Vector(-1, -5, -2),
-		angle = Angle(0, -8, 0),
+		pos = Vector(-3, -5, 0),
+		angle = Angle(0, -8, -1),
 	},
 })
 

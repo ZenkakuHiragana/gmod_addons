@@ -458,7 +458,7 @@ hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
 	local ShouldDraw = Either(weapon:GetBecomeSquid(), ply:Crouching(), weapon:GetInInk())
 	ply:DrawShadow(not ShouldDraw)
 	if ShouldDraw then return true end
-	if ply ~= LocalPlayer() then return end
+	if not weapon:IsCarriedByLocalPlayer() then return end
 	render.SetBlend(math.Clamp(weapon:GetPos():DistToSqr(EyePos()) / ss.CameraFadeDistance, 0, 1))
 end)
 
