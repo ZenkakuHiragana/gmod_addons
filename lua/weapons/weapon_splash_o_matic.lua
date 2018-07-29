@@ -5,6 +5,7 @@ if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.Splash-o-matic"
 SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/splash_sploosh_o_matic/splash_sploosh_o_matic.mdl"
+SWEP.ShowMuzzleMist = true -- Muzzleflash effect
 SWEP.Sub = "suctionbomb"
 SWEP.Special = "bombrush"
 SWEP.Variations = {

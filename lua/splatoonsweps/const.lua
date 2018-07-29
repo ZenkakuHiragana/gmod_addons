@@ -445,7 +445,7 @@ ss.SquidViewOffset = vector_up * 24
 ss.InklingJumpPower = 250
 ss.DisruptoredSpeed = .45 -- Disruptor's debuff factor
 ss.OnEnemyInkJumpPower = ss.InklingJumpPower * .75
-ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) -- = 2.88 Constants for unit conversion
+ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) -- = 3.53 Constants for unit conversion
 ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec --
 ss.ToHammerHealth = 100 --
 ss.FrameToSec = 1 / framepersec --

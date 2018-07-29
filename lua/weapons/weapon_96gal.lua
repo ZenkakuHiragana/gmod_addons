@@ -5,6 +5,7 @@ if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.96"
 SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/52_96_gal/52_96_gal.mdl"
+SWEP.ShowSplashRing = true -- Muzzleflash effect
 SWEP.Sub = "sprinkler"
 SWEP.Special = "echolocator"
 SWEP.Variations = {{

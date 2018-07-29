@@ -36,6 +36,7 @@ SWEP.Variations = {
 		ViewModelAng = Angle(12.736, 75, 90),
 		WorldModelPos = Vector(4, 0.6, -4.5),
 		WorldModelAng = Angle(0, 5, 180),
+		Skin = 1,
 	},
 }
 

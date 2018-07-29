@@ -63,8 +63,7 @@ function SWEP:ClientInit()
 end
 
 function SWEP:GetMuzzlePosition()
-	local tps = self:IsCarriedByLocalPlayer() and not self.Owner:ShouldDrawLocalPlayer()
-	local wt = (tps and self.VElements or self.WElements).weapon
+	local wt = (self:IsTPS() and self.WElements or self.VElements).weapon
 	local ent = wt.modelEnt
 	if not IsValid(ent) then return self:GetPos() end
 	local mp = self.MuzzlePosition or vector_origin
@@ -331,6 +330,31 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
 	if self:IsCarriedByLocalPlayer() or game.SinglePlayer() and not self.Owner:IsPlayer() then
 		self:EmitSound(self.ShootSound)
+	end
+	
+	local e = EffectData()
+	e:SetColor(self:GetColorCode())
+	e:SetEntity(self)
+	e:SetRadius(25)
+	util.Effect("SplatoonSWEPsMuzzleSplash", e)
+	
+	if self.ShowSplashRing then
+		local da = math.Rand(0, 360)
+		for i = 0, 4 do
+			e:SetFlags(1)
+			e:SetRadius(40)
+			e:SetScale(da + i * 72)
+			util.Effect("SplatoonSWEPsMuzzleRing", e)
+			if i > 1 then continue end
+			e:SetFlags(0)
+			e:SetRadius(30)
+			util.Effect("SplatoonSWEPsMuzzleRing", e)
+		end
+	elseif self.ShowMuzzleMist then
+		e:SetNormal(self:GetRight())
+		e:SetRadius(25)
+		e:SetScale(30)
+		util.Effect("SplatoonSWEPsMuzzleMist", e)
 	end
 	
 	if self:IsCarriedByLocalPlayer() and not game.SinglePlayer() then

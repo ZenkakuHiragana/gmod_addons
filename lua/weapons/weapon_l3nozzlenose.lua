@@ -5,6 +5,7 @@ if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.L-3"
 SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/nozzlenose/nozzlenose.mdl"
+SWEP.ShowMuzzleMist = true -- Muzzleflash effect
 SWEP.Sub = "disruptor"
 SWEP.Special = "killerwail"
 SWEP.Variations = {{

@@ -32,7 +32,7 @@ ss:SetViewModel(SWEP, {
 
 ss:SetWorldModel(SWEP, {
 	pos = Vector(4.5, 1.5, 0),
-	angle = Angle(-173, -173.5, -5),
+	angle = Angle(-173, -178, -5),
 })
 
 SWEP.Base = "weapon_charger"
@@ -85,6 +85,10 @@ function SWEP:GetRange()
 	return GetLerp(self:GetChargeProgress(true), self.Primary.MinRange, self.Primary.MaxRange, self.Primary.Range)
 end
 
+function SWEP:GetInkVelocity()
+	return GetLerp(self:GetChargeProgress(), self.Primary.MinVelocity, self.Primary.MaxVelocity, self.Primary.InitVelocity)
+end
+
 local beam = Material "trails/smoke"
 local beamlight = Material "sprites/physbeama"
 local sprite = Material "sprites/gmdm_pickups/light"
@@ -100,7 +104,7 @@ function SWEP.WElements.guide.draw_func(self)
 	if prog == 0 then return end
 	
 	local shootpos, dir = self:GetFirePosition()
-	local pos, ang = self:GetMuzzlePosition()
+	local pos, ang = self:GetMuzzlePosition(true)
 	local col = ss.vector_one * self:GetColRadius()
 	local range = self:GetRange()
 	local tb = ss.SquidTrace
@@ -114,40 +118,51 @@ function SWEP.WElements.guide.draw_func(self)
 	local length = tr.HitPos:Distance(pos)
 	local aimang = self.Owner:EyeAngles() aimang:Normalize()
 	
-	if self:IsCarriedByLocalPlayer() and not self.Owner:ShouldDrawLocalPlayer() then
+	if not self:IsTPS() then
 		local enddir = tr.HitPos - EyePos() enddir:Normalize()
 		local aimdir = EyeAngles():Forward()
-		tr.HitPos = EyePos() + LerpVector(self.ViewModelFOV / self.Owner:GetFOV(), aimdir, enddir) * tr.HitPos:Distance(EyePos())
+		local dir = aimdir + self.ViewModelFOV / self.Owner:GetFOV() * (enddir - aimdir)
+		tr.HitPos = EyePos() + dir * tr.HitPos:Distance(EyePos())
 	end
 	
-	ang = ang:Forward() * length * (math.abs(aimang.pitch) + 10) / 100
+	ang = ang:Forward() * length / 5
 	dir = dir * length
-	local p1, q1, mpos = pos, dp, Matrix {
+	local p, q, mpos = pos, dp, Matrix {
 		{pos.x, pos.y, pos.z, 0},
 		{tr.HitPos.x, tr.HitPos.y, tr.HitPos.z, 0},
 		{ang.x, ang.y, ang.z, 0},
 		{dir.x, dir.y, dir.z, 0},
 	}
 	
+	local tpoints = {q}
+	local points = {p}
 	for t = 0, interp do
 		t = t / interp
 		local t2, t3 = t^2, t^3
-		local p2, q2 = Matrix {
+		p, q = Matrix {
 			{t3, t2, t, 1},
 			{t3, t2, t, 1},
 			{t3, t2, t, 1},
 			{t3, t2, t, 1},
-		} * cubic * mpos, q1 + texpos
-		p2 = Vector(p2:GetField(1, 1), p2:GetField(2, 2), p2:GetField(3, 3))
-		render.SetMaterial(beam)
-		render.DrawBeam(p1, p2, 1, q1, q2, self.InkColor)
-		render.SetMaterial(beamlight)
-		render.DrawBeam(p1, p2, 3, q1, q2, self.InkColor)
-		p1, q1 = p2, q2
+		} * cubic * mpos, q + texpos
+		table.insert(points, Vector(p:GetField(1, 1), p:GetField(2, 2), p:GetField(3, 3)))
+		table.insert(tpoints, q)
 	end
 	
+	for _, m in ipairs {beam, beamlight} do
+		render.SetMaterial(m)
+		render.StartBeam(interp + 2)
+		for i, p in ipairs(points) do
+			render.AddBeam(p, 1, tpoints[i], self.InkColor)
+		end
+		render.EndBeam()
+	end
+	
+	local color = Vector(self.InkColor.r, self.InkColor.g, self.InkColor.b)
+	color = (color / color:Dot(ss.GrayScaleFactor)):ToColor()
+	
 	render.SetMaterial(sprite)
-	render.DrawSprite(tr.HitPos, 16, 16, self.InkColor)
+	render.DrawSprite(tr.HitPos, 16, 16, color)
 end
 
 function SWEP:GetChargeProgress(ping)
@@ -214,7 +229,7 @@ end
 function SWEP:SharedThink()
 	if self:IsMine() and not self:GetChargeFlag() then return end
 	
-	if self:IsFirstTimePredicted() and not self.Owner:OnGround() and CurTime() - self:GetCharge() > self.Primary.MinChargeTime + FrameTime() then
+	if not self.Owner:OnGround() and CurTime() - self:GetCharge() > self.Primary.MinChargeTime + FrameTime() then
 		self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
 	end
 	
@@ -271,14 +286,34 @@ function SWEP:SharedThink()
 	local ShootSound = prog > .75 and self.ShootSound2 or self.ShootSound
 	local pitch = 100 + (prog > .75 and 15 or 0)
 	ss:ShouldSuppress(self.Owner)
+	if SERVER then
+		self:EmitSound(ShootSound, 80, pitch - prog * 20)
+		self:SpawnInk()
+	else
+		if not game.SinglePlayer() and IsFirstTimePredicted() then
+			self:EmitSound(ShootSound, 80, pitch - prog * 20)
+		end
+		
+		local e, da, r = EffectData(), math.Rand(0, 90), Lerp(prog, 20, 70)
+		e:SetColor(self:GetColorCode())
+		e:SetEntity(self)
+		for i = 0, 4 do
+			e:SetFlags(0)
+			e:SetRadius(r)
+			e:SetScale(i * 72 + da)
+			util.Effect("SplatoonSWEPsMuzzleRing", e)
+			e:SetFlags(1)
+			e:SetRadius(r * 2)
+			util.Effect("SplatoonSWEPsMuzzleRing", e)
+		end
+		
+		e:SetRadius(r / 2)
+		util.Effect("SplatoonSWEPsMuzzleSplash", e)
+	end
+	
 	self:ResetCharge()
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
-	if SERVER then
-		self:EmitSound(ShootSound)
-	elseif not game.SinglePlayer() and IsFirstTimePredicted() then
-		self:EmitSound(ShootSound, 80, pitch - prog * 20)
-	end
 	
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self:CheckCannotStandup()

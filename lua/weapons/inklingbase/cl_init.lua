@@ -161,3 +161,7 @@ function SWEP:Think()
 	self:SharedThinkBase()
 	ss:ProtectedCall(self.ClientThink, self)
 end
+
+function SWEP:IsTPS()
+	return not self:IsCarriedByLocalPlayer() or self.Owner:ShouldDrawLocalPlayer()
+end

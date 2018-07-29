@@ -5,6 +5,7 @@ if not ss then return end
 SWEP.Base = "weapon_shooter"
 SWEP.ShootSound = "SplatoonSWEPs.Jet"
 SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/squelcher/squelcher.mdl"
+SWEP.ShowSplashRing = true -- Muzzleflash effect
 SWEP.Sub = "splashwall"
 SWEP.Special = "inkstrike"
 SWEP.Variations = {{

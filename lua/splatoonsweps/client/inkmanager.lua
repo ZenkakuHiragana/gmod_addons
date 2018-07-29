@@ -298,7 +298,7 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 			(trailtime - ink.Straight) / TrailMergeTime, 0, .75), App.TrailPos, App.Pos)
 		end
 		
-		local radius = Lerp(lifetime / ink.Straight, ss.mColRadius / 5, ss.mColRadius)
+		local radius = Lerp(lifetime / ink.Straight, 0, ss.mColRadius)
 		local dir = ink.endpos - ink.start
 		local f = App.Pos -- Forward position
 		local mean, a = f - dir / 2, App.Velocity:Angle()

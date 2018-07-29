@@ -43,7 +43,6 @@ function SWEP:Initialize()
 	self:SetInk(ss.MaxInkAmount)
 	self:SetInkColorProxy(ss.vector_one)
 	self:SharedInitBase()
-	self:AddSchedule(0, self.UpdateInkState)
 	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
 		self:SetSaveValue("m_fMinRange1", 0)
 		self:SetSaveValue("m_fMinRange2", 0)
@@ -217,6 +216,7 @@ function SWEP:Think()
 	end
 	
 	self:ProcessSchedules()
+	self:UpdateInkState()
 	self:SharedThinkBase()
 	ss:ProtectedCall(self.ServerThink, self)
 end

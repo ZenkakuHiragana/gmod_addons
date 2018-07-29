@@ -10,8 +10,10 @@ local function PlayLoopSound(self)
 	local playlist = {self.SwimSound, self.EnemyInkSound}
 	ss:ProtectedCall(self.AddPlaylist, self, playlist)
 	for _, s in ipairs(playlist) do
-		if s:IsPlaying() then continue end
-		s:Play()
+		if not s:IsPlaying() then
+			s:Play()
+		end
+		
 		s:ChangeVolume(0)
 	end
 end
@@ -20,8 +22,8 @@ local function StopLoopSound(self)
 	local playlist = {self.SwimSound, self.EnemyInkSound}
 	ss:ProtectedCall(self.AddPlaylist, self, playlist)
 	for _, s in ipairs(playlist) do
-		if not s:IsPlaying() then continue end
 		s:ChangeVolume(0)
+		if IsValid(self.Owner) and self.Owner:Health() > 0 then continue end
 		s:Stop()
 	end
 end
