@@ -63,7 +63,7 @@ function SWEP:ClientInit()
 end
 
 function SWEP:GetMuzzlePosition()
-	local wt = (self:IsTPS() and self.WElements or self.VElements).weapon
+	local wt = self:GetElements().weapon
 	local ent = wt.modelEnt
 	if not IsValid(ent) then return self:GetPos() end
 	local mp = self.MuzzlePosition or vector_origin
@@ -351,10 +351,16 @@ function SWEP:ClientPrimaryAttack(hasink, auto)
 			util.Effect("SplatoonSWEPsMuzzleRing", e)
 		end
 	elseif self.ShowMuzzleMist then
-		e:SetNormal(self:GetRight())
-		e:SetRadius(25)
-		e:SetScale(30)
-		util.Effect("SplatoonSWEPsMuzzleMist", e)
+		local e = self:GetElements()
+		local scale = e.weapon.size * 6
+		local mdl = self:IsTPS() and self or self.Owner:GetViewModel()
+		local pos, ang = self:GetMuzzlePosition()
+		pos = self:TranslateViewmodelPos(pos)
+		local localpos = WorldToLocal(pos, angle_zero, self:GetPos(), angle_zero)
+		local p = CreateParticleSystem(mdl, ss.Particles.MuzzleMist, PATTACH_POINT_FOLLOW, self.MuzzleAttachment, vector_origin)
+		p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, self:GetInkColorProxy())
+		p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, scale)
+		p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, pos + ang:Right() * 100)
 	end
 	
 	if self:IsCarriedByLocalPlayer() and not game.SinglePlayer() then

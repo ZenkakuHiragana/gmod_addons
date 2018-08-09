@@ -2,7 +2,7 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
-local NumParticles = 25
+local NumParticles = 16
 local LifeTime = 16 * ss.FrameToSec
 local mat = {}
 for i = 1, 16 do
@@ -34,17 +34,11 @@ end
 
 function EFFECT:Render()
 	if not IsValid(self.Weapon) then return end
-	local mul = self.Weapon.WElements.weapon.size
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	local norm = ang:Forward()
-	if not self.Weapon:IsTPS() then
-		local enddir = pos - EyePos() enddir:Normalize()
-		local aimdir = EyeAngles():Forward()
-		local dir = aimdir + self.Weapon.Owner:GetFOV() / self.Weapon.ViewModelFOV * (enddir - aimdir)
-		pos = EyePos() + dir * pos:Distance(EyePos())
-		mul = self.Weapon.VElements.weapon.size
-	end
-	
+	local mul = self.Weapon:IsTPS() and
+	self.Weapon.WElements.weapon.size or self.Weapon.VElements.weapon.size
+	pos = self.Weapon:TranslateViewmodelPos(pos)
 	mul = (mul.x + mul.y + mul.z) / 3
 	self:SetPos(pos)
 	

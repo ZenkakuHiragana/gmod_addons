@@ -31,23 +31,18 @@ local function AdvanceVertex(self, pos, norm, u, v, alpha)
 	mesh.AdvanceVertex()
 end
 
+local halfpi = math.pi / 2
 function EFFECT:Render()
 	if not IsValid(self.Weapon) then return end
 	if not isnumber(self.InitTime) then return end
 	if not isnumber(self.rad) then return end
 	if not isnumber(self.tmax) then return end
 	if not isnumber(self.tmin) then return end
-	local mul = self.Weapon.WElements.weapon.size
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	local norm = ang:Forward()
-	if not self.Weapon:IsTPS() then
-		local enddir = pos - EyePos() enddir:Normalize()
-		local aimdir = EyeAngles():Forward()
-		local dir = aimdir + self.Weapon.Owner:GetFOV() / self.Weapon.ViewModelFOV * (enddir - aimdir)
-		pos = EyePos() + dir * pos:Distance(EyePos())
-		mul = self.Weapon.VElements.weapon.size
-	end
-	
+	local mul = self.Weapon:IsTPS() and
+	self.Weapon.WElements.weapon.size or self.Weapon.VElements.weapon.size
+	pos = self.Weapon:TranslateViewmodelPos(pos)
 	mul = (mul.x + mul.y + mul.z) / 3
 	self:SetPos(pos)
 	
@@ -55,11 +50,12 @@ function EFFECT:Render()
 	local f = (CurTime() - self.InitTime) / LifeTime
 	local alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
 	local t = Lerp(f, self.tmin, self.tmax)
-	local r = Lerp(math.EaseInOut(f, .1, 5), self.rad, self.rad / 5) * mul
+	local r = Lerp(4 * f * (1 - f), self.rad / 5, self.rad) * mul
+	local u, v = {}, {}
 	for _, deg in ipairs {self.deg, self.deg2} do
 		mesh.Begin(MATERIAL_TRIANGLES, Division)
 		for i = 0, Division do
-			local a = Angle(ang) a:RotateAroundAxis(norm, deg + DegStep * i)
+			local a = Angle(ang) a:RotateAroundAxis(norm, deg + i * DegStep)
 			local dir = a:Right() a:RotateAroundAxis(norm, DegStep)
 			local nextdir = a:Right() a:RotateAroundAxis(norm, DegStep)
 			local nextdir2 = a:Right() a:RotateAroundAxis(norm, -DegStep * 3)
@@ -68,14 +64,25 @@ function EFFECT:Render()
 			local n2 = norm:Cross((dir - nextdir2):GetNormalized())
 			local p1 = dir * r + norm * t
 			local p2 = nextdir * r + norm * t
-			local d = math.rad(deg + i * DegStep)
-			local u1, v1 = math.cos(d) / 2 + .5, math.sin(d) / 2 + .5
-			local u2, v2 = math.cos(d + RadStep) / 2 + .5, math.sin(d + RadStep) / 2 + .5
+			for n = i, i + 1 do
+				local d = n * DegStep
+				local q = math.Round(d / 90)
+				local rad = math.rad(d)
+				local tan = math.tan(rad - q * halfpi) / 2
+				u[n] = u[n] or q % 2 == 0 and (q == 2 and 0 or 1) or q == 1 and .5 - tan or .5 + tan
+				v[n] = v[n] or q % 2 > 0 and (q == 1 and 1 or 0) or q == 2 and .5 - tan or .5 + tan
+			end
+			
 			AdvanceVertex(self, pos, -norm, .5, .5, alpha)
-			AdvanceVertex(self, pos + p1, n, u1, v1, alpha)
-			AdvanceVertex(self, pos + p2, n2, u2, v2, alpha)
+			AdvanceVertex(self, pos + p1, n, u[i], v[i], alpha)
+			AdvanceVertex(self, pos + p2, n2, u[i + 1], v[i + 1], alpha)
 		end
 		mesh.End()
+		
+		f = f * 2
+		alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
+		t = Lerp(f * .7, self.tmin, self.tmax)
+		r = Lerp(4 * f * (1 - f), self.rad / 5, self.rad) * mul
 	end
 end
 

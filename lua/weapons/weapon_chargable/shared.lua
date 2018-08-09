@@ -117,13 +117,7 @@ function SWEP.WElements.guide.draw_func(self)
 	local texpos, dp = prog * tr.Fraction * 2 / interp, CurTime() / 5
 	local length = tr.HitPos:Distance(pos)
 	local aimang = self.Owner:EyeAngles() aimang:Normalize()
-	
-	if not self:IsTPS() then
-		local enddir = tr.HitPos - EyePos() enddir:Normalize()
-		local aimdir = EyeAngles():Forward()
-		local dir = aimdir + self.ViewModelFOV / self.Owner:GetFOV() * (enddir - aimdir)
-		tr.HitPos = EyePos() + dir * tr.HitPos:Distance(EyePos())
-	end
+	tr.HitPos = self:TranslateViewmodelPos(tr.HitPos)
 	
 	ang = ang:Forward() * length / 5
 	dir = dir * length
@@ -289,10 +283,8 @@ function SWEP:SharedThink()
 	if SERVER then
 		self:EmitSound(ShootSound, 80, pitch - prog * 20)
 		self:SpawnInk()
-	else
-		if not game.SinglePlayer() and IsFirstTimePredicted() then
-			self:EmitSound(ShootSound, 80, pitch - prog * 20)
-		end
+	elseif not game.SinglePlayer() and IsFirstTimePredicted() then
+		self:EmitSound(ShootSound, 80, pitch - prog * 20)
 		
 		local e, da, r = EffectData(), math.Rand(0, 90), Lerp(prog, 20, 70)
 		e:SetColor(self:GetColorCode())

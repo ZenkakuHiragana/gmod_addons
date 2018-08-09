@@ -409,6 +409,13 @@ ss.Materials = {
 		LineColor = Material "splatoonsweps/crosshair/linecolor.vmt",
 	},
 }
+
+ss.Particles = {
+	MuzzleMist = "splatoonsweps_muzzlemist",
+}
+game.AddParticles "particles/splatoonsweps.pcf"
+for _, p in pairs(ss.Particles) do PrecacheParticleSystem(p) end
+
 ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
 ss.MAX_COLORS = #ss.InkColors

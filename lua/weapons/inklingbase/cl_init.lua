@@ -165,3 +165,15 @@ end
 function SWEP:IsTPS()
 	return not self:IsCarriedByLocalPlayer() or self.Owner:ShouldDrawLocalPlayer()
 end
+
+function SWEP:GetElements()
+	return self:IsTPS() and self.WElements or self.VElements
+end
+
+function SWEP:TranslateViewmodelPos(pos)
+	if self.Weapon:IsTPS() then return pos end
+	local dir = pos - EyePos() dir:Normalize()
+	local aim = EyeAngles():Forward()
+	dir = aim + self.Weapon.Owner:GetFOV() / self.Weapon.ViewModelFOV * (dir - aim)
+	return EyePos() + dir * pos:Distance(EyePos())
+end

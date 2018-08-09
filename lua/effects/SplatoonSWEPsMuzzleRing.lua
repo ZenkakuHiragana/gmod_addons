@@ -41,17 +41,11 @@ function EFFECT:Render()
 	if not isnumber(self.deg) then return end
 	if not isnumber(self.tmax) then return end
 	if not isnumber(self.tmin) then return end
-	local mul = self.Weapon.WElements.weapon.size
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	local norm = ang:Forward()
-	if not self.Weapon:IsTPS() then
-		local enddir = pos - EyePos() enddir:Normalize()
-		local aimdir = EyeAngles():Forward()
-		local dir = aimdir + self.Weapon.Owner:GetFOV() / self.Weapon.ViewModelFOV * (enddir - aimdir)
-		pos = EyePos() + dir * pos:Distance(EyePos())
-		mul = self.Weapon.VElements.weapon.size
-	end
-	
+	local mul = self.Weapon:IsTPS() and
+	self.Weapon.WElements.weapon.size or self.Weapon.VElements.weapon.size
+	pos = self.Weapon:TranslateViewmodelPos(pos)
 	mul = (mul.x + mul.y + mul.z) / 3
 	self:SetPos(pos)
 	
