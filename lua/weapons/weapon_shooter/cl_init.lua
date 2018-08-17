@@ -12,27 +12,31 @@ include "shared.lua"
 -- When the weapon is fired, it slightly expands.  This is maximum time to get back to normal size.
 local FireWeaponCooldown = 0.1
 local FireWeaponMultiplier = 1
-local function ExpandModel(self, model, bone_ent, pos, ang, v, matrix)
-	if v.inktank then return end
-	local fraction = (FireWeaponCooldown - SysTime() + self.ModifyWeaponSize) * FireWeaponMultiplier
-	matrix:Scale(ss.vector_one * math.max(1, fraction + 1))
+local function ExpandModel(self, vm)
+	local fraction = FireWeaponCooldown - SysTime() + self.ModifyWeaponSize
+	fraction = math.max(1, fraction * FireWeaponMultiplier + 1)
+	local s = ss.vector_one * fraction
+	self:ManipulateBoneScale(0, s)
+	if not IsValid(vm) then return end
+	vm:ManipulateBoneScale(vm:LookupBone "root_1", s)
+	function vm.GetInkColorProxy() return self:GetInkColorProxy() end
 end
 
-SWEP.PreDrawWorldModel = ExpandModel
 SWEP.PreViewModelDrawn = ExpandModel
+SWEP.PreDrawWorldModel = ExpandModel
 SWEP.IronSightsAng = {
 	Vector(), -- normal
-	Vector(0, -5, 0), -- left
-	Vector(0, 0, -75), -- top-right
-	Vector(-7, -8, 15), -- top-left
-	Vector(0, -3.25, 0), -- center
+	Vector(0, 0, 0), -- left
+	Vector(0, 0, -60), -- top-right
+	Vector(0, 0, 60), -- top-left
+	Vector(0, 0, 0), -- center
 }
 SWEP.IronSightsPos = {
 	Vector(), -- normal
-	Vector(-18, -4, 0), -- left
+	Vector(-12), -- left
 	Vector(), -- top-right
-	Vector(-18, -4, 8), -- top-left
-	Vector(-10, 0, -1), -- center
+	Vector(-12), -- top-left
+	Vector(-6, 0, -2), -- center
 }
 
 local crosshairalpha = 64
@@ -63,13 +67,9 @@ function SWEP:ClientInit()
 end
 
 function SWEP:GetMuzzlePosition()
-	local wt = self:GetElements().weapon
-	local ent = wt.modelEnt
-	if not IsValid(ent) then return self:GetPos() end
-	local mp = self.MuzzlePosition or vector_origin
-	local pos, ang = ent:GetPos(), ent:GetAngles()
-	mp = Vector(mp.x * wt.size.x, mp.y * wt.size.y, mp.z * wt.size.z)
-	return LocalToWorld(mp, angle_zero, pos, ang)
+	local ent = self:IsTPS() and self or self.Owner:GetViewModel()
+	local a = ent:GetAttachment(ent:LookupAttachment "muzzle")
+	return a.Pos, a.Ang
 end
 
 function SWEP:GetCrosshairTrace(t)
@@ -84,8 +84,8 @@ function SWEP:GetCrosshairTrace(t)
 	t.HitEntity = IsValid(t.Trace.Entity) and t.Trace.Entity:Health() > 0
 	t.Distance = t.Trace.HitPos:Distance(t.pos)
 	if t.HitEntity then
-		local w = ss:IsValidInkling(t.Trace.Entity)
-		if w and ss:IsAlly(w, self) then
+		local w = ss.IsValidInkling(t.Trace.Entity)
+		if w and ss.IsAlly(w, self) then
 			t.HitEntity = false
 		end
 	end
@@ -125,7 +125,7 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
 		
 		if not t.HitEntity then continue end
-		surface.SetDrawColor(self.InkColor)
+		surface.SetDrawColor(self.Color)
 		surface.SetMaterial(ss.Materials.Crosshair.LineColor)
 		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
 	end
@@ -152,22 +152,22 @@ function SWEP:DrawOuterCircle(t)
 	if t.HitEntity then
 		local rb = r + hitouterbg
 		surface.SetDrawColor(color_black)
-		ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, rb, rb - ri)
+		ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, rb, rb - ri)
 	end
 	
 	surface.SetDrawColor(t.Trace.Hit and t.CrosshairColor or self.Crosshair.color_circle)
-	ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - ri)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - ri)
 	
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_circle)
-	ss:DrawArc(t.AimPos.x, t.AimPos.y, r, r - ri)
+	ss.DrawArc(t.AimPos.x, t.AimPos.y, r, r - ri)
 end
 
 function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 	if not t.HitEntity then return end
 	local s = t.Size.Inner / 2
 	local lp = s + math.max(PaintFraction - (t.Distance / ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- line position
-	for mat, col in pairs {[""] = color_white, Color = self.InkColor} do
+	for mat, col in pairs {[""] = color_white, Color = self.Color} do
 		surface.SetMaterial(ss.Materials.Crosshair["Line" .. mat])
 		surface.SetDrawColor(col)
 		local w, h = t.Size.HitLine, t.Size.HitWidth
@@ -183,22 +183,22 @@ function SWEP:DrawInnerCircle(t)
 	local thickness = s - t.Size.Inner / 2 - 1
 	draw.NoTexture()
 	surface.SetDrawColor(t.Trace.Hit and color_white or self.Crosshair.color_nohit)
-	ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s, thickness)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s, thickness)
 	
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss:DrawArc(t.AimPos.x, t.AimPos.y, s, thickness)
+	ss.DrawArc(t.AimPos.x, t.AimPos.y, s, thickness)
 end
 
 function SWEP:DrawCenterDot(t) -- Center circle
 	local s = t.Size.Dot / 2
 	draw.NoTexture()
 	surface.SetDrawColor(color_white)
-	ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s)
 	
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss:DrawArc(t.AimPos.x, t.AimPos.y, s)
+	ss.DrawArc(t.AimPos.x, t.AimPos.y, s)
 end
 
 local swayspeed = .05
@@ -214,7 +214,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 		ang:RotateAroundAxis(ang:Forward(), da.z) -- roll
 		local dp = self.IronSightsPos[5] or Vector()
 		return pos + dp.x * ang:Right() + dp.y * ang:Forward() + dp.z * ang:Up(), ang
-	elseif ss:GetConVarBool "MoveViewmodel" and not self:Crouching() then
+	elseif ss.GetConVarBool "MoveViewmodel" and not self:Crouching() then
 		local x, y = ScrW() / 2, ScrH() / 2
 		if vgui.CursorVisible() then x, y = input.GetCursorPos() end
 		armpos = select(3, self:GetFirePosition(self:GetRange() * gui.ScreenToVector(x, y), RenderAngles(), EyePos()))
@@ -240,10 +240,10 @@ end
 
 function SWEP:SetupDrawCrosshair()
 	local t = {Size = {}}
-	t.CrosshairColor = ss:GetColor(ss.CrosshairColors[self:GetColorCode()])
+	t.CrosshairColor = ss.GetColor(ss.CrosshairColors[self.ColorCode])
 	t.AimPos = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range):ToScreen()
 	t.pos, t.dir = self:GetFirePosition()
-	t.IsSplatoon2 = ss:GetConVarBool "NewStyleCrosshair"
+	t.IsSplatoon2 = ss.GetConVarBool "NewStyleCrosshair"
 	local res = math.sqrt(ScrW() * ScrH() / originalres)
 	for param, size in pairs {
 		Dot = self.Crosshair.Dot,
@@ -279,120 +279,4 @@ function SWEP:DrawCrosshair(x, y, t)
 	return true
 end
 
-function SWEP:ClientPrimaryAttack(hasink, auto)
-	if not IsValid(self.Owner) then return end
-	local pos, dir = self:GetFirePosition()
-	local delay, lv = self.Cooldown, self:GetLaggedMovementValue()
-	if not game.SinglePlayer() then
-		self:SetAimTimer(math.max(self:GetAimTimer(), CurTime() + self.Primary.AimDuration))
-		if self:IsFirstTimePredicted() or self:CheckButtons(IN_ATTACK) then
-			self:SetInk(math.max(0, self:GetInk() - self.Primary.TakeAmmo))
-		end
-	end
-	
-	if not self:IsFirstTimePredicted() then return end
-	if not hasink then
-		if self.Primary.TripleShotDelay then self.Cooldown = CurTime() end
-		if self:IsCarriedByLocalPlayer() and self.PreviousInk then
-			surface.PlaySound(ss.TankEmpty)
-			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
-			self.PreviousInk = false
-		elseif CurTime() > self.NextPlayEmpty then
-			self:EmitSound "SplatoonSWEPs.EmptyShot"
-			self.NextPlayEmpty = CurTime() + self.Primary.Delay * 2
-		end
-		
-		return
-	end
-	
-	if self.Owner:IsPlayer() then
-		local rnda = self.Primary.Recoil * -1
-		local rndb = self.Primary.Recoil * math.Rand(-1, 1)
-		self.ViewPunch = Angle(rnda, rndb, rnda)
-	end
-	
-	local right = self.Owner:GetRight()
-	local ang = dir:Angle()
-	local angle_initvelocity = Angle(ang)
-	local DegRandomX = util.SharedRandom("SplatoonSWEPs: Spread", -self.Primary.SpreadBias, self.Primary.SpreadBias)
-	+ Lerp(self.Owner:GetVelocity().z * ss.SpreadJumpFraction, self.Primary.Spread, self.Primary.SpreadJump)
-	local rx = util.SharedRandom("SplatoonSWEPs: Spread", -DegRandomX, DegRandomX, CurTime() * 1e4)
-	local ry = util.SharedRandom("SplatoonSWEPs: Spread", -ss.mDegRandomY, ss.mDegRandomY, CurTime() * 1e3)
-	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
-	angle_initvelocity:RotateAroundAxis(right:Cross(dir), rx)
-	angle_initvelocity:RotateAroundAxis(right, ry)
-	local initvelocity = angle_initvelocity:Forward() * self.Primary.InitVelocity
-	
-	self.Owner:MuzzleFlash()
-	self.ModifyWeaponSize = SysTime()
-	self.PreviousInk = true
-	self.Cooldown = math.max(self.Cooldown, CurTime()
-	+ math.min(self.Primary.Delay, self.Primary.CrouchDelay) / lv)
-	if self:IsCarriedByLocalPlayer() or game.SinglePlayer() and not self.Owner:IsPlayer() then
-		self:EmitSound(self.ShootSound)
-	end
-	
-	local e = EffectData()
-	e:SetColor(self:GetColorCode())
-	e:SetEntity(self)
-	e:SetRadius(25)
-	util.Effect("SplatoonSWEPsMuzzleSplash", e)
-	
-	if self.ShowSplashRing then
-		local da = math.Rand(0, 360)
-		for i = 0, 4 do
-			e:SetFlags(1)
-			e:SetRadius(40)
-			e:SetScale(da + i * 72)
-			util.Effect("SplatoonSWEPsMuzzleRing", e)
-			if i > 1 then continue end
-			e:SetFlags(0)
-			e:SetRadius(30)
-			util.Effect("SplatoonSWEPsMuzzleRing", e)
-		end
-	elseif self.ShowMuzzleMist then
-		local e = self:GetElements()
-		local scale = e.weapon.size * 6
-		local mdl = self:IsTPS() and self or self.Owner:GetViewModel()
-		local pos, ang = self:GetMuzzlePosition()
-		pos = self:TranslateViewmodelPos(pos)
-		local localpos = WorldToLocal(pos, angle_zero, self:GetPos(), angle_zero)
-		local p = CreateParticleSystem(mdl, ss.Particles.MuzzleMist, PATTACH_POINT_FOLLOW, self.MuzzleAttachment, vector_origin)
-		p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, self:GetInkColorProxy())
-		p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, scale)
-		p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, pos + ang:Right() * 100)
-	end
-	
-	if self:IsCarriedByLocalPlayer() and not game.SinglePlayer() then
-		ss.InkTraces[{
-			Appearance = {
-				InitPos = pos,
-				Pos = pos,
-				Speed = self.Primary.InitVelocity,
-				TrailPos = pos,
-				Velocity = initvelocity,
-			},
-			Color = ss:GetColor(self:GetColorCode()),
-			ColorCode = self:GetColorCode(),
-			InitPos = pos,
-			InitTime = CurTime() - self:Ping(),
-			Speed = self.Primary.InitVelocity,
-			Straight = self.Primary.Straight,
-			TrailDelay = ss.ShooterTrailDelay,
-			TrailTime = RealTime(),
-			Velocity = initvelocity,
-			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
-			filter = self.Owner,
-			mask = ss.SquidSolidMask,
-			maxs = ss.vector_one * self.Primary.ColRadius,
-			mins = -ss.vector_one * self.Primary.ColRadius,
-			start = pos,
-		}] = true
-	end
-	
-	if game.SinglePlayer() or not self.Primary.TripleShotDelay or self.TripleSchedule.done < 2 then return end
-	self.Cooldown = CurTime() + (self.Primary.Delay * 2 + self.Primary.TripleShotDelay) / lv
-	self:SetAimTimer(self.Cooldown)
-	if not self:IsCarriedByLocalPlayer() then return end
-	self.TripleSchedule = self:AddSchedule(self.Primary.Delay, 2, self.PrimaryAttack)
-end
+function SWEP:ClientPrimaryAttack(able, auto) end

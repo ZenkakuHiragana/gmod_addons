@@ -12,15 +12,16 @@ local ref = Material "effects/water_warp01"
 function EFFECT:Init(e)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
-	self.Color = ss:GetColor(e:GetColor())
+	local f = e:GetFlags()
+	self.Color = ss.GetColor(e:GetColor())
 	self.deg = e:GetScale()
 	self.rad = e:GetRadius()
-	self.UseRefract = e:GetFlags() > 0
+	self.UseRefract = bit.band(f, 1) > 0
 	self.curl = self.UseRefract and 3 or 2
 	self.life = self.UseRefract and LifeTimeRef or LifeTime
 	self.tmax = self.rad / 3
 	self.tmin = self.rad / 6
-	self.InitTime = CurTime() - self.Weapon:Ping()
+	self.InitTime = CurTime() - self.Weapon:Ping() * bit.band(f, 128) / 128
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	self:SetPos(pos)
 	self:SetAngles(ang)
@@ -43,10 +44,7 @@ function EFFECT:Render()
 	if not isnumber(self.tmin) then return end
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	local norm = ang:Forward()
-	local mul = self.Weapon:IsTPS() and
-	self.Weapon.WElements.weapon.size or self.Weapon.VElements.weapon.size
-	pos = self.Weapon:TranslateViewmodelPos(pos)
-	mul = (mul.x + mul.y + mul.z) / 3
+	local mul = self.Weapon:IsTPS() and 1 or .5
 	self:SetPos(pos)
 	
 	render.SetMaterial(self.UseRefract and ref or mat)

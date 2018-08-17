@@ -12,10 +12,10 @@ SWEP.Variations = {{
 	ClassName = "weapon_l3nozzlenose_d",
 	Sub = "burstbomb",
 	Special = "kraken",
-	Bodygroup = {1},
+	Bodygroup = {[0] = 1},
 }}
 
-ss:SetPrimary(SWEP, {
+ss.SetPrimary(SWEP, {
 	IsAutomatic			= false,				-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .01,					-- Ink consumption per fire[-]
@@ -43,25 +43,4 @@ ss:SetPrimary(SWEP, {
 		MinDamage		= 15,					-- Deals minimum damage[frames]
 		DecreaseDamage	= 8,					-- Start decreasing damage[frames]
 	},
-})
-
-ss:SetViewModelMods(SWEP, {
-	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(1, 0, 2)},
-	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(50, -40, 0)},
-	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 28, -30)},
-	["ValveBiped.Bip01_Spine4"] = {
-		pos = Vector(-0.15, -5.5, -1),
-		angle = Angle(1, -8, -8),
-	},
-})
-
-ss:SetViewModel(SWEP, {
-	pos = Vector(2.8, -23, -7),
-	angle = Angle(12, 85, 90),
-	size = Vector(0.56, 0.56, 0.56),
-})
-
-ss:SetWorldModel(SWEP, {
-	pos = Vector(4, 0.6, 0),
-	angle = Angle(0, 1, 180),
 })

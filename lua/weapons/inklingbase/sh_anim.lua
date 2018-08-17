@@ -57,7 +57,7 @@ function SWEP:TranslateActivity(act)
 		return self.ActivityTranslateAI[act] or -1
 	end
 	
-	local holdtype = ss:ProtectedCall(self.CustomActivity, self) or "passive"
+	local holdtype = ss.ProtectedCall(self.CustomActivity, self) or "passive"
 	if self:Crouching() then holdtype = "melee2" end
 	if self:GetThrowing() then holdtype = "grenade" end
 	self.HoldType = holdtype
@@ -69,4 +69,21 @@ function SWEP:TranslateActivity(act)
 	end
 
 	return -1
+end
+
+-- event = 5xyy, x = option index, yy = effect type
+-- yy = 0 : SplatoonSWEPsMuzzleSplash
+--     x = 0 : Attach to muzzle
+--     x = 1 : Go backward (for charger's reverse splash)
+-- yy = 1 : SplatoonSWEPsMuzzleRing
+-- yy = 2 : SplatoonSWEPsMuzzleMist
+function SWEP:FireAnimationEvent(pos, ang, event, options)
+	if 5000 <= event and event < 6000 then
+		event = event - 5000
+		local vararg = string.Explode(" ", options)
+		table.insert(vararg, 1, math.floor(event / 100))
+		ss.ProtectedCall(ss.DispatchEffect[event % 100], self, vararg, pos, ang)
+	end
+	
+	return true
 end

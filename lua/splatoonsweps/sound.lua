@@ -25,7 +25,7 @@ ss.ChargerAim = Sound "splatoonsweps/weapons/charger/aim.wav"
 ss.ChargerBeep = Sound "splatoonsweps/weapons/charger/beep.mp3"
 
 sound.Add {
-	channel = CHAN_BODY,
+	channel = CHAN_AUTO,
 	name = "SplatoonSWEPs_Player.InkDiveShallow",
 	level = 75,
 	sound = "splatoonsweps/player/inkdiveshallow.wav",
@@ -34,7 +34,7 @@ sound.Add {
 }
 
 sound.Add {
-	channel = CHAN_BODY,
+	channel = CHAN_AUTO,
 	name = "SplatoonSWEPs_Player.InkDiveDeep",
 	level = 75,
 	sound = "splatoonsweps/player/inkdivedeep.wav",

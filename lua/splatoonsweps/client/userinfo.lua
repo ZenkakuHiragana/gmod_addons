@@ -34,12 +34,12 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 		LabelError:SizeToContents()
 		
 		local function GetColor() -- Get current color for preview model
-			local color = ss:GetColor(ss:GetConVarInt "InkColor")
+			local color = ss.GetColor(ss.GetConVarInt "InkColor")
 			return Vector(color.r, color.g, color.b) / 255
 		end
 		
 		local function GetPlayermodel(i)
-			return ss.Playermodel[i or ss:GetConVarInt "Playermodel"] or
+			return ss.Playermodel[i or ss.GetConVarInt "Playermodel"] or
 			player_manager.TranslatePlayerModel(GetConVar "cl_playermodel":GetString())
 		end
 		
@@ -93,7 +93,7 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 		CurrentColor:SetCursor "arrow"
 		CurrentColor:SetPos(window:GetWide() * .01, window:GetTall() * .01 + 24)
 		CurrentColor:SetSize(window:GetTall() / 16, window:GetTall() / 16)
-		CurrentColor:SetColor(ss:GetColor(ss:GetConVarInt "InkColor"))
+		CurrentColor:SetColor(ss.GetColor(ss.GetConVarInt "InkColor"))
 		
 		local ColorSelector = window:Add "DColorPalette" -- Color picker
 		ColorSelector:SetPos(window:GetWide() * .35, 60)
@@ -104,9 +104,9 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			local i = color:GetID()
 			color:SetToolTip(ss.Text.ColorNames[i])
 			function color:DoClick()
-				local cvar = ss:GetConVar "InkColor"
+				local cvar = ss.GetConVar "InkColor"
 				if cvar then cvar:SetInt(i) end
-				CurrentColor:SetColor(ss:GetColor(i))
+				CurrentColor:SetColor(ss.GetColor(i))
 			end
 		end
 		
@@ -126,7 +126,7 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			item:SetModel(GetPlayermodel(i))
 			item:SetToolTip(c)
 			function item:DoClick()
-				local cvar = ss:GetConVar "Playermodel"
+				local cvar = ss.GetConVar "Playermodel"
 				if cvar then cvar:SetInt(i) end
 				SetPlayerModel(Playermodel)
 			end
@@ -156,8 +156,8 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			local Check = Options:Add "DCheckBoxLabel"
 			Check:Dock(TOP)
 			Check:SetText(ss.Text.Options[i])
-			Check:SetConVar(ss:GetConVarName(OptionsConVar[i]))
-			Check:SetValue(ss:GetConVarInt(OptionsConVar[i]))
+			Check:SetConVar(ss.GetConVarName(OptionsConVar[i]))
+			Check:SetValue(ss.GetConVarInt(OptionsConVar[i]))
 			Check:SizeToContents()
 			
 			if OptionsConVar[i] == "AvoidWalls" then
@@ -178,7 +178,7 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 		ComboRes:SetPos(0, ypos)
 		ComboRes:SetSize(Options:GetWide() * .85, 17)
 		ComboRes:SetToolTip(ss.Text.DescRTResolution)
-		ComboRes:SetValue(ss.Text.RTResolutionName[ss:GetConVarInt "RTResolution" + 1])
+		ComboRes:SetValue(ss.Text.RTResolutionName[ss.GetConVarInt "RTResolution" + 1])
 		for i = 1, #ss.Text.RTResolutionName do
 			ComboRes:AddChoice(ss.Text.RTResolutionName[i])
 		end
@@ -189,7 +189,7 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 		LabelResReq:SetText(ss.Text.RTRestartRequired)
 		LabelResReq:SetTextColor(Color(255, 128, 128))
 		LabelResReq:SetToolTip(ss.Text.DescRTResolution)
-		LabelResReq:SetVisible(before ~= ss.RTSize[ss:GetConVarInt "RTResolution"])
+		LabelResReq:SetVisible(before ~= ss.RTSize[ss.GetConVarInt "RTResolution"])
 		LabelResReq:SizeToContents()
 		
 		local LabelRes = Options:Add "DLabel" -- Ink buffer size:
@@ -199,7 +199,7 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 		LabelRes:SizeToContents()
 		
 		function ComboRes:OnSelect(index, value, data)
-			local cvar = ss:GetConVar "RTResolution"
+			local cvar = ss.GetConVar "RTResolution"
 			if cvar then cvar:SetInt(index - 1) end
 			LabelResReq:SetVisible(before ~= ss.RTSize[index - 1])
 		end

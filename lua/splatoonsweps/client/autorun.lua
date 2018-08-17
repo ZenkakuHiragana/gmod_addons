@@ -130,7 +130,7 @@ end
 
 CreateClientConVar("cl_splatoonsweps_doomstyle", "0", false, false, ss.Text.CVarDescription.DoomStyle)
 CreateConVar("sv_splatoonsweps_ff", "0", CVarFlags, ss.Text.CVarDescription.FF)
-function ss:PrepareInkSurface(write)
+function ss.PrepareInkSurface(write)
 	GenerateBSPTree()
 	
 	local path = "splatoonsweps/" .. game.GetMap() .. "_decompress.txt"
@@ -171,11 +171,11 @@ function ss:PrepareInkSurface(write)
 			z = data:ReadFloat()
 			local v = Vector(x, y, z)
 			table.insert(surf.Vertices[i], v)
-			surf.Mins[i] = ss:MinVector(surf.Mins[i], v)
-			surf.Maxs[i] = ss:MaxVector(surf.Maxs[i], v)
+			surf.Mins[i] = ss.MinVector(surf.Mins[i], v)
+			surf.Maxs[i] = ss.MaxVector(surf.Maxs[i], v)
 		end
 		
-		ss:FindLeaf(surf.Vertices[i]).Surfaces[i] = true
+		ss.FindLeaf(surf.Vertices[i]).Surfaces[i] = true
 	end
 	
 	for _ = 1, numdisps do
@@ -195,8 +195,8 @@ function ss:PrepareInkSurface(write)
 			v.vec = Vector(x, y, z)
 			v.dist = data:ReadFloat()
 			disp.Positions[k] = v
-			surf.Mins[i] = ss:MinVector(surf.Mins[i], v.pos)
-			surf.Maxs[i] = ss:MaxVector(surf.Maxs[i], v.pos)
+			surf.Mins[i] = ss.MinVector(surf.Mins[i], v.pos)
+			surf.Maxs[i] = ss.MaxVector(surf.Maxs[i], v.pos)
 			table.insert(positions, v.pos)
 			
 			local invert = Either(k % 2 == 0, 1, 0) --Generate triangles from displacement mesh.
@@ -207,7 +207,7 @@ function ss:PrepareInkSurface(write)
 		end
 		
 		ss.Displacements[i] = disp
-		ss:FindLeaf(positions).Surfaces[i] = true
+		ss.FindLeaf(positions).Surfaces[i] = true
 	end
 	
 	data:Close()
@@ -218,7 +218,7 @@ function ss:PrepareInkSurface(write)
 		INK_SURFACE_DELTA_NORMAL = 2
 	end
 	
-	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(ss.RTSize[ss.GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
 	local rtmargin = 4 / rtsize -- Render Target margin
 	local arearatio = 41.3329546960896 / rtsize * -- arearatio[units/pixel], Found by Excel bulldozing
@@ -241,7 +241,7 @@ function ss:PrepareInkSurface(write)
 		if u == 0 then bk = #sortedsurfs end -- Storing the first element of current shelf
 		for i, vt in ipairs(surf.Vertices[k]) do -- Get UV coordinates
 			local meshvert = vt + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL
-			local UV = ss:To2D(vt, surf.Origins[k], surf.Angles[k]) / convertunit
+			local UV = ss.To2D(vt, surf.Origins[k], surf.Angles[k]) / convertunit
 			surf.Vertices[k][i] = {pos = meshvert, u = UV.x + u, v = UV.y + v}
 		end
 		
@@ -250,7 +250,7 @@ function ss:PrepareInkSurface(write)
 			for i = 0, #ss.Displacements[k].Positions do
 				local vt = ss.Displacements[k].Positions[i]
 				local meshvert = vt.pos - surf.Normals[k] * surf.Normals[k]:Dot(vt.vec * vt.dist)
-				local UV = ss:To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
+				local UV = ss.To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
 				vt.u, vt.v = UV.x + u, UV.y + v
 			end
 		end
@@ -353,8 +353,8 @@ function ss:PrepareInkSurface(write)
 		mesh.End()
 	end
 	
-	ss:ClearAllInk()
-	ss:InitializeMoveEmulation(LocalPlayer())
+	ss.ClearAllInk()
+	ss.InitializeMoveEmulation(LocalPlayer())
 	ss.PixelsToUnits = arearatio
 	ss.UVToUnits = convertunit
 	ss.UVToPixels = rtsize
@@ -373,7 +373,7 @@ local IMAGE_FORMAT_BGRA4444 = 19
 hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function()
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
 	if file.Exists(crashpath, "DATA") then -- If the client has crashed before, RT shrinks.
-		local res = ss:GetConVar "RTResolution"
+		local res = ss.GetConVar "RTResolution"
 		if res then res:SetInt(ss.RTResID.MINIMUM) end
 		notification.AddLegacy(ss.Text.Error.CrashDetected, NOTIFY_GENERIC, 15)
 	end
@@ -381,7 +381,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	file.Write(crashpath, "")
 	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
 	
-	local rtsize = math.min(ss.RTSize[ss:GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(ss.RTSize[ss.GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	rt.BaseTexture = GetRenderTargetEx(
 		ss.RTName.BaseTexture,
 		rtsize, rtsize,
@@ -449,50 +449,33 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	end
 	
 	data:Close()
-	ss:PrepareInkSurface(file.Read("data/" .. path, true))
+	ss.PrepareInkSurface(file.Read("data/" .. path, true))
 end)
 
-hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", function(ply)
-	local weapon = ss:IsValidInkling(ply)
-	if not weapon then return end
-	local ShouldDraw = Either(weapon:GetBecomeSquid(), ply:Crouching(), weapon:GetInInk())
+function ss.PostPlayerDraw() render.SetBlend(1) end
+function ss.PrePlayerDraw(w, ply)
+	local ShouldDraw = Either(w.BecomeSquid, ply:Crouching(), w:GetInInk())
 	ply:DrawShadow(not ShouldDraw)
+	w:DrawShadow(not ShouldDraw)
 	if ShouldDraw then return true end
-	if not weapon:IsCarriedByLocalPlayer() then return end
-	render.SetBlend(math.Clamp(weapon:GetPos():DistToSqr(EyePos()) / ss.CameraFadeDistance, 0, 1))
-end)
+	if not w:IsCarriedByLocalPlayer() then return end
+	render.SetBlend(math.Clamp(w:GetPos():DistToSqr(EyePos()) / ss.CameraFadeDistance, 0, 1))
+end
 
-hook.Add("PostPlayerDraw", "SplatoonSWEPs: Thirdperson player fadeout", function(ply)
-	local weapon = ss:IsValidInkling(ply)
-	if not weapon then return end
-	render.SetBlend(1)
-end)
-
-hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", function()
-	if LocalPlayer():ShouldDrawLocalPlayer()
-	or not ss:GetConVarBool "DrawInkOverlay" then return end
-	local weapon = ss:IsValidInkling(LocalPlayer())
-	if not (weapon and weapon:GetInInk()) then return end
-	local color = weapon:GetInkColorProxy()
+function ss.RenderScreenspaceEffects(w)
+	if not w:GetInInk() or LocalPlayer():ShouldDrawLocalPlayer() or not ss.GetConVarBool "DrawInkOverlay" then return end
+	local color = w:GetInkColorProxy()
 	DrawMaterialOverlay("effects/water_warp01", .1)
 	surface.SetDrawColor(ColorAlpha(color:ToColor(),
 	48 * (1.1 - math.sqrt(ss.GrayScaleFactor:Dot(color))) / ss.GrayScaleFactor:Dot(render.GetToneMappingScaleLinear())))
 	surface.DrawRect(0, 0, ScrW(), ScrH())
-end)
-
-hook.Add("OnCleanup", "SplatoonSWEPs: Cleanup all ink", function(t)
-	if LocalPlayer():IsAdmin() and (t == "all" or t == ss.CleanupTypeInk) then
-		net.Start "SplatoonSWEPs: Send ink cleanup"
-		net.SendToServer()
-	end
-end)
+end
 
 local PUNCH_DAMPING = 9.0
 local PUNCH_SPRING_CONSTANT = 65.0
-hook.Add("CalcView", "SplatoonSWEPs: ViewPunch clientside", function(p, o, a, f, zn, zf)
+function ss.CalcView(w, p, o, a, f, zn, zf)
 	if p:ShouldDrawLocalPlayer() then return end
-	local w = ss:IsValidInkling(p)
-	if not (w and isangle(w.ViewPunch)) then return end
+	if not isangle(w.ViewPunch) then return end
 	if math.abs(w.ViewPunch.p + w.ViewPunch.y + w.ViewPunch.r) > 0.001
 	or math.abs(w.ViewPunchVel.p + w.ViewPunchVel.y + w.ViewPunchVel.r) > 0.001 then
 		w.ViewPunch:Add(w.ViewPunchVel * FrameTime())
@@ -508,4 +491,15 @@ hook.Add("CalcView", "SplatoonSWEPs: ViewPunch clientside", function(p, o, a, f,
 	end
 	
 	return {angles = a + w.ViewPunch, fov = f, origin = o, znear = zn, zfar = zf}
+end
+
+hook.Add("CalcView", "SplatoonSWEPs: ViewPunch clientside", ss.hook "CalcView")
+hook.Add("PostPlayerDraw", "SplatoonSWEPs: Thirdperson player fadeout", ss.hook "PostPlayerDraw")
+hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", ss.hook "PrePlayerDraw")
+hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", ss.hook "RenderScreenspaceEffects")
+hook.Add("OnCleanup", "SplatoonSWEPs: Cleanup all ink", function(t)
+	if LocalPlayer():IsAdmin() and (t == "all" or t == ss.CleanupTypeInk) then
+		net.Start "SplatoonSWEPs: Send ink cleanup"
+		net.SendToServer()
+	end
 end)

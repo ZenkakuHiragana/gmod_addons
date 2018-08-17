@@ -12,17 +12,17 @@ SWEP.Variations = {
 		ClassName = "weapon_aerospray_rg",
 		Sub = "inkmine",
 		Special = "inkstrike",
-		Skin = 2,
+		Skin = 1,
 	},
 	{
 		ClassName = "weapon_aerospray_pg",
 		Sub = "burstbomb",
 		Special = "kraken",
-		Skin = 4,
+		Skin = 2,
 	},
 }
 
-ss:SetPrimary(SWEP, {
+ss.SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .005,					-- Ink consumption per fire[-]
@@ -49,34 +49,4 @@ ss:SetPrimary(SWEP, {
 		MinDamage		= 15,					-- Deals minimum damage[frames]
 		DecreaseDamage	= 8,					-- Start decreasing damage[frames]
 	},
-})
-
-ss:SetViewModelMods(SWEP, {
-	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2, -1.5, 2)},
-	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 28, -13)},
-	["ValveBiped.Bip01_R_Clavicle"] = {pos = Vector(0, 0, 0)},
-	["ValveBiped.Bip01_R_Finger1"] = {angle = Angle(-8, -20, 0)},
-	["ValveBiped.Bip01_R_Finger11"] = {angle = Angle(8, 25, 0)},
-	["ValveBiped.Bip01_R_Finger12"] = {angle = Angle(0, -60, 0)},
-	["ValveBiped.Bip01_R_Finger2"] = {angle = Angle(0, -30, 0)},
-	["ValveBiped.Bip01_R_Finger22"] = {angle = Angle(0, 45, 0)},
-	["ValveBiped.Bip01_R_Finger3"] = {angle = Angle(0, -20, 0)},
-	["ValveBiped.Bip01_R_Finger32"] = {angle = Angle(0, 20, 0)},
-	["ValveBiped.Bip01_R_Finger4"] = {angle = Angle(0, -40, 0)},
-	["ValveBiped.Bip01_R_Finger41"] = {angle = Angle(0, 20, 0)},
-	["ValveBiped.Bip01_Spine4"] = {
-		pos = Vector(-4, -8.5, 0),
-		angle = Angle(0, -10, 3),
-	},
-})
-
-ss:SetViewModel(SWEP, {
-	pos = Vector(6.1, -26, -7),
-	angle = Angle(0, 80, 90),
-	size = Vector(0.56, 0.56, 0.56),
-})
-
-ss:SetWorldModel(SWEP, {
-	pos = Vector(11, 1, -4),
-	angle = Angle(0, 10, 180),
 })

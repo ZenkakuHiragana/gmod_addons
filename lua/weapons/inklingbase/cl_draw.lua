@@ -203,8 +203,7 @@ function SWEP:CreateModels(t)
 end
 
 function SWEP:MakeSquidModel(id)
-	self.SquidModelNumber = self:GetPMID() == ss.PLAYER.OCTO
-		and ss.SQUID.OCTO or ss.SQUID.INKLING
+	self.SquidModelNumber = self.PMID == ss.PLAYER.OCTO and ss.SQUID.OCTO or ss.SQUID.INKLING
 	local modelpath = ss.Squidmodel[self.SquidModelNumber] --Octopus or squid?
 	if IsValid(self.Squid) then self.Squid:Remove() end
 	if file.Exists(modelpath, "GAME") then
@@ -226,18 +225,23 @@ function SWEP:MakeSquidModel(id)
 		end
 	elseif not self.ErrorSquidModel then
 		self.ErrorSquidModel = true
-		if self:GetBecomeSquid() then
+		if self.BecomeSquid then
 			self:PopupError "WeaponSquidModelNotFound"
 		end
 	end
 end
 
-function SWEP:PreDrawViewModel() render.SetBlend(0) end
-function SWEP:PostDrawViewModel() render.SetBlend(1) end
-function SWEP:ViewModelDrawn()
+function SWEP:PreDrawViewModel(vm)
+	for k, v in pairs(self.Bodygroup or {}) do vm:SetBodygroup(k, v) end
+	vm:SetSkin(self.Skin or 0)
+	ss.ProtectedCall(self.PreViewModelDrawn, self, vm)
+	vm:SetupBones()
+end
+
+function SWEP:ViewModelDrawn(vm)
 	if self.SurpressDrawingVM or self:GetHolstering() or
 	not (IsValid(self) and IsValid(self.Owner) and self.VElements) then return end
-	local bone_ent, vm = self.Owner, self.Owner:GetViewModel()
+	local bone_ent = self.Owner
 	self:UpdateBonePositions(vm)
 	
 	for k, name in ipairs(self.vRenderOrder) do
@@ -284,7 +288,7 @@ function SWEP:ViewModelDrawn()
 				render.SuppressEngineLighting(true)
 			end
 			
-			ss:ProtectedCall(self.PreViewModelDrawn, self, model, bone_ent, ang, pos, v, matrix)
+			ss.ProtectedCall(self.PreDrawViewModelElements, self, model, bone_ent, ang, pos, v, matrix)
 			model:EnableMatrix("RenderMultiply", matrix)
 			render.SetColorModulation(v.color.r / 255, v.color.g / 255, v.color.b / 255)
 			render.SetBlend(v.color.a / 255)
@@ -326,7 +330,7 @@ function SWEP:DrawWorldModel()
 		if self:GetHolstering() then return end
 		if self:Crouching() then
 			if self:GetInInk() then return
-			elseif self:GetBecomeSquid() then
+			elseif self.BecomeSquid then
 				if IsValid(self.Squid) and not self:GetInInk() then
 					--It seems changing eye position doesn't work.
 					self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
@@ -355,7 +359,13 @@ function SWEP:DrawWorldModel()
 		end
 	end
 	
+	ss.ProtectedCall(self.PreDrawWorldModel, self)
+	self.WorldModel = self.ModelPath .. (self:GetThrowing() and "w_left.mdl" or "w_right.mdl")
+	self:SetModel(self.WorldModel)
+	for k, v in pairs(self.Bodygroup or {}) do self:SetBodygroup(k, v) end
+	self:SetSkin(self.Skin or 0)
 	self:SetupBones()
+	self:DrawModel()
 	local bone_ent = self.Owner -- when the weapon is dropped
 	if not IsValid(bone_ent) then bone_ent = self end
 	if not self:IsCarriedByLocalPlayer() then self:Think() end
@@ -449,7 +459,7 @@ function SWEP:DrawWorldModel()
 				model:SetupBones()
 			end
 			
-			ss:ProtectedCall(self.PreDrawWorldModel, self, model, bone_ent, pos, ang, v, matrix)
+			ss.ProtectedCall(self.PreDrawWorldModelElements, self, model, bone_ent, pos, ang, v, matrix)
 			model:EnableMatrix("RenderMultiply", matrix)
 			render.SetColorModulation(v.color.r / 255, v.color.g / 255, v.color.b / 255)
 			render.SetBlend(v.color.a / 255 * cameradistance)
@@ -492,7 +502,7 @@ function SWEP:CustomAmmoDisplay()
 	self.AmmoDisplay = self.AmmoDisplay or {}
 	self.AmmoDisplay.Draw = true
 	self.AmmoDisplay.PrimaryClip = self:GetInk() / ss.MaxInkAmount * 100
-	self.AmmoDisplay.PrimaryAmmo = ss:ProtectedCall(self.DisplayAmmo, self) or ss.MaxInkAmount
+	self.AmmoDisplay.PrimaryAmmo = ss.ProtectedCall(self.DisplayAmmo, self) or ss.MaxInkAmount
 	return self.AmmoDisplay
 end
 
@@ -515,9 +525,9 @@ function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
 end
 
 function SWEP:DoDrawCrosshair(x, y)
-	if not ss:GetConVarBool "DrawCrosshair" then return end
+	if not ss.GetConVarBool "DrawCrosshair" then return end
 	if vgui.CursorVisible() then x, y = input.GetCursorPos() end
 	
-	return ss:ProtectedCall(self.DrawCrosshair, self, x, y,
-	ss:ProtectedCall(self.SetupDrawCrosshair, self, x, y))
+	return ss.ProtectedCall(self.DrawCrosshair, self, x, y,
+	ss.ProtectedCall(self.SetupDrawCrosshair, self, x, y))
 end

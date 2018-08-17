@@ -32,18 +32,18 @@ if CVarEnabled and not CVarEnabled:GetBool() then SplatoonSWEPs = nil return end
 CreateConVar("sv_splatoonsweps_ff", "0", CVarFlags, ss.Text.CVarDescription.FF)
 concommand.Add("sv_splatoonsweps_clear", function(ply, cmd, args, argstr)
 	if not IsValid(ply) and game.IsDedicated() or IsValid(ply) and ply:IsAdmin() then
-		ss:ClearAllInk()
+		ss.ClearAllInk()
 	end
 end, nil, ss.Text.CVarDescription.Clear, FCVAR_SERVER_CAN_EXECUTE)
 
 -- Clears all ink in the world.
 -- Sends a net message to clear ink on clientside.
-function ss:ClearAllInk()
+function ss.ClearAllInk()
 	net.Start "SplatoonSWEPs: Send ink cleanup"
 	net.Send(ss.PlayersReady)
 	
 	ss.InkCounter, ss.InkQueue = 0, {}
-	for node in ss:BSPPairsAll() do
+	for node in ss.BSPPairsAll() do
 		for i = 1, #node.Surfaces.InkCircles do
 			node.Surfaces.InkCircles[i] = {}
 		end
@@ -58,7 +58,7 @@ end
 --   Player user		| The receiver.
 --   number icon		| Notification icon.  Note that NOTIFY_Enums are only in clientside.
 --   number duration	| The number of seconds to display the notification for.
-function ss:SendError(msg, user, icon, duration)
+function ss.SendError(msg, user, icon, duration)
 	if user and not user:IsPlayer() then return end
 	net.Start "SplatoonSWEPs: Send an error message"
 	net.WriteUInt(icon or 1, ss.SEND_ERROR_NOTIFY_BITS)
@@ -91,7 +91,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 		data:WriteDouble(ss.AspectSum)
 		data:WriteDouble(ss.AspectSumX)
 		data:WriteDouble(ss.AspectSumY)
-		for node in ss:BSPPairsAll() do
+		for node in ss.BSPPairsAll() do
 			local surf = node.Surfaces
 			for i, index in ipairs(surf.Indices) do
 				data:WriteULong(math.abs(index))
@@ -154,8 +154,8 @@ end)
 
 hook.Add("PlayerInitialSpawn", "SplatoonSWEPs: Add a player", function(ply)
 	if ply:IsBot() then return end
-	ss:ClearAllInk()
-	ss:InitializeMoveEmulation(ply)
+	ss.ClearAllInk()
+	ss.InitializeMoveEmulation(ply)
 end)
 
 hook.Add("PlayerDisconnected", "SplatoonSWEPs: Reset player's readiness", function(ply)
@@ -163,17 +163,17 @@ hook.Add("PlayerDisconnected", "SplatoonSWEPs: Reset player's readiness", functi
 end)
 
 hook.Add("GetFallDamage", "SplatoonSWEPs: Inklings don't take fall damage.", function(ply, speed)
-	return ss:IsValidInkling(ply) and 0 or nil
+	return ss.IsValidInkling(ply) and 0 or nil
 end)
 
 hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, dmg)
 	if ent:Health() <= 0 then return end
-	local entweapon = ss:IsValidInkling(ent)
+	local entweapon = ss.IsValidInkling(ent)
 	if not entweapon then return end
 	local atk = dmg:GetAttacker()
 	local inf = dmg:GetInflictor()
 	if not (IsValid(atk) and inf.IsSplatoonWeapon) then return end
-	if ss:IsAlly(entweapon, inf) then return true end
+	if ss.IsAlly(entweapon, inf) then return true end
 	entweapon.HealSchedule:SetDelay(45 * ss.FrameToSec)
 	if ent:IsPlayer() then
 		net.Start "SplatoonSWEPs: Play damage sound"

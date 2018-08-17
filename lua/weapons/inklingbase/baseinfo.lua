@@ -26,13 +26,11 @@ end
 SWEP.PrintName = "Inkling base"
 SWEP.Spawnable = false
 SWEP.HoldType = "crossbow"
-SWEP.ViewModel = "models/weapons/c_irifle.mdl"
-SWEP.WorldModel = "models/weapons/w_irifle.mdl"
 SWEP.Slot = 1
 SWEP.SlotPos = 2
 SWEP.IsSplatoonWeapon = true
 SWEP.m_WeaponDeploySpeed = 5
-ss:SetPrimary(SWEP, {
+ss.SetPrimary(SWEP, {
 	Recoil				= .2,	--Viewmodel recoil intensity
 	TakeAmmo			= .01,	--Ink consumption per fire[-].
 	Delay = {
@@ -42,7 +40,7 @@ ss:SetPrimary(SWEP, {
 	},
 })
 
-ss:SetSecondary(SWEP, {
+ss.SetSecondary(SWEP, {
 	IsAutomatic			= true,
 	Recoil				= .2,
 	TakeAmmo			= .7,	 --Sub weapon consumption[-].

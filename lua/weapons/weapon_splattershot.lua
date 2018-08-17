@@ -12,16 +12,17 @@ SWEP.Variations = {
 		ClassName = "weapon_splattershot_tentatek",
 		Sub = "suctionbomb",
 		Special = "inkzooka",
-		Skin = 3,
+		Skin = 1,
 	},
 	{
 		ClassName = "weapon_splattershot_wasabi",
 		Sub = "splatbomb",
 		Special = "inkstrike",
-		Skin = 6,
+		Skin = 2,
 	},
 	{
 		ClassName = "weapon_heroshot",
+		ModelPath = "models/splatoonsweps/weapon_heroshot/",
 		MuzzlePosition = Vector(20, 0, 7.5),
 		WeaponModelName = Model "models/props_splatoon/weapons/primaries/hero_shot/hero_shot.mdl",
 		ViewModelPos = Vector(4, -23, -7.2),
@@ -30,6 +31,7 @@ SWEP.Variations = {
 	{
 		ClassName = "weapon_octoshot",
 		ShootSound = "SplatoonSWEPs.Octoshot",
+		ModelPath = "models/splatoonsweps/weapon_octoshot/",
 		MuzzlePosition = Vector(20, 0, 0.3),
 		WeaponModelName = Model "models/props_splatoon/weapons/primaries/octoshot/octoshot.mdl",
 		ViewModelPos = Vector(6.2, -24.3, -6.9),
@@ -40,7 +42,7 @@ SWEP.Variations = {
 	},
 }
 
-ss:SetPrimary(SWEP, {
+ss.SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .009,					-- Ink consumption per fire[-]
@@ -67,25 +69,4 @@ ss:SetPrimary(SWEP, {
 		MinDamage		= 15,					-- Deals minimum damage[frames]
 		DecreaseDamage	= 8,					-- Start decreasing damage[frames]
 	},
-})
-
-ss:SetViewModelMods(SWEP, {
-	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2, -2, 2)},
-	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(7, -31, 0)},
-	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 23, -12)},
-	["ValveBiped.Bip01_Spine4"] = {
-		pos = Vector(1, -5, 0),
-		angle = Angle(2.8, -6.5, -9),
-	},
-})
-
-ss:SetViewModel(SWEP, {
-	pos = Vector(3.3, -23.5, -7.2),
-	angle = Angle(12.736, 79, 90),
-	size = Vector(0.56, 0.56, 0.56),
-})
-
-ss:SetWorldModel(SWEP, {
-	pos = Vector(4, 0.6, 0.5),
-	angle = Angle(0, 1, 180),
 })

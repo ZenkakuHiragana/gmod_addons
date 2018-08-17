@@ -15,13 +15,12 @@ SWEP.Crosshair = {
 }
 
 function SWEP:ClientInit()
-	self.AimSound = CreateSound(self, ss.ChargerAim)
 	self.MinRenderBounds, self.MaxRenderBounds = self:GetRenderBounds()
 	self.BaseClass.ClientInit(self)
 end
 
 function SWEP:DisplayAmmo()
-	if not self:GetChargeFlag() then return 0 end
+	if self:GetCharge() == math.huge then return 0 end
 	return math.max(self:GetChargeProgress(true) * 100, 0)
 end
 
@@ -35,15 +34,15 @@ function SWEP:DrawOuterCircle(t)
 	
 	draw.NoTexture()
 	surface.SetDrawColor(ColorAlpha(color_black, 192))
-	ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - ri, 90, 450 - prog, 5)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - ri, 90, 450 - prog, 5)
 	surface.SetDrawColor(t.CrosshairDarkColor)
-	ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - rm, 90, 450 - prog, 5)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - rm, 90, 450 - prog, 5)
 	surface.SetDrawColor(self.Crosshair.color_hit)
-	ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - ri, 90 - prog, 90, 5)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - ri, 90 - prog, 90, 5)
 	
 	if not t.Trace.Hit then return end
 	surface.SetDrawColor(t.CrosshairColor)
-	ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - rm)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - rm)
 end
 
 local innerwidth = 2
@@ -51,26 +50,26 @@ function SWEP:DrawInnerCircle(t)
 	local s = t.Size.Inner / 2
 	draw.NoTexture()
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss:DrawArc(t.AimPos.x, t.AimPos.y, s + innerwidth, innerwidth)
+	ss.DrawArc(t.AimPos.x, t.AimPos.y, s + innerwidth, innerwidth)
 end
 
 function SWEP:DrawCenterDot(t) -- Center circle
 	local s = t.Size.Dot / 2
 	draw.NoTexture()
 	surface.SetDrawColor(self.Crosshair.color_circle)
-	ss:DrawArc(t.AimPos.x, t.AimPos.y, s + innerwidth)
+	ss.DrawArc(t.AimPos.x, t.AimPos.y, s + innerwidth)
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss:DrawArc(t.AimPos.x, t.AimPos.y, s)
+	ss.DrawArc(t.AimPos.x, t.AimPos.y, s)
 	
 	if not t.Trace.Hit then return end
 	surface.SetDrawColor(t.CrosshairDarkColor)
-	ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s + innerwidth)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s + innerwidth)
 	surface.SetDrawColor(t.CrosshairColor)
-	ss:DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s)
 end
 
 function SWEP:DrawCrosshair(x, y, t)
-	if not self:GetChargeFlag() then return end
+	if self:GetCharge() == math.huge then return end
 	t.CrosshairDarkColor = ColorAlpha(t.CrosshairColor, 192)
 	t.CrosshairDarkColor.r, t.CrosshairDarkColor.g, t.CrosshairDarkColor.b
 	= t.CrosshairDarkColor.r / 2, t.CrosshairDarkColor.g / 2, t.CrosshairDarkColor.b / 2

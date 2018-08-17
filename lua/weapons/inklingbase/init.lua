@@ -36,8 +36,6 @@ function SWEP:ChangePlayermodel(data)
 end
 
 function SWEP:Initialize()
-	self.OwnerVelocity = vector_origin
-	self.ViewAnim = ACT_VM_IDLE
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
 	self:SetInk(ss.MaxInkAmount)
@@ -64,23 +62,17 @@ function SWEP:Initialize()
 		end)
 	end
 	
-	ss:ProtectedCall(self.ServerInit, self)
+	ss.ProtectedCall(self.ServerInit, self)
 end
 
 function SWEP:OnRemove()
 	return self:Holster()
 end
 
-function SWEP:ShouldDropOnDie()
-	return true
-end
-
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
-	self.OwnerVelocity = self.Owner:GetVelocity()
-	self.ViewAnim = ACT_VM_IDLE
 	if self.Owner:IsPlayer() and not self.Owner:IsBot() then
 		for i, param in ipairs {
 			"Playermodel", "InkColor",
@@ -88,35 +80,41 @@ function SWEP:Deploy()
 			"CanReloadStand", "CanReloadInk",
 			"BecomeSquid", "AvoidWalls",
 		} do
-			local value = self.Owner:GetInfoNum(ss:GetConVarName(param), ss.ConVarDefaults[ss.ConVarName[param]])
+			local value = self.Owner:GetInfoNum(ss.GetConVarName(param), ss.ConVarDefaults[ss.ConVarName[param]])
 			if i == 1 then
-				self:SetPMID(value)
+				self.PMID = value
 			elseif i == 2 then
-				self:SetColorCode(value)
+				self.ColorCode = value
 			else
-				self["Set" .. param](self, value > 0)
+				self[param] = value > 0
 			end
 		end
 	else
-		self:SetPMID(table.Random(ss.PLAYER))
-		self:SetAvoidWalls(true)
-		self:SetBecomeSquid(true)
-		self:SetCanHealStand(true)
-		self:SetCanHealInk(true)
-		self:SetCanReloadStand(true)
-		self:SetCanReloadInk(true)
-		self:SetColorCode(math.random(ss.MAX_COLORS))
+		self.AvoidWalls = true
+		self.BecomeSquid = true
+		self.CanHealStand = true
+		self.CanHealInk = true
+		self.CanReloadStand = true
+		self.CanReloadInk = true
+		self.ColorCode = math.random(ss.MAX_COLORS)
+		self.PMID = table.Random(ss.PLAYER)
 	end
 	
-	if self.Owner:IsPlayer() then
-		net.Start "SplatoonSWEPs: Client Deploy"
-		net.WriteEntity(self)
-		net.Send(ss.PlayersReady)
-	end
+	net.Start "SplatoonSWEPs: Send weapon settings"
+	net.WriteEntity(self)
+	net.WriteBool(self.AvoidWalls)
+	net.WriteBool(self.BecomeSquid)
+	net.WriteBool(self.CanHealStand)
+	net.WriteBool(self.CanHealInk)
+	net.WriteBool(self.CanReloadStand)
+	net.WriteBool(self.CanReloadInk)
+	net.WriteUInt(self.ColorCode, ss.COLOR_BITS)
+	net.WriteUInt(self.PMID, ss.PLAYER_BITS)
+	net.Send(ss.PlayersReady)
 	
-	self.Color = ss:GetColor(self:GetColorCode())
+	self.Color = ss.GetColor(self.ColorCode)
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
-	self.SquidAvailable = tobool(ss:GetSquidmodel(self:GetPMID()))
+	self.SquidAvailable = tobool(ss.GetSquidmodel(self.PMID))
 	if self.Owner:IsPlayer() then
 		self.BackupPlayerInfo = {
 			Color = self.Owner:GetColor(),
@@ -153,7 +151,7 @@ function SWEP:Deploy()
 			self.BackupPlayerInfo.SubMaterial[i] = submat
 		end
 	
-		local PMPath = ss.Playermodel[self:GetPMID()]
+		local PMPath = ss.Playermodel[self.PMID]
 		if PMPath then
 			if file.Exists(PMPath, "GAME") then
 				self.PMTable = {
@@ -165,13 +163,13 @@ function SWEP:Deploy()
 				}
 				self:ChangePlayermodel(self.PMTable)
 			else
-				ss:SendError("WeaponPlayermodelNotFound", self.Owner)
+				ss.SendError("WeaponPlayermodelNotFound", self.Owner)
 			end
 		else
 			self.Owner:SetPlayerColor(self:GetInkColorProxy())
 		end
 		
-		ss:ProtectedCall(self.Owner.SplatColors, self.Owner)
+		ss.ProtectedCall(self.Owner.SplatColors, self.Owner)
 	end
 	
 	return self:SharedDeployBase()
@@ -180,7 +178,6 @@ end
 function SWEP:Holster()
 	if self:GetInFence() then return false end
 	if not IsValid(self.Owner) then return true end
-	if game.SinglePlayer() and self.Owner:IsPlayer() then self:CallOnClient "Holster" end
 	self.PMTable = nil
 	if self.Owner:IsPlayer() then
 		self.Owner:SetDSP(1)
@@ -218,5 +215,5 @@ function SWEP:Think()
 	self:ProcessSchedules()
 	self:UpdateInkState()
 	self:SharedThinkBase()
-	ss:ProtectedCall(self.ServerThink, self)
+	ss.ProtectedCall(self.ServerThink, self)
 end

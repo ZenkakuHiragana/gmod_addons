@@ -171,7 +171,7 @@ end
 local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	if #v3d < 3 or bsp.FaceIndex > 1247232 then return end
 	
-	local surf = ss:FindLeaf(disp or v3d).Surfaces
+	local surf = ss.FindLeaf(disp or v3d).Surfaces
 	local area, bound, minangle, minmins = math.huge, nil, nil, nil
 	for i, v in ipairs(v2d) do -- Get minimum AABB with O(n^2)
 		local seg = v2d[i % #v2d + 1] - v
@@ -193,7 +193,7 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	end
 	
 	minmins:Rotate(minangle)
-	origin = ss:To3D(minmins, origin, angle)
+	origin = ss.To3D(minmins, origin, angle)
 	angle:RotateAroundAxis(normal, minangle.yaw)
 	bound.z = minangle.yaw
 	bsp.FaceIndex = bsp.FaceIndex + 1
@@ -222,9 +222,9 @@ local function MakeTriangle(vert)
 	local maxs = -mins
 	local v2d = {}
 	for i, v in ipairs(vert) do
-		mins = ss:MinVector(mins, v) -- Calculate bounding box
-		maxs = ss:MaxVector(maxs, v)
-		v2d[i] = ss:To2D(v, origin, angle)
+		mins = ss.MinVector(mins, v) -- Calculate bounding box
+		maxs = ss.MaxVector(maxs, v)
+		v2d[i] = ss.To2D(v, origin, angle)
 	end
 	
 	return MakeSurface(mins, maxs, normal, angle, origin, v2d, vert)
@@ -434,7 +434,7 @@ end,
 		center = center / (#fullverts + 1)
 		
 		for k, v in pairs(fullverts) do
-			full2d[k] = ss:To2D(v, center, angle)
+			full2d[k] = ss.To2D(v, center, angle)
 		end
 		
 		local v3d, v2d = {}, {} -- Vector3D, 2D
@@ -445,8 +445,8 @@ end,
 			local v2, v3 = full2d[k], fullverts[k]
 			local _next, prev = full2d[(k + 1) % nf], full2d[(k + nf - 1) % nf]
 			local sin = (prev - v2):GetNormalized():Cross((_next - v2):GetNormalized()).z
-			mins = ss:MinVector(mins, v3) -- Calculate bounding box
-			maxs = ss:MaxVector(maxs, v3)
+			mins = ss.MinVector(mins, v3) -- Calculate bounding box
+			maxs = ss.MaxVector(maxs, v3)
 			table.insert(v2d, v2)
 			table.insert(v3d, v3)
 		end
@@ -472,8 +472,8 @@ end,
 			-- DispInfo.startPosition isn't always equal to v3d[1] so find correct one
 			do local i, min, start = {}, math.huge, 0
 				for k, v in ipairs(v3d) do
-					mins = ss:MinVector(mins, v) -- Calculate bounding box
-					maxs = ss:MaxVector(maxs, v)
+					mins = ss.MinVector(mins, v) -- Calculate bounding box
+					maxs = ss.MaxVector(maxs, v)
 					local dist = startPosition:DistToSqr(v)
 					if dist > min then continue end
 					start, min = k, dist
@@ -495,9 +495,9 @@ end,
 				div2 = div2 - div1
 				v.origin = div1 + div2 * x / (power - 1)
 				v.pos = startPosition + v.origin + v.vec * v.dist
-				v.pos2d = ss:To2D(v.pos - normal * normal:Dot(v.vec * v.dist), center, angle)
-				mins = ss:MinVector(mins, v.pos) -- Calculate bounding box
-				maxs = ss:MaxVector(maxs, v.pos)
+				v.pos2d = ss.To2D(v.pos - normal * normal:Dot(v.vec * v.dist), center, angle)
+				mins = ss.MinVector(mins, v.pos) -- Calculate bounding box
+				maxs = ss.MaxVector(maxs, v.pos)
 				table.insert(isdisp, v.pos)
 				table.insert(isdisp.Positions2D, v.pos2d)
 			end

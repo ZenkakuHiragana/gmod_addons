@@ -47,7 +47,7 @@ local function GetLight(p, n)
 	return (light + lightcolor + amb) / 2.3
 end
 
-function ss:ClearAllInk()
+function ss.ClearAllInk()
 	ss.InkCounter, ss.InkQueue, ss.InkTraces = 0, {}, {}
 	local amb = ss.AmbientColor
 	if not amb then
@@ -92,13 +92,13 @@ local MAX_DEGREES_DIFFERENCE = 45 -- Maximum angle difference between two surfac
 local MAX_COS_DEG_DIFF = math.cos(math.rad(MAX_DEGREES_DIFFERENCE)) -- Used by filtering process
 local POINT_BOUND = ss.vector_one * .1
 local rootpi = math.sqrt(math.pi) / 2
-function ss:GetSurfaceColor(tr)
+function ss.GetSurfaceColor(tr)
 	if not tr.Hit then return end
-	for node in ss:BSPPairs {tr.HitPos} do
+	for node in ss.BSPPairs {tr.HitPos} do
 		for i in pairs(node.Surfaces) do
 			if surf.Normals[i]:Dot(tr.HitNormal) <= MAX_COS_DEG_DIFF * (ss.Displacements[i] and .5 or 1) or not
-			ss:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
-			local p2d = ss:To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
+			ss.CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
+			local p2d = ss.To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
 			for r in SortedPairsByValue(surf.InkCircles[i], true) do
 				local t = ss.InkShotMaterials[r.texid]
 				local w, h = t.width, t.height
@@ -126,12 +126,12 @@ local tick = coroutine.create(function()
 		for q in pairs(ss.InkQueue) do
 			q.done, done = q.done + 1, done + 1
 			local angle, origin, normal, moved = Angles[q.n], Origins[q.n], Normals[q.n], Moved[q.n]
-			local pos2d = ss:To2D(q.pos, origin, angle)
+			local pos2d = ss.To2D(q.pos, origin, angle)
 			if q.done > 5 then
 				local rectsize = q.r * rootpi
 				local sizevec = Vector(rectsize, rectsize)
 				local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
-				ss:AddInkRectangle(surf.InkCircles[q.n], ss.InkCounter, {
+				ss.AddInkRectangle(surf.InkCircles[q.n], ss.InkCounter, {
 					angle = q.inkangle,
 					bounds = {bmins.x, bmins.y, bmaxs.x, bmaxs.y},
 					color = q.c,
@@ -146,7 +146,7 @@ local tick = coroutine.create(function()
 			
 			pos2d = pos2d * ss.UnitsToPixels
 			local bound = surf.Bounds[q.n] * ss.UnitsToPixels
-			local color = ss:GetColor(q.c)
+			local color = ss.GetColor(q.c)
 			local r = math.Round(q.r * ss.UnitsToPixels)
 			local uvorg = Vector(surf.u[q.n], surf.v[q.n]) * ss.UVToPixels
 			if moved then pos2d.x, q.inkangle = -pos2d.x, -q.inkangle - 90 end
@@ -157,7 +157,7 @@ local tick = coroutine.create(function()
 			local s = Vector(math.floor(uvorg.x) - 1, math.floor(uvorg.y) - 1) -- ScissorRect start
 			local settexture = "splatoonsweps/inkshot/shot" .. tostring(q.t)
 			local vrad = ss.vector_one * r
-			if not ss:CollisionAABB2D(s, b, c - vrad, c + vrad) then q.done = math.huge continue end
+			if not ss.CollisionAABB2D(s, b, c - vrad, c + vrad) then q.done = math.huge continue end
 			
 			inkmaterial:SetTexture("$basetexture", settexture)
 			normalmaterial:SetTexture("$basetexture", settexture .. "n")
@@ -197,7 +197,7 @@ local tick = coroutine.create(function()
 				local rx = math.cos(frac * i) * r * (moved and -1 or 1)
 				local ry = math.sin(frac * i) * r
 				local rv = Vector(rx, ry) * ss.PixelsToUnits
-				surface.SetDrawColor(GetLight(ss:To3D(rv, lightorg, angle), normal):ToColor())
+				surface.SetDrawColor(GetLight(ss.To3D(rv, lightorg, angle), normal):ToColor())
 				surface.DrawTexturedRect(math.floor(rx + c.x - r), math.floor(ry + c.y - r), 2 * r, 2 * r)
 			end
 			cam.End2D()
@@ -224,11 +224,12 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 	if not rt.Ready then return end
 	local ct, rtime = CurTime(), RealTime()
 	local g = physenv.GetGravity() * 15
+	-- print(table.Count(ss.InkTraces))
 	for ink in pairs(ss.InkTraces) do
 		local lifetime = math.max(0, ct - ink.InitTime)
 		local trailtime = lifetime - ink.TrailDelay
 		local App = ink.Appearance -- Effect position fix
-		local w = ss:IsValidInkling(ink.filter)
+		local w = ss.IsValidInkling(ink.filter)
 		if w and lifetime < ink.Straight + DecreaseFrame then
 			local time = ink.Straight + DecreaseFrame / 2
 			local straightpos = ink.InitPos + ink.Velocity * time
@@ -272,7 +273,7 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 			if not App.TrailVelocity then
 				App.TrailVelocity = App.Velocity
 				if IsValid(ink.filter) then
-					local aimvector = ss:ProtectedCall(ink.filter.GetAimVector, ink.filter) or ink.filter:GetForward()
+					local aimvector = ss.ProtectedCall(ink.filter.GetAimVector, ink.filter) or ink.filter:GetForward()
 					App.TrailVelocity = aimvector * App.Speed
 				end
 			end
@@ -321,6 +322,12 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 		render.DrawSphere(mean, radius, 8, 8, ink.Color)
 		
 		if not tr.Hit then
+			if math.abs(tr.HitPos.x) > 16384 or
+			   math.abs(tr.HitPos.y) > 16384 or
+			   math.abs(tr.HitPos.z) > 16384 then
+			   ss.InkTraces[ink] = nil
+			end
+			
 			ink.start = tr.HitPos
 			continue
 		elseif tr.HitWorld then
@@ -329,8 +336,8 @@ hook.Add("PostDrawTranslucentRenderables", "SplatoonSWEPs: Simulate ink", functi
 		elseif IsValid(tr.Entity) and tr.Entity:Health() > 0 then
 			-- Entity hit effect here
 			if ink.filter == LocalPlayer() then
-				local ent = ss:IsValidInkling(tr.Entity)
-				if not (ent and ss:IsAlly(ent, ink.ColorCode)) then
+				local ent = ss.IsValidInkling(tr.Entity)
+				if not (ent and ss.IsAlly(ent, ink.ColorCode)) then
 					surface.PlaySound(ink.IsCritical and ss.DealDamageCritical or ss.DealDamage)
 				end
 			end

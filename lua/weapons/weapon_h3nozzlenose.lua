@@ -13,17 +13,17 @@ SWEP.Variations = {
 		ClassName = "weapon_h3nozzlenose_d",
 		Sub = "pointsensor",
 		Special = "inkzooka",
-		Bodygroup = {1, 1},
+		Bodygroup = {[0] = 1},
 	},
 	{
 		ClassName = "weapon_h3nozzlenose_cherry",
 		Sub = "splashwall",
 		Special = "bubbler",
-		Skin = 1,
+		Bodygroup = {[0] = 2},
 	},
 }
 
-ss:SetPrimary(SWEP, {
+ss.SetPrimary(SWEP, {
 	IsAutomatic			= false,				-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .016,					-- Ink consumption per fire[-]
@@ -51,27 +51,4 @@ ss:SetPrimary(SWEP, {
 		MinDamage		= 15,					-- Deals minimum damage[frames]
 		DecreaseDamage	= 8,					-- Start decreasing damage[frames]
 	},
-})
-
-ss:SetViewModelMods(SWEP, {
-	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(1, 0, 2)},
-	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(50, -40, 0)},
-	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 28, -30)},
-	["ValveBiped.Bip01_Spine4"] = {
-		pos = Vector(-0.15, -5.5, -1),
-		angle = Angle(1, -8, -8),
-	},
-})
-
-ss:SetViewModel(SWEP, {
-	pos = Vector(2.8, -23, -7),
-	angle = Angle(12, 85, 90),
-	size = Vector(0.56, 0.56, 0.56),
-	bodygroup = {[2] = 1},
-})
-
-ss:SetWorldModel(SWEP, {
-	pos = Vector(4, 0.6, 0),
-	angle = Angle(0, 1, 180),
-	bodygroup = {[2] = 1},
 })

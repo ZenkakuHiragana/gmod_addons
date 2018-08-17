@@ -4,7 +4,7 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
-function ss:SetPrimary(weapon, info)
+function ss.SetPrimary(weapon, info)
 	local p = istable(weapon.Primary) and weapon.Primary or {}
 	p.ClipSize = ss.MaxInkAmount --Clip size only for displaying.
 	p.DefaultClip = ss.MaxInkAmount
@@ -16,12 +16,12 @@ function ss:SetPrimary(weapon, info)
 	p.ReloadDelay = info.Delay.Reload * ss.FrameToSec
 	p.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
 	p.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
-	ss:ProtectedCall(ss.CustomPrimary[weapon.Base], p, info)
+	ss.ProtectedCall(ss.CustomPrimary[weapon.Base], p, info)
 	weapon.MuzzlePosition = info.MuzzlePosition
 	weapon.Primary = p
 end
 
-function ss:SetSecondary(weapon, info)
+function ss.SetSecondary(weapon, info)
 	local s = istable(weapon.Secondary) and weapon.Secondary or {}
 	s.ClipSize = -1
 	s.DefaultClip = -1
@@ -32,7 +32,7 @@ function ss:SetSecondary(weapon, info)
 	s.ReloadDelay = info.Delay.Reload * ss.FrameToSec
 	s.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
 	s.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
-	ss:ProtectedCall(ss.CustomSecondary[weapon.Base], s, info)
+	ss.ProtectedCall(ss.CustomSecondary[weapon.Base], s, info)
 	weapon.Secondary = s
 end
 
@@ -87,7 +87,7 @@ function ss.CustomPrimary.weapon_charger(p, info)
 	p.Automatic = true
 end
 
-function ss:SetViewModelMods(weapon, mods)
+function ss.SetViewModelMods(weapon, mods)
 	weapon.ViewModelBoneMods = weapon.ViewModelBoneMods or {}
 	for bone, mod in pairs(mods) do
 		weapon.ViewModelBoneMods[bone] = mod
@@ -97,7 +97,7 @@ function ss:SetViewModelMods(weapon, mods)
 	end
 end
 
-function ss:SetViewModel(weapon, view)
+function ss.SetViewModel(weapon, view)
 	weapon.VElements = weapon.VElements or {}
 	weapon.VElements.weapon = {
 		type = "Model",
@@ -115,7 +115,7 @@ function ss:SetViewModel(weapon, view)
 	}
 end
 
-function ss:SetWorldModel(weapon, world)
+function ss.SetWorldModel(weapon, world)
 	weapon.WElements = weapon.WElements or {}
 	weapon.WElements.weapon = {
 		type = "Model",
@@ -131,4 +131,70 @@ function ss:SetWorldModel(weapon, world)
 		skin = world.skin or 0,
 		bodygroup = world.bodygroup or {},
 	}
+end
+
+local SplatoonSWEPsMuzzleSplash = 0
+local SplatoonSWEPsMuzzleRing = 1
+local SplatoonSWEPsMuzzleMist = 2
+
+ss.DispatchEffect = {}
+local sd, e = ss.DispatchEffect, EffectData()
+sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
+	local tpslag = self:IsCarriedByLocalPlayer()
+	and self.Owner:ShouldDrawLocalPlayer() and 128 or 0
+	local ang, a, s, r = angle_zero, 7, 2, 25
+	if options[2] == "CHARGER" then
+		r, s = Lerp(self:GetFireAt(), 20, 60) / 2, 6
+		if options[1] == 1 then
+			if self:GetFireAt() < .3 then return end
+			ang = -Angle(150)
+		end
+	end
+	
+	e:SetAngles(ang) -- Angle difference
+	e:SetAttachment(a) -- Effect duration
+	e:SetColor(self.ColorCode or 0) -- Splash color
+	e:SetEntity(self) -- Enitity attach to
+	e:SetFlags(tpslag) -- Splash mode
+	e:SetScale(s) -- Splash length
+	e:SetRadius(r) -- Splash radius
+	util.Effect("SplatoonSWEPsMuzzleSplash", e)
+end
+
+sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
+	local numpieces = options[1]
+	local da, r1, r2 = math.Rand(0, 360), 40, 30
+	local tpslag = self:IsCarriedByLocalPlayer()
+	and self.Owner:ShouldDrawLocalPlayer() and 128 or 0
+	e:SetColor(self.ColorCode)
+	e:SetEntity(self)
+	
+	if options[2] == "CHARGER" then
+		r2 = Lerp(self:GetFireAt(), 20, 70)
+		r1 = r2 * 2
+	end
+	
+	for i = 0, 4 do
+		e:SetFlags(tpslag + 1) -- 1: Refract effect
+		e:SetRadius(r1)
+		e:SetScale(i * 72 + da)
+		util.Effect("SplatoonSWEPsMuzzleRing", e)
+		if i > numpieces then continue end
+		e:SetFlags(tpslag) -- 0: Splash effect
+		e:SetRadius(r2)
+		util.Effect("SplatoonSWEPsMuzzleRing", e)
+	end
+end
+
+sd[SplatoonSWEPsMuzzleMist] = function(self, options, pos, ang)
+	local scale = self:IsTPS() and 6 or 3
+	local mdl = self:IsTPS() and self or self.Owner:GetViewModel()
+	local pos, ang = self:GetMuzzlePosition()
+	pos = self:TranslateViewmodelPos(pos)
+	self.MuzzleAttachment = self.MuzzleAttachment or self:LookupAttachment "muzzle"
+	local localpos = WorldToLocal(pos, angle_zero, self:GetPos(), angle_zero)
+	local p = CreateParticleSystem(mdl, ss.Particles.MuzzleMist, PATTACH_POINT_FOLLOW, self.MuzzleAttachment, vector_origin)
+	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, self:GetInkColorProxy())
+	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ss.vector_one * scale)
+	p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, pos + ang:Right() * 100)
 end

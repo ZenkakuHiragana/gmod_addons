@@ -61,7 +61,7 @@ ss.MoveEmulation = ss.MoveEmulation or {
 }
 local FT = FrameTime
 local me, mv, ply = ss.MoveEmulation
-function ss:InitializeMoveEmulation(ply)
+function ss.InitializeMoveEmulation(ply)
 	if not IsValid(ply) then return end
 	for var, t in pairs(me) do
 		if t[ply] ~= nil then continue end
@@ -710,7 +710,7 @@ local function CheckJumpButton()
 
 	-- Add a little forward velocity based on your current forward velocity - if you are not sprinting.
 -- #if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
-	if game.SinglePlayer() then
+	if ss.sp then
 		local pMoveData = mv
 		local vecForward = Vector(me.m_vecForward[ply])
 		vecForward.z = 0
@@ -747,7 +747,7 @@ local function CheckJumpButton()
 	hook.Run("SplatoonSWEPs: OnPlayerJump", me.m_outJumpVel[ply].z)
 	
 	-- Set jump time.
-	if game.SinglePlayer() then
+	if ss.sp then
 		me.m_flJumpTime[ply] = GAMEMOVEMENT_JUMP_TIME
 		me.m_bInDuckJump[ply] = true
 	end
@@ -1809,21 +1809,19 @@ local function GetInFence(w, oldpos, newpos)
 	return tr.Entity ~= NULL and util.TraceHull(t).Entity == NULL
 end
 
--- GM:StartCommand is called both serverside/clientside on singleplayer/multiplayer, before GM:Move hook.
 local AttackMask = bit.bnot(IN_ATTACK)
 local DuckMask = bit.bnot(IN_DUCK)
-hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
+function ss.MoveHook(w, p, m)
 	ply, mv = p, m
-	local w = ss:IsValidInkling(ply)
-	if not w then return end
-	w:CheckButtons()
-	if (SERVER or ply:OnGround()) and (w.PreventCrouching or w.EnemyInkPreventCrouching) then
+	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and w:GetOnEnemyInk() and ply:KeyDown(IN_DUCK)
+	w.PreventCrouching = w:GetKey() ~= 0 and w:GetKey() ~= IN_DUCK or CurTime() < w:GetCooldown()
+	if w.PreventCrouching or w.EnemyInkPreventCrouching then
 		mv:SetButtons(bit.band(mv:GetButtons(), DuckMask))
 	end
 	
 	local maxspeed = math.min(mv:GetMaxSpeed(), w.InklingSpeed * 1.1)
 	if ply:OnGround() then -- Max speed clip
-		maxspeed = ss:ProtectedCall(w.CustomMoveSpeed, w) or w.InklingSpeed
+		maxspeed = ss.ProtectedCall(w.CustomMoveSpeed, w) or w.InklingSpeed
 		maxspeed = maxspeed * Either(ply:Crouching(), ss.SquidSpeedOutofInk, 1)
 		maxspeed = w:GetInInk() and w.SquidSpeed or maxspeed
 		maxspeed = w:GetOnEnemyInk() and w.OnEnemyInkSpeed or maxspeed
@@ -1878,17 +1876,11 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	-- Send viewmodel animation.
 	local infence = Either(SERVER, w:GetInFence(), me.m_bInFence[ply])
 	if ply:Crouching() then
-		w.SwimSound:ChangeVolume(w:GetInInk() and math.Clamp(mv:GetVelocity():Length() / w.SquidSpeed, 0, 1) or 0)
-		if not w.OldCrouching then
+		w.SwimSound:ChangeVolume(math.Clamp(mv:GetVelocity():Length() / w.SquidSpeed * (w:GetInInk() and 1 or 0), 0, 1))
+		if not w:GetOldCrouching() then
 			ply:RemoveAllDecals()
-			ss:ShouldSuppress(ply)
-			if SERVER or w:IsFirstTimePredicted() then
-				w:ChangeViewModel(ss.ViewModel.Squid)
-				w:EmitSound "SplatoonSWEPs_Player.ToSquid"
-			else
-				w:ChangeViewModel()
-			end
-			ss:ShouldSuppress()
+			w:EmitSound "SplatoonSWEPs_Player.ToSquid"
+			w:SendWeaponAnim(ss.ViewModel.Squid)
 		end
 		
 		if w:GetOnEnemyInk() then
@@ -1898,19 +1890,14 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 		end
 	elseif infence then -- Cannot stand while in fence
 		mv:AddKey(IN_DUCK) -- it's not correct behavior though
-	elseif not ply:Crouching() and w.OldCrouching then
+	elseif not ply:Crouching() and w:GetOldCrouching() then
 		w.SwimSound:ChangeVolume(0)
-		ss:ShouldSuppress(ply)
-		if SERVER or w:IsFirstTimePredicted() then
-			w:ChangeViewModel(ss.ViewModel.Standing)
-			w:EmitSound "SplatoonSWEPs_Player.ToHuman"
-		else
-			w:ChangeViewModel()
-		end
-		ss:ShouldSuppress()
+		w:EmitSound "SplatoonSWEPs_Player.ToHuman"
+		w:SendWeaponAnim(w:GetThrowing() and ss.ViewModel.Throwing or ss.ViewModel.Standing)
 	end
 	
 	w.OnOutofInk = w:GetInWallInk()
+	w:SetOldCrouching(ply:Crouching())
 	me.m_angViewPunchAngles[ply] = ply:GetViewPunchAngles()
 	me.m_bAllowAutoMovement[ply] = true
 	me.m_bInDuckJump[ply] = ply:Crouching() and not ply:OnGround()
@@ -1934,18 +1921,15 @@ hook.Add("Move", "SplatoonSWEPs: Squid's movement", function(p, m)
 	me.m_vecOldAngles[ply] = mv:GetOldAngles()
 	me.m_vecOrigin[ply] = mv:GetOrigin()
 	me.m_vecVelocity[ply] = mv:GetVelocity()
-	if SERVER or w:IsFirstTimePredicted() then w.OldCrouching = ply:Crouching() end
 	if CLIENT then me.m_bInFence[ply] = w:GetInFence() end
 	if infence and ply:GetMoveType() == MOVETYPE_NOCLIP then
 		ply:SetMoveType(MOVETYPE_WALK)
 	end
-end)
+end
 
 -- Squids can go through fences
-hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
+function ss.FinishMove(w, p, m)
 	ply, mv = p, m
-	local w = ss:IsValidInkling(ply)
-	if not w then return end
 	if not (w:GetInFence() or mv:KeyDown(IN_DUCK)) then return end
 	if not ply:Crouching() then
 		if SERVER then
@@ -2021,13 +2005,10 @@ hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", function(p, m)
 			mv:SetVelocity(me.m_vecVelocity[ply])
 		end
 	end
-end)
+end
 
-hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", function(ply, desired)
+function ss.PlayerNoClip(w, ply, desired)
 	if desired then return end
-	local w = ss:IsValidInkling(ply)
-	if not w then return end
-	
 	local old = w:GetInFence()
 	w:SetInFence(not old and util.TraceHull {
 		start = ply:GetPos(), endpos = ply:GetPos(),
@@ -2041,21 +2022,23 @@ hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", function(ply, desired)
 	end
 	
 	return old == w:GetInFence()
-end)
+end
 
 local nest = nil
-for _, hookname in ipairs {"CalcMainActivity", "TranslateActivity"} do
-	hook.Add(hookname, "SplatoonSWEPs: Crouch anim in fence", function(ply, ...)
+for hookname in pairs {CalcMainActivity = true, TranslateActivity = true} do
+	hook.Add(hookname, "SplatoonSWEPs: Crouch anim in fence", ss.hook(function(w, ply, ...)
 		if nest then nest = nil return end
 		if not ply:Crouching() then return end
-		local w = ss:IsValidInkling(ply)
-		if not (w and w:GetInFence()) then return end
-		nest = true
-		ply.m_bWasNoclipping = nil
+		if not w:GetInFence() then return end
+		nest, ply.m_bWasNoclipping = true
 		ply:SetMoveType(MOVETYPE_WALK)
 		local res1, res2 = gamemode.Call(hookname, ply, ...)
 		ply:AnimResetGestureSlot(GESTURE_SLOT_CUSTOM)
 		ply:SetMoveType(MOVETYPE_NOCLIP)
 		return res1, res2
-	end)
+	end))
 end
+
+hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", ss.hook "FinishMove")
+hook.Add("Move", "SplatoonSWEPs: Squid's movement", ss.hook "MoveHook")
+hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", ss.hook "PlayerNoClip")

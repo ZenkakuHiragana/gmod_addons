@@ -3,7 +3,7 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
-function ss:GetColorName(colorid)
+function ss.GetColorName(colorid)
 	return ss.Text.ColorNames[colorid or math.random(self.MAX_COLORS)]
 end
 

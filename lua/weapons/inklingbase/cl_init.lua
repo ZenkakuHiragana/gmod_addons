@@ -70,27 +70,38 @@ function SWEP:Initialize()
 	self:MakeSquidModel()
 	self.JustUsableTime = CurTime() - 1 -- For animation of ink tank light
 	self:SharedInitBase()
-	ss:ProtectedCall(self.ClientInit, self)
-	self:ClientDeployBase()
+	ss.ProtectedCall(self.ClientInit, self)
+	self:Deploy()
 end
 
-function SWEP:Deploy(forced)
-	if self:IsFirstTimePredicted() or forced then return self:ClientDeployBase() end
-end
-
-function SWEP:ClientDeployBase()
+function SWEP:Deploy()
 	if not IsValid(self.Owner) then return end
 	if self.Owner:IsPlayer() then
 		self.SurpressDrawingVM = nil
 		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 		self:UpdateBonePositions(self.Owner:GetViewModel())
+		
+		if self:IsCarriedByLocalPlayer() then
+			for i, param in ipairs {
+				"Playermodel", "InkColor",
+				"CanHealStand", "CanHealInk",
+				"CanReloadStand", "CanReloadInk",
+				"BecomeSquid", "AvoidWalls",
+			} do
+				local value = ss.GetConVarInt(param)
+				if i == 1 then
+					self.PMID = value
+				elseif i == 2 then
+					self.ColorCode = value
+				else
+					self[param] = value > 0
+				end
+			end
+			
+			self.Color = ss.GetColor(self.ColorCode)
+		end
 	end
-	
-	timer.Simple(0, function()
-		if not IsValid(self) then return end
-		self.InkColor = ss:GetColor(self:GetColorCode())
-	end)
 	
 	return self:SharedDeployBase()
 end
@@ -102,7 +113,7 @@ function SWEP:Holster()
 		self.SurpressDrawingVM = true
 		local vm = self.Owner:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
-		if self:GetBecomeSquid() and self.HullDuckMins then
+		if self.BecomeSquid and self.HullDuckMins then
 			self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 			self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 		end
@@ -138,7 +149,7 @@ function SWEP:Think()
 	end
 	
 	if IsValid(self.Squid) then
-		if self:GetPMID() == ss.PLAYER.OCTO then
+		if self.PMID == ss.PLAYER.OCTO then
 			if self.SquidModelNumber ~= ss.SQUID.OCTO then
 				self.Squid:SetModel(ss.Squidmodel[ss.SQUID.OCTO])
 				self.SquidModelNumber = ss.SQUID.OCTO
@@ -151,15 +162,9 @@ function SWEP:Think()
 		self:MakeSquidModel()
 	end
 	
-	if self:GetBecomeSquid() then
-		self:DrawShadow(not self:Crouching())
-	end
-	
-	self.WElements.weapon.bone = self:GetThrowing()
-	and "ValveBiped.Bip01_L_Hand" or "ValveBiped.Bip01_R_Hand"
 	self:ProcessSchedules()
 	self:SharedThinkBase()
-	ss:ProtectedCall(self.ClientThink, self)
+	ss.ProtectedCall(self.ClientThink, self)
 end
 
 function SWEP:IsTPS()
@@ -171,9 +176,9 @@ function SWEP:GetElements()
 end
 
 function SWEP:TranslateViewmodelPos(pos)
-	if self.Weapon:IsTPS() then return pos end
+	if self:IsTPS() then return pos end
 	local dir = pos - EyePos() dir:Normalize()
 	local aim = EyeAngles():Forward()
-	dir = aim + self.Weapon.Owner:GetFOV() / self.Weapon.ViewModelFOV * (dir - aim)
+	dir = aim + self.Owner:GetFOV() / self.ViewModelFOV * (dir - aim)
 	return EyePos() + dir * pos:Distance(EyePos())
 end

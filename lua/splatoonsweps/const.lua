@@ -4,6 +4,8 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
+ss.sp = game.SinglePlayer()
+ss.mp = not ss.sp
 ss.WeaponClassNames = {
 	"weapon_52gal",
 	"weapon_52gal_deco",
@@ -273,25 +275,25 @@ ss.RTFlags = {
 	),
 }
 
-function ss:GetConVarName(name)
-	return self.ConVar[self.ConVarName[name]] or ""
+function ss.GetConVarName(name)
+	return ss.ConVar[ss.ConVarName[name]] or ""
 end
 
-function ss:GetConVar(name)
-	return GetConVar(self:GetConVarName(name))
+function ss.GetConVar(name)
+	return GetConVar(ss.GetConVarName(name))
 end
 
-function ss:GetConVarInt(name)
-	local cvar = self:GetConVar(name)
+function ss.GetConVarInt(name)
+	local cvar = ss.GetConVar(name)
 	if cvar then
 		return cvar:GetInt()
 	else
-		return self.ConVarDefaults[self.ConVarName[name]]
+		return ss.ConVarDefaults[ss.ConVarName[name]]
 	end
 end
 
-function ss:GetConVarBool(name)
-	return ss:GetConVarInt(name) ~= 0
+function ss.GetConVarBool(name)
+	return ss.GetConVarInt(name) ~= 0
 end
 
 ss.InkTankModel = Model "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl"
@@ -331,9 +333,9 @@ ss.CheckSplatoonPlayermodels = {
 	["models/drlilrobot/splatoon/ply/octoling.mdl"] = true,
 }
 
-function ss:GetSquidmodel(pmid)
-	if pmid == self.PLAYER.NOCHANGE then return end
-	local squid = self.Squidmodel[pmid == self.PLAYER.OCTO and self.SQUID.OCTO or self.SQUID.INKLING]
+function ss.GetSquidmodel(pmid)
+	if pmid == ss.PLAYER.NOCHANGE then return end
+	local squid = ss.Squidmodel[pmid == ss.PLAYER.OCTO and ss.SQUID.OCTO or ss.SQUID.INKLING]
 	return file.Exists(squid, "GAME") and squid or nil
 end
 
@@ -420,16 +422,19 @@ ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
 ss.MAX_COLORS = #ss.InkColors
 ss.COLOR_BITS = 5
+ss.PLAYER_BITS = 3
+ss.SQUID_BITS = 2
 ss.SURFACE_INDEX_BITS = 20
 ss.SEND_ERROR_DURATION_BITS = 4
 ss.SEND_ERROR_NOTIFY_BITS = 3
 ss.ViewModel = { -- Viewmodel animations
 	Standing = ACT_VM_IDLE, -- Humanoid form
-	Squid = ACT_VM_HOLSTER, -- Squid form
-	Throwing = ACT_VM_IDLE_LOWERED, -- Throwing sub weapon
+	Squid = ACT_VM_IDLE_LOWERED, -- Squid form
+	Throwing = ACT_VM_PULLPIN, -- About to throw sub weapon
+	Throw = ACT_VM_THROW, --Actual throw animation
 }
 
-function ss:GetColor(colorid)
+function ss.GetColor(colorid)
 	return ss.InkColors[colorid or math.random(ss.MAX_COLORS)]
 end
 

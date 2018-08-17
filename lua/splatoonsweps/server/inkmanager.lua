@@ -45,22 +45,22 @@ end
 --   number angle	| Ink rotation in degrees.
 --   number inktype | Shape of ink.
 --   number ratio	| Aspect ratio.
-function ss:Paint(pos, normal, radius, color, angle, inktype, ratio)
+function ss.Paint(pos, normal, radius, color, angle, inktype, ratio)
 	local ang, polys = normal:Angle(), {}
 	ang.roll = math.abs(normal.z) > MAX_COS_DEG_DIFF and angle * normal.z or ang.yaw
 	for i, v in ipairs(reference_polys) do -- Scaling
-		polys[i] = ss:To3D(v * radius, pos, ang)
+		polys[i] = ss.To3D(v * radius, pos, ang)
 	end
 	
 	local inkqueue = 0
 	local rectsize = radius * rootpi
 	local sizevec = Vector(rectsize, rectsize)
-	local mins, maxs = ss:GetBoundingBox(polys, MIN_BOUND)
-	for node in ss:BSPPairs(polys) do
+	local mins, maxs = ss.GetBoundingBox(polys, MIN_BOUND)
+	for node in ss.BSPPairs(polys) do
 		local surf = node.Surfaces
 		for i, index in ipairs(surf.Indices) do
 			if surf.Normals[i]:Dot(normal) <= MAX_COS_DEG_DIFF * (index < 0 and .5 or 1) or
-			not ss:CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
+			not ss.CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
 			local _, localang = WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle())
 			localang = surf.DefaultAngles[i] + ang.yaw - localang.roll
 			net.Start "SplatoonSWEPs: DrawInk"
@@ -71,9 +71,9 @@ function ss:Paint(pos, normal, radius, color, angle, inktype, ratio)
 			net.WriteVector(Vector(radius, localang, ratio))
 			net.Send(ss.PlayersReady)
 			
-			local pos2d = ss:To2D(pos, surf.Origins[i], surf.Angles[i])
+			local pos2d = ss.To2D(pos, surf.Origins[i], surf.Angles[i])
 			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
-			ss:AddInkRectangle(surf.InkCircles[i], ss.InkCounter, {
+			ss.AddInkRectangle(surf.InkCircles[i], ss.InkCounter, {
 				angle = localang,
 				bounds = {bmins.x, bmins.y, bmaxs.x, bmaxs.y},
 				color = color,
@@ -93,14 +93,14 @@ end
 -- Returning:
 --   number			| The ink color of the specified position.
 --   nil			| If there is no ink, returns nil.
-function ss:GetSurfaceColor(tr)
+function ss.GetSurfaceColor(tr)
 	if not tr.Hit then return end
-	for node in ss:BSPPairs {tr.HitPos} do
+	for node in ss.BSPPairs {tr.HitPos} do
 		local surf = node.Surfaces
 		for i, index in ipairs(surf.Indices) do
 			if surf.Normals[i]:Dot(tr.HitNormal) <= MAX_COS_DEG_DIFF * (index < 0 and .5 or 1) or not
-			ss:CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
-			local p2d = ss:To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
+			ss.CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
+			local p2d = ss.To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
 			for r in SortedPairsByValue(surf.InkCircles[i], true) do
 				local t = ss.InkShotMaterials[r.texid]
 				local w, h = t.width, t.height
@@ -143,8 +143,8 @@ end
 --     number SplashNum			|   The number of drops.  May not be integer.
 --     number SplashInterval	|   The interval between two drops.
 --     number Straight			|   Time to start falling in seconds.
-function ss:AddInk(owner, pos, velocity, color, angle, inktype, splashinit, info)
-	local w = ss:IsValidInkling(owner)
+function ss.AddInk(owner, pos, velocity, color, angle, inktype, splashinit, info)
+	local w = ss.IsValidInkling(owner)
 	local t = {
 		Angle = angle,
 		Color = color,
@@ -227,7 +227,7 @@ local process = coroutine.create(function()
 					dropdata.InkRadius = ink.SplashRadius
 					dropdata.MinRadius = ink.SplashRadius
 					dropdata.InitTime = CurTime() - DecreaseFrame
-					ss:AddInk(ink.filter, ink.InitPos + ink.InitDirection
+					ss.AddInk(ink.filter, ink.InitPos + ink.InitDirection
 					* (nextlen + math.random(-1, 1) * ss.mSplashDrawRadius),
 					Vector(), ink.Color, ink.Angle, 1, 0, dropdata)
 					
@@ -238,6 +238,10 @@ local process = coroutine.create(function()
 			end
 			
 			if not t.Hit then
+				if not util.IsInWorld(t.HitPos) then
+					ss.InkQueue[ink] = nil
+				end
+				
 				ink.start = t.HitPos
 				continue
 			elseif t.HitWorld then
@@ -260,10 +264,10 @@ local process = coroutine.create(function()
 					ink.InkType = math.random(3)
 				end
 				
-				ss:Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ink.InkType, ratio)
+				ss.Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ink.InkType, ratio)
 			elseif IsValid(t.Entity) and ink.Info.Damage > 0 then -- If ink hits an NPC or something
-				local w = ss:IsValidInkling(t.Entity)
-				if not (w and ss:IsAlly(w, ink.Color)) then
+				local w = ss.IsValidInkling(t.Entity)
+				if not (w and ss.IsAlly(w, ink.Color)) then
 					local d, o = DamageInfo(), ink.filter
 					local frac = (lifetime - ink.Info.DecreaseDamage) / ink.Info.MinDamageTime
 					d:SetDamage(Lerp(1 - frac, ink.Info.MinDamage, ink.Info.Damage))
@@ -273,7 +277,7 @@ local process = coroutine.create(function()
 					d:SetMaxDamage(ink.Info.Damage)
 					d:SetReportedPosition(t.HitPos)
 					d:SetAttacker(IsValid(o) and o or game.GetWorld())
-					d:SetInflictor(ss:IsValidInkling(o) or game.GetWorld())
+					d:SetInflictor(ss.IsValidInkling(o) or game.GetWorld())
 					t.Entity:TakeDamageInfo(d)
 				end
 			end
@@ -298,5 +302,5 @@ end)
 -- local tr = util.TraceHull(ink)
 -- local radius = Lerp((ink.InitPos.z - tr.HitPos.z) / PaintDistance - PaintFraction, ink.SplashMinRadius, ink.SplashRadius)
 -- timer.Simple(math.sqrt(math.abs(t.HitPos.z - tr.HitPos.z) * gravityscale), function()
-	-- ss:Paint(tr.HitPos, tr.HitNormal, radius, ink.Color, ink.Angle, math.random(1, 3), 1)
+	-- ss.Paint(tr.HitPos, tr.HitNormal, radius, ink.Color, ink.Angle, math.random(1, 3), 1)
 -- end)

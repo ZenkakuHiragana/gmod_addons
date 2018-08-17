@@ -3,25 +3,6 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
-net.Receive("SplatoonSWEPs: Client PrimaryAttack", function()
-	local w = net.ReadEntity()
-	if not IsValid(w) or not game.SinglePlayer() and w:IsCarriedByLocalPlayer() then return end
-	local auto = net.ReadBool()
-	ss:ProtectedCall(w.PrimaryAttack, w, auto)
-end)
-
-net.Receive("SplatoonSWEPs: Client SecondaryAttack", function()
-	local w = net.ReadEntity()
-	if not IsValid(w) or not game.SinglePlayer() and w:IsCarriedByLocalPlayer() then return end
-	ss:ProtectedCall(w.SecondryAttack, w, auto)
-end)
-
-net.Receive("SplatoonSWEPs: Client Deploy", function()
-	local w = net.ReadEntity()
-	if not IsValid(w) then return end
-	ss:ProtectedCall(w.Deploy, w, true)
-end)
-
 net.Receive("SplatoonSWEPs: DrawInk", function()
 	local facenumber = net.ReadInt(ss.SURFACE_INDEX_BITS)
 	local color = net.ReadUInt(ss.COLOR_BITS)
@@ -58,13 +39,13 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function()
 	end
 	
 	file.Write("splatoonsweps/" .. game.GetMap() .. ".txt", redownload)
-	ss:PrepareInkSurface(redownload)
+	ss.PrepareInkSurface(redownload)
 end)
 
 net.Receive("SplatoonSWEPs: Shooter Tracer", function()
 	local owner = net.ReadEntity()
-	if owner == LocalPlayer() and not game.SinglePlayer() then return end
-	local w = ss:IsValidInkling(owner)
+	if owner == LocalPlayer() and ss.mp then return end
+	local w = ss.IsValidInkling(owner)
 	if not w then return end
 	local pos = net.ReadVector()
 	local dir = net.ReadVector()
@@ -80,7 +61,7 @@ net.Receive("SplatoonSWEPs: Shooter Tracer", function()
 			TrailPos = pos,
 			Velocity = dir * speed,
 		},
-		Color = ss:GetColor(color),
+		Color = ss.GetColor(color),
 		ColorCode = color,
 		InitPos = pos,
 		InitTime = CurTime() - w:Ping(),
@@ -105,4 +86,23 @@ net.Receive("SplatoonSWEPs: Send an error message", function()
 	local msg = ss.Text.Error[net.ReadString()]
 	if not msg then return end
 	notification.AddLegacy(msg, icon, duration)
+end)
+
+net.Receive("SplatoonSWEPs: Send weapon settings", function()
+	local w = net.ReadEntity()
+	if not IsValid(w) then
+		net.Start "SplatoonSWEPs: Resend weapon settings"
+		net.SendToServer()
+		return
+	end
+	
+	w.AvoidWalls = net.ReadBool()
+	w.BecomeSquid = net.ReadBool()
+	w.CanHealStand = net.ReadBool()
+	w.CanHealInk = net.ReadBool()
+	w.CanReloadStand = net.ReadBool()
+	w.CanReloadInk = net.ReadBool()
+	w.ColorCode = net.ReadUInt(ss.COLOR_BITS)
+	w.PMID = net.ReadUInt(ss.PLAYER_BITS)
+	w.Color = ss.GetColor(w.ColorCode)
 end)

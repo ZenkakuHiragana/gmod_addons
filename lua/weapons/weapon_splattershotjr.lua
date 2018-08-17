@@ -14,7 +14,7 @@ SWEP.Variations = {{
 	Bodygroup = {1},
 }}
 
-ss:SetPrimary(SWEP, {
+ss.SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .005,					-- Ink consumption per fire[-]
@@ -41,32 +41,4 @@ ss:SetPrimary(SWEP, {
 		MinDamage		= 15,					-- Deals minimum damage[frames]
 		DecreaseDamage	= 8,					-- Start decreasing damage[frames]
 	},
-})
-
-ss:SetViewModelMods(SWEP, {
-	["ValveBiped.Bip01_L_Clavicle"] = {pos = Vector(2.397, -2, 2)},
-	["ValveBiped.Bip01_L_Finger0"] = {angle = Angle(7, -32, 0)},
-	["ValveBiped.Bip01_L_Finger1"] = {angle = Angle(5, 10, 0)},
-	["ValveBiped.Bip01_L_Finger11"] = {angle = Angle(0, -15, 0)},
-	["ValveBiped.Bip01_L_Finger12"] = {angle = Angle(0, -15, 0)},
-	["ValveBiped.Bip01_L_Finger2"] = {angle = Angle(0, 5, 0)},
-	["ValveBiped.Bip01_L_Finger21"] = {angle = Angle(0, -15, 0)},
-	["ValveBiped.Bip01_L_Finger4"] = {angle = Angle(0, 5, 0)},
-	["ValveBiped.Bip01_L_Finger41"] = {angle = Angle(0, 5, 0)},
-	["ValveBiped.Bip01_L_Hand"] = {angle = Angle(0, 23, -12)},
-	["ValveBiped.Bip01_Spine4"] = {
-		pos = Vector(-3, -5, 0),
-		angle = Angle(0, -8, -1),
-	},
-})
-
-ss:SetViewModel(SWEP, {
-	pos = Vector(4, -23, -7),
-	angle = Angle(10, 80, 90),
-	size = Vector(0.56, 0.56, 0.56),
-})
-
-ss:SetWorldModel(SWEP, {
-	pos = Vector(4, 0.6, 0.5),
-	angle = Angle(0, 0, 180),
 })

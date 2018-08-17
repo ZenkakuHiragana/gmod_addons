@@ -40,7 +40,7 @@ end
 -- radius is the total radius of the outside edge to the center.
 -- cx, cy are the x,y coordinates of the center of the arc.
 -- roughness determines how many triangles are drawn. Number between 1-360; 2 or 3 is a good number.
-function ss:DrawArc(cx, cy, radius, thickness, startang, endang, roughness)
+function ss.DrawArc(cx, cy, radius, thickness, startang, endang, roughness)
 	for _, v in ipairs(PrecacheArc(cx, cy, radius, thickness, startang, endang, roughness)) do
 		surface.DrawPoly(v)
 	end

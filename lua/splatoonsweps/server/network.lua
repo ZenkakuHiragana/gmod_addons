@@ -4,19 +4,18 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
-util.AddNetworkString "SplatoonSWEPs: Client Deploy"
-util.AddNetworkString "SplatoonSWEPs: Client PrimaryAttack"
-util.AddNetworkString "SplatoonSWEPs: Client SecondaryAttack"
 util.AddNetworkString "SplatoonSWEPs: DrawInk"
 util.AddNetworkString "SplatoonSWEPs: Play damage sound"
 util.AddNetworkString "SplatoonSWEPs: Ready to splat"
 util.AddNetworkString "SplatoonSWEPs: Redownload ink data"
+util.AddNetworkString "SplatoonSWEPs: Resend weapon settings"
 util.AddNetworkString "SplatoonSWEPs: Send an error message"
 util.AddNetworkString "SplatoonSWEPs: Send ink cleanup"
+util.AddNetworkString "SplatoonSWEPs: Send weapon settings"
 util.AddNetworkString "SplatoonSWEPs: Shooter Tracer"
 net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 	table.insert(ss.PlayersReady, ply)
-	ss:InitializeMoveEmulation(ply)
+	ss.InitializeMoveEmulation(ply)
 end)
 
 net.Receive("SplatoonSWEPs: Redownload ink data", function(_, ply)
@@ -36,5 +35,21 @@ end)
 
 net.Receive("SplatoonSWEPs: Send ink cleanup", function(_, ply)
 	if not ply:IsAdmin() then return end
-	ss:ClearAllInk()
+	ss.ClearAllInk()
+end)
+
+net.Receive("SplatoonSWEPs: Resend weapon settings", function(_, ply)
+	local self = ss.IsValidInkling(ply)
+	if not self then return end
+	net.Start "SplatoonSWEPs: Send weapon settings"
+	net.WriteEntity(self)
+	net.WriteBool(self.AvoidWalls)
+	net.WriteBool(self.BecomeSquid)
+	net.WriteBool(self.CanHealStand)
+	net.WriteBool(self.CanHealInk)
+	net.WriteBool(self.CanReloadStand)
+	net.WriteBool(self.CanReloadInk)
+	net.WriteUInt(self.ColorCode, ss.COLOR_BITS)
+	net.WriteUInt(self.PMID, ss.PLAYER_BITS)
+	net.Send(ss.PlayersReady)
 end)

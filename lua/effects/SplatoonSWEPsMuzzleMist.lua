@@ -13,7 +13,7 @@ end
 function EFFECT:Init(e)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
-	self.Color = ss:GetColor(e:GetColor())
+	self.Color = ss.GetColor(e:GetColor())
 	self.size = e:GetScale()
 	self.InitTime = CurTime() - self.Weapon:Ping()
 	local pos, ang = self.Weapon:GetMuzzlePosition()
@@ -36,10 +36,7 @@ function EFFECT:Render()
 	if not IsValid(self.Weapon) then return end
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	local norm = ang:Forward()
-	local mul = self.Weapon:IsTPS() and
-	self.Weapon.WElements.weapon.size or self.Weapon.VElements.weapon.size
-	pos = self.Weapon:TranslateViewmodelPos(pos)
-	mul = (mul.x + mul.y + mul.z) / 3
+	local mul = self.Weapon:IsTPS() and 1 or .5
 	self:SetPos(pos)
 	
 	local f = (CurTime() - self.InitTime) / LifeTime
