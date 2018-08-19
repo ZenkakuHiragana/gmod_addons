@@ -10,7 +10,7 @@ include "shared.lua"
 --   v | Viewmodel/Worldmodel element table
 --   matrix | VMatrix for scaling
 -- When the weapon is fired, it slightly expands.  This is maximum time to get back to normal size.
-local FireWeaponCooldown = 0.1
+local FireWeaponCooldown = .1
 local FireWeaponMultiplier = 1
 local function ExpandModel(self, vm)
 	local fraction = FireWeaponCooldown - SysTime() + self.ModifyWeaponSize
@@ -278,5 +278,3 @@ function SWEP:DrawCrosshair(x, y, t)
 	
 	return true
 end
-
-function SWEP:ClientPrimaryAttack(able, auto) end

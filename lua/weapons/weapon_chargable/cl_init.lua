@@ -80,3 +80,40 @@ function SWEP:DrawCrosshair(x, y, t)
 	self:DrawHitCross(t)
 	return true
 end
+
+-- Manipulate player arms to adjust position.  Need to rework.
+local delta = {crossbow = -3, rpg = 2}
+local deltahand = {rpg = Vector(-10, 5, 5)}
+function SWEP:ManipulatePlayerBones(ply)
+	local b = {ply:LookupBone "ValveBiped.Bip01_L_Forearm"}
+	local bp, ba = {}, {}
+	while #b > 0 do
+		local m = ply:GetBoneMatrix(b[1])
+		local pi = ply:GetBoneParent(b[1])
+		local pm = ply:GetBoneMatrix(pi)
+		bp[b[1]], ba[b[1]] = WorldToLocal(m:GetTranslation(), m:GetAngles(), pm:GetTranslation(), pm:GetAngles())
+		for i, c in ipairs(ply:GetChildBones(b[1])) do
+			table.insert(b, c)
+		end
+		table.remove(b, 1)
+	end
+	
+	b = {ply:LookupBone "ValveBiped.Bip01_L_Forearm"}
+	while #b > 0 do
+		if ply:GetBoneName(b[1]) == "ValveBiped.Bip01_L_Forearm" then
+			ba[b[1]]:RotateAroundAxis(vector_up, delta[self.HoldType] or 0)
+		elseif ply:GetBoneName(b[1]) == "ValveBiped.Bip01_L_Hand" then
+			ba[b[1]]:RotateAroundAxis(Vector(1), (deltahand[self.HoldType] or vector_origin).x)
+			ba[b[1]]:RotateAroundAxis(Vector(0, 1), (deltahand[self.HoldType] or vector_origin).y)
+			ba[b[1]]:RotateAroundAxis(vector_up, (deltahand[self.HoldType] or vector_origin).z)
+		end
+		
+		local pi = ply:GetBoneParent(b[1])
+		local pm = ply:GetBoneMatrix(pi)
+		ply:SetBonePosition(b[1], LocalToWorld(bp[b[1]], ba[b[1]], pm:GetTranslation(), pm:GetAngles()))
+		for i, c in ipairs(ply:GetChildBones(b[1])) do
+			table.insert(b, c)
+		end
+		table.remove(b, 1)
+	end
+end

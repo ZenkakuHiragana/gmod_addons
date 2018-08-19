@@ -55,10 +55,17 @@ end
 local halfpi = math.pi / 2
 function EFFECT:Render()
 	if not IsValid(self.Weapon) then return end
+	if not istable(self.Color) then return end
+	if not isnumber(self.Color.r) then return end
+	if not isnumber(self.Color.g) then return end
+	if not isnumber(self.Color.b) then return end
 	if not isnumber(self.InitTime) then return end
+	if not isnumber(self.LifeTime) then return end
 	if not isnumber(self.rad) then return end
 	if not isnumber(self.tmax) then return end
 	if not isnumber(self.tmin) then return end
+	if not isvector(self.Pos) then return end
+	if not isangle(self.Angle) then return end
 	local pos, ang = self:GetPosition()
 	local norm = ang:Forward()
 	local mul = self.Weapon:IsTPS() and 1 or .5
@@ -107,9 +114,16 @@ end
 -- Called when the effect should think, return false to kill the effect.
 function EFFECT:Think()
 	return IsValid(self.Weapon)
+	and istable(self.Color)
+	and isnumber(self.Color.r)
+	and isnumber(self.Color.g)
+	and isnumber(self.Color.b)
 	and isnumber(self.InitTime)
+	and isnumber(self.LifeTime)
 	and isnumber(self.rad)
 	and isnumber(self.tmax)
 	and isnumber(self.tmin)
+	and isvector(self.Pos)
+	and isangle(self.Angle)
 	and CurTime() < self.InitTime + self.LifeTime
 end

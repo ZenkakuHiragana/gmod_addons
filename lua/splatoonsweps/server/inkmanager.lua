@@ -143,7 +143,7 @@ end
 --     number SplashNum			|   The number of drops.  May not be integer.
 --     number SplashInterval	|   The interval between two drops.
 --     number Straight			|   Time to start falling in seconds.
-function ss.AddInk(owner, pos, velocity, color, angle, inktype, splashinit, info)
+function ss.AddInk(owner, pos, velocity, color, angle, inktype, splashinit, splashnum, info)
 	local w = ss.IsValidInkling(owner)
 	local t = {
 		Angle = angle,
@@ -160,6 +160,7 @@ function ss.AddInk(owner, pos, velocity, color, angle, inktype, splashinit, info
 		SplashInit = info.SplashInterval / info.SplashPatterns * splashinit,
 		SplashInitMul = splashinit,
 		SplashMinRadius = info.SplashRadius * info.MinRadius / info.InkRadius,
+		SplashNum = splashnum,
 		SplashRadius = info.SplashRadius,
 		Velocity = velocity,
 		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
@@ -170,8 +171,6 @@ function ss.AddInk(owner, pos, velocity, color, angle, inktype, splashinit, info
 		start = pos,
 	}
 	
-	t.SplashNum = math.floor(t.Info.SplashNum)
-	t.SplashNum = t.SplashNum + (math.random() < t.Info.SplashNum % 1 and 1 or 0)
 	ss.InkQueue[t] = true
 end
 
@@ -193,12 +192,13 @@ local process = coroutine.create(function()
 			
 			local endpos = ink.endpos
 			local lifetime = math.max(0, ct - ink.InitTime)
-			if lifetime < ink.Info.Straight then -- Goes straight
+			local straight = ink.InkType > 3 and ink.Info.Straight or 0
+			if ink.InkType > 3 and lifetime < straight then -- Goes straight
 				ink.endpos = ink.InitPos + ink.Velocity * lifetime
 				ink.start = ink.InitPos + ink.Velocity * math.max(0, lifetime - ss.FrameToSec)
-			elseif lifetime > ink.Info.Straight + DecreaseFrame then -- Falls straight
-				local pos = ink.InitPos + ink.Velocity * (ink.Info.Straight + DecreaseFrame / 2)
-				local falltime = math.max(lifetime - ink.Info.Straight - DecreaseFrame, 0)
+			elseif lifetime > straight + DecreaseFrame then -- Falls straight
+				local pos = ink.InitPos + ink.Velocity * (straight + DecreaseFrame / 2)
+				local falltime = math.max(lifetime - straight - DecreaseFrame, 0)
 				if falltime > term then
 					local v = g * term
 					ink.endpos = pos - v * term / 2 + v * falltime
@@ -210,11 +210,11 @@ local process = coroutine.create(function()
 					ink.start = pos + g * falltime * falltime / 2
 				end
 			else
-				local time = lifetime - ink.Info.Straight
-				ink.endpos = ink.InitPos + ink.Velocity * (ink.Info.Straight + time / 2)
+				local time = lifetime - straight
+				ink.endpos = ink.InitPos + ink.Velocity * (straight + time / 2)
 				time = time - ss.FrameToSec
 				ink.start = ink.InitPos + ink.Velocity
-				* (ink.Info.Straight + time / (time > 0 and 2 or 1))
+				* (straight + time / (time > 0 and 2 or 1))
 			end
 			
 			if not endpos then ink.start = ink.InitPos end
@@ -227,9 +227,8 @@ local process = coroutine.create(function()
 					dropdata.InkRadius = ink.SplashRadius
 					dropdata.MinRadius = ink.SplashRadius
 					dropdata.InitTime = CurTime() - DecreaseFrame
-					ss.AddInk(ink.filter, ink.InitPos + ink.InitDirection
-					* (nextlen + math.random(-1, 1) * ss.mSplashDrawRadius),
-					Vector(), ink.Color, ink.Angle, 1, 0, dropdata)
+					ss.AddInk(ink.filter, ink.InitPos + ink.InitDirection * nextlen,
+					Vector(), ink.Color, ink.Angle, 1, 0, 0, dropdata)
 					
 					len = len - ink.Info.SplashInterval
 					nextlen = nextlen + ink.Info.SplashInterval

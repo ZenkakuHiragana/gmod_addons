@@ -12,7 +12,6 @@ util.AddNetworkString "SplatoonSWEPs: Resend weapon settings"
 util.AddNetworkString "SplatoonSWEPs: Send an error message"
 util.AddNetworkString "SplatoonSWEPs: Send ink cleanup"
 util.AddNetworkString "SplatoonSWEPs: Send weapon settings"
-util.AddNetworkString "SplatoonSWEPs: Shooter Tracer"
 net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 	table.insert(ss.PlayersReady, ply)
 	ss.InitializeMoveEmulation(ply)

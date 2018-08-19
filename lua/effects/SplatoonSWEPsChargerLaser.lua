@@ -20,6 +20,7 @@ function EFFECT:Init(e)
 end
 
 function EFFECT:Render()
+	if not IsValid(self.Weapon) then return end
 	self:SetPos(GetViewEntity():GetPos())
 	
 	local self = self.Weapon

@@ -100,13 +100,6 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		return
 	end
 	
-	if self:IsFirstTimePredicted() then
-		local rnda = p.Recoil * -1
-		local rndb = p.Recoil * math.Rand(-1, 1)
-		self.ViewPunch = Angle(rnda, rndb, rnda)
-		self.ModifyWeaponSize = SysTime()
-	end
-	
 	local pos, dir = self:GetFirePosition()
 	local right = self.Owner:GetRight()
 	local ang = dir:Angle()
@@ -121,12 +114,37 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	self.InitVelocity = angle_initvelocity:Forward() * p.InitVelocity
 	self.InitAngle = angle_initvelocity
 	
+	local SplashInit = self:GetSplashInitMul() % p.SplashPatterns
+	local SplashNum = math.floor(p.SplashNum) + (math.random() < p.SplashNum % 1 and 1 or 0)
+	if SERVER then
+		ss.AddInk(self.Owner, pos, self.InitVelocity, self.ColorCode,
+		self.Owner:EyeAngles().yaw, math.random(4, 9), SplashInit, SplashNum, p)
+	end
+	
+	self:SetSplashInitMul(self:GetSplashInitMul() + (p.TripleShotDelay and 3 or 1))
 	self:SetPreviousHasInk(true)
 	self:EmitSound(self.ShootSound)
-	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self:ResetSequence "fire"
-	self.Owner:MuzzleFlash()
+	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
+	
+	if self:IsFirstTimePredicted() then
+		local rnda = p.Recoil * -1
+		local rndb = p.Recoil * math.Rand(-1, 1)
+		self.ViewPunch = Angle(rnda, rndb, rnda)
+		self.ModifyWeaponSize = SysTime()
+		
+		local e = EffectData()
+		e:SetAttachment(SplashInit)
+		e:SetAngles(self.InitAngle)
+		e:SetColor(self.ColorCode)
+		e:SetEntity(self)
+		e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)
+		e:SetOrigin(pos)
+		e:SetScale(SplashNum)
+		e:SetStart(self.InitVelocity)
+		util.Effect("SplatoonSWEPsShooterInk", e)
+	end
 	
 	if not p.TripleShotDelay then return end
 	local d = self.TripleSchedule:GetDone()
@@ -140,6 +158,7 @@ function SWEP:CustomDataTables()
 	self:AddNetworkVar("Bool", "PreviousHasInk")
 	self:AddNetworkVar("Float", "AimTimer")
 	self:AddNetworkVar("Float", "NextPlayEmpty")
+	self:AddNetworkVar("Int", "SplashInitMul")
 	
 	if not self.Primary.TripleShotDelay then return end
 	self.TripleSchedule = self:AddNetworkSchedule(0, function(self, schedule)
@@ -169,4 +188,12 @@ end
 
 function SWEP:CustomMoveSpeed()
 	return CurTime() < self:GetAimTimer() and self.Primary.MoveSpeed or nil
+end
+
+function SWEP:GetAnimWeight()
+	return (self.Primary.Delay + .5) / 1.5
+end
+
+function SWEP:UpdateAnimation(ply, vel, max)
+	ply:AnimSetGestureWeight(GESTURE_SLOT_ATTACK_AND_RELOAD, self:GetAnimWeight())
 end

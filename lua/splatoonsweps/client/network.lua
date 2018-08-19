@@ -42,43 +42,6 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function()
 	ss.PrepareInkSurface(redownload)
 end)
 
-net.Receive("SplatoonSWEPs: Shooter Tracer", function()
-	local owner = net.ReadEntity()
-	if owner == LocalPlayer() and ss.mp then return end
-	local w = ss.IsValidInkling(owner)
-	if not w then return end
-	local pos = net.ReadVector()
-	local dir = net.ReadVector()
-	local speed = net.ReadFloat()
-	local straight = net.ReadFloat()
-	local color = net.ReadUInt(ss.COLOR_BITS)
-	local splashinit = net.ReadUInt(4)
-	ss.InkTraces[{
-		Appearance = {
-			InitPos = pos,
-			Pos = pos,
-			Speed = speed,
-			TrailPos = pos,
-			Velocity = dir * speed,
-		},
-		Color = ss.GetColor(color),
-		ColorCode = color,
-		InitPos = pos,
-		InitTime = CurTime() - w:Ping(),
-		Speed = speed,
-		Straight = straight,
-		TrailDelay = ss.ShooterTrailDelay,
-		TrailTime = RealTime(),
-		Velocity = dir * speed,
-		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
-		filter = owner,
-		mask = ss.SquidSolidMask,
-		maxs = ss.vector_one * ss.mColRadius,
-		mins = -ss.vector_one * ss.mColRadius,
-		start = pos,
-	}] = true
-end)
-
 net.Receive("SplatoonSWEPs: Send ink cleanup", ss.ClearAllInk)
 net.Receive("SplatoonSWEPs: Send an error message", function()
 	local icon = net.ReadUInt(ss.SEND_ERROR_NOTIFY_BITS)

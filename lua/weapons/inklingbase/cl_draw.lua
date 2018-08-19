@@ -325,7 +325,7 @@ function SWEP:GetBombMeterPosition(inkconsumption)
 	return self.BombMeterPosition
 end
 
-function SWEP:DrawWorldModel()
+function SWEP:DrawWorldModelTranslucent()
 	if IsValid(self.Owner) then
 		if self:GetHolstering() then return end
 		if self:Crouching() then
@@ -373,7 +373,7 @@ function SWEP:DrawWorldModel()
 	
 	local cameradistance = 1
 	if self:IsCarriedByLocalPlayer() then
-		cameradistance = math.Clamp(self:GetPos():DistToSqr(EyePos()) / ss.CameraFadeDistance, 0, 1)
+		cameradistance = self:GetCameraFade()
 	end
 	
 	for k, name in pairs(self.wRenderOrder) do
@@ -495,7 +495,7 @@ function SWEP:DrawWorldModel()
 		end
 	end
 end
-SWEP.DrawWorldModelTranslucent = SWEP.DrawWorldModel
+-- SWEP.DrawWorldModelTranslucent = SWEP.DrawWorldModel
 
 --Show remaining amount of ink tank
 function SWEP:CustomAmmoDisplay()
@@ -530,4 +530,8 @@ function SWEP:DoDrawCrosshair(x, y)
 	
 	return ss.ProtectedCall(self.DrawCrosshair, self, x, y,
 	ss.ProtectedCall(self.SetupDrawCrosshair, self, x, y))
+end
+
+function SWEP:GetCameraFade()
+	return math.Clamp(self:GetPos():DistToSqr(EyePos()) / ss.CameraFadeDistance, 0, 1)
 end

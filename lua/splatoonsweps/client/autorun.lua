@@ -452,14 +452,15 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	ss.PrepareInkSurface(file.Read("data/" .. path, true))
 end)
 
-function ss.PostPlayerDraw() render.SetBlend(1) end
+function ss.PostPlayerDraw(w, ply) render.SetBlend(1) end
 function ss.PrePlayerDraw(w, ply)
 	local ShouldDraw = Either(w.BecomeSquid, ply:Crouching(), w:GetInInk())
 	ply:DrawShadow(not ShouldDraw)
 	w:DrawShadow(not ShouldDraw)
 	if ShouldDraw then return true end
+	ss.ProtectedCall(w.ManipulatePlayerBones, w, ply)
 	if not w:IsCarriedByLocalPlayer() then return end
-	render.SetBlend(math.Clamp(w:GetPos():DistToSqr(EyePos()) / ss.CameraFadeDistance, 0, 1))
+	render.SetBlend(w:GetCameraFade())
 end
 
 function ss.RenderScreenspaceEffects(w)

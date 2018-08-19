@@ -34,6 +34,10 @@ end
 
 function EFFECT:Render()
 	if not IsValid(self.Weapon) then return end
+	if not istable(self.Color) then return end
+	if not isnumber(self.Color.r) then return end
+	if not isnumber(self.Color.g) then return end
+	if not isnumber(self.Color.b) then return end
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	local norm = ang:Forward()
 	local mul = self.Weapon:IsTPS() and 1 or .5
@@ -52,5 +56,10 @@ end
 
 -- Called when the effect should think, return false to kill the effect.
 function EFFECT:Think()
-	return IsValid(self.Weapon) and CurTime() < self.InitTime + LifeTime
+	return IsValid(self.Weapon)
+	and istable(self.Color)
+	and isnumber(self.Color.r)
+	and isnumber(self.Color.g)
+	and isnumber(self.Color.b)
+	and CurTime() < self.InitTime + LifeTime
 end

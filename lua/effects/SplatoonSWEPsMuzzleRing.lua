@@ -5,8 +5,6 @@ if not ss then return end
 local MinRadius = 3
 local Division = 16
 local DegStep = 90 / Division
-local LifeTime = 13 * ss.FrameToSec
-local LifeTimeRef = LifeTime / 2
 local mat = Material "splatoonsweps/effects/ring"
 local ref = Material "effects/water_warp01"
 function EFFECT:Init(e)
@@ -16,9 +14,9 @@ function EFFECT:Init(e)
 	self.Color = ss.GetColor(e:GetColor())
 	self.deg = e:GetScale()
 	self.rad = e:GetRadius()
+	self.LifeTime = e:GetAttachment() * ss.FrameToSec
 	self.UseRefract = bit.band(f, 1) > 0
 	self.curl = self.UseRefract and 3 or 2
-	self.life = self.UseRefract and LifeTimeRef or LifeTime
 	self.tmax = self.rad / 3
 	self.tmin = self.rad / 6
 	self.InitTime = CurTime() - self.Weapon:Ping() * bit.band(f, 128) / 128
@@ -37,18 +35,26 @@ end
 
 function EFFECT:Render()
 	if not IsValid(self.Weapon) then return end
-	if not isnumber(self.InitTime) then return end
-	if not isnumber(self.rad) then return end
+	if not istable(self.Color) then return end
+	if not isnumber(self.Color.r) then return end
+	if not isnumber(self.Color.g) then return end
+	if not isnumber(self.Color.b) then return end
 	if not isnumber(self.deg) then return end
+	if not isnumber(self.rad) then return end
+	if not isnumber(self.InitTime) then return end
+	if not isnumber(self.LifeTime) then return end
 	if not isnumber(self.tmax) then return end
 	if not isnumber(self.tmin) then return end
 	local pos, ang = self.Weapon:GetMuzzlePosition()
+	if not isvector(pos) then return end
+	if not isangle(ang) then return end
+	
 	local norm = ang:Forward()
 	local mul = self.Weapon:IsTPS() and 1 or .5
 	self:SetPos(pos)
 	
 	render.SetMaterial(self.UseRefract and ref or mat)
-	local f = (CurTime() - self.InitTime) / self.life
+	local f = (CurTime() - self.InitTime) / self.LifeTime
 	local alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
 	local t = Lerp(f, self.tmax, self.tmin)
 	local r = Lerp(f, MinRadius, self.rad) * mul
@@ -75,10 +81,15 @@ end
 -- Called when the effect should think, return false to kill the effect.
 function EFFECT:Think()
 	return IsValid(self.Weapon)
-	and isnumber(self.InitTime)
-	and isnumber(self.rad)
+	and istable(self.Color)
+	and isnumber(self.Color.r)
+	and isnumber(self.Color.g)
+	and isnumber(self.Color.b)
 	and isnumber(self.deg)
+	and isnumber(self.rad)
+	and isnumber(self.InitTime)
+	and isnumber(self.LifeTime)
 	and isnumber(self.tmax)
 	and isnumber(self.tmin)
-	and CurTime() < self.InitTime + self.life
+	and CurTime() < self.InitTime + self.LifeTime
 end

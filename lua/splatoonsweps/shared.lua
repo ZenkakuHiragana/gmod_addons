@@ -578,6 +578,21 @@ cvars.AddChangeCallback("gmod_language", function(convar, old, new)
 	CompileFile "splatoonsweps/text.lua" ()
 end, "SplatoonSWEPs: OnLanguageChanged")
 
+local nest = nil
+for hookname in pairs {CalcMainActivity = true, TranslateActivity = true} do
+	hook.Add(hookname, "SplatoonSWEPs: Crouch anim in fence", ss.hook(function(w, ply, ...)
+		if nest then nest = nil return end
+		if not ply:Crouching() then return end
+		if not w:GetInFence() then return end
+		nest, ply.m_bWasNoclipping = true
+		ply:SetMoveType(MOVETYPE_WALK)
+		local res1, res2 = gamemode.Call(hookname, ply, ...)
+		ply:AnimResetGestureSlot(GESTURE_SLOT_CUSTOM)
+		ply:SetMoveType(MOVETYPE_NOCLIP)
+		return res1, res2
+	end))
+end
+
 -- Inkling playermodels hull change fix
 if not isfunction(FindMetaTable "Player".SplatoonOffsets) then return end
 CreateConVar("splt_Colors", 1, {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}, "Toggles skin/eye colors on Splatoon playermodels.")

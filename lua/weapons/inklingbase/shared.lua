@@ -240,14 +240,15 @@ function ss.KeyRelease(self, ply, key)
 	ss.ProtectedCall(self.KeyRelease, self, ply, key)
 	
 	if not (self:GetThrowing() and key == IN_ATTACK2) then return end
-	self:AddSchedule(self.Secondary.Delay, 1, function() self:SetThrowing(false) end)
+	self:AddSchedule(ss.SubWeaponThrowTime, 1, function() self:SetThrowing(false) end)
 	
-	local time = CurTime() + self.Secondary.Delay
+	local time = CurTime() + ss.SubWeaponThrowTime
 	self:SetCooldown(time)
+	self:SetThrowAnimTime(CurTime())
 	self:SetNextPrimaryFire(time)
 	self:SetNextSecondaryFire(time)
 	self:SendWeaponAnim(ss.ViewModel.Throw)
-	self.Owner:SetAnimation(PLAYER_ATTACK1)
+	-- self.Owner:SetAnimation(PLAYER_ATTACK1)
 	
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self:CheckCannotStandup()
@@ -274,7 +275,7 @@ function SWEP:ChangeInInk(name, old, new)
 		e:SetAttachment(10)
 		e:SetColor(self.ColorCode)
 		e:SetEntity(self)
-		e:SetFlags(f > .5 and 7 or 3)
+		e:SetFlags((f > .5 and 7 or 3) + (CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0))
 		e:SetOrigin(t.HitPos)
 		e:SetRadius(Lerp(f, 25, 50))
 		e:SetScale(.5)
@@ -322,8 +323,9 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Bool", "Throwing") -- Is about to use sub weapon.
 	self:AddNetworkVar("Float", "Cooldown") -- Cannot crouch, fire, or use sub weapon.
 	self:AddNetworkVar("Float", "Ink") -- Ink remainig. 0 to ss.MaxInkAmount
-	self:AddNetworkVar("Float", "Key") -- A valid key input
+	self:AddNetworkVar("Float", "Key") -- A valid key input.
 	self:AddNetworkVar("Float", "OldSpeed") -- Old Z-velocity of the player.
+	self:AddNetworkVar("Float", "ThrowAnimTime") -- Time to adjust throw anim. speed.
 	self:AddNetworkVar("Int", "GroundColor") -- Surface ink color.
 	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
 	self.HealSchedule = self:AddNetworkSchedule(HealingDelay, function(self, schedule)

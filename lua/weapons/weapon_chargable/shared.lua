@@ -154,7 +154,6 @@ function SWEP:KeyRelease(ply, key)
 	self:ResetCharge()
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self:ResetSequence "fire"
-	self.Owner:MuzzleFlash()
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 end
 
@@ -168,4 +167,8 @@ end
 function SWEP:CustomMoveSpeed()
 	return self:GetKey() == IN_ATTACK and Lerp(self:GetChargeProgress(),
 	self.InklingSpeed, self.Primary.MoveSpeed) or self.InklingSpeed
+end
+
+function SWEP:GetAnimWeight()
+	return (self:GetFireAt() + .5) / 1.5
 end

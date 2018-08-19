@@ -2024,21 +2024,6 @@ function ss.PlayerNoClip(w, ply, desired)
 	return old == w:GetInFence()
 end
 
-local nest = nil
-for hookname in pairs {CalcMainActivity = true, TranslateActivity = true} do
-	hook.Add(hookname, "SplatoonSWEPs: Crouch anim in fence", ss.hook(function(w, ply, ...)
-		if nest then nest = nil return end
-		if not ply:Crouching() then return end
-		if not w:GetInFence() then return end
-		nest, ply.m_bWasNoclipping = true
-		ply:SetMoveType(MOVETYPE_WALK)
-		local res1, res2 = gamemode.Call(hookname, ply, ...)
-		ply:AnimResetGestureSlot(GESTURE_SLOT_CUSTOM)
-		ply:SetMoveType(MOVETYPE_NOCLIP)
-		return res1, res2
-	end))
-end
-
 hook.Add("FinishMove", "SplatoonSWEPs: Handle noclip", ss.hook "FinishMove")
 hook.Add("Move", "SplatoonSWEPs: Squid's movement", ss.hook "MoveHook")
 hook.Add("PlayerNoClip", "SplatoonSWEPs: Through fence", ss.hook "PlayerNoClip")

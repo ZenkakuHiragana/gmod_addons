@@ -368,7 +368,7 @@ ss.InkColors = {
 	HSVToColor(0,	0,	.03	),
 	HSVToColor(0,	0,	.5	),
 	HSVToColor(0,	0,	.75	),
-	HSVToColor(0,	0,	1	),
+	HSVToColor(0,	0,	.999),
 }
 
 ss.CrosshairColors = {
@@ -469,6 +469,7 @@ ss.SpreadJumpCoefficient = .25 --   Angle expansion : Player's Z-velocity
 ss.SpreadJumpFraction = ss.SpreadJumpCoefficient / ss.SpreadJumpMaxVelocity
 ss.SquidSpeedOutofInk = .45 -- Squid speed coefficient if it is out of ink.
 ss.CameraFadeDistance = 100^2 -- Thirdperson model fade distance[units^2]
+ss.SubWeaponThrowTime = 25 * ss.FrameToSec -- Duration of TPS sub weapon throwing animation.
 ss.SquidTrace = {
 	start = vector_origin, endpos = vector_origin,
 	filter = {}, mask = ss.SquidSolidMask,

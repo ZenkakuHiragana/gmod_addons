@@ -163,7 +163,7 @@ end
 
 sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 	local numpieces = options[1]
-	local da, r1, r2 = math.Rand(0, 360), 40, 30
+	local da, r1, r2, t1, t2 = math.Rand(0, 360), 40, 30, 6, 13
 	local tpslag = self:IsCarriedByLocalPlayer()
 	and self.Owner:ShouldDrawLocalPlayer() and 128 or 0
 	e:SetColor(self.ColorCode)
@@ -172,14 +172,19 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 	if options[2] == "CHARGER" then
 		r2 = Lerp(self:GetFireAt(), 20, 70)
 		r1 = r2 * 2
+		t2 = Lerp(self:GetFireAt(), 5, 9)
+		t1 = t2 * .75
+		if self:GetFireAt() < .3 then numpieces = numpieces - 1 end
 	end
 	
 	for i = 0, 4 do
+		e:SetAttachment(t1)
 		e:SetFlags(tpslag + 1) -- 1: Refract effect
 		e:SetRadius(r1)
 		e:SetScale(i * 72 + da)
 		util.Effect("SplatoonSWEPsMuzzleRing", e)
 		if i > numpieces then continue end
+		e:SetAttachment(t2)
 		e:SetFlags(tpslag) -- 0: Splash effect
 		e:SetRadius(r2)
 		util.Effect("SplatoonSWEPsMuzzleRing", e)
