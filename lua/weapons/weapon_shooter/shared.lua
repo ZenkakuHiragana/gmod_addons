@@ -113,12 +113,11 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	angle_initvelocity:RotateAroundAxis(right, ry)
 	self.InitVelocity = angle_initvelocity:Forward() * p.InitVelocity
 	self.InitAngle = angle_initvelocity
+	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns
+	self.SplashNum = math.floor(p.SplashNum) + (math.random() < p.SplashNum % 1 and 1 or 0)
 	
-	local SplashInit = self:GetSplashInitMul() % p.SplashPatterns
-	local SplashNum = math.floor(p.SplashNum) + (math.random() < p.SplashNum % 1 and 1 or 0)
 	if SERVER then
-		ss.AddInk(self.Owner, pos, self.InitVelocity, self.ColorCode,
-		self.Owner:EyeAngles().yaw, math.random(4, 9), SplashInit, SplashNum, p)
+		ss.AddInk(self.Owner, pos, math.random(4, 9))
 	end
 	
 	self:SetSplashInitMul(self:GetSplashInitMul() + (p.TripleShotDelay and 3 or 1))
@@ -135,13 +134,13 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		self.ModifyWeaponSize = SysTime()
 		
 		local e = EffectData()
-		e:SetAttachment(SplashInit)
+		e:SetAttachment(self.SplashInit)
 		e:SetAngles(self.InitAngle)
 		e:SetColor(self.ColorCode)
 		e:SetEntity(self)
 		e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)
 		e:SetOrigin(pos)
-		e:SetScale(SplashNum)
+		e:SetScale(self.SplashNum)
 		e:SetStart(self.InitVelocity)
 		util.Effect("SplatoonSWEPsShooterInk", e)
 	end

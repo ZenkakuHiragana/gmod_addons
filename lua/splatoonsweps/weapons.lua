@@ -17,7 +17,6 @@ function ss.SetPrimary(weapon, info)
 	p.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
 	p.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
 	ss.ProtectedCall(ss.CustomPrimary[weapon.Base], p, info)
-	weapon.MuzzlePosition = info.MuzzlePosition
 	weapon.Primary = p
 end
 
@@ -80,9 +79,23 @@ function ss.CustomPrimary.weapon_charger(p, info)
 	p.MaxChargeTime = info.Delay.MaxCharge * ss.FrameToSec
 	p.MinColRadius = info.MinColRadius or ss.mColRadius
 	p.ColRadius = info.MaxColRadius or ss.mColRadius
+	p.MinWallPaintNum = info.MinWallPaintNum
+	p.MaxWallPaintNum = info.MaxWallPaintNum
+	p.WallPaintCharge = info.WallPaintChargeThreshold
+	p.FootpaintCharge = info.FootpaintChargeRate
 	p.Spread = info.Spread or 0
 	p.SpreadJump = info.SpreadJump or 0
 	p.SpreadBias = info.SpreadBias or 0
+	p.SplashPatterns = info.SplashPatterns or 1
+	p.SplashRadiusMul = info.LastSplashRadiusMul
+	p.MaxSplashRadius = info.MaxChargeSplashPaintRadius * ss.ToHammerUnits
+	p.MinSplashRadius = info.MinChargeSplashPaintRadius * p.MaxSplashRadius
+	p.MinSplashRatio = info.MinSplashRatio
+	p.MaxSplashRatio = info.MaxSplashRatio
+	p.MinSplashInterval = info.MinSplashInterval
+	p.MaxSplashInterval = info.MaxSplashInterval
+	p.MinFreezeTime = (info.Delay.MinFreeze or 1) * ss.FrameToSec
+	p.MaxFreezeTime = (info.Delay.MaxFreeze or 1) * ss.FrameToSec
 	p.AimDuration = info.Delay.Aim * ss.FrameToSec
 	p.Automatic = true
 end

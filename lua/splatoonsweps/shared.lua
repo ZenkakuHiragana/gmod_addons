@@ -524,53 +524,74 @@ local weaponslot = {
 local function RegisterWeapons()
 	local ssEnabled = GetConVar "sv_splatoonsweps_enabled"
 	if not ssEnabled or not ssEnabled:GetBool() then return end
-	local weaponlist = list.GetForEdit "Weapon"
-	for loop = 1, 2 do
-		for i, c in ipairs(ss.WeaponClassNames) do
-			for _, weapon in ipairs {weapons.GetStored(c), weaponlist[c]} do
-				for _, v in ipairs(weapon.Variations or {}) do
-					v.Base = c
-					v.OriginalName = c
-					weapons.Register(v, v.ClassName)
-				end
-				
-				local name = weapon.OriginalName or weapon.ClassName
-				weapon.ModelPath = weapon.ModelPath or "models/splatoonsweps/" .. name .. "/"
-				weapon.ViewModel = weapon.ModelPath .. "c_viewmodel.mdl"
-				weapon.WorldModel = weapon.ModelPath .. "w_right.mdl"
-				weapon.VElements = weapon.VElements or {}
-				weapon.WElements = weapon.WElements or {}
-				weapon.Category = ss.Text.Category
-				weapon.PrintName = ss.Text.PrintNames[c]
-				weapon.Spawnable = true
-				weapon.Slot = weaponslot[weapon.Base]
-				weapon.SlotPos = i
-				weapon.Variations = nil
-				
-				if CLIENT then
-					local icon = "entities/" .. c
-					if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then
-						icon = "weapons/swep"
-					end
-					
-					if not killicon.Exists(c) then
-						killicon.Add(c, icon, color_white) -- Weapon killicon
-					end
-					
-					weapon.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
-				end
-				
-				if not weapon.Slot then
-					local base = weapons.Get(weapon.Base)
-					weapon.Slot = base and base.Slot or 0
-				end
+	
+	local oldSWEP = SWEP
+	for base in pairs(weaponslot) do
+		local LuaFolderPath = "weapons/" .. base
+		for i, LuaFilePath in ipairs(file.Find(LuaFolderPath .. "/weapon_*.lua", "LUA")) do
+			local ClassName = LuaFilePath:StripExtension()
+			LuaFilePath = LuaFolderPath .. "/" .. LuaFilePath
+			
+			if SERVER then AddCSLuaFile(LuaFilePath) end
+			SWEP = {
+				Base = base,
+				ClassName = ClassName,
+				Folder = LuaFolderPath,
+			}
+			
+			include(LuaFilePath)
+			
+			for _, v in ipairs(SWEP.Variations or {}) do
+				v.Base = base
+				v.Category = ss.Text.Category
+				v.OriginalName = base
+				v.PrintName = ss.Text.PrintNames[v.ClassName]
+				v.Spawnable = true
+				setmetatable(v, {__index = SWEP})
+				weapons.Register(v, v.ClassName)
+				list.Add("NPCUsableWeapons", {
+					class = v.ClassName,
+					title = ss.Text.PrintNames[v.ClassName],
+				})
 			end
 			
-			if loop == 2 and weapons.Get(c) then -- Adds to NPC weapon list
-				list.Add("NPCUsableWeapons", {class = c, title = ss.Text.PrintNames[c]})
+			local name = SWEP.OriginalName or SWEP.ClassName
+			SWEP.ModelPath = SWEP.ModelPath or "models/splatoonsweps/" .. name .. "/"
+			SWEP.ViewModel = SWEP.ModelPath .. "c_viewmodel.mdl"
+			SWEP.WorldModel = SWEP.ModelPath .. "w_right.mdl"
+			SWEP.Category = ss.Text.Category
+			SWEP.PrintName = ss.Text.PrintNames[SWEP.ClassName]
+			SWEP.Spawnable = true
+			SWEP.Slot = weaponslot[SWEP.Base]
+			SWEP.SlotPos = i
+				
+			if CLIENT then
+				local icon = "entities/" .. SWEP.ClassName
+				if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then
+					icon = "weapons/swep"
+				end
+				
+				if not killicon.Exists(SWEP.ClassName) then
+					killicon.Add(SWEP.ClassName, icon, color_white) -- Weapon killicon
+				end
+				
+				SWEP.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
 			end
+			
+			if not SWEP.Slot then
+				local BaseTable = weapons.Get(SWEP.Base)
+				SWEP.Slot = BaseTable and BaseTable.Slot or 0
+			end
+			
+			weapons.Register(SWEP, SWEP.ClassName)
+			list.Add("NPCUsableWeapons", {
+				class = SWEP.ClassName,
+				title = SWEP.PrintName,
+			})
 		end
 	end
+	
+	SWEP = oldSWEP
 end
 
 hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", RegisterWeapons)

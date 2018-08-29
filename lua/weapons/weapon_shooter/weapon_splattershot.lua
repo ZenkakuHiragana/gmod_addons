@@ -1,10 +1,8 @@
 
 AddCSLuaFile()
 local ss = SplatoonSWEPs
-if not ss then return end
-SWEP.Base = "weapon_shooter"
+if not (ss and SWEP) then return end
 SWEP.ShootSound = "SplatoonSWEPs.Splattershot"
-SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/splattershot/splattershot.mdl"
 SWEP.Sub = "burstbomb"
 SWEP.Special = "bombrush"
 SWEP.Variations = {
@@ -23,21 +21,11 @@ SWEP.Variations = {
 	{
 		ClassName = "weapon_heroshot",
 		ModelPath = "models/splatoonsweps/weapon_heroshot/",
-		MuzzlePosition = Vector(20, 0, 7.5),
-		WeaponModelName = Model "models/props_splatoon/weapons/primaries/hero_shot/hero_shot.mdl",
-		ViewModelPos = Vector(4, -23, -7.2),
-		ViewModelAng = Angle(12.736, 75, 90),
 	},
 	{
 		ClassName = "weapon_octoshot",
 		ShootSound = "SplatoonSWEPs.Octoshot",
 		ModelPath = "models/splatoonsweps/weapon_octoshot/",
-		MuzzlePosition = Vector(20, 0, 0.3),
-		WeaponModelName = Model "models/props_splatoon/weapons/primaries/octoshot/octoshot.mdl",
-		ViewModelPos = Vector(6.2, -24.3, -6.9),
-		ViewModelAng = Angle(12.736, 75, 90),
-		WorldModelPos = Vector(4, 0.6, -4.5),
-		WorldModelAng = Angle(0, 5, 180),
 		Skin = 1,
 	},
 }
@@ -46,7 +34,6 @@ ss.SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .009,					-- Ink consumption per fire[-]
-	MuzzlePosition		= Vector(21, 0, 4.8),	-- Thirdperson muzzle position in local coord.[Hammer units]
 	Damage				= .36,					-- Maximum damage[-]
 	MinDamage			= .18,					-- Minimum damage[-]
 	InkRadius			= 19.20000076,			-- Painting radius[Splatoon units]

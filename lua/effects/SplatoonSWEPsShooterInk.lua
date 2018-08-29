@@ -13,47 +13,69 @@ function EFFECT:Init(e)
 	if not IsValid(self.Weapon.Owner) then return end
 	local f = e:GetFlags()
 	local p = self.Weapon.Primary
-	local StraightTime = p.Straight + DecreaseFrame / 2
 	self.IsDrop = bit.band(f, 1) > 0
+	self.IsShooter = self.Weapon.Base == "weapon_shooter"
 	self.InitTime = CurTime() - self.Weapon:Ping() * bit.band(f, 128) / 128
 	self.TruePos, self.TrueAng, self.TrueVelocity = e:GetOrigin(), e:GetAngles(), e:GetStart()
 	self.AppPos, self.AppAng = self.Weapon:GetMuzzlePosition()
-	self.AppVelocity = (self.TruePos + self.TrueVelocity * StraightTime - self.AppPos) / StraightTime
-	if self.IsDrop then
-		self.AppPos, self.AppAng, self.AppVelocity = self.TruePos, self.TrueAng, vector_origin
+	self.Speed = self.TrueVelocity:Length()
+	if self.IsShooter then
+		local StraightTime = self.IsDrop and 0 or p.Straight + DecreaseFrame / 2
+		self.AppVelocity = (self.TruePos + self.TrueVelocity * StraightTime - self.AppPos) / StraightTime
+		self.SplashInit = e:GetAttachment() * p.SplashInterval / p.SplashPatterns
+		self.SplashNum = e:GetScale()
+		self.TrailInitTime = self.InitTime + ss.ShooterTrailDelay
+		if self.IsDrop then
+			self.AppPos, self.AppAng, self.AppVelocity = self.TruePos, self.TrueAng, vector_origin
+		end
+		
+		self.TrailPos = self.AppPos
+	else
+		self.Charge = e:GetMagnitude()
+		self.Damage = self.Weapon:GetLerp(self.Charge, p.MinDamage, p.MaxDamage, p.Damage)
+		self.IsCritical = self.Damage >= 100
+		self.Range = e:GetScale()
+		self.AppVelocity = (self.TruePos + self.TrueAng:Forward() * self.Range - self.AppPos):GetNormalized() * self.Speed
+		self.SplashInterval = Lerp(self.Charge, p.MinSplashInterval, p.MaxSplashInterval)
+		self.SplashRadius = Lerp(self.Charge, p.MinSplashRadius, p.MaxSplashRadius)
+		self.SplashRatio = Lerp(self.Charge, p.MinSplashRatio, p.MaxSplashRatio)
+		self.SplashInit = self.SplashInterval / p.SplashPatterns * self.Weapon.SplashInit + self.SplashRadius * self.SplashRatio
+		self.SplashInterval = self.SplashInterval * self.SplashRadius * self.SplashRatio * .9
+		self.Straight = self.Range / self.Speed
+		self.TrailInitTime = self.InitTime + ss.ShooterTrailDelay * 2.5
+		self.InitTime = self.InitTime - e:GetRadius()
+		self.TrailPos = self.AppPos
+		if self.IsDrop then
+			self.AppPos, self.AppAng, self.AppVelocity = self.TruePos, self.TrueAng, vector_origin
+			self.TrailPos = self.AppPos - self.TrueAng:Forward() * self.SplashInterval
+			self.TrailInitTime = self.InitTime
+		end
 	end
 	
-	self.TrailPos, self.TrailAng = self.AppPos, self.AppAng
+	self.TrailAng = self.AppAng
 	self.TrailVelocity = self.AppVelocity
-	self.TrailInitTime = self.InitTime + ss.ShooterTrailDelay
-	self.Speed = self.TrueVelocity:Length()
 	self.SplashCount = 0
-	self.SplashInit = e:GetAttachment() * p.SplashInterval / p.SplashPatterns
-	self.SplashNum = e:GetScale()
 	self.ColorCode = e:GetColor()
 	self.Color = ss.GetColor(self.ColorCode)
 	self.Hit = false
 	self.Size = ss.mColRadius * (self.IsDrop and .5 or 1)
 	self.IsCarriedByLocalPlayer = self.Weapon:IsCarriedByLocalPlayer()
 	self:SetModel "models/props_junk/PopCan01a.mdl"
-	self:SetAngles(self.TrueAng)
+	self:SetAngles(self.AppAng)
 	self:SetMaterial(MatInvisible)
-	self:SetPos(self.TruePos)
-	self:SetRenderOrigin(self.TruePos)
+	self:SetPos(self.AppPos)
 end
 
 function EFFECT:Simulate(initpos, initang, initvel, lt, outpos, outang, outstart)
 	local g = physenv.GetGravity() * 15
 	local Straight = self.IsDrop and 0 or self.Weapon.Primary.Straight
+	outang:Set(initang)
 	if not self.IsDrop and lt < Straight then
 		outpos:Set(initpos + initvel * lt)
 		outstart:Set(initpos + initvel * math.max(lt - ss.FrameToSec, 0))
-		outang:Set(initvel:Angle())
 	else
 		local RestTime = lt - Straight -- 0 <= t <= DecreaseFrame
 		local f = math.Clamp(RestTime / (DecreaseFrame + TermTime), 0, 1)
-		outang:Set(LerpAngle(f, initvel:Angle(), g:Angle()))
-		outang:Set(LerpAngle(0, initvel:Angle(), g:Angle()))
 		if self.IsDrop or lt > Straight + DecreaseFrame then
 			local StraightTime = Straight + DecreaseFrame / 2
 			local FallTime = math.max(lt - Straight - DecreaseFrame, 0)
@@ -72,16 +94,88 @@ function EFFECT:Simulate(initpos, initang, initvel, lt, outpos, outang, outstart
 		else
 			local Time = Straight + RestTime / 2
 			outpos:Set(initpos + initvel * Time)
-			outang:Set(LerpAngle(RestTime / (DecreaseFrame + TermTime), initvel:Angle(), g:Angle()))
+			outang:Set(LerpAngle(f, initvel:Angle(), g:Angle()))
 			RestTime = RestTime - ss.FrameToSec
 			outstart:Set(initpos + initvel * (Straight + RestTime / (RestTime > 0 and 2 or 1)))
 		end
 	end
 end
 
+function EFFECT:SimulateCharger(initpos, initang, initvel, lt, outpos, outang, outstart)
+	local g = physenv.GetGravity() * 15
+	local Length = math.Clamp(self.Speed * lt, 0, self.Range)
+	local dir = initang:Forward()
+	local StraightPos = initpos + dir * self.Range
+	outpos:Set(initpos + dir * Length)
+	outstart:Set(initpos + dir * math.max(Length - self.Speed * ss.FrameToSec, 0))
+	outang:Set(initang)
+	if self.Speed * lt > self.Range then -- Falls Straight
+		local p = initpos + dir * self.Range
+		local FallTime = math.max(lt - self.Straight, 0)
+		if FallTime > TermTime then
+			local v = g * TermTime
+			outpos:Set(p - v * TermTime / 2 + v * FallTime)
+			FallTime = math.max(FallTime - ss.FrameToSec, 0)
+			outstart:Set(StraightPos - v * TermTime / 2 + v * FallTime)
+		else
+			outpos:Set(p + g * FallTime * FallTime / 2)
+			FallTime = math.max(FallTime - ss.FrameToSec, 0)
+			outstart:Set(StraightPos + g * FallTime * FallTime / 2)
+		end
+	end
+end
+
+function EFFECT:CreateDrops(tr) -- Creates ink drops
+	if self.IsDrop or self.SplashCount > self.SplashNum then return end
+	local SplashInterval = self.Weapon.Primary.SplashInterval
+	local len = (tr.HitPos - self.TruePos):Length2D()
+	local nextlen = self.SplashCount * SplashInterval + self.SplashInit
+	local e = EffectData()
+	while len >= nextlen do -- Create drops
+		e:SetAttachment(0)
+		e:SetAngles(self.TrueAng)
+		e:SetColor(self.ColorCode)
+		e:SetEntity(self.Weapon)
+		e:SetFlags(1)
+		e:SetOrigin(self.TruePos + self.TrueAng:Forward() * nextlen)
+		e:SetScale(0)
+		e:SetStart(vector_origin)
+		util.Effect("SplatoonSWEPsShooterInk", e)
+		
+		nextlen = nextlen + SplashInterval
+		self.SplashCount = self.SplashCount + 1
+	end
+end
+
+function EFFECT:CreateChargerDrops(tr)
+	if self.IsDrop then return end
+	local e = EffectData()
+	local Length = tr.HitPos:Distance(self.TruePos)
+	local NextLength = self.SplashCount * self.SplashInterval + self.SplashInit
+	while Length < self.Range and Length >= NextLength do -- Create ink drops
+		e:SetAttachment(0)
+		e:SetAngles(self.TrueAng)
+		e:SetColor(self.ColorCode)
+		e:SetEntity(self.Weapon)
+		e:SetFlags(1)
+		e:SetOrigin(self.TruePos + self.TrueAng:Forward() * NextLength)
+		e:SetScale(0)
+		e:SetStart(self.TrueVelocity)
+		e:SetRadius(self.SplashInterval / self.Speed)
+		e:SetMagnitude(self.Charge)
+		util.Effect("SplatoonSWEPsShooterInk", e)
+		
+		NextLength = NextLength + self.SplashInterval
+		self.SplashCount = self.SplashCount + 1
+	end
+end
+
 function EFFECT:HitEffect(tr)
-	self.Hit = tr.Hit or math.abs(tr.HitPos.x) > 16384
-	or math.abs(tr.HitPos.y) > 16384 or math.abs(tr.HitPos.z) > 16384
+	self.Hit = tr.Hit
+	or math.abs(tr.HitPos.x) > 16384
+	or math.abs(tr.HitPos.y) > 16384
+	or math.abs(tr.HitPos.z) > 16384
+	
 	if tr.HitWorld then -- World hit effect here
 		local e = EffectData()
 		e:SetAngles(tr.HitNormal:Angle())
@@ -93,14 +187,14 @@ function EFFECT:HitEffect(tr)
 		e:SetRadius(self.Size * 5)
 		e:SetScale(.4)
 		util.Effect("SplatoonSWEPsMuzzleSplash", e)
-		if self.IsDrop then return end
+		if self.IsDrop and self.IsShooter then return end
 		sound.Play("SplatoonSWEPs_Ink.HitWorld", tr.HitPos)
 	elseif not self.IsDrop and self.IsCarriedByLocalPlayer
-	and IsValid(tr.Entity) and tr.Entity:Health() > 0 then
+		and IsValid(tr.Entity) and tr.Entity:Health() > 0 then
 		local ent = ss.IsValidInkling(tr.Entity) -- Entity hit effect here
-		if not (ent and ss.IsAlly(ent, self.ColorCode)) then
-			surface.PlaySound(self.IsCritical and ss.DealDamageCritical or ss.DealDamage)
-		end
+		if ent and ss.IsAlly(ent, self.ColorCode) then return end
+		if self.Speed * math.max(CurTime() - FrameTime() - self.InitTime, 0) > self.Range then return end
+		surface.PlaySound(self.IsCritical and ss.DealDamageCritical or ss.DealDamage)
 	end
 end
 
@@ -123,7 +217,7 @@ function EFFECT:DrawMesh(MeshTable)
 	mesh.End()
 end
 
-function EFFECT:Render()
+function EFFECT:Render(NoDraw)
 	if not IsValid(self.Weapon) then return end
 	if not IsValid(self.Weapon.Owner) then return end
 	if not istable(self.Color) then return end
@@ -142,8 +236,7 @@ function EFFECT:Render()
 	if not isvector(self.TrailVelocity) then return end
 	if not isnumber(self.InitTime) then return end
 	if not isnumber(self.SplashInit) then return end
-	if not isnumber(self.SplashNum) then return end
-	local w, Straight = self.Weapon, self.Weapon.Primary.Straight
+	local w, Straight = self.Weapon, self.Weapon.Primary.Straight or 0
 	local LifeTime = math.max(CurTime() - self.InitTime, 0)
 	local TrailTime = math.max(CurTime() - self.TrailInitTime, 0)
 	local TruePos, TrueStart, AppPos, TrailPos = Vector(), Vector(), Vector(), Vector()
@@ -153,6 +246,9 @@ function EFFECT:Render()
 		local aim = ss.ProtectedCall(w.Owner.GetAimVector, w.Owner) or w.Owner:GetForward()
 		self.TrailPos, self.TrailAng = w:GetMuzzlePosition()
 		self.TrailVelocity = aim * self.Speed
+		if not self.IsShooter then
+			self.TrailPos = self.TrailPos - self.TrailAng:Forward() * self.SplashInterval
+		end
 	end
 	
 	for to, from in pairs {
@@ -160,7 +256,11 @@ function EFFECT:Render()
 		[{AppPos, AppAng, Vector()}] = {self.AppPos, self.AppAng, self.AppVelocity, LifeTime},
 		[{TrailPos, TrailAng, Vector()}] = {self.TrailPos, self.TrailAng, self.TrailVelocity, TrailTime},
 	} do
-		self:Simulate(from[1], from[2], from[3], from[4], to[1], to[2], to[3])
+		if self.IsShooter then
+			self:Simulate(from[1], from[2], from[3], from[4], to[1], to[2], to[3])
+		else
+			self:SimulateCharger(from[1], from[2], from[3], from[4], to[1], to[2], to[3])
+		end
 	end
 	
 	local size = self.Size * .75
@@ -175,46 +275,36 @@ function EFFECT:Render()
 	}
 	
 	self:HitEffect(tr)
-	self:SetPos(tr.HitPos)
-	self:SetRenderOrigin(tr.HitPos)
-	self:SetAngles(TrueAng)
+	self:SetPos(AppPos)
+	self:SetAngles(AppAng)
 	self:SetColor(self.Color)
 	self:DrawModel()
 	
-	if not self.IsDrop and self.SplashCount <= self.SplashNum then -- Creates an ink drop
-		local len = (tr.HitPos - self.TruePos):Length2D()
-		local nextlen = self.SplashCount * w.Primary.SplashInterval + self.SplashInit
-		local e = EffectData()
-		while len >= nextlen do -- Create drops
-			e:SetAttachment(0)
-			e:SetAngles(self.TrueAng)
-			e:SetColor(self.ColorCode)
-			e:SetEntity(w)
-			e:SetFlags(1)
-			e:SetOrigin(self.TruePos + self.TrueAng:Forward() * nextlen)
-			e:SetScale(0)
-			e:SetStart(vector_origin)
-			util.Effect("SplatoonSWEPsShooterInk", e)
-			
-			len = len - w.Primary.SplashInterval
-			nextlen = nextlen + w.Primary.SplashInterval
-			self.SplashCount = self.SplashCount + 1
-		end
+	if self.IsShooter then
+		self:CreateDrops(tr)
+		TrailPos = LerpVector(math.Clamp((TrailTime - Straight) / TrailLagTime, 0, 1), TrailPos, AppPos)
+	else
+		self:CreateChargerDrops(tr)
 	end
 	
-	TrailPos = LerpVector(math.Clamp((TrailTime - Straight) / TrailLagTime, 0, 1), TrailPos, AppPos)
+	if NoDraw then return end
 	local fore = AppPos + AppAng:Forward() * self.Size
-	local foreup = AppPos + AppAng:Up() * self.Size
-	local foreleft, foreright = Angle(AppAng), Angle(AppAng)
 	local back = TrailPos - TrailAng:Forward() * size
-	local backdown = TrailPos - TrailAng:Up() * size
-	local backleft, backright = Angle(TrailAng), Angle(TrailAng)
-	foreleft:RotateAroundAxis(AppAng:Forward(), 120)
-	foreright:RotateAroundAxis(AppAng:Forward(), -120)
-	backleft:RotateAroundAxis(TrailAng:Forward(), -120)
-	backright:RotateAroundAxis(TrailAng:Forward(), 120)
-	foreleft, foreright = AppPos + foreleft:Up() * self.Size, AppPos + foreright:Up() * self.Size
-	backleft, backright = TrailPos - backleft:Up() * size, TrailPos - backright:Up() * size
+	local foreup, foreleft, foreright = Angle(AppAng), Angle(AppAng), Angle(AppAng)
+	local backdown, backleft, backright = Angle(TrailAng), Angle(TrailAng), Angle(TrailAng)
+	local deg = CurTime() * self.Speed
+	foreup:RotateAroundAxis(AppAng:Forward(), deg)
+	foreleft:RotateAroundAxis(AppAng:Forward(), deg + 120)
+	foreright:RotateAroundAxis(AppAng:Forward(), deg - 120)
+	backdown:RotateAroundAxis(TrailAng:Forward(), deg)
+	backleft:RotateAroundAxis(TrailAng:Forward(), deg - 120)
+	backright:RotateAroundAxis(TrailAng:Forward(), deg + 120)
+	foreup = AppPos + foreup:Up() * self.Size
+	foreleft = AppPos + foreleft:Up() * self.Size
+	foreright = AppPos + foreright:Up() * self.Size
+	backdown = TrailPos - backdown:Up() * size
+	backleft = TrailPos - backleft:Up() * size
+	backright = TrailPos - backright:Up() * size
 	local MeshTable = {
 		{fore, foreleft, foreup},
 		{fore, foreup, foreright},
@@ -263,28 +353,12 @@ function EFFECT:Think()
 	and isvector(self.TrailVelocity)
 	and isnumber(self.InitTime)
 	and isnumber(self.SplashInit)
-	and isnumber(self.SplashNum)
 	and not self.Hit
-	and CurTime() < self.InitTime + self.Weapon.Primary.Straight + 20
+	and math.abs(self.TruePos.x) < 16384
+	and math.abs(self.TruePos.y) < 16384
+	and math.abs(self.TruePos.z) < 16384
 	if not valid then return false end
 	
-	local TrueAng, t = Angle(), {
-		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
-		filter = owner,
-		mask = ss.SquidSolidMask,
-		maxs = ss.vector_one * ss.mColRadius,
-		mins = -ss.vector_one * ss.mColRadius,
-		start = Vector(),
-		endpos = Vector(),
-	}
-	
-	self:Simulate(self.TruePos, self.TrueAng, self.TrueVelocity,
-	math.max(CurTime() - self.InitTime, 0), t.endpos, TrueAng, t.start)
-	local tr = util.TraceHull(t)
-	self:HitEffect(tr)
-	self:SetPos(tr.HitPos)
-	self:SetRenderOrigin(tr.HitPos)
-	self:SetAngles(TrueAng)
-	self:SetColor(self.Color)
+	self:Render(true)
 	return true
 end

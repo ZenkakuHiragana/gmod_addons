@@ -2,36 +2,6 @@
 --The way to draw weapon models comes from SWEP Construction Kit.
 local ss = SplatoonSWEPs
 if not ss then return end
-SWEP.WElements = SWEP.WElements or {
-	inktank = {
-		type = "Model",
-		model = ss.InkTankModel,
-		bone = "ValveBiped.Bip01_Spine4",
-		rel = "",
-		pos = Vector(-20, 3, 0),
-		angle = Angle(0, 75, 90),
-		size = Vector(1, 1, 1),
-		color = Color(255, 255, 255, 255),
-		surpresslightning = false,
-		material = "",
-		skin = 0,
-		bodygroup = {},
-		inktank = true,
-	},
-	subweaponusable = {
-		type = "Sprite",
-		sprite = "sprites/flare1",
-		bone = "ValveBiped.Bip01_Spine4",
-		rel = "inktank",
-		pos = Vector(0, 0, 25.5),
-		size = {x = 12, y = 12},
-		color = Color(255, 255, 255, 255),
-		nocull = true,
-		additive = true,
-		ignorez = false,
-	},
-}
-
 function SWEP:ResetBonePositions(vm)
 	if not (IsValid(vm) and vm:GetBoneCount()) then return end
 	for i = 0, vm:GetBoneCount() do
@@ -240,7 +210,7 @@ end
 
 function SWEP:ViewModelDrawn(vm)
 	if self.SurpressDrawingVM or self:GetHolstering() or
-	not (IsValid(self) and IsValid(self.Owner) and self.VElements) then return end
+	not (IsValid(self) and IsValid(self.Owner)) then return end
 	local bone_ent = self.Owner
 	self:UpdateBonePositions(vm)
 	
@@ -255,8 +225,8 @@ function SWEP:ViewModelDrawn(vm)
 		if v.type == "Model" then
 			if not (IsValid(v.modelEnt) or self:RecreateModel(v)) then continue end
 			local model = v.modelEnt
-			local da = name == "weapon" and self.ViewModelAng or v.angle or Angle()
-			local dp = name == "weapon" and self.ViewModelPos or v.pos or Vector()
+			local da = name == "weapon" and v.angle or Angle()
+			local dp = name == "weapon" and v.pos or Vector()
 			model:SetPos(pos + ang:Forward() * dp.x + ang:Right() * dp.y + ang:Up() * dp.z)
 			ang:RotateAroundAxis(ang:Up(), da.y)
 			ang:RotateAroundAxis(ang:Right(), da.p)
@@ -369,7 +339,6 @@ function SWEP:DrawWorldModelTranslucent()
 	local bone_ent = self.Owner -- when the weapon is dropped
 	if not IsValid(bone_ent) then bone_ent = self end
 	if not self:IsCarriedByLocalPlayer() then self:Think() end
-	if not self.WElements then return end
 	
 	local cameradistance = 1
 	if self:IsCarriedByLocalPlayer() then
@@ -396,8 +365,8 @@ function SWEP:DrawWorldModelTranslucent()
 		if v.type == "Model" then
 			if not (IsValid(v.modelEnt) or self:RecreateModel(v)) then continue end
 			local model = v.modelEnt
-			local da = name == "weapon" and self.WorldModelAng or v.angle or Angle()
-			local dp = name == "weapon" and self.WorldModelPos or v.pos or Vector()
+			local da = v.angle or Angle()
+			local dp = v.pos or Vector()
 			if name ~= "weapon" or v.bone ~= "ValveBiped.Bip01_L_Hand" then
 				model:SetPos(pos + ang:Forward() * dp.x + ang:Right() * dp.y + ang:Up() * dp.z)
 				ang:RotateAroundAxis(ang:Up(), da.y)
@@ -501,7 +470,7 @@ end
 function SWEP:CustomAmmoDisplay()
 	self.AmmoDisplay = self.AmmoDisplay or {}
 	self.AmmoDisplay.Draw = true
-	self.AmmoDisplay.PrimaryClip = self:GetInk() / ss.MaxInkAmount * 100
+	self.AmmoDisplay.PrimaryClip = math.Round(self:GetInk() / ss.MaxInkAmount * 100)
 	self.AmmoDisplay.PrimaryAmmo = ss.ProtectedCall(self.DisplayAmmo, self) or ss.MaxInkAmount
 	return self.AmmoDisplay
 end

@@ -6,6 +6,34 @@ include "baseinfo.lua"
 include "cl_draw.lua"
 include "ai_translations.lua"
 
+local inktank = {
+	type = "Model",
+	model = ss.InkTankModel,
+	bone = "ValveBiped.Bip01_Spine4",
+	rel = "",
+	pos = Vector(-20, 3, 0),
+	angle = Angle(0, 75, 90),
+	size = Vector(1, 1, 1),
+	color = Color(255, 255, 255, 255),
+	surpresslightning = false,
+	material = "",
+	skin = 0,
+	bodygroup = {},
+	inktank = true,
+}
+local subweaponusable = {
+	type = "Sprite",
+	sprite = "sprites/flare1",
+	bone = "ValveBiped.Bip01_Spine4",
+	rel = "inktank",
+	pos = Vector(0, 0, 25.5),
+	size = {x = 12, y = 12},
+	color = Color(255, 255, 255, 255),
+	nocull = true,
+	additive = true,
+	ignorez = false,
+}
+
 function SWEP:PopupError(msg)
 	msg = ss.Text.Error[msg]
 	if not msg then return end
@@ -42,6 +70,10 @@ function SWEP:Initialize()
 	-- we build a render order because sprites need to be drawn after models
 	self.vRenderOrder = {}
 	self.wRenderOrder = {}
+	self.VElements = self.VElements or {}
+	self.WElements = self.WElements or {}
+	self.WElements.inktank = inktank
+	self.WElements.subweaponusable = subweaponusable
 	
 	for e, r in pairs {
 		[self.VElements] = self.vRenderOrder,

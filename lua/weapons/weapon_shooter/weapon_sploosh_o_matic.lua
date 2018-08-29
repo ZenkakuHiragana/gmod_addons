@@ -1,10 +1,8 @@
 
 AddCSLuaFile()
 local ss = SplatoonSWEPs
-if not ss then return end
-SWEP.Base = "weapon_shooter"
+if not (ss and SWEP) then return end
 SWEP.ShootSound = "SplatoonSWEPs.Sploosh-o-matic"
-SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/splash_sploosh_o_matic/splash_sploosh_o_matic.mdl"
 SWEP.Sub = "squidbeakon"
 SWEP.Special = "killerwail"
 SWEP.Skin = 1
@@ -27,7 +25,6 @@ ss.SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .007,					-- Ink consumption per fire[-]
-	MuzzlePosition		= Vector(20, 0, 7),		-- Thirdperson muzzle position in local coord.[Hammer units]
 	Damage				= .38,					-- Maximum damage[-]
 	MinDamage			= .19,					-- Minimum damage[-]
 	InkRadius			= 24,					-- Painting radius[Splatoon units]

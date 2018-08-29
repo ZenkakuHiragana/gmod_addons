@@ -1,11 +1,8 @@
 
 AddCSLuaFile()
 local ss = SplatoonSWEPs
-if not ss then return end
-SWEP.Base = "weapon_shooter"
+if not (ss and SWEP) then return end
 SWEP.ShootSound = "SplatoonSWEPs.96"
-SWEP.WeaponModelName = "models/props_splatoon/weapons/primaries/52_96_gal/52_96_gal.mdl"
-SWEP.ShowSplashRing = true -- Muzzleflash effect
 SWEP.Sub = "sprinkler"
 SWEP.Special = "echolocator"
 SWEP.Variations = {{
@@ -19,7 +16,6 @@ ss.SetPrimary(SWEP, {
 	IsAutomatic			= true,					-- false to semi-automatic
 	Recoil				= .2,					-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .025,					-- Ink consumption per fire[-]
-	MuzzlePosition		= Vector(27, 0, 9),		-- Thirdperson muzzle position in local coord.[Hammer units]
 	Damage				= .62,					-- Maximum damage[-]
 	MinDamage			= .31,					-- Minimum damage[-]
 	InkRadius			= 21,					-- Painting radius[Splatoon units]

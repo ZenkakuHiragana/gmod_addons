@@ -16,7 +16,7 @@ SWEP.Crosshair = {
 
 function SWEP:ClientInit()
 	self.MinRenderBounds, self.MaxRenderBounds = self:GetRenderBounds()
-	self.BaseClass.ClientInit(self)
+	self.BaseClass.BaseClass.ClientInit(self)
 end
 
 function SWEP:DisplayAmmo()
