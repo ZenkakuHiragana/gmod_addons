@@ -521,6 +521,20 @@ local weaponslot = {
 	weapon_scope = 4,
 	weapon_slosher = 5,
 }
+local function SetupIcons(SWEP)
+	if SERVER then return end
+	local icon = "entities/" .. SWEP.ClassName
+	if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then
+		icon = "weapons/swep"
+	end
+	
+	if not killicon.Exists(SWEP.ClassName) then
+		killicon.Add(SWEP.ClassName, icon, color_white) -- Weapon killicon
+	end
+	
+	SWEP.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
+end
+
 local function RegisterWeapons()
 	local ssEnabled = GetConVar "sv_splatoonsweps_enabled"
 	if not ssEnabled or not ssEnabled:GetBool() then return end
@@ -540,23 +554,8 @@ local function RegisterWeapons()
 			}
 			
 			include(LuaFilePath)
-			
-			for _, v in ipairs(SWEP.Variations or {}) do
-				v.Base = base
-				v.Category = ss.Text.Category
-				v.OriginalName = base
-				v.PrintName = ss.Text.PrintNames[v.ClassName]
-				v.Spawnable = true
-				setmetatable(v, {__index = SWEP})
-				weapons.Register(v, v.ClassName)
-				list.Add("NPCUsableWeapons", {
-					class = v.ClassName,
-					title = ss.Text.PrintNames[v.ClassName],
-				})
-			end
-			
-			local name = SWEP.OriginalName or SWEP.ClassName
-			SWEP.ModelPath = SWEP.ModelPath or "models/splatoonsweps/" .. name .. "/"
+			SetupIcons(SWEP)
+			SWEP.ModelPath = SWEP.ModelPath or "models/splatoonsweps/" .. SWEP.ClassName .. "/"
 			SWEP.ViewModel = SWEP.ModelPath .. "c_viewmodel.mdl"
 			SWEP.WorldModel = SWEP.ModelPath .. "w_right.mdl"
 			SWEP.Category = ss.Text.Category
@@ -564,18 +563,22 @@ local function RegisterWeapons()
 			SWEP.Spawnable = true
 			SWEP.Slot = weaponslot[SWEP.Base]
 			SWEP.SlotPos = i
-				
-			if CLIENT then
-				local icon = "entities/" .. SWEP.ClassName
-				if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then
-					icon = "weapons/swep"
-				end
-				
-				if not killicon.Exists(SWEP.ClassName) then
-					killicon.Add(SWEP.ClassName, icon, color_white) -- Weapon killicon
-				end
-				
-				SWEP.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
+			
+			for _, v in ipairs(SWEP.Variations or {}) do
+				v.Base = base
+				v.Category = ss.Text.Category
+				v.PrintName = ss.Text.PrintNames[v.ClassName]
+				v.Spawnable = true
+				v.ModelPath = v.ModelPath or SWEP.ModelPath
+				v.ViewModel = v.ModelPath .. "c_viewmodel.mdl"
+				v.WorldModel = v.ModelPath .. "w_right.mdl"
+				SetupIcons(v)
+				setmetatable(v, {__index = SWEP})
+				weapons.Register(v, v.ClassName)
+				list.Add("NPCUsableWeapons", {
+					class = v.ClassName,
+					title = ss.Text.PrintNames[v.ClassName],
+				})
 			end
 			
 			if not SWEP.Slot then

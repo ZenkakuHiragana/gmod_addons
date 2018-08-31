@@ -22,6 +22,10 @@ SWEP.Variations = {
 		Skin = 1,
 	},
 	{
+		ClassName = "weapon_herocharger",
+		ModelPath = "models/splatoonsweps/weapon_herocharger/",
+	},
+	{
 		ClassName = "weapon_splatterscope",
 		Bodygroup = {3},
 	},

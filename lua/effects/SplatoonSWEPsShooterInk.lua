@@ -39,7 +39,7 @@ function EFFECT:Init(e)
 		self.SplashInterval = Lerp(self.Charge, p.MinSplashInterval, p.MaxSplashInterval)
 		self.SplashRadius = Lerp(self.Charge, p.MinSplashRadius, p.MaxSplashRadius)
 		self.SplashRatio = Lerp(self.Charge, p.MinSplashRatio, p.MaxSplashRatio)
-		self.SplashInit = self.SplashInterval / p.SplashPatterns * self.Weapon.SplashInit + self.SplashRadius * self.SplashRatio
+		self.SplashInit = self.SplashInterval / p.SplashPatterns * e:GetAttachment() + self.SplashRadius * self.SplashRatio
 		self.SplashInterval = self.SplashInterval * self.SplashRadius * self.SplashRatio * .9
 		self.Straight = self.Range / self.Speed
 		self.TrailInitTime = self.InitTime + ss.ShooterTrailDelay * 2.5
@@ -104,7 +104,7 @@ end
 function EFFECT:SimulateCharger(initpos, initang, initvel, lt, outpos, outang, outstart)
 	local g = physenv.GetGravity() * 15
 	local Length = math.Clamp(self.Speed * lt, 0, self.Range)
-	local dir = initang:Forward()
+	local dir = initvel:GetNormalized()
 	local StraightPos = initpos + dir * self.Range
 	outpos:Set(initpos + dir * Length)
 	outstart:Set(initpos + dir * math.max(Length - self.Speed * ss.FrameToSec, 0))
@@ -193,7 +193,8 @@ function EFFECT:HitEffect(tr)
 		and IsValid(tr.Entity) and tr.Entity:Health() > 0 then
 		local ent = ss.IsValidInkling(tr.Entity) -- Entity hit effect here
 		if ent and ss.IsAlly(ent, self.ColorCode) then return end
-		if self.Speed * math.max(CurTime() - FrameTime() - self.InitTime, 0) > self.Range then return end
+		if not self.IsShooter and self.Speed * math.max(CurTime()
+		- FrameTime() - self.InitTime, 0) > self.Range then return end
 		surface.PlaySound(self.IsCritical and ss.DealDamageCritical or ss.DealDamage)
 	end
 end
