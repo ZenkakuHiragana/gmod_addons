@@ -193,6 +193,7 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if self:GetHolstering() then return end
 	if self:CheckCannotStandup() then return end
 	if self:GetThrowing() then return end
+	if auto and ss.sp and CLIENT then return end
 	if not auto and CurTime() < self:GetCooldown() then return end
 	if not auto and self:GetKey() ~= IN_ATTACK then return end
 	local hasink = self:GetInk() > 0
@@ -248,7 +249,6 @@ function ss.KeyRelease(self, ply, key)
 	self:SetNextPrimaryFire(time)
 	self:SetNextSecondaryFire(time)
 	self:SendWeaponAnim(ss.ViewModel.Throw)
-	-- self.Owner:SetAnimation(PLAYER_ATTACK1)
 	
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self:CheckCannotStandup()
@@ -279,7 +279,7 @@ function SWEP:ChangeInInk(name, old, new)
 		e:SetOrigin(t.HitPos)
 		e:SetRadius(Lerp(f, 25, 50))
 		e:SetScale(.5)
-		util.Effect("SplatoonSWEPsMuzzleSplash", e, CLIENT)
+		util.Effect("SplatoonSWEPsMuzzleSplash", e)
 	elseif outofink and self.Owner:IsPlayer() then
 		self.Owner:SetDSP(1)
 	end

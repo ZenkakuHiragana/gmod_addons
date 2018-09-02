@@ -98,7 +98,8 @@ function HitPaint.weapon_shooter(ink, t)
 		ratio = ink.Ratio or ratio
 	end
 	
-	if CLIENT and IsFirstTimePredicted() and t.Hit and (not ink.IsDrop or ink.PlayHitSound) then
+	if (ss.sp or CLIENT and IsFirstTimePredicted())
+	and t.Hit and (not ink.IsDrop or ink.PlayHitSound) then
 		sound.Play("SplatoonSWEPs_Ink.HitWorld", t.HitPos)
 	end
 	
@@ -109,13 +110,19 @@ function HitEntity.weapon_shooter(ink, t, w)
 	local d, e, o = DamageInfo(), t.Entity, ink.filter
 	local frac = (math.max(0, CurTime() - ink.InitTime)
 	- ink.Info.DecreaseDamage) / ink.Info.MinDamageTime
-	if CLIENT and not ink.IsDrop and ink.IsCarriedByLocalPlayer and e:Health() > 0 then
+	if (ss.sp or CLIENT and IsFirstTimePredicted())
+	and not ink.IsDrop and ink.IsCarriedByLocalPlayer and e:Health() > 0 then
 		local ent = ss.IsValidInkling(e) -- Entity hit effect here
 		if not (ent and ss.IsAlly(ent, ink.Color)) then
-			surface.PlaySound(ink.IsCritical and ss.DealDamageCritical or ss.DealDamage)
+			if ss.mp then
+				surface.PlaySound(ink.IsCritical and ss.DealDamageCritical or ss.DealDamage)
+			elseif SERVER then
+				ink.filter:SendLua("surface.PlaySound(SplatoonSWEPs.DealDamage"
+				.. (ink.IsCritical and "Critical" or "") .. ")")
+			end
 		end
 		
-		return
+		if ss.mp then return end
 	end
 	
 	d:SetDamage(Lerp(1 - frac, ink.Info.MinDamage, ink.Info.Damage))
@@ -195,7 +202,7 @@ function HitPaint.weapon_charger(ink, t)
 	local SplashNum = math.Round(Lerp(ink.Charge,
 	ink.Info.MinWallPaintNum, ink.Info.MaxWallPaintNum))
 	for i = 0, SplashNum do
-		local pos = t.HitPos - vector_up * i * radius
+		local pos = t.HitPos - vector_up * i * radius * Lerp(ink.Charge, 1, 1.25)
 		local tr = util.TraceLine {
 			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 			endpos = pos - t.HitNormal,
@@ -224,13 +231,19 @@ function HitEntity.weapon_charger(ink, t, w)
 	local LifeTime = math.max(0, CurTime() - FrameTime() - ink.InitTime)
 	if LifeTime > ink.Straight then return end
 	local d, e, o = DamageInfo(), t.Entity, ink.filter
-	if CLIENT and ink.IsCarriedByLocalPlayer and e:Health() > 0 then
+	if (ss.sp or CLIENT and IsFirstTimePredicted())
+	and ink.IsCarriedByLocalPlayer and e:Health() > 0 then
 		local ent = ss.IsValidInkling(e) -- Entity hit effect here
 		if not (ent and ss.IsAlly(ent, ink.Color)) then
-			surface.PlaySound(ink.Damage >= 100 and ss.DealDamageCritical or ss.DealDamage)
+			if ss.mp then
+				surface.PlaySound(ink.Damage >= 100 and ss.DealDamageCritical or ss.DealDamage)
+			elseif SERVER then
+				ink.filter:SendLua("surface.PlaySound(SplatoonSWEPs.DealDamage"
+				.. (ink.Damage >= 100 and "Critical" or "") .. ")")
+			end
 		end
 		
-		return
+		if ss.mp then return end
 	end
 	
 	d:SetDamage(ink.Damage)
@@ -295,7 +308,7 @@ end
 --   number inktype				| Shape of ink.
 function ss.AddInk(ply, pos, inktype, isdrop)
 	local w = ss.IsValidInkling(ply)
-	if not w then return end
+	if not w then return {} end
 	local info = isdrop and dropdata or w.Primary
 	local base = not isdrop and w.Base or "weapon_shooter"
 	local dt = CLIENT and w:IsCarriedByLocalPlayer() and w:Ping() or 0

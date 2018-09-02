@@ -87,8 +87,12 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	if not able then
 		if p.TripleShotDelay then self:SetCooldown(CurTime()) end
 		if self:GetPreviousHasInk() then
-			if CLIENT and IsFirstTimePredicted() and self:IsCarriedByLocalPlayer() then
-				surface.PlaySound(ss.TankEmpty)
+			if ss.mp and CLIENT then
+				if IsFirstTimePredicted() and self:IsCarriedByLocalPlayer() then
+					surface.PlaySound(ss.TankEmpty)
+				end
+			else
+				self.Owner:SendLua "surface.PlaySound(SplatoonSWEPs.TankEmpty)"
 			end
 			self:SetNextPlayEmpty(CurTime() + p.Delay * 2)
 			self:SetPreviousHasInk(false)

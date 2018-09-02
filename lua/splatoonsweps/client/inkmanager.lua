@@ -87,7 +87,7 @@ local function ProcessPaintQueue()
 	while true do
 		local done = 0
 		for time, queuetable in SortedPairs(ss.PaintQueue) do
-			for id, q in ipairs(queuetable) do
+			for id, q in SortedPairs(queuetable) do
 				q.done, done = q.done + 1, done + 1
 				local angle, origin, normal, moved = Angles[q.n], Origins[q.n], Normals[q.n], Moved[q.n]
 				local pos2d = ss.To2D(q.pos, origin, angle)

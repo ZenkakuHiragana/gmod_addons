@@ -69,8 +69,19 @@ function SWEP:SharedPrimaryAttack()
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
 		if ss.sp or CLIENT and self:IsFirstTimePredicted() then self:PlayChargeSound() end
 		if prog == 0 then return end
-		if not self.Owner:OnGround() or self:GetInk() < prog * self.Primary.TakeAmmo then
+		local EnoughInk = self:GetInk() >= prog * self.Primary.TakeAmmo
+		if not self.Owner:OnGround() or not EnoughInk then
 			self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
+			if not (self.NotEnoughInk or EnoughInk) then
+				self.NotEnoughInk = true
+				if ss.mp and CLIENT then
+					if IsFirstTimePredicted() and self:IsCarriedByLocalPlayer() then
+						surface.PlaySound(ss.TankEmpty)
+					end
+				else
+					self.Owner:SendLua "surface.PlaySound(SplatoonSWEPs.TankEmpty)"
+				end
+			end
 		end
 		
 		if prog == 1 and not self:GetFullChargeFlag() then
@@ -109,6 +120,7 @@ function SWEP:Move()
 	self.Range = self:GetRange()
 	self.InitVelocity = dir * self:GetInkVelocity()
 	self.InitAngle = dir:Angle()
+	self.NotEnoughInk = false
 	if self:IsFirstTimePredicted() then
 		local rnda = self.Primary.Recoil * -1
 		local rndb = self.Primary.Recoil * math.Rand(-1, 1)
