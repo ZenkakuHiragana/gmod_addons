@@ -16,6 +16,8 @@ The aim of this rework is the following:
 * Basic GUI to change playermodel, ink color, and other settings.  
     GUI menu is in the context menu.
 * All Shooters in Splatoon (WiiU)
+* Splat charger and its variations in Splatoon.
+* E-liter 3K and its variations in Splatoon.
 
 ## Currently working on
 * Chargers
@@ -23,12 +25,14 @@ The aim of this rework is the following:
     * [x] Write a charging script
     * [x] Draw a crosshair
     * [x] Draw a laser sight
-    * [ ] Write a script to fire the actual ink
-    * [ ] Set an ink consumption and other parameters.
+    * [x] Write a script to fire the actual ink
+    * [x] Set an ink consumption and other parameters
+          Squiffers and Bamboozlers are remaining.
+    * [ ] Write a script for scoped chargers
 * More effects!
     * [x] Create muzzle effects (cone-shaped, ring, and mist, for shooters and chargers)
     * [x] Use Source particle system (.pcf file) to emit muzzle effect
-    * [ ] Create ink effects when it's going to paint the world.
+    * [x] Create ink effects when it's going to paint the world.
 * Weapon models  
     SWEP Construction Kit can't draw the shadow of the SWEPs.  
     So I decided to make viewmodels and worldmodels from [Splatoon Full Weapons Pack.][2]  
@@ -36,6 +40,7 @@ The aim of this rework is the following:
 
 ## Upcoming features
 * Sub weapons
+* Blasters
 * Spinners
 * Rollers
 * Inkbrushes
