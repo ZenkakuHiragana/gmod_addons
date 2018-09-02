@@ -32,9 +32,11 @@ for i = 1, 9 do
 end
 
 include "const.lua"
+include "inkmanager.lua"
 include "movement.lua"
 include "sound.lua"
 include "text.lua"
+include "trajectory.lua"
 include "weapons.lua"
 cleanup.Register(ss.CleanupTypeInk)
 
@@ -192,56 +194,16 @@ function ss.To3D(source, orgpos, organg)
 	return (LocalToWorld(localpos, angle_zero, orgpos, organg))
 end
 
--- Records a new ink to ink history.
--- Arguments:
---   table ink       | Ink history table. node.Surfaces.InkCircle or SequentialSurfaces.InkCircle
---   number sz       | Ink surface Z-position.
---   table newink    | A table which describes the new ink.
---     number angle  | Ink pattern angle in degrees.
---     table bounds  | Ink bounding box, {min.x, min.y, max.x, max.y}
---     number color  | Color code.
---     Vector pos    | Ink position in surface-related system.
---     number radius | Ink characteristic radius.
---     number ratio  | Ink aspect ratio.
---     number texid  | Ink pattern ID.
-local MIN_BOUND_AREA = 64 -- minimum ink bounding box area
-function ss.AddInkRectangle(ink, sz, newink)
-	local nb, nr = newink.bounds, newink.ratio
-	local n1, n2, n3, n4 = nb[1], nb[2], nb[3], nb[4] -- 1, 2 = min, 3, 4 = max
-	for r, z in pairs(ink) do
-		local bounds, lr = r.bounds, r.lastratio
-		if not next(bounds) then
-			if lr > .6 then
-				ink[r] = nil
-			else
-				r.lastratio = lr + 1e-4
-			end
-		else
-			for b in pairs(bounds) do
-				local b1, b2, b3, b4 = b[1], b[2], b[3], b[4]
-				if (b3 - b1) * (b4 - b2) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
-				if n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2 then continue end
-				r.lastratio, r.bounds[b] = nr
-				local x, y = {n1, n3, b1, b3}, {n2, n4, b2, b4} table.sort(x) table.sort(y)
-				local x1, x2, x3, x4, y1, y2, y3, y4
-					= x[1], x[2], x[3], x[4], y[1], y[2], y[3], y[4]
-				local t = {
-					{x1, y1, x2, y2}, {x2, y1, x3, y2}, {x3, y1, x4, y2},
-					{x1, y2, x2, y3}, {x2, y2, x3, y3}, {x3, y2, x4, y3},
-					{x1, y3, x2, y4}, {x2, y3, x3, y4}, {x3, y3, x4, y4},
-				}
-				for i = 1, 9 do
-					local c = t[i]
-					local c1, c2, c3, c4 = c[1], c[2], c[3], c[4]
-					r.bounds[c] = b1 < c3 and b3 > c1 and b2 < c4 and b4 > c2 and
-						(n1 >= c3 or n3 <= c1 or n2 >= c4 or n4 <= c2) or nil
-				end
-			end
-		end
-	end
-	
-	newink.bounds = {[nb] = true}
-	ink[newink] = sz
+-- util.IsInWorld() only exists in serverside.
+-- This is shared version of it.
+-- Argument:
+--   Vector pos		| A vector to test.
+-- Returning:
+--   bool			| The given vector is in world or not.
+function ss.IsInWorld(pos)
+	return math.abs(pos.x) < 16384
+		and math.abs(pos.y) < 16384
+		and math.abs(pos.z) < 16384
 end
 
 -- Short for Entity:NetworkVar().
@@ -457,23 +419,6 @@ function ss.IsAlly(c1, c2)
 	c2 = isentity(c2) and c2.ColorCode or c2
 	local CVarFF = GetConVar "sv_splatoonsweps_ff"
 	return not (CVarFF and CVarFF:GetBool()) and c1 == c2
-end
-
--- Time to run EmitSound() is a little complicated.
--- Argument:
---   Entity ply    | Player to suppress.
-function ss.ShouldSuppress(ply)
-	if CLIENT or ss.sp then return end
-	SuppressHostEvents(ply)
-end
-
--- Time to run EmitSound() is a little complicated.
--- Argument:
---   Entity ent    | Entity to emit sound.
---   string track  | Sound to be played.
-function ss.ShouldEmitSound(ent, track)
-	if CLIENT or ss.sp then return end
-	ent:EmitSound(track)
 end
 
 -- Overriding footstep sound stops calling other PlayerFootstep hooks in other addons.

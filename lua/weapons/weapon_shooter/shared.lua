@@ -114,12 +114,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	self.InitVelocity = angle_initvelocity:Forward() * p.InitVelocity
 	self.InitAngle = angle_initvelocity
 	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns
-	self.SplashNum = math.floor(p.SplashNum) + (math.random() < p.SplashNum % 1 and 1 or 0)
-	
-	if SERVER then
-		ss.AddInk(self.Owner, pos, math.random(4, 9))
-	end
-	
+	self.SplashNum = math.floor(p.SplashNum) + math.Round(util.SharedRandom("SplatoonSWEPs: SplashNum", 0, 1))
 	self:SetSplashInitMul(self:GetSplashInitMul() + (p.TripleShotDelay and 3 or 1))
 	self:SetPreviousHasInk(true)
 	self:EmitSound(self.ShootSound)
@@ -143,6 +138,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		e:SetScale(self.SplashNum)
 		e:SetStart(self.InitVelocity)
 		util.Effect("SplatoonSWEPsShooterInk", e)
+		ss.AddInk(self.Owner, pos, util.SharedRandom("SplatoonSWEPs: Shooter ink type", 4, 9))
 	end
 	
 	if not p.TripleShotDelay then return end

@@ -11,16 +11,15 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	Models = {},
 	NoCollide = {},
 	NumInkEntities = 0,
-	InkCounter = 0,
 	InkQueue = {},
 	InkShotMaterials = {},
+	PaintSchedule = {},
 	PlayerHullChanged = {},
 	PlayersReady = {},
 }
 
 include "bsp.lua"
 include "splatoonsweps/const.lua"
-include "inkmanager.lua"
 include "network.lua"
 include "splatoonsweps/shared.lua"
 include "splatoonsweps/text.lua"
@@ -42,7 +41,7 @@ function ss.ClearAllInk()
 	net.Start "SplatoonSWEPs: Send ink cleanup"
 	net.Send(ss.PlayersReady)
 	
-	ss.InkCounter, ss.InkQueue = 0, {}
+	ss.InkQueue, ss.PaintSchedule = {}, {}
 	for node in ss.BSPPairsAll() do
 		for i = 1, #node.Surfaces.InkCircles do
 			node.Surfaces.InkCircles[i] = {}

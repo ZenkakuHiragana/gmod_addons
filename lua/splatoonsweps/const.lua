@@ -424,9 +424,10 @@ ss.MAX_COLORS = #ss.InkColors
 ss.COLOR_BITS = 5
 ss.PLAYER_BITS = 3
 ss.SQUID_BITS = 2
-ss.SURFACE_INDEX_BITS = 20
 ss.SEND_ERROR_DURATION_BITS = 4
 ss.SEND_ERROR_NOTIFY_BITS = 3
+ss.MAX_DEGREES_DIFFERENCE = 45 -- Maximum angle difference between two surfaces
+ss.MAX_COS_DEG_DIFF = math.cos(math.rad(ss.MAX_DEGREES_DIFFERENCE)) -- Used by filtering process
 ss.ViewModel = { -- Viewmodel animations
 	Standing = ACT_VM_IDLE, -- Humanoid form
 	Squid = ACT_VM_IDLE_LOWERED, -- Squid form
@@ -470,6 +471,8 @@ ss.SpreadJumpFraction = ss.SpreadJumpCoefficient / ss.SpreadJumpMaxVelocity
 ss.SquidSpeedOutofInk = .45 -- Squid speed coefficient if it is out of ink.
 ss.CameraFadeDistance = 100^2 -- Thirdperson model fade distance[units^2]
 ss.SubWeaponThrowTime = 25 * ss.FrameToSec -- Duration of TPS sub weapon throwing animation.
+ss.ShooterDecreaseFrame = 4 * ss.FrameToSec -- Shooters ink velocity deceleration time to fall.
+ss.ShooterTermTime = 10 * ss.FrameToSec -- Time to reach terminal velocity
 ss.SquidTrace = {
 	start = vector_origin, endpos = vector_origin,
 	filter = {}, mask = ss.SquidSolidMask,

@@ -98,6 +98,12 @@ function ss.CustomPrimary.weapon_charger(p, info)
 	p.MaxFreezeTime = (info.Delay.MaxFreeze or 1) * ss.FrameToSec
 	p.AimDuration = info.Delay.Aim * ss.FrameToSec
 	p.Automatic = true
+	p.Scope = {}
+	p.Scope.StartMove = info.Scope.StartMove
+	p.Scope.EndMove = info.Scope.EndMove
+	p.Scope.FOV = info.Scope.CameraFOV
+	p.Scope.Alpha = info.Scope.PlayerAlpha
+	p.Scope.Invisible = info.Scope.PlayerInvisible
 end
 
 function ss.SetViewModelMods(weapon, mods)

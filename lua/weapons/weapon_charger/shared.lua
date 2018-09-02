@@ -31,7 +31,7 @@ function SWEP:ResetCharge()
 	self.JumpPower = ss.InklingJumpPower
 	if ss.mp and SERVER then return end
 	self.AimSound:Stop()
-	self.AimSound:ChangePitch(0)
+	self.AimSound:ChangePitch(1)
 end
 
 SWEP.SharedDeploy = SWEP.ResetCharge
@@ -40,10 +40,10 @@ function SWEP:AddPlaylist(p) table.insert(p, self.AimSound) end
 function SWEP:PlayChargeSound()
 	local prog = self:GetChargeProgress()
 	if 0 < prog and prog < 1 then
-		self.AimSound:PlayEx(1, math.max(self.AimSound:GetPitch(), prog * 100))
+		self.AimSound:PlayEx(1, math.max(self.AimSound:GetPitch(), prog * 99 + 1))
 	else
 		self.AimSound:Stop()
-		self.AimSound:ChangePitch(0)
+		self.AimSound:ChangePitch(1)
 		if prog == 1 and not self:GetFullChargeFlag() then
 			if ss.mp and CLIENT then
 				surface.PlaySound(ss.ChargerBeep)
@@ -80,6 +80,8 @@ function SWEP:SharedPrimaryAttack()
 		return
 	end
 	
+	self.AimSound:Play()
+	self.AimSound:ChangePitch(1)
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 	self:SetCharge(CurTime())
 	self:SetFullChargeFlag(false)
@@ -107,7 +109,6 @@ function SWEP:Move()
 	self.Range = self:GetRange()
 	self.InitVelocity = dir * self:GetInkVelocity()
 	self.InitAngle = dir:Angle()
-	if SERVER then ss.AddInk(self.Owner, pos, math.random(3)) end
 	if self:IsFirstTimePredicted() then
 		local rnda = self.Primary.Recoil * -1
 		local rndb = self.Primary.Recoil * math.Rand(-1, 1)
@@ -126,6 +127,7 @@ function SWEP:Move()
 		e:SetRadius(0)
 		e:SetMagnitude(prog)
 		util.Effect("SplatoonSWEPsShooterInk", e)
+		ss.AddInk(self.Owner, pos, ss.GetDropType())
 	end
 	
 	self:EmitSound(ShootSound, 80, pitch - prog * 20)

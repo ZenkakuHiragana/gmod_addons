@@ -3,25 +3,6 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
-net.Receive("SplatoonSWEPs: DrawInk", function()
-	local facenumber = net.ReadInt(ss.SURFACE_INDEX_BITS)
-	local color = net.ReadUInt(ss.COLOR_BITS)
-	local inktype = net.ReadUInt(4)
-	local pos = net.ReadVector()
-	local info = net.ReadVector() -- Vector(Radius, Inkangle, Ratio)
-	ss.InkQueue[{
-		c = color,
-		dispflag = facenumber < 0 and 0 or 1,
-		done = 0,
-		inkangle = info.y,
-		n = math.abs(facenumber),
-		pos = pos,
-		r = info.x,
-		ratio = info.z,
-		t = inktype,
-	}] = true
-end)
-
 net.Receive("SplatoonSWEPs: Play damage sound", function()
 	surface.PlaySound(ss.TakeDamage)
 end)

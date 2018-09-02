@@ -39,6 +39,17 @@ end
 function DebugBox(mins, maxs)
 	debugoverlay.Box(vector_origin, mins, maxs, DebugOverlayTime, ColorAlpha(DebugOverlayColor, 64))
 end
+function SDebugBox(ply, a, b)
+	if CLIENT then DebugBox(a, b) return end
+	ply:SendLua("DebugBox(Vector("..a.x..","..a.y..","..a.z.."),Vector("..b.x..","..b.y..","..b.z.."))")
+end
+function SSweptBox(ply, a, b, mi, ma)
+	if CLIENT then SweptBox(a, b, mi, ma) return end
+	ply:SendLua("SweptBox(Vector("..a.x..","..a.y..","..a.z.."),Vector("..b.x..","..b.y..","..b.z.."),Vector("..mi.x..","..mi.y..","..mi.z.."),Vector("..ma.x..","..ma.y..","..ma.z.."))")
+end
+function SweptBox(start, endpos, mins, maxs)
+	debugoverlay.SweptBox(start, endpos, mins, maxs, Angle(), DebugOverlayTime, DebugOverlayColor)
+end
 function DebugTrace(t, ignoreZ)
 	debugoverlay.Box(t.start, t.mins, t.maxs, DebugOverlayTime, ColorAlpha(DebugOverlayColor, 64))
 	debugoverlay.Box(t.endpos, t.mins, t.maxs, DebugOverlayTime, ColorAlpha(DebugOverlayColor, 64))

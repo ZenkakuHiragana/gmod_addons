@@ -40,7 +40,7 @@ function EFFECT:Init(e)
 	self:SetPos(pos)
 	self:SetAngles(ang)
 	
-	if bit.band(f, 2) == 0 then return end
+	if bit.band(f, 2) == 0 or not self.Weapon:IsFirstTimePredicted() then return end
 	self:EmitSound(bit.band(f, 4) > 0 and "SplatoonSWEPs_Player.InkDiveDeep" or "SplatoonSWEPs_Player.InkDiveShallow")
 end
 

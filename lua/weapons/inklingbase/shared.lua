@@ -279,7 +279,7 @@ function SWEP:ChangeInInk(name, old, new)
 		e:SetOrigin(t.HitPos)
 		e:SetRadius(Lerp(f, 25, 50))
 		e:SetScale(.5)
-		util.Effect("SplatoonSWEPsMuzzleSplash", e)
+		util.Effect("SplatoonSWEPsMuzzleSplash", e, CLIENT)
 	elseif outofink and self.Owner:IsPlayer() then
 		self.Owner:SetDSP(1)
 	end
