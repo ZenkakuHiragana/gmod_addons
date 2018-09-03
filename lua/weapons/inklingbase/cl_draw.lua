@@ -495,7 +495,9 @@ end
 
 function SWEP:DoDrawCrosshair(x, y)
 	if not ss.GetConVarBool "DrawCrosshair" then return end
-	if vgui.CursorVisible() then x, y = input.GetCursorPos() end
+	if vgui.CursorVisible() and not gui.IsGameUIVisible() then
+		x, y = input.GetCursorPos()
+	end
 	
 	return ss.ProtectedCall(self.DrawCrosshair, self, x, y,
 	ss.ProtectedCall(self.SetupDrawCrosshair, self, x, y))

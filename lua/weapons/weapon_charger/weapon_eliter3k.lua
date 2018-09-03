@@ -62,7 +62,7 @@ ss.SetPrimary(SWEP, {
 		MinCharge				= 8,	-- Time between pressing MOUSE1 and beginning of charge[frames]
 		MaxCharge				= 100,	-- Time between pressing MOUSE1 and being fully charged[frames]
 		MinFreeze				= 1,	-- Delay time from ZR released to fire ink[frames]
-		MaxFreeze				= 1,
+		MaxFreeze				= 1,	-- 
 	},
 	Scope = {
 		StartMove				= .5,	-- Start moving camera position at specific charge[-].
@@ -70,5 +70,7 @@ ss.SetPrimary(SWEP, {
 		CameraFOV				= 20,	-- Camera FOV[deg]
 		PlayerAlpha				= .5,	-- Player becomes translucent at specific charge[-]
 		PlayerInvisible			= .85,	-- Player becomes invisible at specific charge[-]
+		Pos = Vector(-11.5, 3.1, 2.55),	-- Scoped viewmodel position[Hammer units]
+		Ang = Angle(),					-- Scoped viewmodel angles[deg]
 	},
 })

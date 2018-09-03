@@ -24,19 +24,27 @@ end
 
 SWEP.PreViewModelDrawn = ExpandModel
 SWEP.PreDrawWorldModel = ExpandModel
+SWEP.SwayTime = 12 * ss.FrameToSec
 SWEP.IronSightsAng = {
-	Vector(), -- normal
-	Vector(0, 0, 0), -- left
-	Vector(0, 0, -60), -- top-right
-	Vector(0, 0, 60), -- top-left
-	Vector(0, 0, 0), -- center
+	Angle(), -- normal
+	Angle(), -- left
+	Angle(0, 0, -60), -- top-right
+	Angle(0, 0, -60), -- top-left
+	Angle(), -- center
 }
 SWEP.IronSightsPos = {
 	Vector(), -- normal
-	Vector(-12), -- left
+	Vector(), -- left
 	Vector(), -- top-right
-	Vector(-12), -- top-left
-	Vector(-6, 0, -2), -- center
+	Vector(), -- top-left
+	Vector(0, 6, -2), -- center
+}
+SWEP.IronSightsFlip = {
+	false,
+	true,
+	false,
+	true,
+	false,
 }
 
 local crosshairalpha = 64
@@ -59,8 +67,10 @@ SWEP.Crosshair = {
 }
 
 function SWEP:ClientInit()
-	self.oldpos = Vector()
-	self.p, self.y, self.r = 0, 0, 0
+	self.ArmPos, self.ArmBegin = nil, nil
+	self.BasePos, self.BaseAng = nil, nil
+	self.OldPos, self.OldAng = nil, nil
+	self.TransitFlip = false
 	self.ModifyWeaponSize = SysTime() - 1
 	self.ViewPunch = Angle()
 	self.ViewPunchVel = Angle()
@@ -201,41 +211,56 @@ function SWEP:DrawCenterDot(t) -- Center circle
 	ss.DrawArc(t.AimPos.x, t.AimPos.y, s)
 end
 
-local swayspeed = .05
+local SwayTime = 12 * ss.FrameToSec
 function SWEP:GetViewModelPosition(pos, ang)
 	if not IsValid(self.Owner) then return pos, ang end
+	local vm = self.Owner:GetViewModel()
+	if not IsValid(vm) then return pos, ang end
+	if not self.OldPos then
+		self.ArmPos, self.ArmBegin = 1, SysTime()
+		self.BasePos, self.BaseAng = Vector(), Angle()
+		self.OldPos, self.OldAng = self.BasePos, self.BaseAng
+		return pos, ang
+	end
 	
 	local armpos = 1
-	local ads = GetConVar "cl_splatoonsweps_doomstyle"
-	if ads and ads:GetBool() then
-		local da = self.IronSightsAng[5] or Vector() -- center
-		ang:RotateAroundAxis(ang:Right(), da.x) -- pitch
-		ang:RotateAroundAxis(ang:Up(), da.y) -- yaw
-		ang:RotateAroundAxis(ang:Forward(), da.z) -- roll
-		local dp = self.IronSightsPos[5] or Vector()
-		return pos + dp.x * ang:Right() + dp.y * ang:Forward() + dp.z * ang:Up(), ang
+	if ss.GetConVarBool "DoomStyle" then
+		armpos = 5
 	elseif ss.GetConVarBool "MoveViewmodel" and not self:Crouching() then
 		local x, y = ScrW() / 2, ScrH() / 2
-		if vgui.CursorVisible() then x, y = input.GetCursorPos() end
+		if vgui.CursorVisible() and not gui.IsGameUIVisible() then
+			x, y = input.GetCursorPos()
+		end
+		
 		armpos = select(3, self:GetFirePosition(self:GetRange() * gui.ScreenToVector(x, y), RenderAngles(), EyePos()))
 	end
 	
-	if not self.IronSightsAng[armpos] then return pos, ang end
-	local iang = self.IronSightsAng[armpos] or Vector()
-	self.p = self.p + (iang.x - self.p) * swayspeed
-	self.y = self.y + (iang.y - self.y) * swayspeed
-	self.r = self.r + (iang.z - self.r) * swayspeed
+	if self:GetThrowing() then armpos = 1 end
+	armpos = ss.ProtectedCall(self.GetArmPos, self) or armpos
+	if not isangle(self.IronSightsAng[armpos]) then return pos, ang end
+	if not isvector(self.IronSightsPos[armpos]) then return pos, ang end
+	if armpos ~= self.ArmPos then
+		self.ArmPos, self.ArmBegin = armpos, SysTime()
+		self.BasePos, self.BaseAng = self.OldPos, self.OldAng
+		self.TransitFlip = self.ViewModelFlip ~= self.IronSightsFlip[armpos]
+	end
 	
-	local da = Angle(ang)
-	da:RotateAroundAxis(da:Right(), self.p)
-	da:RotateAroundAxis(da:Up(), self.y)
-	da:RotateAroundAxis(da:Forward(), self.r)
+	local relpos, relang = WorldToLocal(pos, ang, EyePos(), RenderAngles())
+	local SwayTime = self.SwayTime / ss.GetTimeScale(self.Owner)
+	local f = math.Clamp((SysTime() - self.ArmBegin) / SwayTime, 0, 1)
+	if self.TransitFlip then
+		if f > .5 then
+			f, self.ArmPos = .5, 5
+			self.ViewModelFlip = self.IronSightsFlip[armpos]
+		end
+		
+		f, armpos = f * 2, 5
+	end
 	
-	local ipos = self.IronSightsPos[armpos] or Vector()
-	local dpos = ipos.x * da:Right() + ipos.y * da:Forward() + ipos.z * da:Up()
-	self.oldpos = self.oldpos + (dpos - self.oldpos) * swayspeed
+	self.OldPos = LerpVector(f, self.BasePos, self.IronSightsPos[armpos])
+	self.OldAng = LerpAngle(f, self.BaseAng, self.IronSightsAng[armpos])
 	
-	return pos + self.oldpos, da
+	return LocalToWorld(relpos + self.OldPos, relang + self.OldAng, EyePos(), RenderAngles())
 end
 
 function SWEP:SetupDrawCrosshair()

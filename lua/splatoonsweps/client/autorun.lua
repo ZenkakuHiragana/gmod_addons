@@ -129,7 +129,6 @@ local function GenerateBSPTree()
 	bsp:Close()
 end
 
-CreateClientConVar("cl_splatoonsweps_doomstyle", "0", false, false, ss.Text.CVarDescription.DoomStyle)
 CreateConVar("sv_splatoonsweps_ff", "0", CVarFlags, ss.Text.CVarDescription.FF)
 function ss.PrepareInkSurface(write)
 	GenerateBSPTree()

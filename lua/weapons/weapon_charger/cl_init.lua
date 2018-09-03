@@ -15,7 +15,9 @@ SWEP.Crosshair = {
 }
 
 function SWEP:ClientInit()
-	self.MinRenderBounds, self.MaxRenderBounds = self:GetRenderBounds()
+	self.IronSightsPos[6] = self.Primary.Scope.Pos
+	self.IronSightsAng[6] = self.Primary.Scope.Ang
+	self.IronSightsFlip[6] = false
 	self.BaseClass.BaseClass.ClientInit(self)
 end
 
@@ -79,6 +81,18 @@ function SWEP:DrawCrosshair(x, y, t)
 	self:DrawHitCrossBG(t)
 	self:DrawHitCross(t)
 	return true
+end
+
+function SWEP:GetArmPos()
+	if not self.Scoped then return end
+	local prog = self:GetChargeProgress(true)
+	local scope = self.Primary.Scope
+	self.SwayTime = 12 * ss.FrameToSec
+	if prog > scope.StartMove then
+		self.IronSightsFlip[6] = self.ViewModelFlip
+		self.SwayTime = scope.SwayTime
+		return 6
+	end
 end
 
 -- Manipulate player arms to adjust position.  Need to rework.

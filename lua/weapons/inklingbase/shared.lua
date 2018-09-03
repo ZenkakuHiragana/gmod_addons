@@ -66,11 +66,6 @@ function SWEP:Crouching()
 	ss.ProtectedCall(self.Owner.Crouching, self.Owner), self.Owner:IsFlagSet(FL_DUCKING))
 end
 
-function SWEP:GetLaggedMovementValue()
-	return IsValid(self.Owner) and self.Owner:IsPlayer()
-	and self.Owner:GetLaggedMovementValue() or 1
-end
-
 -- When NPC weapon is picked up by player.
 function SWEP:OwnerChanged()
 	if not IsValid(self.Owner) then
@@ -198,8 +193,8 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if not auto and self:GetKey() ~= IN_ATTACK then return end
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self.CannotStandup
-	local lmv = self:GetLaggedMovementValue()
-	local reloadtime = self.Primary.ReloadDelay / lmv
+	local timescale = ss.GetTimeScale(self.Owner)
+	local reloadtime = self.Primary.ReloadDelay / timescale
 	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
 	self.ReloadSchedule:SetLastCalled(CurTime() + reloadtime)
 	ss.ProtectedCall(self.SharedPrimaryAttack, self, able, auto)
@@ -330,8 +325,8 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
 	self.HealSchedule = self:AddNetworkSchedule(HealingDelay, function(self, schedule)
 		local canheal = self.CanHealInk and self:GetInInk() -- Gradually heals the owner
-		local lmv = self:GetLaggedMovementValue()
-		local delay = HealingDelay / lmv / (canheal and 8 or 1)
+		local timescale = ss.GetTimeScale(self.Owner)
+		local delay = HealingDelay / timescale / (canheal and 8 or 1)
 		if schedule:GetDelay() ~= delay then schedule:SetDelay(delay) end
 		if not self:GetOnEnemyInk() and (self.CanHealStand or canheal) then
 			local health = math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth())
@@ -342,8 +337,8 @@ function SWEP:SetupDataTables()
 	self.ReloadSchedule = self:AddNetworkSchedule(0, function(self, schedule)
 		local reloadamount = math.max(0, schedule:SinceLastCalled()) -- Recharging ink
 		local fastreload = self.CanReloadInk and self:GetInInk()
-		local lmv = self:GetLaggedMovementValue()
-		local mul = ReloadMultiply * (fastreload and 10/3 or 1) * lmv
+		local timescale = ss.GetTimeScale(self.Owner)
+		local mul = ReloadMultiply * (fastreload and 10/3 or 1) * timescale
 		if self.CanReloadStand or fastreload then
 			local ink = math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.MaxInkAmount)
 			if self:GetInk() ~= ink then self:SetInk(ink) end

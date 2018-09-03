@@ -151,6 +151,7 @@ list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
 			"NewStyleCrosshair",
 			"AvoidWalls",
 			"MoveViewmodel",
+			"DoomStyle",
 		}
 		for i = 1, #OptionsConVar do
 			local Check = Options:Add "DCheckBoxLabel"

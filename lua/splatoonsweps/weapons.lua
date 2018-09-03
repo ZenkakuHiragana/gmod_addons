@@ -104,6 +104,9 @@ function ss.CustomPrimary.weapon_charger(p, info)
 	p.Scope.FOV = info.Scope.CameraFOV
 	p.Scope.Alpha = info.Scope.PlayerAlpha
 	p.Scope.Invisible = info.Scope.PlayerInvisible
+	p.Scope.Pos = info.Scope.Pos
+	p.Scope.Ang = info.Scope.Ang
+	p.Scope.SwayTime = (info.Scope.EndMove - info.Scope.StartMove) * p.MaxChargeTime
 end
 
 function ss.SetViewModelMods(weapon, mods)

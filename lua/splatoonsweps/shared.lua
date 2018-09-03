@@ -421,6 +421,19 @@ function ss.IsAlly(c1, c2)
 	return not (CVarFF and CVarFF:GetBool()) and c1 == c2
 end
 
+-- Get player timescale
+-- Argument:
+--   Entity ply    | Optional.
+-- Returning:
+--   number scale  | The game timescale.
+local host_timescale = GetConVar "host_timescale"
+function ss.GetTimeScale(ply)
+	return host_timescale:GetFloat()
+	* game.GetTimeScale()
+	* (IsValid(ply) and ply:IsPlayer()
+	and ply:GetLaggedMovementValue() or 1)
+end
+
 -- Overriding footstep sound stops calling other PlayerFootstep hooks in other addons.
 -- I decided to have one of their hook run my function.
 local FootstepTrace = vector_up * -20

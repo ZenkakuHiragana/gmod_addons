@@ -91,6 +91,10 @@ function SWEP:SharedPrimaryAttack()
 		return
 	end
 	
+	if CurTime() > self:GetAimTimer() then
+		self:SetSplashInitMul(0)
+	end
+	
 	self.AimSound:Play()
 	self.AimSound:ChangePitch(1)
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)

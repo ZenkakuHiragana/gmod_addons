@@ -180,6 +180,7 @@ ss.ConVar = {
 	"cl_splatoonsweps_newstylecrosshair",
 	"cl_splatoonsweps_avoidwalls",
 	"cl_splatoonsweps_moveviewmodel",
+	"cl_splatoonsweps_doomstyle"
 }
 
 ss.ConVarName = {
@@ -196,6 +197,7 @@ ss.ConVarName = {
 	NewStyleCrosshair = 11,
 	AvoidWalls = 12,
 	MoveViewmodel = 13,
+	DoomStyle = 14,
 }
 
 ss.RTResID = {
@@ -224,6 +226,7 @@ ss.ConVarDefaults = {
 	0,
 	1,
 	1,
+	0,
 }
 
 ss.RTSize = {

@@ -78,11 +78,12 @@ end
 function SWEP:SharedPrimaryAttack(able, auto)
 	if not IsValid(self.Owner) then return end
 	local p = self.Primary
-	local lmv = self:GetLaggedMovementValue()
-	self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / lmv)
-	self:SetCooldown(math.max(self:GetCooldown(), CurTime() + math.min(p.Delay, p.CrouchDelay) / lmv))
+	local timescale = ss.GetTimeScale(self.Owner)
+	self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / timescale)
 	self:SetAimTimer(CurTime() + p.AimDuration)
 	self:SetInk(math.max(0, self:GetInk() - p.TakeAmmo))
+	self:SetCooldown(math.max(self:GetCooldown(),
+	CurTime() + math.min(p.Delay, p.CrouchDelay) / timescale))
 	
 	if not able then
 		if p.TripleShotDelay then self:SetCooldown(CurTime()) end
@@ -148,7 +149,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	if not p.TripleShotDelay then return end
 	local d = self.TripleSchedule:GetDone()
 	if d == 1 or d == 2 then return end
-	self:SetCooldown(CurTime() + (p.Delay * 2 + p.TripleShotDelay) / lmv)
+	self:SetCooldown(CurTime() + (p.Delay * 2 + p.TripleShotDelay) / timescale)
 	self:SetAimTimer(self:GetCooldown())
 	self.TripleSchedule:SetDone(1)
 end

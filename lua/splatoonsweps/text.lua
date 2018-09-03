@@ -918,10 +918,10 @@ ss.Text.Options = {
 	"Use new style crosshair",
 	"Make sight avoid walls",
 	"Move Viewmodel",
+	"Doom-styled",
 }
 ss.Text.CVarDescription = {
 	Clear = "Clears all ink in the map.",
-	DoomStyle = "Enables Aim down sights.  Weapon accuracy will not be better. (1: enabled, 0: disabled)",
 	Enabled = "Enables or disables SplatoonSWEPs. (1: enabled, 0: disabled)",
 	FF = "Enables friendly fire. (1: enabled, 0: disabled)",
 	[[Your ink color.  Available values are:
@@ -953,7 +953,7 @@ Make sure your graphics card has enough space of video memory.
 	"Draw Splatoon-styled crosshair. (1: yes, 0: no)",
 	"Make crosshair act like Splatoon 2. (1: yes, 0: no)",
 	"Prevent SWEPs from shooting at wall wastfully. (1: yes, 0: no)",
-	"Move viewmodel when avoid setting is enabled. (1: yes, 0: no)",
+	"Move viewmodel when avoid setting is enabled. (1: yes, 0: no)","Enables Aim down sights.  Weapon accuracy will not be better. (1: enabled, 0: disabled)",
 }
 ss.Text.AuthorName = "GreatZenkakuMan"
 ss.Text.Purpose = "Splat ink!"
@@ -1037,10 +1037,10 @@ if lang == "ja" then
 		"Splatoon 2風の照準",
 		"壁を避けて狙う",
 		"ビューモデルを動かす",
+		"DOOMスタイル",
 	}
 	ss.Text.CVarDescription = {
 		Clear = "マップにあるすべてのインクを消去する。",
-		DoomStyle = "ADSを有効にする。ただし、命中率は上昇しない。 (1: する 0: しない)",
 		Enabled = "SplatoonSWEPsを有効化するかどうか。 (1: する 0: しない)",
 		FF = "同士討ちを有効にする。 (1: する 0: しない)",
 		[[インクの色を設定する。使用可能な値は以下の通り。:
@@ -1073,6 +1073,7 @@ if lang == "ja" then
 		"照準の動き方をスプラトゥーン2に合わせるかどうか。 (1: する 0: しない)",
 		"インクが壁に吸い付かないようにするかどうか。 (1: する 0: しない)",
 		"壁を避けて狙う時、ビューモデルを動かすかどうか。 (1: する 0: しない)",
+		"ADSを有効にする。ただし、命中率は上昇しない。 (1: する 0: しない)",
 	}
 	ss.Text.AuthorName = "全角ひらがな"
 	ss.Text.Purpose = "ブキを手に取り、イカになれ！"
