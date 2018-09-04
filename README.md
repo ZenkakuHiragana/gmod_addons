@@ -28,7 +28,7 @@ The aim of this rework is the following:
     * [x] Write a script to fire the actual ink
     * [x] Set an ink consumption and other parameters
           Squiffers and Bamboozlers are remaining.
-    * [ ] Write a script for scoped chargers
+    * [x] Write a script for scoped chargers
 * More effects!
     * [x] Create muzzle effects (cone-shaped, ring, and mist, for shooters and chargers)
     * [x] Use Source particle system (.pcf file) to emit muzzle effect

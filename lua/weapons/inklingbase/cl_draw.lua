@@ -201,10 +201,10 @@ function SWEP:MakeSquidModel(id)
 	end
 end
 
-function SWEP:PreDrawViewModel(vm)
+function SWEP:PreDrawViewModel(vm, weapon, ply)
 	for k, v in pairs(self.Bodygroup or {}) do vm:SetBodygroup(k, v) end
 	vm:SetSkin(self.Skin or 0)
-	ss.ProtectedCall(self.PreViewModelDrawn, self, vm)
+	ss.ProtectedCall(self.PreViewModelDrawn, self, vm, weapon, ply)
 	vm:SetupBones()
 end
 
@@ -329,11 +329,11 @@ function SWEP:DrawWorldModelTranslucent()
 		end
 	end
 	
-	ss.ProtectedCall(self.PreDrawWorldModel, self)
 	self.WorldModel = self.ModelPath .. (self:GetThrowing() and "w_left.mdl" or "w_right.mdl")
 	self:SetModel(self.WorldModel)
 	for k, v in pairs(self.Bodygroup or {}) do self:SetBodygroup(k, v) end
 	self:SetSkin(self.Skin or 0)
+	ss.ProtectedCall(self.PreDrawWorldModel, self)
 	self:SetupBones()
 	self:DrawModel()
 	local bone_ent = self.Owner -- when the weapon is dropped
@@ -501,6 +501,29 @@ function SWEP:DoDrawCrosshair(x, y)
 	
 	return ss.ProtectedCall(self.DrawCrosshair, self, x, y,
 	ss.ProtectedCall(self.SetupDrawCrosshair, self, x, y))
+end
+
+local PUNCH_DAMPING = 9.0
+local PUNCH_SPRING_CONSTANT = 65.0
+function SWEP:CalcView(ply, pos, ang, fov)
+	local f = ss.ProtectedCall(self.CustomCalcView, self, ply, pos, ang, fov)
+	if ply:ShouldDrawLocalPlayer() then return pos, ang, f or fov end
+	if not isangle(self.ViewPunch) then return pos, ang, f or fov end
+	if math.abs(self.ViewPunch.p + self.ViewPunch.y + self.ViewPunch.r) > 0.001
+	or math.abs(self.ViewPunchVel.p + self.ViewPunchVel.y + self.ViewPunchVel.r) > 0.001 then
+		self.ViewPunch:Add(self.ViewPunchVel * FrameTime())
+		self.ViewPunchVel:Mul(math.max(0, 1 - PUNCH_DAMPING * FrameTime()))
+		self.ViewPunchVel:Sub(self.ViewPunch * math.Clamp(
+			PUNCH_SPRING_CONSTANT * FrameTime(), 0, 2))
+		self.ViewPunch:Set(Angle( 
+			math.Clamp(self.ViewPunch.p, -89, 89), 
+			math.Clamp(self.ViewPunch.y, -179, 179),
+			math.Clamp(self.ViewPunch.r, -89, 89)))
+	else
+		self.ViewPunch:Zero()
+	end
+	
+	return pos, ang + self.ViewPunch, f or fov
 end
 
 function SWEP:GetCameraFade()

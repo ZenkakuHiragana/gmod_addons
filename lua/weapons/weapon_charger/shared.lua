@@ -3,6 +3,20 @@ local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_shooter"
 
+function SWEP:GetFOV()
+	return self.ScopedFOV or self.Owner:GetFOV()
+end
+
+function SWEP:TranslateFOV(fov)
+	fov = fov or self.Owner:GetFOV()
+	self.ScopedFOV = nil
+	if not self.Scoped then return end
+	local frac = self:GetScopedProgress(CLIENT)
+	if frac == 0 then return end
+	self.ScopedFOV = Lerp(frac, fov, self.Primary.Scope.FOV)
+	return self.ScopedFOV
+end
+
 function SWEP:GetLerp(frac, min, max, full)
 	return frac < 1 and Lerp(frac, min, max) or full or max
 end
@@ -23,6 +37,16 @@ function SWEP:GetChargeProgress(ping)
 	local frac = CurTime() - self:GetCharge()
 	if ping then frac = frac + self:Ping() end
 	return math.Clamp(frac	/ self.Primary.MaxChargeTime, 0, 1)
+end
+
+function SWEP:GetScopedProgress(ping)
+	if not self.Scoped then return 0 end
+	if CLIENT and GetViewEntity() ~= self.Owner then return 0 end
+	local prog = self:GetChargeProgress(ping)
+	local scope = self.Primary.Scope
+	if prog < scope.StartMove then return 0 end
+	return math.Clamp((prog - scope.StartMove)
+		/ (scope.EndMove - scope.StartMove), 0, 1)
 end
 
 function SWEP:ResetCharge()
@@ -74,12 +98,14 @@ function SWEP:SharedPrimaryAttack()
 			self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
 			if not (self.NotEnoughInk or EnoughInk) then
 				self.NotEnoughInk = true
-				if ss.mp and CLIENT then
-					if IsFirstTimePredicted() and self:IsCarriedByLocalPlayer() then
-						surface.PlaySound(ss.TankEmpty)
+				if CLIENT then
+					if ss.mp then
+						if IsFirstTimePredicted() and self:IsCarriedByLocalPlayer() then
+							surface.PlaySound(ss.TankEmpty)
+						end
+					else
+						self.Owner:SendLua "surface.PlaySound(SplatoonSWEPs.TankEmpty)"
 					end
-				else
-					self.Owner:SendLua "surface.PlaySound(SplatoonSWEPs.TankEmpty)"
 				end
 			end
 		end

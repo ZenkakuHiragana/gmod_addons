@@ -459,12 +459,15 @@ function ss.PrePlayerDraw(w, ply)
 	ply:DrawShadow(not ShouldDraw)
 	w:DrawShadow(not ShouldDraw)
 	if ShouldDraw then return true end
-	ss.ProtectedCall(w.ManipulatePlayerBones, w, ply)
-	if not w:IsCarriedByLocalPlayer() then return end
-	render.SetBlend(w:GetCameraFade())
+	if w:IsCarriedByLocalPlayer() then
+		render.SetBlend(w:GetCameraFade())
+	end
+	
+	ss.ProtectedCall(w.ManipulatePlayer, w, ply)
 end
 
 function ss.RenderScreenspaceEffects(w)
+	ss.ProtectedCall(w.RenderScreenspaceEffects, w)
 	if not w:GetInInk() or LocalPlayer():ShouldDrawLocalPlayer() or not ss.GetConVarBool "DrawInkOverlay" then return end
 	local color = w:GetInkColorProxy()
 	DrawMaterialOverlay("effects/water_warp01", .1)
@@ -473,29 +476,6 @@ function ss.RenderScreenspaceEffects(w)
 	surface.DrawRect(0, 0, ScrW(), ScrH())
 end
 
-local PUNCH_DAMPING = 9.0
-local PUNCH_SPRING_CONSTANT = 65.0
-function ss.CalcView(w, p, o, a, f, zn, zf)
-	if p:ShouldDrawLocalPlayer() then return end
-	if not isangle(w.ViewPunch) then return end
-	if math.abs(w.ViewPunch.p + w.ViewPunch.y + w.ViewPunch.r) > 0.001
-	or math.abs(w.ViewPunchVel.p + w.ViewPunchVel.y + w.ViewPunchVel.r) > 0.001 then
-		w.ViewPunch:Add(w.ViewPunchVel * FrameTime())
-		w.ViewPunchVel:Mul(math.max(0, 1 - PUNCH_DAMPING * FrameTime()))
-		w.ViewPunchVel:Sub(w.ViewPunch * math.Clamp(
-			PUNCH_SPRING_CONSTANT * FrameTime(), 0, 2))
-		w.ViewPunch:Set(Angle( 
-			math.Clamp(w.ViewPunch.p, -89, 89), 
-			math.Clamp(w.ViewPunch.y, -179, 179),
-			math.Clamp(w.ViewPunch.r, -89, 89)))
-	else
-		w.ViewPunch:Zero()
-	end
-	
-	return {angles = a + w.ViewPunch, fov = f, origin = o, znear = zn, zfar = zf}
-end
-
-hook.Add("CalcView", "SplatoonSWEPs: ViewPunch clientside", ss.hook "CalcView")
 hook.Add("PostPlayerDraw", "SplatoonSWEPs: Thirdperson player fadeout", ss.hook "PostPlayerDraw")
 hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", ss.hook "PrePlayerDraw")
 hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", ss.hook "RenderScreenspaceEffects")

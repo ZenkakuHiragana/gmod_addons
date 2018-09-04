@@ -26,6 +26,7 @@ function EFFECT:Render()
 	local self = self.Weapon
 	local prog = self:GetChargeProgress(true)
 	if prog == 0 then return end
+	local color = ColorAlpha(self.Color, (1 - self:GetScopedProgress(true)) * 255)
 	
 	local shootpos, dir = self:GetFirePosition()
 	local pos, ang = self:GetMuzzlePosition()
@@ -70,19 +71,18 @@ function EFFECT:Render()
 		render.SetMaterial(m)
 		render.StartBeam(interp + 2)
 		for i, p in ipairs(points) do
-			render.AddBeam(p, 1, tpoints[i], self.Color)
+			render.AddBeam(p, 1, tpoints[i], color)
 		end
 		render.EndBeam()
 	end
 	
-	local color = self:GetInkColorProxy() * 255
-	color = (color / color:Dot(ss.GrayScaleFactor)):ToColor()
+	local tipcolor = self:GetInkColorProxy() * 255
+	tipcolor = (tipcolor / tipcolor:Dot(ss.GrayScaleFactor)):ToColor()
 	
 	render.SetMaterial(sprite)
-	render.DrawSprite(tr.HitPos, 16, 16, color)
+	render.DrawSprite(tr.HitPos, 16, 16, ColorAlpha(tipcolor, color.a))
 end
 
 function EFFECT:Think()
-	return IsValid(self.Weapon)
-	and self.Weapon:GetCharge() < math.huge
+	return IsValid(self.Weapon) and self.Weapon:GetCharge() < math.huge
 end

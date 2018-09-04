@@ -211,6 +211,6 @@ function SWEP:TranslateViewmodelPos(pos)
 	if self:IsTPS() then return pos end
 	local dir = pos - EyePos() dir:Normalize()
 	local aim = EyeAngles():Forward()
-	dir = aim + self.Owner:GetFOV() / self.ViewModelFOV * (dir - aim)
+	dir = aim + self:GetFOV() / self.ViewModelFOV * (dir - aim)
 	return EyePos() + dir * pos:Distance(EyePos())
 end

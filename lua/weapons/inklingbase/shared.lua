@@ -66,6 +66,10 @@ function SWEP:Crouching()
 	ss.ProtectedCall(self.Owner.Crouching, self.Owner), self.Owner:IsFlagSet(FL_DUCKING))
 end
 
+function SWEP:GetFOV()
+	return self.Owner:GetFOV()
+end
+
 -- When NPC weapon is picked up by player.
 function SWEP:OwnerChanged()
 	if not IsValid(self.Owner) then

@@ -145,9 +145,11 @@ function SWEP:DrawHitCrossBG(t) -- Hit cross pattern, background
 	if not t.HitEntity then return end
 	surface.SetMaterial(ss.Materials.Crosshair.Line)
 	surface.SetDrawColor(color_black)
-	local s = t.Size.Inner / 2
-	local lp = s + math.max(PaintFraction - (t.Distance / ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- line position
-	local w, h = t.Size.HitLine + hitcrossbg, t.Size.HitWidth + hitcrossbg
+	local mul = ss.ProtectedCall(self.GetScopedSize, self) or 1
+	local s = t.Size.Inner / 2 * mul
+	local lp = s + math.max(PaintFraction - (t.Distance
+	/ ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
+	local w, h = t.Size.HitLine * mul + hitcrossbg, t.Size.HitWidth * mul + hitcrossbg
 	for i = 1, 4 do
 		local dx, dy = lp * (i > 2 and 1 or -1), lp * (bit.band(i, 3) > 1 and 1 or -1)
 		surface.DrawTexturedRectRotated(t.HitPosScreen.x + dx, t.HitPosScreen.y + dy, w, h, 90 * i + 45)
@@ -175,12 +177,14 @@ end
 
 function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 	if not t.HitEntity then return end
-	local s = t.Size.Inner / 2
-	local lp = s + math.max(PaintFraction - (t.Distance / ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- line position
+	local mul = ss.ProtectedCall(self.GetScopedSize, self) or 1
+	local s = t.Size.Inner / 2 * mul
+	local w, h = t.Size.HitLine * mul, t.Size.HitWidth * mul
+	local lp = s + math.max(PaintFraction - (t.Distance
+	/ ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
 	for mat, col in pairs {[""] = color_white, Color = self.Color} do
 		surface.SetMaterial(ss.Materials.Crosshair["Line" .. mat])
 		surface.SetDrawColor(col)
-		local w, h = t.Size.HitLine, t.Size.HitWidth
 		for i = 1, 4 do
 			local dx, dy = lp * (i > 2 and 1 or -1), lp * (bit.band(i, 3) > 1 and 1 or -1)
 			surface.DrawTexturedRectRotated(t.HitPosScreen.x + dx, t.HitPosScreen.y + dy, w, h, 90 * i + 45)
