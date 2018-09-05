@@ -423,6 +423,7 @@ for _, p in pairs(ss.Particles) do PrecacheParticleSystem(p) end
 
 ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
+ss.InkGravityMul = 15
 ss.MAX_COLORS = #ss.InkColors
 ss.COLOR_BITS = 5
 ss.PLAYER_BITS = 3

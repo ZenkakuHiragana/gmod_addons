@@ -27,6 +27,8 @@ ss.SetPrimary(SWEP, {
 	Spread				= 4.5,		-- Aim cone[deg]
 	SpreadJump			= 12,		-- Aim cone while jumping[deg]
 	SpreadBias			= .25,		-- Aim cone random component[deg]
+	SpreadBiasStep		= .2,		-- Aim cone random bias initial value and step[-]
+	SpreadBiasJump		= .4,		-- Aim cone random bias while jumping[-]
 	MoveSpeed			= .4,		-- Walk speed while shooting[Splatoon units/frame]
 	InitVelocity		= 22,		-- Ink initial velocity[Splatoon units/frame]	
 	Delay = {
@@ -37,5 +39,6 @@ ss.SetPrimary(SWEP, {
 		Straight		= 6,		-- Ink goes without gravity[frames]
 		MinDamage		= 18,		-- Deals minimum damage[frames]
 		DecreaseDamage	= 9,		-- Start decreasing damage[frames]
+		SpreadJump		= 60,		-- Time to get spread angle back to normal[frames]
 	},
 })

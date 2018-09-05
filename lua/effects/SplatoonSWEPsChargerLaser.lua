@@ -26,7 +26,9 @@ function EFFECT:Render()
 	local self = self.Weapon
 	local prog = self:GetChargeProgress(true)
 	if prog == 0 then return end
-	local color = ColorAlpha(self.Color, (1 - self:GetScopedProgress(true)) * 255)
+	local color = ColorAlpha(
+	ss.GetColor(self:GetNWInt "ColorCode"),
+	(1 - self:GetScopedProgress(true)) * 255)
 	
 	local shootpos, dir = self:GetFirePosition()
 	local pos, ang = self:GetMuzzlePosition()

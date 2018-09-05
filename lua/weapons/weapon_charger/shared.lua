@@ -121,8 +121,7 @@ function SWEP:SharedPrimaryAttack()
 		self:SetSplashInitMul(0)
 	end
 	
-	self.AimSound:Play()
-	self.AimSound:ChangePitch(1)
+	self.AimSound:PlayEx(0, 1)
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 	self:SetCharge(CurTime())
 	self:SetFullChargeFlag(false)
@@ -139,8 +138,8 @@ function SWEP:KeyPress(ply, key)
 	self:SetCooldown(CurTime())
 end
 
-function SWEP:Move()
-	if self.Owner:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end
+function SWEP:Move(ply, mv)
+	if ply:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end
 	if CurTime() - self:GetCharge() < self.Primary.MinChargeTime then return end
 	local prog = self:GetChargeProgress()
 	local ShootSound = prog > .75 and self.ShootSound2 or self.ShootSound
@@ -160,7 +159,7 @@ function SWEP:Move()
 		local e = EffectData()
 		e:SetAttachment(self.SplashInit)
 		e:SetAngles(self.InitAngle)
-		e:SetColor(self.ColorCode)
+		e:SetColor(self:GetNWInt "ColorCode")
 		e:SetEntity(self)
 		e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)
 		e:SetOrigin(pos)
@@ -169,7 +168,7 @@ function SWEP:Move()
 		e:SetRadius(0)
 		e:SetMagnitude(prog)
 		util.Effect("SplatoonSWEPsShooterInk", e)
-		ss.AddInk(self.Owner, pos, ss.GetDropType())
+		ss.AddInk(ply, pos, ss.GetDropType())
 	end
 	
 	self:EmitSound(ShootSound, 80, pitch - prog * 20)
@@ -180,7 +179,7 @@ function SWEP:Move()
 	self:ResetCharge()
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self:ResetSequence "fire"
-	self.Owner:SetAnimation(PLAYER_ATTACK1)
+	ply:SetAnimation(PLAYER_ATTACK1)
 end
 
 function SWEP:CustomDataTables()

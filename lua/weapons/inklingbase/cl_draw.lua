@@ -173,7 +173,8 @@ function SWEP:CreateModels(t)
 end
 
 function SWEP:MakeSquidModel(id)
-	self.SquidModelNumber = self.PMID == ss.PLAYER.OCTO and ss.SQUID.OCTO or ss.SQUID.INKLING
+	self.SquidModelNumber = self:GetNWInt "PMID"
+	== ss.PLAYER.OCTO and ss.SQUID.OCTO or ss.SQUID.INKLING
 	local modelpath = ss.Squidmodel[self.SquidModelNumber] --Octopus or squid?
 	if IsValid(self.Squid) then self.Squid:Remove() end
 	if file.Exists(modelpath, "GAME") then
@@ -195,7 +196,7 @@ function SWEP:MakeSquidModel(id)
 		end
 	elseif not self.ErrorSquidModel then
 		self.ErrorSquidModel = true
-		if self.BecomeSquid then
+		if self:GetNWBool "BecomeSquid" then
 			self:PopupError "WeaponSquidModelNotFound"
 		end
 	end
@@ -300,7 +301,7 @@ function SWEP:DrawWorldModelTranslucent()
 		if self:GetHolstering() then return end
 		if self:Crouching() then
 			if self:GetInInk() then return
-			elseif self.BecomeSquid then
+			elseif self:GetNWBool "BecomeSquid" then
 				if IsValid(self.Squid) and not self:GetInInk() then
 					--It seems changing eye position doesn't work.
 					self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)

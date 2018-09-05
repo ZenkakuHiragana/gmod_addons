@@ -3,7 +3,7 @@ local ss = SplatoonSWEPs
 if not ss then return end
 
 local TrailLagTime = 20 * ss.FrameToSec
-local InflateTime = 2 * ss.FrameToSec
+local InflateTime = 4 * ss.FrameToSec
 local Mat = Material "splatoonsweps/inkeffect"
 local MatInvisible = "models/props_splatoon/weapons/primaries/shared/weapon_hider"
 function EFFECT:Init(e)
@@ -15,6 +15,7 @@ function EFFECT:Init(e)
 	self.IsDrop = bit.band(f, 1) > 0
 	self.IsShooter = self.Weapon.Base == "weapon_shooter"
 	self.InitTime = CurTime() - self.Weapon:Ping() * bit.band(f, 128) / 128
+	self.TrailInitTime = self.InitTime + ss.ShooterTrailDelay
 	self.TruePos, self.TrueAng, self.TrueVelocity = e:GetOrigin(), e:GetAngles(), e:GetStart()
 	self.AppPos, self.AppAng = self.Weapon:GetMuzzlePosition()
 	self.Speed = self.TrueVelocity:Length()
@@ -23,7 +24,6 @@ function EFFECT:Init(e)
 		self.AppVelocity = (self.TruePos + self.TrueVelocity * StraightTime - self.AppPos) / StraightTime
 		self.SplashInit = e:GetAttachment() * p.SplashInterval / p.SplashPatterns
 		self.SplashNum = e:GetScale()
-		self.TrailInitTime = self.InitTime + ss.ShooterTrailDelay
 		if self.IsDrop then
 			self.AppPos, self.AppAng, self.AppVelocity = self.TruePos, self.TrueAng, vector_origin
 		end
@@ -41,7 +41,6 @@ function EFFECT:Init(e)
 		self.SplashInit = self.SplashInterval / p.SplashPatterns * e:GetAttachment() + self.SplashRadius * self.SplashRatio
 		self.SplashInterval = self.SplashInterval * self.SplashRadius * self.SplashRatio * .9
 		self.Straight = self.Range / self.Speed
-		self.TrailInitTime = self.InitTime + ss.ShooterTrailDelay * 2.5
 		self.InitTime = self.InitTime - e:GetRadius()
 		self.TrailPos = self.AppPos
 		if self.IsDrop then
@@ -70,7 +69,7 @@ end
 function EFFECT:Simulate(initpos, initang, initvel, lt, prevlt, outpos, outang, outstart)
 	outang:Set(initang)
 	
-	local g = physenv.GetGravity() * 15
+	local g = physenv.GetGravity() * ss.InkGravityMul
 	local Straight = self.IsDrop and 0 or self.Weapon.Primary.Straight
 	local MaxFrame = Straight + ss.ShooterDecreaseFrame
 	local MaxPos = initpos + initvel * (MaxFrame - ss.ShooterDecreaseFrame / 2)
@@ -102,7 +101,7 @@ end
 function EFFECT:SimulateCharger(initpos, initang, initvel, lt, prevlt, outpos, outang, outstart)
 	outang:Set(initang)
 	
-	local g = physenv.GetGravity() * 15
+	local g = physenv.GetGravity() * ss.InkGravityMul
 	local Length = math.Clamp(self.Speed * lt, 0, self.Range)
 	local dir = initvel:GetNormalized()
 	local StraightPos = initpos + dir * self.Range
@@ -279,13 +278,10 @@ function EFFECT:Think()
 	local TruePos, TrueStart, AppPos, TrailPos = Vector(), Vector(), Vector(), Vector()
 	local TrueAng, AppAng, TrailAng = Angle(), Angle(), Angle()
 	
-	if not self.IsDrop and CurTime() < self.TrailInitTime then
+	if not self.IsDrop and self.IsShooter and CurTime() < self.TrailInitTime then
 		local aim = ss.ProtectedCall(w.Owner.GetAimVector, w.Owner) or w.Owner:GetForward()
 		self.TrailPos, self.TrailAng = w:GetMuzzlePosition()
 		self.TrailVelocity = aim * self.Speed
-		if not self.IsShooter then
-			self.TrailPos = self.TrailPos - self.TrailAng:Forward() * self.SplashInterval
-		end
 	end
 	
 	for to, from in pairs {

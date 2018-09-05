@@ -68,53 +68,42 @@ end
 function SWEP:OnRemove()
 	return self:Holster()
 end
-
+local Settings = {
+	"Playermodel", "InkColor",
+	"CanHealStand", "CanHealInk",
+	"CanReloadStand", "CanReloadInk",
+	"BecomeSquid", "AvoidWalls",
+}
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
 	if self.Owner:IsPlayer() and not self.Owner:IsBot() then
-		for i, param in ipairs {
-			"Playermodel", "InkColor",
-			"CanHealStand", "CanHealInk",
-			"CanReloadStand", "CanReloadInk",
-			"BecomeSquid", "AvoidWalls",
-		} do
+		for i, param in ipairs(Settings) do
 			local value = self.Owner:GetInfoNum(ss.GetConVarName(param), ss.ConVarDefaults[ss.ConVarName[param]])
 			if i == 1 then
-				self.PMID = value
+				self:SetNWInt("PMID", value)
 			elseif i == 2 then
-				self.ColorCode = value
+				self:SetNWInt("ColorCode", value)
 			else
-				self[param] = value > 0
+				self:SetNWBool(param, value > 0)
 			end
 		end
 	else
-		self.AvoidWalls = true
-		self.BecomeSquid = true
-		self.CanHealStand = true
-		self.CanHealInk = true
-		self.CanReloadStand = true
-		self.CanReloadInk = true
-		self.ColorCode = math.random(ss.MAX_COLORS)
-		self.PMID = table.Random(ss.PLAYER)
+		for i, param in ipairs(Settings) do
+			if i == 1 then
+				self:SetNWInt("PMID", table.Random(ss.PLAYER))
+			elseif i == 2 then
+				self:SetNWInt("ColorCode", math.random(ss.MAX_COLORS))
+			else
+				self:SetNWBool(param, true)
+			end
+		end
 	end
 	
-	net.Start "SplatoonSWEPs: Send weapon settings"
-	net.WriteEntity(self)
-	net.WriteBool(self.AvoidWalls)
-	net.WriteBool(self.BecomeSquid)
-	net.WriteBool(self.CanHealStand)
-	net.WriteBool(self.CanHealInk)
-	net.WriteBool(self.CanReloadStand)
-	net.WriteBool(self.CanReloadInk)
-	net.WriteUInt(self.ColorCode, ss.COLOR_BITS)
-	net.WriteUInt(self.PMID, ss.PLAYER_BITS)
-	net.Send(ss.PlayersReady)
-	
-	self.Color = ss.GetColor(self.ColorCode)
+	self.Color = ss.GetColor(self:GetNWInt "ColorCode")
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
-	self.SquidAvailable = tobool(ss.GetSquidmodel(self.PMID))
+	self.SquidAvailable = tobool(ss.GetSquidmodel(self:GetNWInt "PMID"))
 	if self.Owner:IsPlayer() then
 		self.BackupPlayerInfo = {
 			Color = self.Owner:GetColor(),
@@ -151,7 +140,7 @@ function SWEP:Deploy()
 			self.BackupPlayerInfo.SubMaterial[i] = submat
 		end
 	
-		local PMPath = ss.Playermodel[self.PMID]
+		local PMPath = ss.Playermodel[self:GetNWInt "PMID"]
 		if PMPath then
 			if file.Exists(PMPath, "GAME") then
 				self.PMTable = {

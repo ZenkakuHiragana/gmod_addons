@@ -5,6 +5,8 @@ if not (ss and SWEP) then return end
 SWEP.ShootSound = "SplatoonSWEPs.Eliter3K"
 SWEP.ShootSound2 = "SplatoonSWEPs.Eliter3KFull"
 SWEP.ModelPath = "models/splatoonsweps/weapon_eliter3k/"
+SWEP.ScopePos = Vector(-11.5, 3.1, 2.55)	-- Scoped viewmodel position[Hammer units]
+SWEP.ScopeAng = Angle()						-- Scoped viewmodel angles[deg]
 SWEP.Sub = "burstbomb"
 SWEP.Special = "echolocator"
 SWEP.Variations = {
@@ -70,7 +72,5 @@ ss.SetPrimary(SWEP, {
 		CameraFOV				= 20,	-- Camera FOV[deg]
 		PlayerAlpha				= .5,	-- Player becomes translucent at specific charge[-]
 		PlayerInvisible			= .85,	-- Player becomes invisible at specific charge[-]
-		Pos = Vector(-11.5, 3.1, 2.55),	-- Scoped viewmodel position[Hammer units]
-		Ang = Angle(),					-- Scoped viewmodel angles[deg]
 	},
 })

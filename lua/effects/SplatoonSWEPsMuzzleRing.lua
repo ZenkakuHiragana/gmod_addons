@@ -49,12 +49,15 @@ function EFFECT:Render()
 	if not isvector(pos) then return end
 	if not isangle(ang) then return end
 	
+	local g = physenv.GetGravity()
 	local norm = ang:Forward()
 	local mul = self.Weapon:IsTPS() and 1 or .5
+	local LifeTime = math.max(0, CurTime() - self.InitTime)
+	local f = LifeTime / self.LifeTime
+	pos:Add(norm * self.tmax * f + g / 2 * LifeTime^2)
 	self:SetPos(pos)
 	
 	render.SetMaterial(self.UseRefract and ref or mat)
-	local f = (CurTime() - self.InitTime) / self.LifeTime
 	local alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
 	local t = Lerp(f, self.tmax, self.tmin)
 	local r = Lerp(f, MinRadius, self.rad) * mul

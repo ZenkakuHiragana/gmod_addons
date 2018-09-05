@@ -36,7 +36,7 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	
 	t.start, t.endpos = pos, tr.HitPos
 	local trtest = util.TraceHull(t)
-	if self.AvoidWalls and tr.HitPos:DistToSqr(shootpos) > trtest.HitPos:DistToSqr(pos) * 9 then
+	if self:GetNWBool "AvoidWalls" and tr.HitPos:DistToSqr(shootpos) > trtest.HitPos:DistToSqr(pos) * 9 then
 		for dir, negate in ipairs {false, "y", "z", "yz", 0} do --right, left, up
 			if negate then
 				if negate == 0 then
@@ -65,6 +65,18 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	return min.pos, (tr.HitPos - min.pos):GetNormalized(), min.dir
 end
 
+function SWEP:GetSpreadJumpFraction()
+	local frac = CurTime() - self:GetJump()
+	if CLIENT then frac = frac + self:Ping() end
+	return math.Clamp(frac / self.Primary.SpreadJumpDelay, 0, 1)
+end
+
+function SWEP:GetSpread()
+	return Lerp(self:GetSpreadJumpFraction(),
+	self.Primary.SpreadJump, self.Primary.Spread),
+	ss.mDegRandomY
+end
+
 function SWEP:SharedInit()
 	self.NextPlayEmpty = CurTime()
 	self:SetAimTimer(CurTime())
@@ -75,10 +87,12 @@ function SWEP:SharedDeploy()
 	self.TripleSchedule:SetDone(0)
 end
 
+local rand = "SplatoonSWEPs: Spread"
 function SWEP:SharedPrimaryAttack(able, auto)
 	if not IsValid(self.Owner) then return end
 	local p = self.Primary
 	local timescale = ss.GetTimeScale(self.Owner)
+	local AlreadyAiming = CurTime() < self:GetAimTimer()
 	self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / timescale)
 	self:SetAimTimer(CurTime() + p.AimDuration)
 	self:SetInk(math.max(0, self:GetInk() - p.TakeAmmo))
@@ -109,10 +123,21 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	local right = self.Owner:GetRight()
 	local ang = dir:Angle()
 	local angle_initvelocity = Angle(ang)
-	local DegRandomX = util.SharedRandom("SplatoonSWEPs: Spread", -p.SpreadBias, p.SpreadBias)
-	+ Lerp(self.Owner:GetVelocity().z * ss.SpreadJumpFraction, p.Spread, p.SpreadJump)
-	local rx = util.SharedRandom("SplatoonSWEPs: Spread", -DegRandomX, DegRandomX, CurTime() * 1e4)
-	local ry = util.SharedRandom("SplatoonSWEPs: Spread", -ss.mDegRandomY, ss.mDegRandomY, CurTime() * 1e3)
+	local DegRandX, DegRandY = self:GetSpread()
+	if self:GetAimTimer() < 1 then
+		self:SetBias(p.SpreadBiasJump)
+	else
+		if not AlreadyAiming then self:SetBias(0) end
+		self:SetBias(math.min(self:GetBias() + p.SpreadBiasStep, p.SpreadBias))
+	end
+	
+	local sgn = math.Round(util.SharedRandom(rand, 0, 1, CurTime())) * 2 - 1
+	local SelectInterval = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 2)
+	local frac = util.SharedRandom(rand,
+		SelectInterval and self:GetBias() or 0,
+		SelectInterval and 1 or self:GetBias(), CurTime() * 3)
+	local rx = sgn * frac * DegRandX
+	local ry = sgn * frac * DegRandY
 	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
 	angle_initvelocity:RotateAroundAxis(right:Cross(dir), rx)
 	angle_initvelocity:RotateAroundAxis(right, ry)
@@ -126,7 +151,6 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	self:ResetSequence "fire"
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
-	
 	if self:IsFirstTimePredicted() then
 		local rnda = p.Recoil * -1
 		local rndb = p.Recoil * math.Rand(-1, 1)
@@ -136,7 +160,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		local e = EffectData()
 		e:SetAttachment(self.SplashInit)
 		e:SetAngles(self.InitAngle)
-		e:SetColor(self.ColorCode)
+		e:SetColor(self:GetNWInt "ColorCode")
 		e:SetEntity(self)
 		e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)
 		e:SetOrigin(pos)
@@ -157,6 +181,8 @@ end
 function SWEP:CustomDataTables()
 	self:AddNetworkVar("Bool", "PreviousHasInk")
 	self:AddNetworkVar("Float", "AimTimer")
+	self:AddNetworkVar("Float", "Bias")
+	self:AddNetworkVar("Float", "Jump")
 	self:AddNetworkVar("Float", "NextPlayEmpty")
 	self:AddNetworkVar("Int", "SplashInitMul")
 	
@@ -188,6 +214,15 @@ end
 
 function SWEP:CustomMoveSpeed()
 	return CurTime() < self:GetAimTimer() and self.Primary.MoveSpeed or nil
+end
+
+function SWEP:Move(ply, mv)
+	if not ply:OnGround() then return end
+	if ply:KeyPressed(IN_JUMP) then
+		self:SetJump(CurTime())
+	elseif CurTime() - self:GetJump() < self.Primary.SpreadJumpDelay then
+		self:SetJump(self:GetJump() - FrameTime() / 2)
+	end
 end
 
 function SWEP:GetAnimWeight()

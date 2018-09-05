@@ -15,8 +15,8 @@ SWEP.Crosshair = {
 }
 
 function SWEP:ClientInit()
-	self.IronSightsPos[6] = self.Primary.Scope.Pos
-	self.IronSightsAng[6] = self.Primary.Scope.Ang
+	self.IronSightsPos[6] = self.ScopePos or Vector()
+	self.IronSightsAng[6] = self.ScopeAng or Angle()
 	self.IronSightsFlip[6] = false
 	self.BaseClass.BaseClass.ClientInit(self)
 end
@@ -50,7 +50,7 @@ function SWEP:DrawOuterCircle(t)
 	
 	if not t.Trace.Hit then return end
 	surface.SetDrawColor(t.CrosshairColor)
-	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - rm)
+	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r + 1, r - rm)
 end
 
 local innerwidth = 2
@@ -66,8 +66,8 @@ end
 function SWEP:DrawCenterDot(t) -- Center circle
 	local scoped = self:GetScopedSize()
 	local s = t.Size.Dot / 2 * scoped
+	draw.NoTexture()
 	if scoped < 2 then
-		draw.NoTexture()
 		surface.SetDrawColor(self.Crosshair.color_circle)
 		ss.DrawArc(t.AimPos.x, t.AimPos.y, s + innerwidth)
 		surface.SetDrawColor(self.Crosshair.color_nohit)
@@ -104,10 +104,15 @@ function SWEP:PostDrawViewModel(vm, weapon, ply)
 end
 
 function SWEP:GetArmPos()
-	if not self.Scoped then return end
-	if self.Owner:KeyDown(IN_USE) then return 6 end
-	local prog = self:GetChargeProgress(true)
 	local scope = self.Primary.Scope
+	if self.Owner:KeyDown(IN_USE) then
+		self.IronSightsFlip[6] = self.ViewModelFlip
+		self.SwayTime = scope.SwayTime / 2
+		return 6
+	end
+	
+	if not self.Scoped then return end
+	local prog = self:GetChargeProgress(true)
 	local timescale = ss.GetTimeScale(self.Owner)
 	local SwayTime = self.SwayTime / timescale
 	self.SwayTime = 12 * ss.FrameToSec

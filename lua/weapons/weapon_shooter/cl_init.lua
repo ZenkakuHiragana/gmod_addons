@@ -10,16 +10,18 @@ include "shared.lua"
 --   v | Viewmodel/Worldmodel element table
 --   matrix | VMatrix for scaling
 -- When the weapon is fired, it slightly expands.  This is maximum time to get back to normal size.
-local FireWeaponCooldown = .1
+local FireWeaponCooldown = 6 * ss.FrameToSec
 local FireWeaponMultiplier = 1
-local function ExpandModel(self, vm)
+local function ExpandModel(self, vm, weapon, ply)
 	local fraction = FireWeaponCooldown - SysTime() + self.ModifyWeaponSize
 	fraction = math.max(1, fraction * FireWeaponMultiplier + 1)
 	local s = ss.vector_one * fraction
 	self:ManipulateBoneScale(0, s)
 	if not IsValid(vm) then return end
 	vm:ManipulateBoneScale(vm:LookupBone "root_1", s)
-	function vm.GetInkColorProxy() return self:GetInkColorProxy() end
+	function vm.GetInkColorProxy()
+		return ss.ProtectedCall(self.GetInkColorProxy, self) or ss.vector_one
+	end
 end
 
 SWEP.PreViewModelDrawn = ExpandModel
@@ -135,7 +137,7 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
 		
 		if not t.HitEntity then continue end
-		surface.SetDrawColor(self.Color)
+		surface.SetDrawColor(ss.GetColor(self:GetNWInt "ColorCode"))
 		surface.SetMaterial(ss.Materials.Crosshair.LineColor)
 		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
 	end
@@ -182,7 +184,10 @@ function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 	local w, h = t.Size.HitLine * mul, t.Size.HitWidth * mul
 	local lp = s + math.max(PaintFraction - (t.Distance
 	/ ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
-	for mat, col in pairs {[""] = color_white, Color = self.Color} do
+	for mat, col in pairs {
+		[""] = color_white,
+		Color = ss.GetColor(self:GetNWInt "ColorCode")
+	} do
 		surface.SetMaterial(ss.Materials.Crosshair["Line" .. mat])
 		surface.SetDrawColor(col)
 		for i = 1, 4 do
@@ -269,7 +274,7 @@ end
 
 function SWEP:SetupDrawCrosshair()
 	local t = {Size = {}}
-	t.CrosshairColor = ss.GetColor(ss.CrosshairColors[self.ColorCode])
+	t.CrosshairColor = ss.GetColor(ss.CrosshairColors[self:GetNWInt "ColorCode"])
 	t.AimPos = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range):ToScreen()
 	t.pos, t.dir = self:GetFirePosition()
 	t.IsSplatoon2 = ss.GetConVarBool "NewStyleCrosshair"
@@ -298,7 +303,7 @@ function SWEP:SetupDrawCrosshair()
 end
 
 function SWEP:DrawCrosshair(x, y, t)
-	self:DrawFourLines(t, Lerp(self.Owner:GetVelocity().z * ss.SpreadJumpFraction, self.Primary.Spread, self.Primary.SpreadJump), ss.mDegRandomY)
+	self:DrawFourLines(t, self:GetSpread())
 	self:DrawHitCrossBG(t)
 	self:DrawOuterCircle(t)
 	self:DrawHitCross(t)

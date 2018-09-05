@@ -113,26 +113,6 @@ function SWEP:Deploy()
 		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 		self:UpdateBonePositions(self.Owner:GetViewModel())
-		
-		if self:IsCarriedByLocalPlayer() then
-			for i, param in ipairs {
-				"Playermodel", "InkColor",
-				"CanHealStand", "CanHealInk",
-				"CanReloadStand", "CanReloadInk",
-				"BecomeSquid", "AvoidWalls",
-			} do
-				local value = ss.GetConVarInt(param)
-				if i == 1 then
-					self.PMID = value
-				elseif i == 2 then
-					self.ColorCode = value
-				else
-					self[param] = value > 0
-				end
-			end
-			
-			self.Color = ss.GetColor(self.ColorCode)
-		end
 	end
 	
 	return self:SharedDeployBase()
@@ -145,7 +125,7 @@ function SWEP:Holster()
 		self.SurpressDrawingVM = true
 		local vm = self.Owner:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
-		if self.BecomeSquid and self.HullDuckMins then
+		if self:GetNWBool "BecomeSquid" and self.HullDuckMins then
 			self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 			self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 		end
@@ -181,7 +161,7 @@ function SWEP:Think()
 	end
 	
 	if IsValid(self.Squid) then
-		if self.PMID == ss.PLAYER.OCTO then
+		if self:GetNWInt "PMID" == ss.PLAYER.OCTO then
 			if self.SquidModelNumber ~= ss.SQUID.OCTO then
 				self.Squid:SetModel(ss.Squidmodel[ss.SQUID.OCTO])
 				self.SquidModelNumber = ss.SQUID.OCTO

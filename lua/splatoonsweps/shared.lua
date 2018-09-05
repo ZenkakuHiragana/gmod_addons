@@ -415,8 +415,8 @@ end
 -- Returning:
 --   bool          | The colors are the same.
 function ss.IsAlly(c1, c2)
-	c1 = isentity(c1) and c1.ColorCode or c1
-	c2 = isentity(c2) and c2.ColorCode or c2
+	c1 = isentity(c1) and IsValid(c1) and c1:GetNWInt "ColorCode" or c1
+	c2 = isentity(c2) and IsValid(c2) and c2:GetNWInt "ColorCode" or c2
 	local CVarFF = GetConVar "sv_splatoonsweps_ff"
 	return not (CVarFF and CVarFF:GetBool()) and c1 == c2
 end
@@ -446,8 +446,8 @@ end
 -- This is my footstep hook.
 function ss.PlayerFootstep(w, ply, pos, foot, soundname, volume, filter)
 	if SERVER and ss.mp then return end
-	if ply:Crouching() and w.BecomeSquid and w:GetGroundColor() < 0 or
-	not ply:Crouching() and w:GetGroundColor() >= 0 then
+	if ply:Crouching() and w:GetNWBool "BecomeSquid" and w:GetGroundColor() < 0
+	or not ply:Crouching() and w:GetGroundColor() >= 0 then
 		ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		return true
 	end

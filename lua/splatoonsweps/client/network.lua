@@ -31,22 +31,3 @@ net.Receive("SplatoonSWEPs: Send an error message", function()
 	if not msg then return end
 	notification.AddLegacy(msg, icon, duration)
 end)
-
-net.Receive("SplatoonSWEPs: Send weapon settings", function()
-	local w = net.ReadEntity()
-	if not IsValid(w) then
-		net.Start "SplatoonSWEPs: Resend weapon settings"
-		net.SendToServer()
-		return
-	end
-	
-	w.AvoidWalls = net.ReadBool()
-	w.BecomeSquid = net.ReadBool()
-	w.CanHealStand = net.ReadBool()
-	w.CanHealInk = net.ReadBool()
-	w.CanReloadStand = net.ReadBool()
-	w.CanReloadInk = net.ReadBool()
-	w.ColorCode = net.ReadUInt(ss.COLOR_BITS)
-	w.PMID = net.ReadUInt(ss.PLAYER_BITS)
-	w.Color = ss.GetColor(w.ColorCode)
-end)

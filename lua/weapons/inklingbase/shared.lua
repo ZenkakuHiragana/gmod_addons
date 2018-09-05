@@ -89,7 +89,7 @@ local InkTraceLength = 20
 local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:UpdateInkState() -- Set if player is in ink
 	local ang = Angle(0, self.Owner:GetAngles().yaw)
-	local c = self.ColorCode
+	local c = self:GetNWInt "ColorCode"
 	local filter = {self, self.Owner}
 	local p = self.Owner:WorldSpaceCenter()
 	local fw, right = ang:Forward() * InkTraceLength, ang:Right() * InkTraceLength
@@ -272,7 +272,7 @@ function SWEP:ChangeInInk(name, old, new)
 		local t = util.QuickTrace(self.Owner:GetPos(), -vector_up * 16384, {self, self.Owner})
 		e:SetAngles(t.HitNormal:Angle())
 		e:SetAttachment(10)
-		e:SetColor(self.ColorCode)
+		e:SetColor(self:GetNWInt "ColorCode")
 		e:SetEntity(self)
 		e:SetFlags((f > .5 and 7 or 3) + (CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0))
 		e:SetOrigin(t.HitPos)
@@ -328,11 +328,11 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Int", "GroundColor") -- Surface ink color.
 	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
 	self.HealSchedule = self:AddNetworkSchedule(HealingDelay, function(self, schedule)
-		local canheal = self.CanHealInk and self:GetInInk() -- Gradually heals the owner
+		local canheal = self:GetNWBool "CanHealInk" and self:GetInInk() -- Gradually heals the owner
 		local timescale = ss.GetTimeScale(self.Owner)
 		local delay = HealingDelay / timescale / (canheal and 8 or 1)
 		if schedule:GetDelay() ~= delay then schedule:SetDelay(delay) end
-		if not self:GetOnEnemyInk() and (self.CanHealStand or canheal) then
+		if not self:GetOnEnemyInk() and (self:GetNWBool "CanHealStand" or canheal) then
 			local health = math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth())
 			if self.Owner:Health() ~= health then self.Owner:SetHealth(health) end
 		end
@@ -340,10 +340,10 @@ function SWEP:SetupDataTables()
 	
 	self.ReloadSchedule = self:AddNetworkSchedule(0, function(self, schedule)
 		local reloadamount = math.max(0, schedule:SinceLastCalled()) -- Recharging ink
-		local fastreload = self.CanReloadInk and self:GetInInk()
+		local fastreload = self:GetNWBool "CanReloadInk" and self:GetInInk()
 		local timescale = ss.GetTimeScale(self.Owner)
 		local mul = ReloadMultiply * (fastreload and 10/3 or 1) * timescale
-		if self.CanReloadStand or fastreload then
+		if self:GetNWBool "CanReloadStand" or fastreload then
 			local ink = math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.MaxInkAmount)
 			if self:GetInk() ~= ink then self:SetInk(ink) end
 		end

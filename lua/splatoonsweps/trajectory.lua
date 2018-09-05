@@ -30,7 +30,7 @@ end
 -- After that, ink decelerates horizontally and is affected by gravity.
 local Simulate, HitPaint, HitEntity = {}, {}, {}
 function Simulate.weapon_shooter(ink)
-	local g = physenv.GetGravity() * 15
+	local g = physenv.GetGravity() * ss.InkGravityMul
 	local LifeTime = math.max(0, CurTime() - ink.InitTime)
 	local PrevTime = ink.Time
 	if PrevTime > LifeTime then return end
@@ -137,7 +137,7 @@ function HitEntity.weapon_shooter(ink, t, w)
 end
 
 function Simulate.weapon_charger(ink)
-	local g = physenv.GetGravity() * 15
+	local g = physenv.GetGravity() * ss.InkGravityMul
 	local dir = ink.InitDirection
 	local LifeTime = math.max(0, CurTime() - ink.InitTime)
 	local PrevTime = ink.Time
@@ -315,7 +315,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 	local t = {
 		Angle = w.InitAngle.yaw,
 		Base = base,
-		Color = w.ColorCode,
+		Color = w:GetNWInt "ColorCode",
 		Info = info,
 		InitDirection = isdrop and -vector_up or w.InitVelocity:GetNormalized(),
 		InitPos = pos,

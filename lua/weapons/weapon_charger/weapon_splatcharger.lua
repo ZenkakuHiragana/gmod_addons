@@ -2,9 +2,12 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
+local ScopePos = Vector(-5, 5.98, 1.13)
 SWEP.ShootSound = "SplatoonSWEPs.SplatCharger"
 SWEP.ShootSound2 = "SplatoonSWEPs.SplatChargerFull"
 SWEP.ModelPath = "models/splatoonsweps/weapon_splatcharger/"
+SWEP.ScopePos = Vector(-5, 6, 2.2)	-- Scoped viewmodel position[Hammer units]
+SWEP.ScopeAng = Angle()				-- Scoped viewmodel angles[deg]
 SWEP.Sub = "splatbomb"
 SWEP.Special = "bombrush"
 SWEP.Variations = {
@@ -24,14 +27,17 @@ SWEP.Variations = {
 	{
 		ClassName = "weapon_herocharger",
 		ModelPath = "models/splatoonsweps/weapon_herocharger/",
+		ScopePos = Vector(-5, 6.03, .2),
 	},
 	{
 		ClassName = "weapon_splatterscope",
+		ScopePos = ScopePos,
 		Bodygroup = {3},
 		Scoped = true,
 	},
 	{
 		ClassName = "weapon_splatterscope_kelp",
+		ScopePos = ScopePos,
 		Sub = "sprinkler",
 		Special = "killerwail",
 		Bodygroup = {4},
@@ -39,6 +45,7 @@ SWEP.Variations = {
 	},
 	{
 		ClassName = "weapon_splatterscope_bento",
+		ScopePos = ScopePos,
 		Sub = "splashwall",
 		Special = "echolocator",
 		Bodygroup = {5},
@@ -89,7 +96,5 @@ ss.SetPrimary(SWEP, {
 		CameraFOV				= 28,	-- Camera FOV[deg]
 		PlayerAlpha				= .5,	-- Player becomes translucent at specific charge[-]
 		PlayerInvisible			= .85,	-- Player becomes invisible at specific charge[-]
-		Pos = Vector(-5, 5.98, 1.13),	-- Scoped viewmodel position[Hammer units]
-		Ang = Angle(),					-- Scoped viewmodel angles[deg]
 	},
 })

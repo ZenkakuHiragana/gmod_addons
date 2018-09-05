@@ -455,7 +455,7 @@ end)
 
 function ss.PostPlayerDraw(w, ply) render.SetBlend(1) end
 function ss.PrePlayerDraw(w, ply)
-	local ShouldDraw = Either(w.BecomeSquid, ply:Crouching(), w:GetInInk())
+	local ShouldDraw = Either(w:GetNWBool "BecomeSquid", ply:Crouching(), w:GetInInk())
 	ply:DrawShadow(not ShouldDraw)
 	w:DrawShadow(not ShouldDraw)
 	if ShouldDraw then return true end

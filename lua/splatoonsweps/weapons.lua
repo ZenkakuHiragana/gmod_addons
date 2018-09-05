@@ -50,13 +50,16 @@ function ss.CustomPrimary.weapon_shooter(p, info)
 	p.Spread = info.Spread
 	p.SpreadJump = info.SpreadJump
 	p.SpreadBias = info.SpreadBias
+	p.SpreadBiasStep = info.SpreadBiasStep
+	p.SpreadBiasJump = info.SpreadBiasJump
+	p.SpreadJumpDelay = info.Delay.SpreadJump * ss.FrameToSec
 	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
 	p.MinDamageTime = info.Delay.MinDamage * ss.FrameToSec
 	p.DecreaseDamage = info.Delay.DecreaseDamage * ss.FrameToSec
 	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
 	p.AimDuration = info.Delay.Aim * ss.FrameToSec
 	p.ColRadius = info.ColRadius or ss.mColRadius
-	p.Range = p.InitVelocity * (p.Straight + 2 * ss.FrameToSec)
+	p.Range = p.InitVelocity * (p.Straight + ss.ShooterDecreaseFrame / 2)
 	
 	if not info.Delay.TripleShot then return end
 	p.TripleShotDelay = info.Delay.TripleShot * ss.FrameToSec
@@ -104,8 +107,6 @@ function ss.CustomPrimary.weapon_charger(p, info)
 	p.Scope.FOV = info.Scope.CameraFOV
 	p.Scope.Alpha = info.Scope.PlayerAlpha
 	p.Scope.Invisible = info.Scope.PlayerInvisible
-	p.Scope.Pos = info.Scope.Pos
-	p.Scope.Ang = info.Scope.Ang
 	p.Scope.SwayTime = (info.Scope.EndMove - info.Scope.StartMove) * p.MaxChargeTime
 end
 
@@ -175,7 +176,7 @@ sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
 	
 	e:SetAngles(ang) -- Angle difference
 	e:SetAttachment(a) -- Effect duration
-	e:SetColor(self.ColorCode or 0) -- Splash color
+	e:SetColor(self:GetNWInt "ColorCode") -- Splash color
 	e:SetEntity(self) -- Enitity attach to
 	e:SetFlags(tpslag) -- Splash mode
 	e:SetScale(s) -- Splash length
@@ -188,13 +189,13 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 	local da, r1, r2, t1, t2 = math.Rand(0, 360), 40, 30, 6, 13
 	local tpslag = self:IsCarriedByLocalPlayer()
 	and self.Owner:ShouldDrawLocalPlayer() and 128 or 0
-	e:SetColor(self.ColorCode)
+	e:SetColor(self:GetNWInt "ColorCode")
 	e:SetEntity(self)
 	
 	if options[2] == "CHARGER" then
 		r2 = Lerp(self:GetFireAt(), 20, 70)
 		r1 = r2 * 2
-		t2 = Lerp(self:GetFireAt(), 5, 9)
+		t2 = Lerp(self:GetFireAt(), 3, 7)
 		t1 = t2 * .75
 		if self:GetFireAt() < .3 then numpieces = numpieces - 1 end
 	end
