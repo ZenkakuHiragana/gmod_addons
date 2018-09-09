@@ -154,8 +154,8 @@ function SWEP:SharedDeployBase()
 end
 
 function SWEP:SharedHolsterBase()
-	ss.ProtectedCall(self.SharedHolster, self)
 	self:SetHolstering(true)
+	ss.ProtectedCall(self.SharedHolster, self)
 	StopLoopSound(self)
 	return true
 end

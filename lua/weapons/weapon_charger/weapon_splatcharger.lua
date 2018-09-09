@@ -5,7 +5,6 @@ if not (ss and SWEP) then return end
 local ScopePos = Vector(-5, 5.98, 1.13)
 SWEP.ShootSound = "SplatoonSWEPs.SplatCharger"
 SWEP.ShootSound2 = "SplatoonSWEPs.SplatChargerFull"
-SWEP.ModelPath = "models/splatoonsweps/weapon_splatcharger/"
 SWEP.ScopePos = Vector(-5, 6, 2.2)	-- Scoped viewmodel position[Hammer units]
 SWEP.ScopeAng = Angle()				-- Scoped viewmodel angles[deg]
 SWEP.Sub = "splatbomb"
@@ -26,7 +25,6 @@ SWEP.Variations = {
 	},
 	{
 		ClassName = "weapon_herocharger",
-		ModelPath = "models/splatoonsweps/weapon_herocharger/",
 		ScopePos = Vector(-5, 6.03, .2),
 	},
 	{

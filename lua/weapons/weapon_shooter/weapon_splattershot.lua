@@ -20,12 +20,10 @@ SWEP.Variations = {
 	},
 	{
 		ClassName = "weapon_heroshot",
-		ModelPath = "models/splatoonsweps/weapon_heroshot/",
 	},
 	{
 		ClassName = "weapon_octoshot",
 		ShootSound = "SplatoonSWEPs.Octoshot",
-		ModelPath = "models/splatoonsweps/weapon_octoshot/",
 		Skin = 1,
 	},
 }

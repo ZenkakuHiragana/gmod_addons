@@ -523,11 +523,12 @@ local function RegisterWeapons()
 			SWEP.SlotPos = i
 			
 			for _, v in ipairs(SWEP.Variations or {}) do
+				local UniqueModelPath = "models/splatoonsweps/" .. v.ClassName .. "/"
 				v.Base = base
 				v.Category = ss.Text.Category
 				v.PrintName = ss.Text.PrintNames[v.ClassName]
 				v.Spawnable = true
-				v.ModelPath = v.ModelPath or SWEP.ModelPath
+				v.ModelPath = v.ModelPath or file.Exists(UniqueModelPath, "GAME") and UniqueModelPath or SWEP.ModelPath
 				v.ViewModel = v.ModelPath .. "c_viewmodel.mdl"
 				v.WorldModel = v.ModelPath .. "w_right.mdl"
 				SetupIcons(v)

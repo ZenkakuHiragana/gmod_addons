@@ -331,7 +331,10 @@ function SWEP:DrawWorldModelTranslucent()
 	end
 	
 	self.WorldModel = self.ModelPath .. (self:GetThrowing() and "w_left.mdl" or "w_right.mdl")
-	self:SetModel(self.WorldModel)
+	if self.WorldModel ~= self:GetModel() then
+		self:SetModel(self.WorldModel)
+	end
+	
 	for k, v in pairs(self.Bodygroup or {}) do self:SetBodygroup(k, v) end
 	self:SetSkin(self.Skin or 0)
 	ss.ProtectedCall(self.PreDrawWorldModel, self)

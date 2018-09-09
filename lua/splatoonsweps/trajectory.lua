@@ -254,7 +254,7 @@ function HitEntity.weapon_charger(ink, t, w)
 	d:SetReportedPosition(t.HitPos)
 	d:SetAttacker(IsValid(o) and o or game.GetWorld())
 	d:SetInflictor(ss.IsValidInkling(o) or game.GetWorld())
-	e:TakeDamageInfo(d)
+	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
 local function ProcessInkQueue(ply)
@@ -356,7 +356,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		SplashInterval = SplashInterval * SplashRadius * SplashRatio * .9
 		table.Merge(t, {
 			Charge = prog,
-			Damage = w:GetLerp(prog, info.MinDamage, info.MaxDamage, Damage),
+			Damage = w:GetDamage(),
 			FootpaintCharge = info.FootpaintCharge,
 			FootpaintRadius = SplashRadius / info.SplashRadiusMul,
 			Range = w.Range,
@@ -383,15 +383,4 @@ hook.Add("Move", "SplatoonSWEPs: Simulate ink", function(ply, mv)
 	local ok, msg = coroutine.resume(process, ply)
 	ply:LagCompensation(false)
 	if not ok then ErrorNoHalt(msg) end
-	
-	-- Test function
-	if ply ~= player.GetByID(2) then return end
-	if CurTime() % 2 < 1 then
-		mv:SetSideSpeed(600)
-		mv:SetButtons(bit.bor(mv:GetButtons(), IN_RIGHT))
-	else
-		mv:SetSideSpeed(-600)
-		mv:SetButtons(bit.bor(mv:GetButtons(), IN_LEFT))
-	end
-	ply:SetHealth(math.min(ply:GetMaxHealth(), ply:Health() + 1))
 end)

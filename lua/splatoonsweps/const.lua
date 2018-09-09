@@ -328,13 +328,19 @@ ss.Squidmodel = {
 	Model "models/props_splatoon/squids/octopus_beta.mdl",
 }
 
-ss.CheckSplatoonPlayermodels = {
-	["models/drlilrobot/splatoon/ply/marie.mdl"] = true,
-	["models/drlilrobot/splatoon/ply/callie.mdl"] = true,
-	["models/drlilrobot/splatoon/ply/inkling_boy.mdl"] = true,
-	["models/drlilrobot/splatoon/ply/inkling_girl.mdl"] = true,
-	["models/drlilrobot/splatoon/ply/octoling.mdl"] = true,
+local Marie = "models/drlilrobot/splatoon/ply/marie.mdl"
+local Callie = "models/drlilrobot/splatoon/ply/callie.mdl"
+local InkBoy = "models/drlilrobot/splatoon/ply/inkling_boy.mdl"
+local InkGirl = "models/drlilrobot/splatoon/ply/inkling_girl.mdl"
+local Octo = "models/drlilrobot/splatoon/ply/octoling.mdl"
+ss.ChargingEyeSkin = {
+	[Marie] = 0,
+	[Callie] = 5,
+	[InkBoy] = 4,
+	[InkGirl] = 4,
+	[Octo] = 4,
 }
+ss.CheckSplatoonPlayermodels = ss.ChargingEyeSkin
 
 function ss.GetSquidmodel(pmid)
 	if pmid == ss.PLAYER.NOCHANGE then return end

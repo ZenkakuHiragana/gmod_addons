@@ -5,7 +5,6 @@ if not ss then return end
 local interp = 30
 local beam = Material "trails/smoke"
 local beamlight = Material "sprites/physbeama"
-local sprite = Material "sprites/gmdm_pickups/light"
 local cubic = Matrix {
 	{2, -2, 1, 1},
 	{-3, 3, -2, -1},
@@ -73,16 +72,10 @@ function EFFECT:Render()
 		render.SetMaterial(m)
 		render.StartBeam(interp + 2)
 		for i, p in ipairs(points) do
-			render.AddBeam(p, 1, tpoints[i], color)
+			render.AddBeam(p, i == #points and .25 or 1, tpoints[i], color)
 		end
 		render.EndBeam()
 	end
-	
-	local tipcolor = self:GetInkColorProxy() * 255
-	tipcolor = (tipcolor / tipcolor:Dot(ss.GrayScaleFactor)):ToColor()
-	
-	render.SetMaterial(sprite)
-	render.DrawSprite(tr.HitPos, 16, 16, ColorAlpha(tipcolor, color.a))
 end
 
 function EFFECT:Think()

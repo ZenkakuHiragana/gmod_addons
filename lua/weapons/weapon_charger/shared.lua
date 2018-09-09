@@ -22,15 +22,23 @@ function SWEP:GetLerp(frac, min, max, full)
 end
 
 function SWEP:GetColRadius()
-	return self:GetLerp(self:GetChargeProgress(), self.Primary.MinColRadius, self.Primary.ColRadius)
+	return self:GetLerp(self:GetChargeProgress(CLIENT),
+	self.Primary.MinColRadius, self.Primary.ColRadius)
+end
+
+function SWEP:GetDamage()
+	return self:GetLerp(self:GetChargeProgress(CLIENT),
+	self.Primary.MinDamage, self.Primary.MaxDamage, self.Primary.Damage)
 end
 
 function SWEP:GetRange()
-	return self:GetLerp(self:GetChargeProgress(CLIENT), self.Primary.MinRange, self.Primary.MaxRange, self.Primary.Range)
+	return self:GetLerp(self:GetChargeProgress(CLIENT),
+	self.Primary.MinRange, self.Primary.MaxRange, self.Primary.Range)
 end
 
 function SWEP:GetInkVelocity()
-	return self:GetLerp(self:GetChargeProgress(), self.Primary.MinVelocity, self.Primary.MaxVelocity, self.Primary.InitVelocity)
+	return self:GetLerp(self:GetChargeProgress(),
+	self.Primary.MinVelocity, self.Primary.MaxVelocity, self.Primary.InitVelocity)
 end
 
 function SWEP:GetChargeProgress(ping)
@@ -50,6 +58,17 @@ function SWEP:GetScopedProgress(ping)
 end
 
 function SWEP:ResetCharge()
+	if not self:GetHolstering() and IsValid(self.Owner)
+	and ss.ChargingEyeSkin[self.Owner:GetModel()] then
+		if self:GetNWInt "PMID" == ss.PLAYER.NOCHANGE then
+			self.Owner:SetSkin(CLIENT and
+			GetConVar "cl_playerskin":GetInt() or
+			self.Owner:GetInfoNum("cl_playerskin", 0))
+		else
+			self.Owner:SetSkin(0)
+		end
+	end
+	
 	self:SetCharge(math.huge)
 	self:SetFullChargeFlag(false)
 	self.JumpPower = ss.InklingJumpPower
@@ -88,6 +107,9 @@ end
 function SWEP:SharedPrimaryAttack()
 	if not IsValid(self.Owner) then return end
 	if self:GetCharge() < math.huge then
+		local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
+		if skin then self.Owner:SetSkin(skin) end
+		
 		local prog = self:GetChargeProgress()
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)

@@ -232,20 +232,22 @@ function SWEP:GetViewModelPosition(pos, ang)
 		return pos, ang
 	end
 	
-	local armpos = 1
-	if ss.GetConVarBool "DoomStyle" then
-		armpos = 5
-	elseif ss.GetConVarBool "MoveViewmodel" and not self:Crouching() then
-		local x, y = ScrW() / 2, ScrH() / 2
-		if vgui.CursorVisible() and not gui.IsGameUIVisible() then
-			x, y = input.GetCursorPos()
+	local armpos = ss.ProtectedCall(self.GetArmPos, self)
+	if not armpos then
+		if self:GetThrowing() then
+			armpos = 1
+		elseif ss.GetConVarBool "DoomStyle" then
+			armpos = 5
+		elseif ss.GetConVarBool "MoveViewmodel" and not self:Crouching() then
+			local x, y = ScrW() / 2, ScrH() / 2
+			if vgui.CursorVisible() and not gui.IsGameUIVisible() then
+				x, y = input.GetCursorPos()
+			end
+			
+			armpos = select(3, self:GetFirePosition(self:GetRange() * gui.ScreenToVector(x, y), RenderAngles(), EyePos()))
 		end
-		
-		armpos = select(3, self:GetFirePosition(self:GetRange() * gui.ScreenToVector(x, y), RenderAngles(), EyePos()))
 	end
 	
-	if self:GetThrowing() then armpos = 1 end
-	armpos = ss.ProtectedCall(self.GetArmPos, self) or armpos
 	if not isangle(self.IronSightsAng[armpos]) then return pos, ang end
 	if not isvector(self.IronSightsPos[armpos]) then return pos, ang end
 	if armpos ~= self.ArmPos then
@@ -254,7 +256,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 		self.TransitFlip = self.ViewModelFlip ~= self.IronSightsFlip[armpos]
 	end
 	
-	local relpos, relang = WorldToLocal(pos, ang, EyePos(), RenderAngles())
+	local relpos, relang = LocalToWorld(vector_origin, angle_zero, pos, ang)
 	local SwayTime = self.SwayTime / ss.GetTimeScale(self.Owner)
 	local f = math.Clamp((SysTime() - self.ArmBegin) / SwayTime, 0, 1)
 	if self.TransitFlip then
@@ -269,7 +271,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 	self.OldPos = LerpVector(f, self.BasePos, self.IronSightsPos[armpos])
 	self.OldAng = LerpAngle(f, self.BaseAng, self.IronSightsAng[armpos])
 	
-	return LocalToWorld(relpos + self.OldPos, relang + self.OldAng, EyePos(), RenderAngles())
+	return LocalToWorld(self.OldPos, self.OldAng, relpos, relang)
 end
 
 function SWEP:SetupDrawCrosshair()

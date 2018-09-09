@@ -176,6 +176,7 @@ function SWEP:ManipulatePlayer(ply)
 	local bp, ba = {}, {}
 	while #b > 0 do
 		local m = ply:GetBoneMatrix(b[1])
+		if not m then return end
 		local pi = ply:GetBoneParent(b[1])
 		local pm = ply:GetBoneMatrix(pi)
 		bp[b[1]], ba[b[1]] = WorldToLocal(m:GetTranslation(), m:GetAngles(), pm:GetTranslation(), pm:GetAngles())
