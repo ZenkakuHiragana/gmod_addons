@@ -68,7 +68,11 @@ function Simulate.weapon_shooter(ink)
 		local Length = (ink.endpos - ink.InitPos):Length2D()
 		local NextLength = ink.SplashCount * ink.Info.SplashInterval + ink.SplashInit
 		while Length >= NextLength and ink.SplashCount <= ink.SplashNum do
-			ss.AddInk(ink.filter, ink.InitPos + ink.InitDirection * NextLength, ss.GetDropType(), true)
+			ss.AddInk(ink.filter, ink.InitPos + ink.InitDirection * NextLength, ss.GetDropType(), {
+				Angle = ink.Angle,
+				Color = ink.Color,
+				SplashInit = ink.WeaponSplashInit,
+			})
 			if util.QuickTrace(ink.InitPos + ink.InitDirection * NextLength,
 			ink.InitDirection * ink.Info.SplashInterval, ink.filter).Hit then
 				break
@@ -133,7 +137,7 @@ function HitEntity.weapon_shooter(ink, t, w)
 	d:SetReportedPosition(t.HitPos)
 	d:SetAttacker(IsValid(o) and o or game.GetWorld())
 	d:SetInflictor(ss.IsValidInkling(o) or game.GetWorld())
-	e:TakeDamageInfo(d)
+	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
 function Simulate.weapon_charger(ink)
@@ -164,8 +168,13 @@ function Simulate.weapon_charger(ink)
 	dropdata.InitTime = CurTime() - ss.ShooterDecreaseFrame
 	local NextLength = ink.SplashCount * ink.SplashInterval + ink.SplashInit
 	while Length >= NextLength do -- Create ink drops
+		local droptable = {
+			Angle = ink.Angle,
+			Color = ink.Color,
+			SplashInit = ink.WeaponSplashInit,
+		}
 		dropdata.InkRadius = ink.SplashRadius / ink.SplashRatio
-		local t = ss.AddInk(ink.filter, ink.InitPos + dir * NextLength, ss.GetDropType(), true)
+		local t = ss.AddInk(ink.filter, ink.InitPos + dir * NextLength, ss.GetDropType(), droptable)
 		t.Ratio = ink.SplashRatio
 		if util.QuickTrace(ink.InitPos + dir * NextLength, dir * ink.SplashInterval, ink.filter).Hit then
 			break
@@ -175,7 +184,7 @@ function Simulate.weapon_charger(ink)
 		ink.SplashCount = ink.SplashCount + 1
 		if NextLength >= ink.Range then
 			dropdata.InkRadius = dropdata.InkRadius * ink.Info.SplashRadiusMul
-			t = ss.AddInk(ink.filter, ink.StraightPos, ss.GetDropType(), true)
+			t = ss.AddInk(ink.filter, ink.StraightPos, ss.GetDropType(), droptable)
 			t.Ratio = ink.SplashRatio
 			
 			HitPaint.weapon_charger(ink, {
@@ -185,7 +194,7 @@ function Simulate.weapon_charger(ink)
 			})
 		elseif ink.SplashCount == 1 and ink.Charge > ink.FootpaintCharge then
 			dropdata.InkRadius = ink.FootpaintRadius
-			ss.AddInk(ink.filter, ink.InitPos, ss.GetDropType(), true)
+			ss.AddInk(ink.filter, ink.InitPos, ss.GetDropType(), droptable)
 		end
 	end
 	
@@ -308,23 +317,28 @@ end
 --   number inktype				| Shape of ink.
 function ss.AddInk(ply, pos, inktype, isdrop)
 	local w = ss.IsValidInkling(ply)
-	if not w then return {} end
+	if not (isdrop or w) then return {} end
+	if isdrop then w = isdrop end
 	local info = isdrop and dropdata or w.Primary
-	local base = not isdrop and w.Base or "weapon_shooter"
-	local dt = CLIENT and w:IsCarriedByLocalPlayer() and w:Ping() or 0
+	local base = isdrop and "weapon_shooter" or w.Base
+	local IsLP = Either(isdrop,
+		(isdrop or {}).IsCarriedByLocalPlayer,
+		SERVER or ss.ProtectedCall(w.IsCarriedByLocalPlayer, w))
+	local dt = CLIENT and IsLP and w:Ping() or 0
 	local t = {
-		Angle = w.InitAngle.yaw,
+		Angle = isdrop and isdrop.Angle or w.InitAngle.yaw,
 		Base = base,
-		Color = w:GetNWInt "ColorCode",
+		Color = isdrop and isdrop.Color or w:GetNWInt "ColorCode",
 		Info = info,
 		InitDirection = isdrop and -vector_up or w.InitVelocity:GetNormalized(),
 		InitPos = pos,
 		InitTime = info.InitTime or CurTime(),
 		InkType = math.floor(inktype),
-		IsCarriedByLocalPlayer = SERVER or w:IsCarriedByLocalPlayer(),
+		IsCarriedByLocalPlayer = IsLP,
 		IsDrop = isdrop,
 		Time = 0,
 		Velocity = isdrop and vector_origin or w.InitVelocity,
+		WeaponSplashInit = w.SplashInit,
 		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 		endpos = Vector(),
 		filter = ply,

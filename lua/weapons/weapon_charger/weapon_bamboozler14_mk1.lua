@@ -4,7 +4,7 @@ local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
 SWEP.ShootSound = "SplatoonSWEPs.Bamboozler"
 SWEP.ShootSound2 = "SplatoonSWEPs.BamboozlerFull"
-SWEP.ScopePos = Vector(-11, 6, 2.2)	-- Scoped viewmodel position[Hammer units]
+SWEP.ScopePos = Vector(-8.5, 6, 3)	-- Scoped viewmodel position[Hammer units]
 SWEP.ScopeAng = Angle(2, 0, 0)		-- Scoped viewmodel angles[deg]
 SWEP.Sub = "splashwall"
 SWEP.Special = "killerwail"

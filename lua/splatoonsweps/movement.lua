@@ -1882,6 +1882,7 @@ function ss.MoveHook(w, p, m)
 			ply:RemoveAllDecals()
 			w:EmitSound "SplatoonSWEPs_Player.ToSquid"
 			w:SendWeaponAnim(ss.ViewModel.Squid)
+			w.WorldModel = w.ModelPath .. "w_right.mdl"
 		end
 		
 		if w:GetOnEnemyInk() then
@@ -1895,6 +1896,8 @@ function ss.MoveHook(w, p, m)
 		w.SwimSound:ChangeVolume(0)
 		w:EmitSound "SplatoonSWEPs_Player.ToHuman"
 		w:SendWeaponAnim(w:GetThrowing() and ss.ViewModel.Throwing or ss.ViewModel.Standing)
+		w.WorldModel = w.ModelPath
+		.. (w:GetThrowing() and "w_left.mdl" or "w_right.mdl")
 	end
 	
 	w.OnOutofInk = w:GetInWallInk()

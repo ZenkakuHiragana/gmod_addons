@@ -212,6 +212,7 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 	if self:GetKey() ~= IN_ATTACK2 then return end
 	self:SetThrowing(true)
 	self:SendWeaponAnim(ss.ViewModel.Throwing)
+	self.WorldModel = self.ModelPath .. "w_left.mdl"
 	if not self:IsFirstTimePredicted() then return end
 	if self.ThrowSchedule then return end
 	if self.HoldType ~= "grenade" then
@@ -240,7 +241,10 @@ function ss.KeyRelease(self, ply, key)
 	ss.ProtectedCall(self.KeyRelease, self, ply, key)
 	
 	if not (self:GetThrowing() and key == IN_ATTACK2) then return end
-	self:AddSchedule(ss.SubWeaponThrowTime, 1, function() self:SetThrowing(false) end)
+	self:AddSchedule(ss.SubWeaponThrowTime, 1, function()
+		self:SetThrowing(false)
+		self.WorldModel = self.ModelPath .. "w_right.mdl"
+	end)
 	
 	local time = CurTime() + ss.SubWeaponThrowTime
 	self:SetCooldown(time)
