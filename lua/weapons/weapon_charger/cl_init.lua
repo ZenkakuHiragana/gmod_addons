@@ -38,7 +38,8 @@ function SWEP:DrawOuterCircle(t)
 	local r = t.Size.Outer / 2 * scoped
 	local ri = t.Size.Inner / 2 * scoped
 	local rm = t.Size.Middle / 2 * scoped
-	local prog = self:GetChargeProgress(true) * 360
+	local time = math.max(CurTime() - self:GetCharge() + self:Ping(), 0)
+	local prog = math.Clamp(time / self.Primary.MaxChargeTime, 0, 1) * 360
 	
 	draw.NoTexture()
 	surface.SetDrawColor(ColorAlpha(color_black, 192))
@@ -95,10 +96,14 @@ function SWEP:DrawCrosshair(x, y, t)
 end
 
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
+	local base = self.BaseClass.BaseClass
+	ss.ProtectedCall(base.PreViewModelDrawn, self, vm, weapon, ply)
 	render.SetBlend((1 - self:GetScopedProgress(true))^2)
 end
 
 function SWEP:PostDrawViewModel(vm, weapon, ply)
+	local base = self.BaseClass.BaseClass
+	ss.ProtectedCall(base.PostDrawViewModel, self, vm, weapon, ply)
 	if not self.Scoped then return end
 	render.SetBlend(1)
 end

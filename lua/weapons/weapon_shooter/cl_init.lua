@@ -16,7 +16,7 @@ local function ExpandModel(self, vm, weapon, ply)
 	local fraction = FireWeaponCooldown - SysTime() + self.ModifyWeaponSize
 	fraction = math.max(1, fraction * FireWeaponMultiplier + 1)
 	local s = ss.vector_one * fraction
-	self:ManipulateBoneScale(0, s)
+	self:ManipulateBoneScale(self:LookupBone "root_1" or 0, s)
 	if not IsValid(vm) then return end
 	vm:ManipulateBoneScale(vm:LookupBone "root_1", s)
 	function vm.GetInkColorProxy()

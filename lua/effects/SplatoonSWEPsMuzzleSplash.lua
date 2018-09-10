@@ -34,14 +34,20 @@ function EFFECT:Init(e)
 	self.InitTime = CurTime() - self.Weapon:Ping() * bit.band(f, 128) / 128
 	self.LifeTime = e:GetAttachment() * ss.FrameToSec
 	self.Pos, self.Angle = e:GetOrigin(), e:GetAngles()
+	if not (isvector(self.Pos) and isangle(self.Angle)) then return end
 	if bit.band(f, 1) == 0 then self.GetPosition = self.GetMuzzlePosition end
 	
 	local pos, ang = self:GetPosition()
 	self:SetPos(pos)
 	self:SetAngles(ang)
 	
-	if bit.band(f, 2) == 0 or not self.Weapon:IsFirstTimePredicted() then return end
-	self:EmitSound(bit.band(f, 4) > 0 and "SplatoonSWEPs_Player.InkDiveDeep" or "SplatoonSWEPs_Player.InkDiveShallow")
+	if bit.band(f, 2) == 0 then return end
+	local track = "SplatoonSWEPs_Player.InkDive" .. (bit.band(f, 4) > 0 and "Deep" or "Shallow")
+	if self.Weapon:IsCarriedByLocalPlayer() then
+		self:EmitSound(track)
+	else
+		sound.Play(track, self.Pos)
+	end
 end
 
 local function AdvanceVertex(self, pos, norm, u, v, alpha)

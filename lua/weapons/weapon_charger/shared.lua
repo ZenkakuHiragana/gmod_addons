@@ -27,8 +27,10 @@ function SWEP:GetColRadius()
 end
 
 function SWEP:GetDamage()
-	return self:GetLerp(self:GetChargeProgress(CLIENT),
-	self.Primary.MinDamage, self.Primary.MaxDamage, self.Primary.Damage)
+	local p = self.Primary
+	local ChargeFrame = p.MaxChargeTime * ss.SecToFrame
+	local frac = math.floor(self:GetChargeProgress(CLIENT) * ChargeFrame) / ChargeFrame
+	return self:GetLerp(frac, p.MinDamage, p.MaxDamage, p.Damage)
 end
 
 function SWEP:GetRange()
@@ -42,7 +44,7 @@ function SWEP:GetInkVelocity()
 end
 
 function SWEP:GetChargeProgress(ping)
-	local frac = CurTime() - self:GetCharge()
+	local frac = CurTime() - self:GetCharge() - self.Primary.MinChargeTime
 	if ping then frac = frac + self:Ping() end
 	return math.Clamp(frac	/ self.Primary.MaxChargeTime, 0, 1)
 end
@@ -145,7 +147,7 @@ function SWEP:SharedPrimaryAttack()
 	
 	self.AimSound:PlayEx(0, 1)
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
-	self:SetCharge(CurTime())
+	self:SetCharge(CurTime() + self.Primary.MinFreezeTime)
 	self:SetFullChargeFlag(false)
 	
 	if not self:IsFirstTimePredicted() then return end
@@ -161,20 +163,22 @@ function SWEP:KeyPress(ply, key)
 end
 
 function SWEP:Move(ply, mv)
+	local p = self.Primary
 	if ply:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end
-	if CurTime() - self:GetCharge() < self.Primary.MinChargeTime then return end
-	local prog = self:GetChargeProgress()
+	if CurTime() - self:GetCharge() < p.MinChargeTime then return end
+	local prog = self:GetChargeProgress(CLIENT)
+	local inkprog = math.max(p.MinChargeTime / p.MaxChargeTime, prog)
 	local ShootSound = prog > .75 and self.ShootSound2 or self.ShootSound
-	local pitch = 100 + (prog > .75 and 15 or 0)
+	local pitch = 100 + (prog > .75 and 15 or 0) - prog * 20
 	local pos, dir = self:GetFirePosition()
-	self.SplashInit = self:GetSplashInitMul() % self.Primary.SplashPatterns
+	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns * (1 - prog)
 	self.Range = self:GetRange()
 	self.InitVelocity = dir * self:GetInkVelocity()
 	self.InitAngle = dir:Angle()
 	self.NotEnoughInk = false
 	if self:IsFirstTimePredicted() then
-		local rnda = self.Primary.Recoil * -1
-		local rndb = self.Primary.Recoil * math.Rand(-1, 1)
+		local rnda = p.Recoil * -1
+		local rndb = p.Recoil * math.Rand(-1, 1)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
 		self.ModifyWeaponSize = SysTime()
 		
@@ -193,10 +197,10 @@ function SWEP:Move(ply, mv)
 		ss.AddInk(ply, pos, ss.GetDropType())
 	end
 	
-	self:EmitSound(ShootSound, 80, pitch - prog * 20)
-	self:SetCooldown(CurTime() + self.Primary.MinChargeTime)
+	self:EmitSound(ShootSound, 80, pitch)
+	self:SetCooldown(CurTime() + p.MaxFreezeTime)
 	self:SetFireAt(prog)
-	self:SetInk(math.max(0, self:GetInk() - prog * self.Primary.TakeAmmo))
+	self:SetInk(math.max(0, self:GetInk() - inkprog * p.TakeAmmo))
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:ResetCharge()
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)

@@ -44,10 +44,10 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio)
 			localang = surf.DefaultAngles[i] + ang.yaw - localang.roll
 			
 			local e = EffectData()
-			e:SetScale(SERVER and index or i * (ss.Displacements[i] and -1 or 1))
 			e:SetAttachment(color)
 			e:SetFlags(inktype)
 			e:SetOrigin(pos)
+			e:SetScale(SERVER and index or i * (ss.Displacements[i] and -1 or 1))
 			e:SetStart(Vector(radius, localang, ratio))
 			util.Effect("SplatoonSWEPsDrawInk", e)
 			

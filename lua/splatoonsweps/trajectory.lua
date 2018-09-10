@@ -21,8 +21,8 @@ local dropdata = {
 	InitVelocity = 0,
 }
 
-function ss.GetDropType()
-	return util.SharedRandom("SplatoonSWEPs: Drop ink type", 1, 3)
+function ss.GetDropType() -- math.floor(1 <= x < 4) -> 1, 2, 3
+	return util.SharedRandom("SplatoonSWEPs: Drop ink type", 1, 4, CurTime())
 end
 
 -- Physics simulation for ink trajectory.
@@ -87,7 +87,8 @@ end
 function HitPaint.weapon_shooter(ink, t)
 	local ratio = 1
 	local radius = ink.InkRadius
-	if not ink.IsDrop and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
+	if not ink.IsDrop and ink.Base == "weapon_shooter"
+	and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
 		local actual = (t.HitPos - ink.InitPos):Length2D()
 		local min = SplashDistance + ss.mPaintNearDistance
 		if actual > min then
@@ -173,9 +174,9 @@ function Simulate.weapon_charger(ink)
 			Color = ink.Color,
 			SplashInit = ink.WeaponSplashInit,
 		}
-		dropdata.InkRadius = ink.SplashRadius / ink.SplashRatio
+		dropdata.InkRadius = ink.SplashRadius / ink.Ratio
 		local t = ss.AddInk(ink.filter, ink.InitPos + dir * NextLength, ss.GetDropType(), droptable)
-		t.Ratio = ink.SplashRatio
+		t.Ratio = ink.Ratio
 		if util.QuickTrace(ink.InitPos + dir * NextLength, dir * ink.SplashInterval, ink.filter).Hit then
 			break
 		end
@@ -184,8 +185,9 @@ function Simulate.weapon_charger(ink)
 		ink.SplashCount = ink.SplashCount + 1
 		if NextLength >= ink.Range then
 			dropdata.InkRadius = dropdata.InkRadius * ink.Info.SplashRadiusMul
+			t = nil
 			t = ss.AddInk(ink.filter, ink.StraightPos, ss.GetDropType(), droptable)
-			t.Ratio = ink.SplashRatio
+			t.Ratio = ink.Ratio
 			
 			HitPaint.weapon_charger(ink, {
 				FractionPaintWall = .8,
@@ -202,16 +204,15 @@ function Simulate.weapon_charger(ink)
 end
 
 function HitPaint.weapon_charger(ink, t)
-	ink.InkRadius = ink.SplashRadius
-	HitPaint.weapon_shooter(ink, t)
-	if ink.Charge < ink.Info.WallPaintCharge then return end
 	if math.abs(t.HitNormal.z) > ss.MAX_COS_DEG_DIFF then return end
 	
+	local wallfrac = math.Remap(ink.Charge, 0, ink.Info.WallPaintCharge, 0, 1)
 	local radius = ink.Info.MinSplashRadius
-	local SplashNum = math.Round(Lerp(ink.Charge,
-	ink.Info.MinWallPaintNum, ink.Info.MaxWallPaintNum))
-	for i = 0, SplashNum do
-		local pos = t.HitPos - vector_up * i * radius * Lerp(ink.Charge, 1, 1.25)
+	local SplashNum = math.Round(Lerp(wallfrac, ink.Info.MinWallPaintNum, ink.Info.MaxWallPaintNum))
+	ink.InkRadius, ink.Ratio = Lerp(wallfrac + .5, ink.Info.MinSplashRadius, ink.Info.MaxSplashRadius), 1
+	HitPaint.weapon_shooter(ink, t)
+	for i = 1, SplashNum do
+		local pos = t.HitPos - vector_up * i * radius * Lerp(wallfrac, 1, 1.25)
 		local tr = util.TraceLine {
 			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 			endpos = pos - t.HitNormal,
@@ -367,20 +368,20 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		local SplashRadius = Lerp(prog, info.MinSplashRadius, info.MaxSplashRadius)
 		local SplashRatio = Lerp(prog, info.MinSplashRatio, info.MaxSplashRatio)
 		local SplashInterval = Lerp(prog, info.MinSplashInterval, info.MaxSplashInterval)
-		SplashInterval = SplashInterval * SplashRadius * SplashRatio * .9
+		SplashInterval = SplashInterval * SplashRadius * SplashRatio * .85
 		table.Merge(t, {
 			Charge = prog,
 			Damage = w:GetDamage(),
 			FootpaintCharge = info.FootpaintCharge,
 			FootpaintRadius = SplashRadius / info.SplashRadiusMul,
 			Range = w.Range,
+			Ratio = 1 / SplashRatio,
 			Speed = Speed,
 			SplashCount = 0,
-			SplashInit = SplashInterval / info.SplashPatterns * w.SplashInit + SplashRadius * SplashRatio,
+			SplashInit = SplashInterval / info.SplashPatterns * w.SplashInit + SplashRadius,
 			SplashInitMul = w.SplashInit,
 			SplashInterval = SplashInterval,
 			SplashRadius = SplashRadius,
-			SplashRatio = 1 / SplashRatio,
 			Straight = w.Range / Speed,
 			StraightPos = pos + t.InitDirection * w.Range,
 		})
