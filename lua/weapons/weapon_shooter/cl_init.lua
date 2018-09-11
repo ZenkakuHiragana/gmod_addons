@@ -18,7 +18,7 @@ local function ExpandModel(self, vm, weapon, ply)
 	local s = ss.vector_one * fraction
 	self:ManipulateBoneScale(self:LookupBone "root_1" or 0, s)
 	if not IsValid(vm) then return end
-	vm:ManipulateBoneScale(vm:LookupBone "root_1", s)
+	vm:ManipulateBoneScale(vm:LookupBone "root_1" or 0, s)
 	function vm.GetInkColorProxy()
 		return ss.ProtectedCall(self.GetInkColorProxy, self) or ss.vector_one
 	end

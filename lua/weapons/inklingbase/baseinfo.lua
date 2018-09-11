@@ -29,7 +29,7 @@ SWEP.HoldType = "crossbow"
 SWEP.Slot = 1
 SWEP.SlotPos = 2
 SWEP.IsSplatoonWeapon = true
-SWEP.m_WeaponDeploySpeed = 5
+SWEP.m_WeaponDeploySpeed = 2
 ss.SetPrimary(SWEP, {
 	Recoil				= .2,	--Viewmodel recoil intensity
 	TakeAmmo			= .01,	--Ink consumption per fire[-].
