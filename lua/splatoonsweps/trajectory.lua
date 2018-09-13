@@ -169,17 +169,27 @@ function Simulate.weapon_charger(ink)
 	dropdata.InitTime = CurTime() - ss.ShooterDecreaseFrame
 	local NextLength = ink.SplashCount * ink.SplashInterval + ink.SplashInit
 	while Length >= NextLength do -- Create ink drops
+		dropdata.InkRadius = ink.SplashRadius / ink.Ratio
 		local droptable = {
 			Angle = ink.Angle,
 			Color = ink.Color,
 			SplashInit = ink.WeaponSplashInit,
 		}
-		dropdata.InkRadius = ink.SplashRadius / ink.Ratio
-		local t = ss.AddInk(ink.filter, ink.InitPos + dir * NextLength, ss.GetDropType(), droptable)
+		local hull = {
+			collisiongroup = ink.collisiongroup,
+			endpos = ink.InitPos + dir * NextLength,
+			filter = ink.filter,
+			mask = ink.mask,
+			maxs = ss.vector_one * dropdata.ColRadius + ink.maxs,
+			mins = -ss.vector_one * dropdata.ColRadius + ink.mins,
+			start = ink.InitPos,
+		}
+		local t = util.TraceHull(hull)
+		t = ss.AddInk(ink.filter, t.HitPos + t.HitNormal, ss.GetDropType(), droptable)
 		t.Ratio = ink.Ratio
-		if util.QuickTrace(ink.InitPos + dir * NextLength, dir * ink.SplashInterval, ink.filter).Hit then
-			break
-		end
+		
+		hull.start, hull.endpos = hull.endpos, hull.endpos + dir * ink.SplashInterval
+		if util.TraceHull(hull).Hit then break end
 		
 		NextLength = NextLength + ink.SplashInterval
 		ink.SplashCount = ink.SplashCount + 1
@@ -204,12 +214,12 @@ function Simulate.weapon_charger(ink)
 end
 
 function HitPaint.weapon_charger(ink, t)
-	if math.abs(t.HitNormal.z) > ss.MAX_COS_DEG_DIFF then return end
+	if t.HitNormal.z > ss.MAX_COS_DEG_DIFF then return end
 	
 	local wallfrac = math.Remap(ink.Charge, 0, ink.Info.WallPaintCharge, 0, 1)
-	local radius = ink.Info.MinSplashRadius
+	local radius = ink.SplashRadius / ink.Info.SplashRadiusMul
 	local SplashNum = math.Round(Lerp(wallfrac, ink.Info.MinWallPaintNum, ink.Info.MaxWallPaintNum))
-	ink.InkRadius, ink.Ratio = Lerp(wallfrac + .5, ink.Info.MinSplashRadius, ink.Info.MaxSplashRadius), 1
+	ink.InkRadius, ink.Ratio = ink.SplashRadius * ((1 + 1 / ink.Ratio) / 2), 1
 	HitPaint.weapon_shooter(ink, t)
 	for i = 1, SplashNum do
 		local pos = t.HitPos - vector_up * i * radius * Lerp(wallfrac, 1, 1.25)
@@ -327,7 +337,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		SERVER or ss.ProtectedCall(w.IsCarriedByLocalPlayer, w))
 	local dt = CLIENT and IsLP and w:Ping() or 0
 	local t = {
-		Angle = isdrop and isdrop.Angle or w.InitAngle.yaw,
+		Angle = isdrop and isdrop.Angle or w.InitAngle,
 		Base = base,
 		Color = isdrop and isdrop.Color or w:GetNWInt "ColorCode",
 		Info = info,

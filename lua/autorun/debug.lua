@@ -47,7 +47,7 @@ function SSweptBox(ply, a, b, mi, ma)
 	if CLIENT then SweptBox(a, b, mi, ma) return end
 	ply:SendLua("SweptBox(Vector("..a.x..","..a.y..","..a.z.."),Vector("..b.x..","..b.y..","..b.z.."),Vector("..mi.x..","..mi.y..","..mi.z.."),Vector("..ma.x..","..ma.y..","..ma.z.."))")
 end
-function SweptBox(start, endpos, mins, maxs)
+function DebugSweptBox(start, endpos, mins, maxs)
 	debugoverlay.SweptBox(start, endpos, mins, maxs, Angle(), DebugOverlayTime, DebugOverlayColor)
 end
 function DebugTrace(t, ignoreZ)

@@ -474,6 +474,7 @@ ss.ToHammerHealth = 100 --
 ss.FrameToSec = 1 / framepersec --
 ss.SecToFrame = framepersec --
 ss.mDegRandomY = .5 -- Shooter spread angle, yaw (need to be validated)
+ss.HealDelay = 60 * ss.FrameToSec -- Time to heal again after taking damage.
 ss.ShooterTrailDelay = 2 * ss.FrameToSec -- Time to start moving shooter trail.
 ss.SpreadJumpMaxVelocity = 32 -- Shooter spread angle expansion by jumping.
 ss.SpreadJumpCoefficient = .25 --   Angle expansion : Player's Z-velocity

@@ -212,7 +212,6 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 	if self:GetKey() ~= IN_ATTACK2 then return end
 	self:SetThrowing(true)
 	self:SendWeaponAnim(ss.ViewModel.Throwing)
-	self.WorldModel = self.ModelPath .. "w_left.mdl"
 	if not self:IsFirstTimePredicted() then return end
 	if self.ThrowSchedule then return end
 	if self.HoldType ~= "grenade" then
@@ -224,7 +223,10 @@ function ss.KeyPress(self, ply, key)
 	if not KeyMaskFind[key] then return end
 	self.LastKeyDown[key] = CurTime()
 	self:SetKey(key)
-	self:SetThrowing(self:GetThrowing() and key == IN_ATTACK2)
+	if CurTime() > self:GetCooldown() then
+		self:SetThrowing(self:GetThrowing() and key == IN_ATTACK2)
+	end
+	
 	ss.ProtectedCall(self.KeyPress, self, ply, key)
 end
 
@@ -241,10 +243,7 @@ function ss.KeyRelease(self, ply, key)
 	ss.ProtectedCall(self.KeyRelease, self, ply, key)
 	
 	if not (self:GetThrowing() and key == IN_ATTACK2) then return end
-	self:AddSchedule(ss.SubWeaponThrowTime, 1, function()
-		self:SetThrowing(false)
-		self.WorldModel = self.ModelPath .. "w_right.mdl"
-	end)
+	self:AddSchedule(ss.SubWeaponThrowTime, 1, function() self:SetThrowing(false) end)
 	
 	local time = CurTime() + ss.SubWeaponThrowTime
 	self:SetCooldown(time)
@@ -314,6 +313,13 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 	end
 end
 
+function SWEP:ChangeThrowing(name, old, new)
+	if self:GetHolstering() then return end
+	local start, stop = not old and new, old and not new
+	if start == stop then return end
+	self.WorldModel = self.ModelPath .. (start and "w_left.mdl" or "w_right.mdl")
+end
+
 local ReloadMultiply = ss.MaxInkAmount / 10 -- Reloading rate(inkling)
 local HealingDelay = 10 / ss.ToHammerHealth -- Healing rate(inkling)
 function SWEP:SetupDataTables()
@@ -358,5 +364,6 @@ function SWEP:SetupDataTables()
 	
 	self:NetworkVarNotify("InInk", self.ChangeInInk)
 	self:NetworkVarNotify("OnEnemyInk", self.ChangeOnEnemyInk)
+	self:NetworkVarNotify("Throwing", self.ChangeThrowing)
 	ss.ProtectedCall(self.CustomDataTables, self)
 end

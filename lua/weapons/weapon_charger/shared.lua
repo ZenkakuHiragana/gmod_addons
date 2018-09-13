@@ -171,10 +171,12 @@ function SWEP:Move(ply, mv)
 	local ShootSound = prog > .75 and self.ShootSound2 or self.ShootSound
 	local pitch = 100 + (prog > .75 and 15 or 0) - prog * 20
 	local pos, dir = self:GetFirePosition()
+	local ang = dir:Angle()
+	ang.yaw = self.Owner:GetAngles().yaw
 	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns * (1 - prog)
 	self.Range = self:GetRange()
 	self.InitVelocity = dir * self:GetInkVelocity()
-	self.InitAngle = dir:Angle()
+	self.InitAngle = ang.yaw
 	self.NotEnoughInk = false
 	if self:IsFirstTimePredicted() then
 		local rnda = p.Recoil * -1
@@ -184,7 +186,7 @@ function SWEP:Move(ply, mv)
 		
 		local e = EffectData()
 		e:SetAttachment(self.SplashInit)
-		e:SetAngles(self.InitAngle)
+		e:SetAngles(ang)
 		e:SetColor(self:GetNWInt "ColorCode")
 		e:SetEntity(self)
 		e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)

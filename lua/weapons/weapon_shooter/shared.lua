@@ -12,7 +12,7 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	if not aim then
 		local aimvector = ss.ProtectedCall(self.Owner.GetAimVector, self.Owner) or self.Owner:GetForward()
 		aim = self:GetRange() * aimvector
-		ang = self.Owner:EyeAngles()
+		ang = aimvector:Angle()
 		shootpos = ss.ProtectedCall(self.Owner.GetShootPos, self.Owner) or self.Owner:WorldSpaceCenter()
 	end
 	
@@ -142,7 +142,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	angle_initvelocity:RotateAroundAxis(right:Cross(dir), rx)
 	angle_initvelocity:RotateAroundAxis(right, ry)
 	self.InitVelocity = angle_initvelocity:Forward() * p.InitVelocity
-	self.InitAngle = angle_initvelocity
+	self.InitAngle = angle_initvelocity.yaw
 	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns
 	self.SplashNum = math.floor(p.SplashNum) + math.Round(util.SharedRandom("SplatoonSWEPs: SplashNum", 0, 1))
 	self:SetSplashInitMul(self:GetSplashInitMul() + (p.TripleShotDelay and 3 or 1))
@@ -159,7 +159,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		
 		local e = EffectData()
 		e:SetAttachment(self.SplashInit)
-		e:SetAngles(self.InitAngle)
+		e:SetAngles(angle_initvelocity)
 		e:SetColor(self:GetNWInt "ColorCode")
 		e:SetEntity(self)
 		e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)
