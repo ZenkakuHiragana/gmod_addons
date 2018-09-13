@@ -17,6 +17,7 @@ SWEP.Variations = {
 		ClassName = "weapon_sploosh_o_matic_7",
 		Sub = "splatbomb",
 		Special = "inkzooka",
+		Bodygroup = {1},
 		Skin = 2,
 	},
 }
