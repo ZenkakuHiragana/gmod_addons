@@ -32,10 +32,11 @@ for i = 1, 9 do
 end
 
 include "const.lua"
+include "text.lua"
+include "convars.lua"
 include "inkmanager.lua"
 include "movement.lua"
 include "sound.lua"
-include "text.lua"
 include "trajectory.lua"
 include "weapons.lua"
 cleanup.Register(ss.CleanupTypeInk)
@@ -417,8 +418,7 @@ end
 function ss.IsAlly(c1, c2)
 	c1 = isentity(c1) and IsValid(c1) and c1:GetNWInt "ColorCode" or c1
 	c2 = isentity(c2) and IsValid(c2) and c2:GetNWInt "ColorCode" or c2
-	local CVarFF = GetConVar "sv_splatoonsweps_ff"
-	return not (CVarFF and CVarFF:GetBool()) and c1 == c2
+	return not ss.GetOption "FF" and c1 == c2
 end
 
 -- Get player timescale
@@ -494,8 +494,7 @@ local function SetupIcons(SWEP)
 end
 
 local function RegisterWeapons()
-	local ssEnabled = GetConVar "sv_splatoonsweps_enabled"
-	if not ssEnabled or not ssEnabled:GetBool() then return end
+	if not ss.GetOption "Enabled" then return end
 	
 	local oldSWEP = SWEP
 	for base in pairs(weaponslot) do

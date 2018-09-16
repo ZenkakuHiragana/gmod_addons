@@ -7,6 +7,7 @@ SWEP.ShootSound = "SplatoonSWEPs.SplatCharger"
 SWEP.ShootSound2 = "SplatoonSWEPs.SplatChargerFull"
 SWEP.ScopePos = Vector(-5, 6, 2.2)	-- Scoped viewmodel position[Hammer units]
 SWEP.ScopeAng = Angle()				-- Scoped viewmodel angles[deg]
+SWEP.RTScopeNum = 10				-- Submaterial number for RT scope option.
 SWEP.Sub = "splatbomb"
 SWEP.Special = "bombrush"
 SWEP.Variations = {
@@ -22,10 +23,15 @@ SWEP.Variations = {
 		Special = "echolocator",
 		Bodygroup = {2},
 		Skin = 1,
+		RTScopeNum = 11,
 	},
 	{
 		ClassName = "weapon_herocharger",
 		ScopePos = Vector(-5, 6.03, .2),
+		SharedThink = Either(SERVER, nil, function(self)
+			ss.ProtectedCall(self.BaseClass.SharedThink, self)
+			self.Skin = self:GetNWInt("Level", ss.Options[self.Base][self.ClassName].Level)
+		end),
 	},
 	{
 		ClassName = "weapon_splatterscope",
@@ -49,6 +55,7 @@ SWEP.Variations = {
 		Bodygroup = {5},
 		Skin = 1,
 		Scoped = true,
+		RTScopeNum = 11,
 	},
 }
 
@@ -96,3 +103,7 @@ ss.SetPrimary(SWEP, {
 		PlayerInvisible			= .85,	-- Player becomes invisible at specific charge[-]
 	},
 })
+
+function SWEP:HideRTScope(alpha)
+	self.RTMaterial:SetVector("$envmaptint", ss.vector_one * alpha)
+end

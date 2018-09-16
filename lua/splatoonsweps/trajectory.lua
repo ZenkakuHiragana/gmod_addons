@@ -179,9 +179,9 @@ function Simulate.weapon_charger(ink)
 			collisiongroup = ink.collisiongroup,
 			endpos = ink.InitPos + dir * NextLength,
 			filter = ink.filter,
-			mask = ink.mask,
-			maxs = ss.vector_one * dropdata.ColRadius + ink.maxs,
-			mins = -ss.vector_one * dropdata.ColRadius + ink.mins,
+			mask = MASK_SHOT_HULL,
+			maxs = ink.maxs,
+			mins = ink.mins,
 			start = ink.InitPos,
 		}
 		local t = util.TraceHull(hull)
@@ -288,14 +288,11 @@ local function ProcessInkQueue(ply)
 				ss.InkQueue[ink] = nil
 				continue
 			end
-			
+
 			local t = util.TraceHull(ink)
-			if not t.Hit then
-				if not ss.IsInWorld(t.HitPos) then
-					ss.InkQueue[ink] = nil
-				end
-				
-				ink.start = t.HitPos
+			ink.start = t.HitPos
+			if not (t.Hit or ss.IsInWorld(t.HitPos)) then
+				ss.InkQueue[ink] = nil
 			elseif t.HitWorld then
 				ink.endpos = t.HitPos - t.HitNormal * ink.Info.ColRadius * 2
 				t = util.TraceLine(ink)
@@ -317,7 +314,9 @@ local function ProcessInkQueue(ply)
 			end
 		end
 		
-		ply = coroutine.yield()
+		repeat
+			ply = coroutine.yield()
+		until IsFirstTimePredicted()
 	end
 end
 
@@ -350,10 +349,10 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		Time = 0,
 		Velocity = isdrop and vector_origin or w.InitVelocity,
 		WeaponSplashInit = w.SplashInit,
-		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
+		-- collisiongroup = COLLISION_GROUP_IN_VEHICLE,
 		endpos = Vector(),
 		filter = ply,
-		mask = ss.SquidSolidMask,
+		mask = MASK_SHOT,
 		maxs = ss.vector_one * info.ColRadius,
 		mins = -ss.vector_one * info.ColRadius,
 		start = pos,

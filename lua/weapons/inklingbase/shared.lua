@@ -11,11 +11,8 @@ local function PlayLoopSound(self)
 	local playlist = {self.SwimSound, self.EnemyInkSound}
 	ss.ProtectedCall(self.AddPlaylist, self, playlist)
 	for _, s in ipairs(playlist) do
-		if not s:IsPlaying() then
-			s:Play()
-		end
-		
-		s:ChangeVolume(0)
+		if s:IsPlaying() then continue end
+		s:PlayEx(0, 100)
 	end
 end
 
@@ -24,7 +21,6 @@ local function StopLoopSound(self)
 	ss.ProtectedCall(self.AddPlaylist, self, playlist)
 	for _, s in ipairs(playlist) do
 		s:ChangeVolume(0)
-		if IsValid(self.Owner) and self.Owner:Health() > 0 then continue end
 		s:Stop()
 	end
 end
@@ -68,6 +64,45 @@ end
 
 function SWEP:GetFOV()
 	return self.Owner:GetFOV()
+end
+
+local Options = {
+	Playermodel = "PMID",
+	InkColor = "ColorCode",
+	CanHealStand = true,
+	CanHealInk = true,
+	CanReloadStand = true,
+	CanReloadInk = true,
+	BecomeSquid = true,
+	AvoidWalls = true,
+}
+function SWEP:GetOptions()
+	if not self:IsMine() then return end
+	local queue = {ss.Options}
+	local getoption = {true}
+	while #queue > 0 do
+		local t = table.remove(queue, 1)
+		local g = table.remove(getoption, 1)
+		if not isfunction(g) then g = ss.GetOption end
+		for name, default in pairs(t) do
+			if (not istable(default) and t ~= ss.Options) or Options[name]
+			or name == self.Base or name == self.ClassName then
+				if istable(default) then
+					table.insert(queue, default)
+					table.insert(getoption, g(name))
+				else
+					local alias = isstring(Options[name]) and Options[name] or name
+					local value = g(name, self.Owner)
+					if isbool(value) then
+						self:SetNWBool(alias, value)
+					else
+						self:SetNWInt(alias, value)
+					end
+					print(name, alias, value)
+				end
+			end
+		end
+	end
 end
 
 -- When NPC weapon is picked up by player.
@@ -117,7 +152,17 @@ function SWEP:SharedInitBase()
 	end
 	
 	local translate = {}
-	for _, t in ipairs {"crossbow", "grenade", "melee2", "passive", "rpg", "shotgun", "smg"} do
+	for _, t in ipairs {
+		"ar2",
+		"crossbow",
+		"grenade",
+		"melee2",
+		"passive",
+		"revolver",
+		"rpg",
+		"shotgun",
+		"smg"
+	} do
 		self:SetWeaponHoldType(t)
 		translate[t] = self.ActivityTranslate
 	end
@@ -161,6 +206,11 @@ function SWEP:SharedHolsterBase()
 end
 
 function SWEP:SharedThinkBase()
+	self:SetSkin(self.Skin or 0)
+	for k, v in pairs(self.Bodygroup or {}) do
+		self:SetBodygroup(k, v)
+	end
+	
 	ss.ProtectedCall(self.SharedThink, self)
 end
 
@@ -231,6 +281,7 @@ function ss.KeyPress(self, ply, key)
 end
 
 function ss.KeyRelease(self, ply, key)
+	if CurTime() < self:GetNextSecondaryFire() then return end
 	if not KeyMaskFind[key] then return end
 	local keytable, keytime = {}, {}
 	for _, k in ipairs(KeyMask) do
@@ -318,6 +369,12 @@ function SWEP:ChangeThrowing(name, old, new)
 	local start, stop = not old and new, old and not new
 	if start == stop then return end
 	self.WorldModel = self.ModelPath .. (start and "w_left.mdl" or "w_right.mdl")
+	
+	if CLIENT then return end
+	net.Start "SplatoonSWEPs: Change throwing"
+	net.WriteEntity(self)
+	net.WriteBool(start)
+	net.Send(ss.PlayersReady)
 end
 
 local ReloadMultiply = ss.MaxInkAmount / 10 -- Reloading rate(inkling)

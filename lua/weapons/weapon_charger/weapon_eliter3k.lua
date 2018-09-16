@@ -6,6 +6,7 @@ SWEP.ShootSound = "SplatoonSWEPs.Eliter3K"
 SWEP.ShootSound2 = "SplatoonSWEPs.Eliter3KFull"
 SWEP.ScopePos = Vector(-11.5, 3.1, 2.55)	-- Scoped viewmodel position[Hammer units]
 SWEP.ScopeAng = Angle()						-- Scoped viewmodel angles[deg]
+SWEP.RTScopeNum = 4							-- Submaterial number for RT scope option.
 SWEP.Sub = "burstbomb"
 SWEP.Special = "echolocator"
 SWEP.Variations = {
@@ -73,3 +74,11 @@ ss.SetPrimary(SWEP, {
 		PlayerInvisible			= .85,	-- Player becomes invisible at specific charge[-]
 	},
 })
+
+function SWEP:HideRTScope(alpha)
+	cam.Start2D()
+	draw.NoTexture()
+	surface.SetDrawColor(ColorAlpha(color_black, alpha * 225))
+	surface.DrawRect(0, 0, 512, 512)
+	cam.End2D()
+end

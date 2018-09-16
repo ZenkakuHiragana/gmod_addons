@@ -76,6 +76,9 @@ function SWEP:ClientInit()
 	self.ModifyWeaponSize = SysTime() - 1
 	self.ViewPunch = Angle()
 	self.ViewPunchVel = Angle()
+	if not (self.ADSAngOffset and self.ADSOffset) then return end
+	self.IronSightsAng[6] = self.IronSightsAng[5] + self.ADSAngOffset
+	self.IronSightsPos[6] = self.IronSightsPos[5] + self.ADSOffset
 end
 
 function SWEP:GetMuzzlePosition()
@@ -113,7 +116,7 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 	local pitch = EyeAngles():Right()
 	local yaw = pitch:Cross(dir)
 	if t.IsSplatoon2 then
-		frac, lx, ly = 1, t.AimPos.x, t.AimPos.y
+		frac, lx, ly = 1, self.Cursor.x, self.Cursor.y
 		if t.Trace.Hit then
 			dir = self.Owner:GetAimVector()
 			pos = self.Owner:GetShootPos()
@@ -174,7 +177,7 @@ function SWEP:DrawOuterCircle(t)
 	
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_circle)
-	ss.DrawArc(t.AimPos.x, t.AimPos.y, r, r - ri)
+	ss.DrawArc(self.Cursor.x, self.Cursor.y, r, r - ri)
 end
 
 function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
@@ -206,7 +209,7 @@ function SWEP:DrawInnerCircle(t)
 	
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss.DrawArc(t.AimPos.x, t.AimPos.y, s, thickness)
+	ss.DrawArc(self.Cursor.x, self.Cursor.y, s, thickness)
 end
 
 function SWEP:DrawCenterDot(t) -- Center circle
@@ -217,7 +220,14 @@ function SWEP:DrawCenterDot(t) -- Center circle
 	
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss.DrawArc(t.AimPos.x, t.AimPos.y, s)
+	ss.DrawArc(self.Cursor.x, self.Cursor.y, s)
+end
+
+function SWEP:GetArmPos()
+	if self:GetADS() then
+		self.IronSightsFlip[6] = self.ViewModelFlip
+		return 6
+	end
 end
 
 local SwayTime = 12 * ss.FrameToSec
@@ -236,14 +246,10 @@ function SWEP:GetViewModelPosition(pos, ang)
 	if not armpos then
 		if self:GetThrowing() then
 			armpos = 1
-		elseif ss.GetConVarBool "DoomStyle" then
+		elseif ss.GetOption "DoomStyle" then
 			armpos = 5
-		elseif ss.GetConVarBool "MoveViewmodel" and not self:Crouching() then
-			local x, y = ScrW() / 2, ScrH() / 2
-			if vgui.CursorVisible() and not gui.IsGameUIVisible() then
-				x, y = input.GetCursorPos()
-			end
-			
+		elseif ss.GetOption "MoveViewmodel" and not self:Crouching() then
+			local x, y = self.Cursor.x, self.Cursor.y
 			armpos = select(3, self:GetFirePosition(self:GetRange() * gui.ScreenToVector(x, y), RenderAngles(), EyePos()))
 		end
 	end
@@ -277,9 +283,8 @@ end
 function SWEP:SetupDrawCrosshair()
 	local t = {Size = {}}
 	t.CrosshairColor = ss.GetColor(ss.CrosshairColors[self:GetNWInt "ColorCode"])
-	t.AimPos = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range):ToScreen()
 	t.pos, t.dir = self:GetFirePosition()
-	t.IsSplatoon2 = ss.GetConVarBool "NewStyleCrosshair"
+	t.IsSplatoon2 = ss.GetOption "NewStyleCrosshair"
 	local res = math.sqrt(ScrW() * ScrH() / originalres)
 	for param, size in pairs {
 		Dot = self.Crosshair.Dot,

@@ -4,7 +4,7 @@ local ss = SplatoonSWEPs
 if not ss then return end
 
 if CLIENT then
-	SWEP.Author = ss.Text.AuthorName
+	SWEP.Author = ss.Text.Author
 	SWEP.BobScale = 1
 	SWEP.BounceWeaponIcon = true
 	SWEP.DrawAmmo = false

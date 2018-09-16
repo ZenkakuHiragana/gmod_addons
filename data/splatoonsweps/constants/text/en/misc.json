@@ -1,0 +1,14 @@
+{
+	"DescRTResolution": "Buffer size used in ink system.\nTo apply the change, restart your GMOD client.\nHigher option needs more VRAM.\nMake sure your graphics card has enough space of video memory.",
+	"Category": "SplatoonSWEPs",
+	"RTResolution": "Ink buffer size:",
+	"Playermodel": "Playermodel:",
+	"CleanupInk": "SplatoonSWEPs ink",
+	"Purpose": "Splat ink!",
+	"Instructions": "Primary: Shoot ink.\nSecondary: Use sub weapon.\nReload: Use special weapon.\nSprint: Super Jump menu.\nCrouch: Become squid.",
+	"RTRestartRequired": "(Requires restart)",
+	"ConfigTitle": "SplatoonSWEPs Configuration",
+	"InkColor": "Ink color:",
+	"CleanupInkMessage": "Cleaned up SplatoonSWEPs ink.",
+	"Author": "GreatZenkakuMan"
+}

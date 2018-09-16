@@ -179,6 +179,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 end
 
 function SWEP:CustomDataTables()
+	self:AddNetworkVar("Bool", "ADS")
 	self:AddNetworkVar("Bool", "PreviousHasInk")
 	self:AddNetworkVar("Float", "AimTimer")
 	self:AddNetworkVar("Float", "Bias")
@@ -208,8 +209,11 @@ function SWEP:CustomActivity()
 	if CLIENT and self:IsCarriedByLocalPlayer() then at = at - self:Ping() end
 	if CurTime() > at then return end
 	local aimpos = select(3, self:GetFirePosition())
-	aimpos = aimpos == 3 or aimpos == 4
-	return aimpos and "rpg" or "crossbow"
+	aimpos = (aimpos == 3 or aimpos == 4) and "rpg" or "crossbow"
+	return (self:GetADS() or self.Scoped
+	and self:GetChargeProgress(CLIENT) > self.Primary.Scope.StartMove)
+	and not ss.ChargingEyeSkin[self.Owner:GetModel()]
+	and "ar2" or aimpos
 end
 
 function SWEP:CustomMoveSpeed()
@@ -217,12 +221,22 @@ function SWEP:CustomMoveSpeed()
 end
 
 function SWEP:Move(ply, mv)
+	if self:GetNWBool "ToggleADS" then
+		if ply:KeyPressed(IN_USE) then
+			self:SetADS(not self:GetADS())
+		end
+	else
+		self:SetADS(ply:KeyDown(IN_USE))
+	end
+	
 	if not ply:OnGround() then return end
-	if ply:KeyPressed(IN_JUMP) then
-		self:SetJump(CurTime())
-	elseif CurTime() - self:GetJump() < self.Primary.SpreadJumpDelay then
+	if CurTime() - self:GetJump() < self.Primary.SpreadJumpDelay then
 		self:SetJump(self:GetJump() - FrameTime() / 2)
 	end
+end
+
+function SWEP:KeyPress(ply, key)
+	if key == IN_JUMP then self:SetJump(CurTime()) end
 end
 
 function SWEP:GetAnimWeight()

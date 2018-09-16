@@ -3,6 +3,12 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
+net.Receive("SplatoonSWEPs: Change throwing", function()
+	local w = net.ReadEntity()
+	if not (IsValid(w) and w.IsSplatoonWeapon) then return end
+	w.WorldModel = w.ModelPath .. (net.ReadBool() and "w_left.mdl" or "w_right.mdl")
+end)
+
 net.Receive("SplatoonSWEPs: Play damage sound", function()
 	surface.PlaySound(ss.TakeDamage)
 end)

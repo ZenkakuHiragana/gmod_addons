@@ -25,10 +25,8 @@ include "splatoonsweps/shared.lua"
 include "splatoonsweps/text.lua"
 
 local ss = SplatoonSWEPs
-local CVarFlags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
-local CVarEnabled = CreateConVar("sv_splatoonsweps_enabled", "1", CVarFlags, ss.Text.CVarDescription.Enabled)
-if CVarEnabled and not CVarEnabled:GetBool() then SplatoonSWEPs = nil return end
-CreateConVar("sv_splatoonsweps_ff", "0", CVarFlags, ss.Text.CVarDescription.FF)
+if not ss.GetOption "Enabled" then SplatoonSWEPs = nil return end
+
 concommand.Add("sv_splatoonsweps_clear", function(ply, cmd, args, argstr)
 	if not IsValid(ply) and game.IsDedicated() or IsValid(ply) and ply:IsAdmin() then
 		ss.ClearAllInk()

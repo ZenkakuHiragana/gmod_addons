@@ -4,7 +4,6 @@ if not ss then return end
 include "shared.lua"
 
 local crosshairalpha = 64
-local dotbg = 2 -- in pixel
 SWEP.Crosshair = {
 	color_circle = ColorAlpha(color_black, crosshairalpha),
 	color_nohit = ColorAlpha(color_white, crosshairalpha),
@@ -15,10 +14,46 @@ SWEP.Crosshair = {
 }
 
 function SWEP:ClientInit()
-	self.IronSightsPos[6] = self.ScopePos or Vector()
-	self.IronSightsAng[6] = self.ScopeAng or Angle()
+	self.IronSightsPos[6] = self.ScopePos
+	self.IronSightsAng[6] = self.ScopeAng
 	self.IronSightsFlip[6] = false
 	self.BaseClass.BaseClass.ClientInit(self)
+	
+	if not self.Scoped then return end
+	self.RTScope = GetRenderTarget(ss.RTName.RTScope, 512, 512)
+	self:AddSchedule(0, function(self, sched)
+		local vm = self.Owner:GetViewModel()
+		if not IsValid(vm) then return end
+		if self.RTScope and self:GetNWBool "UseRTScope" then
+			self.RTName = self.RTName or vm:GetMaterials()[self.RTScopeNum] .. "rt"
+			self.RTMaterial = self.RTMaterial or Material(self.RTName)
+			self.RTMaterial:SetTexture("$basetexture", self.RTScope)
+			self.RTAttachment = self.RTAttachment or vm:LookupAttachment "scope_end"
+			if not self.RTAttachment then return end
+			vm:SetSubMaterial(self.RTScopeNum - 1, self.RTName)
+			
+			local alpha = 1 - self:GetScopedProgress(true)
+			render.PushRenderTarget(self.RTScope)
+			render.RenderView {
+				origin = vm:GetAttachment(self.RTAttachment).Pos,
+				x = 0, y = 0, w = 512, h = 512, aspectratio = 1,
+				fov = self.Primary.Scope.FOV / 2,
+				drawviewmodel = false,
+			}
+			ss.ProtectedCall(self.HideRTScope, self, alpha)
+			render.PopRenderTarget()
+		else
+			vm:SetSubMaterial(self.RTScopeNum - 1)
+		end
+	end)
+	
+	self:AddSchedule(0, function(self, sched)
+		if not (self.Scoped and IsValid(self.Owner)) then return end
+		self.Owner:SetNoDraw(
+			self:IsMine() and
+			self:GetScopedProgress() == 1 and
+			not self:GetNWBool "UseRTScope")
+	end)
 end
 
 function SWEP:DisplayAmmo()
@@ -26,9 +61,8 @@ function SWEP:DisplayAmmo()
 	return math.max(self:GetChargeProgress(true) * 100, 0)
 end
 
-local FOV = GetConVar "fov_desired"
 function SWEP:GetScopedSize()
-	return 1 + self:GetScopedProgress(true)
+	return 1 + (self:GetNWBool "UseRTScope" and self:IsTPS() and 0 or self:GetScopedProgress(true))
 end
 
 function SWEP:ClientPrimaryAttack() end
@@ -58,10 +92,10 @@ local innerwidth = 2
 function SWEP:DrawInnerCircle(t)
 	local scoped = self:GetScopedSize()
 	local s = t.Size.Inner / 2 * scoped
-	if scoped == 2 and t.Trace.Hit then return end
+	if scoped == 2 then return end
 	draw.NoTexture()
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss.DrawArc(t.AimPos.x, t.AimPos.y, s + innerwidth, innerwidth)
+	ss.DrawArc(self.Cursor.x, self.Cursor.y, s + innerwidth, innerwidth)
 end
 
 function SWEP:DrawCenterDot(t) -- Center circle
@@ -70,9 +104,9 @@ function SWEP:DrawCenterDot(t) -- Center circle
 	draw.NoTexture()
 	if scoped < 2 then
 		surface.SetDrawColor(self.Crosshair.color_circle)
-		ss.DrawArc(t.AimPos.x, t.AimPos.y, s + innerwidth)
+		ss.DrawArc(self.Cursor.x, self.Cursor.y, s + innerwidth)
 		surface.SetDrawColor(self.Crosshair.color_nohit)
-		ss.DrawArc(t.AimPos.x, t.AimPos.y, s)
+		ss.DrawArc(self.Cursor.x, self.Cursor.y, s)
 	end
 	
 	if not t.Trace.Hit then return end
@@ -80,6 +114,36 @@ function SWEP:DrawCenterDot(t) -- Center circle
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s + innerwidth)
 	surface.SetDrawColor(t.CrosshairColor)
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s)
+end
+
+local MatScope = Material "gmod/scope"
+local MatRefScope = Material "gmod/scope-refract"
+local DebugRefract = Material "dev/reflectivity_10"
+local DebugRefDefault = DebugRefract:GetFloat "$refractamount"
+local MatRefDefault = MatRefScope:GetFloat "$refractamount"
+function SWEP:RenderScreenspaceEffects()
+	if not self.Scoped or self:GetNWBool "UseRTScope" then return end
+	local prog = self:GetScopedProgress(true)
+	if prog == 0 then return end
+	local padding = surface.DrawTexturedRectUV
+	local u, v = .115, 1
+	local x, y = self.Cursor.x, self.Cursor.y
+	local sx, sy = ScrH() * 4 / 3, ScrH()
+	local ex, ey = x + sx / 2, y + sy / 2 -- End position of x, y
+	x, y = x - sx / 2, y - sy / 2
+	
+	MatRefScope:SetFloat("$refractamount", prog * prog * MatRefDefault)
+	for _, material in ipairs {MatRefScope, MatScope} do
+	surface.SetDrawColor(ColorAlpha(color_black, prog * 255))
+		surface.SetMaterial(material)
+		surface.DrawTexturedRect(x, y, sx, sy)
+		if x > 0 then padding(0, 0, x, ScrH(), 0, 0, u, v) end
+		if ex < ScrW() then padding(ex, 0, ScrW() - ex, ScrH(), 0, 0, u, v) end
+		if y > 0 then padding(x, 0, sx, y, 0, 0, u, v) end
+		if ey < ScrH() then padding(x, ey, ScrW(), ScrH() - ey, 0, 0, u, v) end
+	end
+	
+	MatRefScope:SetFloat("$refractamount", MatRefDefault)
 end
 
 function SWEP:DrawCrosshair(x, y, t)
@@ -95,9 +159,15 @@ function SWEP:DrawCrosshair(x, y, t)
 	return true
 end
 
+function SWEP:TranslateFOV(fov)
+	if not self.Scoped or self:GetNWBool "UseRTScope" then return end
+	return Lerp(self:GetScopedProgress(true), fov, self.Primary.Scope.FOV)
+end
+
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	local base = self.BaseClass.BaseClass
 	ss.ProtectedCall(base.PreViewModelDrawn, self, vm, weapon, ply)
+	if self:GetNWBool "UseRTScope" then return end
 	render.SetBlend((1 - self:GetScopedProgress(true))^2)
 end
 
@@ -108,9 +178,14 @@ function SWEP:PostDrawViewModel(vm, weapon, ply)
 	render.SetBlend(1)
 end
 
+function SWEP:PreDrawWorldModel()
+	if not self.Scoped or self:GetNWBool "UseRTScope" then return end
+	return self:GetScopedProgress(true) == 1
+end
+
 function SWEP:GetArmPos()
 	local scope = self.Primary.Scope
-	if self.Owner:KeyDown(IN_USE) then
+	if self:GetADS() then
 		self.IronSightsFlip[6] = self.ViewModelFlip
 		self.SwayTime = scope.SwayTime / 2
 		return 6
@@ -123,7 +198,11 @@ function SWEP:GetArmPos()
 	self.SwayTime = 12 * ss.FrameToSec
 	if prog > scope.StartMove then
 		self.IronSightsFlip[6] = self.ViewModelFlip
-		self.SwayTime = scope.SwayTime / 2
+		self.SwayTime = scope.SwayTime
+		if not self:GetNWBool "UseRTScope" then
+			self.SwayTime = self.SwayTime / 2
+		end
+		
 		local mul = self.Primary.EmptyChargeMul
 		local f = (SysTime() - self.ArmBegin) / SwayTime
 		if not self.Owner:OnGround() or self:GetInk() < prog * self.Primary.TakeAmmo then
@@ -135,34 +214,8 @@ function SWEP:GetArmPos()
 	end
 end
 
-local MatScope = Material "gmod/scope"
-local MatRefScope = Material "gmod/scope-refract"
-local DebugRefract = Material "dev/reflectivity_10"
-local DebugRefDefault = DebugRefract:GetFloat "$refractamount"
-local MatRefDefault = MatRefScope:GetFloat "$refractamount"
-function SWEP:RenderScreenspaceEffects()
-	if not self.Scoped then return end
-	local prog = self:GetScopedProgress(true)
-	if prog == 0 then return end
-	
-	MatRefScope:SetFloat("$refractamount", prog * prog * MatRefDefault)
-	local sy = math.min(ScrW(), ScrH())
-	local sx = sy * 4 / 3
-	local x, y = math.max(0, (ScrW() - sx)) / 2, math.max(0, (ScrH() - sy)) / 2
-	local rest = sx * x / sy * 6
-	surface.SetDrawColor(ColorAlpha(color_black, prog * 255))
-	surface.SetMaterial(MatRefScope)
-	surface.DrawTexturedRect(x, y, sx, sy)
-	surface.DrawTexturedRect(x - rest, 0, rest, ScrH())
-	surface.DrawTexturedRect(x + sx, 0, rest, ScrH())
-	surface.SetMaterial(MatScope)
-	surface.DrawTexturedRect(x, y, sx, sy)
-	surface.DrawTexturedRect(x - rest, 0, rest, ScrH())
-	surface.DrawTexturedRect(x + sx, 0, rest, ScrH())
-	MatRefScope:SetFloat("$refractamount", MatRefDefault)
-end
-
 function SWEP:CustomCalcView(ply, pos, ang, fov)
+	if self:GetNWBool "UseRTScope" then return end
 	if not (self.Scoped and self:IsTPS() and self:IsMine()) then return end
 	local p, a = self:GetFirePosition()
 	local frac = self:GetScopedProgress(true)
@@ -175,8 +228,6 @@ end
 local delta = {crossbow = 0, rpg = 2}
 local deltahand = {rpg = Vector(-10, 5, 5)}
 function SWEP:ManipulatePlayer(ply)
-	if self:IsMine() and self:GetScopedProgress() == 1 then render.SetBlend(0) end
-	
 	local b = {ply:LookupBone "ValveBiped.Bip01_L_Forearm"}
 	local bp, ba = {}, {}
 	while #b > 0 do

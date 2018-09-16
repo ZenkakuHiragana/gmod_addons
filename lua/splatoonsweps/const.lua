@@ -4,202 +4,17 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
+function ss.ReadJSON(name)
+	local path = "data/splatoonsweps/constants/" .. name .. ".json"
+	return file.Exists(path, "GAME") and util.JSONToTable(file.Read(path, true)) or {}
+end
+
 ss.sp = game.SinglePlayer()
 ss.mp = not ss.sp
-ss.WeaponClassNames = {
-	"weapon_52gal",
-	"weapon_52gal_deco",
-	"weapon_96gal",
-	"weapon_96gal_deco",
-	"weapon_aerospray_mg",
-	"weapon_aerospray_pg",
-	"weapon_aerospray_rg",
-	"weapon_bamboozler14_mk1",
-	"weapon_bamboozler14_mk2",
-	"weapon_bamboozler14_mk3",
-	"weapon_blaster",
-	"weapon_blaster_custom",
-	"weapon_carbonroller",
-	"weapon_carbonroller_deco",
-	"weapon_dualsquelcher",
-	"weapon_dualsquelcher_custom",
-	"weapon_dynamoroller",
-	"weapon_dynamoroller_gold",
-	"weapon_dynamoroller_tempered",
-	"weapon_eliter3k",
-	"weapon_eliter3k_custom",
-	"weapon_eliter3k_scope",
-	"weapon_eliter3k_scope_custom",
-	"weapon_h3nozzlenose",
-	"weapon_h3nozzlenose_d",
-	"weapon_h3nozzlenose_cherry",
-	"weapon_heavysplatling",
-	"weapon_heavysplatling_deco",
-	"weapon_heavysplatling_remix",
-	"weapon_herocharger",
-	"weapon_heroroller",
-	"weapon_heroshot",
-	"weapon_hydrasplatling",
-	"weapon_hydrasplatling_custom",
-	"weapon_inkbrush",
-	"weapon_inkbrush_nouveau",
-	"weapon_inkbrush_permanent",
-	"weapon_jetsquelcher",
-	"weapon_jetsquelcher_custom",
-	"weapon_l3nozzlenose",
-	"weapon_l3nozzlenose_d",
-	"weapon_lunablaster",
-	"weapon_lunablaster_neo",
-	"weapon_minisplatling",
-	"weapon_minisplatling_refurbished",
-	"weapon_minisplatling_zink",
-	"weapon_nzap83",
-	"weapon_nzap85",
-	"weapon_nzap89",
-	"weapon_octobrush",
-	"weapon_octobrush_nouveau",
-	"weapon_octoshot",
-	"weapon_rangeblaster",
-	"weapon_rangeblaster_custom",
-	"weapon_rangeblaster_grim",
-	"weapon_rapidblaster",
-	"weapon_rapidblaster_deco",
-	"weapon_rapidblasterpro",
-	"weapon_rapidblasterpro_deco",
-	"weapon_slosher",
-	"weapon_slosher_deco",
-	"weapon_slosher_soda",
-	"weapon_sloshingmachine",
-	"weapon_sloshingmachine_neo",
-	"weapon_splash_o_matic",
-	"weapon_splash_o_matic_neo",
-	"weapon_splatcharger",
-	"weapon_splatcharger_kelp",
-	"weapon_splatcharger_bento",
-	"weapon_splatroller",
-	"weapon_splatroller_krakon",
-	"weapon_splatroller_corocoro",
-	"weapon_splatterscope",
-	"weapon_splatterscope_kelp",
-	"weapon_splatterscope_bento",
-	"weapon_splattershot",
-	"weapon_splattershot_tentatek",
-	"weapon_splattershot_wasabi",
-	"weapon_splattershotjr",
-	"weapon_splattershotjr_custom",
-	"weapon_splattershotpro",
-	"weapon_splattershotpro_forge",
-	"weapon_splattershotpro_berry",
-	"weapon_sploosh_o_matic",
-	"weapon_sploosh_o_matic_neo",
-	"weapon_sploosh_o_matic_7",
-	"weapon_squiffer_classic",
-	"weapon_squiffer_fresh",
-	"weapon_squiffer_new",
-	"weapon_trislosher",
-	"weapon_trislosher_nouveau",
-}
-
-ss.WeaponClassNames2 = {
-	"weapon_clashblaster",
-	"weapon_dappledualies",
-	"weapon_dappledualies_nouveau",
-	"weapon_darktetradualies",
-	"weapon_dualiesquelchers",
-	"weapon_eliter4k",
-	"weapon_eliter4k_custom",
-	"weapon_eliter4k_scope",
-	"weapon_eliter4k_scope_custom",
-	"weapon_flingzaroller",
-	"weapon_flingzaroller_foil",
-	"weapon_gloogadualies",
-	"weapon_gootuber",
-	"weapon_gootuber_custom",
-	"weapon_heroblaster",
-	"weapon_herobrella",
-	"weapon_herobrush",
-	"weapon_herodualie",
-	"weapon_heroslosher",
-	"weapon_herosplatling",
-	"weapon_splatbrella",
-	"weapon_splatcharger_firefin",
-	"weapon_splatdualies",
-	"weapon_splatdualies_emperry",
-	"weapon_splatterscope_firefin",
-	"weapon_squeezer",
-	"weapon_tentabrella",
-	"weapon_undercoverbrella",
-}
-
-ss.TEXTUREFLAGS = {
-	POINTSAMPLE			= 0x00000001, -- Low quality, "pixel art" texture filtering.
-	TRILINEAR			= 0x00000002, -- Medium quality texture filtering.
-	CLAMPS				= 0x00000004, -- Clamp S coordinates.
-	CLAMPT				= 0x00000008, -- Clamp T coordinates.
-	ANISOTROPIC			= 0x00000010, -- High quality texture filtering.
-	HINT_DXT5			= 0x00000020, -- Used in skyboxes.  Make sure edges are seamless.
-	PWL_CORRECTED		= 0x00000040, -- Purpose unknown.
-	NORMAL				= 0x00000080, -- Texture is a normal map.
-	NOMIP				= 0x00000100, -- Render largest mipmap only. (Does not delete existing mipmaps, just disables them.)
-	NOLOD				= 0x00000200, -- Not affected by texture resolution settings.
-	ALL_MIPS			= 0x00000400, -- No Minimum Mipmap
-	PROCEDURAL			= 0x00000800, -- Texture is an procedural texture (code can modify it).
-	ONEBITALPHA			= 0x00001000, -- One bit alpha channel used.
-	EIGHTBITALPHA		= 0x00002000, -- Eight bit alpha channel used.
-	ENVMAP				= 0x00004000, -- Texture is an environment map.
-	RENDERTARGET		= 0x00008000, -- Texture is a render target.
-	DEPTHRENDERTARGET	= 0x00010000, -- Texture is a depth render target.
-	NODEBUGOVERRIDE		= 0x00020000, --
-	SINGLECOPY			= 0x00040000, --
-	UNUSED_00080000		= 0x00080000, --
-	IMMEDIATE_CLEANUP	= 0x00100000, -- Immediately destroy this texture when its refernce count hits zero.
-	UNUSED_00200000		= 0x00200000, --
-	UNUSED_00400000		= 0x00400000, --
-	NODEPTHBUFFER		= 0x00800000, -- Do not buffer for Video Processing, generally render distance.
-	UNUSED_01000000		= 0x01000000, --
-	CLAMPU				= 0x02000000, -- Clamp U coordinates (for volumetric textures).
-	VERTEXTEXTURE		= 0x04000000, -- Usable as a vertex texture
-	SSBUMP				= 0x08000000, -- Texture is a SSBump. (SSB)
-	UNUSED_10000000		= 0x10000000, --
-	BORDER				= 0x20000000, -- Clamp to border colour on all texture coordinates.
-	UNUSED_40000000		= 0x40000000, --
-	UNUSED_80000000		= 0x80000000, --
-}
-
-ss.ConVar = {
-	"cl_splatoonsweps_inkcolor",
-	"cl_splatoonsweps_playermodel",
-	"cl_splatoonsweps_canhealstand",
-	"cl_splatoonsweps_canhealink",
-	"cl_splatoonsweps_canreloadstand",
-	"cl_splatoonsweps_canreloadink",
-	"cl_splatoonsweps_becomesquid",
-	"cl_splatoonsweps_drawinkoverlay",
-	"cl_splatoonsweps_rtresolution",
-	"cl_splatoonsweps_drawcrosshair",
-	"cl_splatoonsweps_newstylecrosshair",
-	"cl_splatoonsweps_avoidwalls",
-	"cl_splatoonsweps_moveviewmodel",
-	"cl_splatoonsweps_doomstyle"
-}
-
-ss.ConVarName = {
-	InkColor = 1,
-	Playermodel = 2,
-	CanHealStand = 3,
-	CanHealInk = 4,
-	CanReloadStand = 5,
-	CanReloadInk = 6,
-	BecomeSquid = 7,
-	DrawInkOverlay = 8,
-	RTResolution = 9,
-	DrawCrosshair = 10,
-	NewStyleCrosshair = 11,
-	AvoidWalls = 12,
-	MoveViewmodel = 13,
-	DoomStyle = 14,
-}
-
+ss.Options = ss.ReadJSON "options"
+ss.WeaponClassNames = ss.ReadJSON "weaponclasses"
+ss.WeaponClassNames2 = ss.ReadJSON "weaponclasses2"
+ss.TEXTUREFLAGS = ss.ReadJSON "textureflags"
 ss.RTResID = {
 	MINIMUM	= 0, -- 2048x2048,		32MB
 	SMALL	= 1, --	4096x4096,		128MB
@@ -210,23 +25,6 @@ ss.RTResID = {
 	DLARGE	= 6, --	2x16384x16384,	4GB
 	ULTRA	= 7, --	32768x32768,	8GB
 	DULTRA	= 8, --	2x32768x32768,	16GB
-}
-
-ss.ConVarDefaults = {
-	1,
-	1,
-	1,
-	1,
-	1,
-	1,
-	1,
-	1,
-	ss.RTResID.SMALL,
-	1,
-	0,
-	1,
-	1,
-	0,
 }
 
 ss.RTSize = {
@@ -247,6 +45,7 @@ ss.RTName = {
 	Lightmap = "splatoonsweps_lightmap",
 	RenderTarget = "splatoonsweps_rendertarget",
 	WaterMaterial = "splatoonsweps_watermaterial",
+	RTScope = "splatoonsweps_rtscope",
 }
 
 ss.RTFlags = {
@@ -277,27 +76,6 @@ ss.RTFlags = {
 		ss.TEXTUREFLAGS.NODEPTHBUFFER
 	),
 }
-
-function ss.GetConVarName(name)
-	return ss.ConVar[ss.ConVarName[name]] or ""
-end
-
-function ss.GetConVar(name)
-	return GetConVar(ss.GetConVarName(name))
-end
-
-function ss.GetConVarInt(name)
-	local cvar = ss.GetConVar(name)
-	if cvar then
-		return cvar:GetInt()
-	else
-		return ss.ConVarDefaults[ss.ConVarName[name]]
-	end
-end
-
-function ss.GetConVarBool(name)
-	return ss.GetConVarInt(name) ~= 0
-end
 
 ss.InkTankModel = Model "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl"
 ss.PLAYER = {
@@ -379,6 +157,11 @@ ss.InkColors = {
 	HSVToColor(0,	0,	.75	),
 	HSVToColor(0,	0,	.999),
 }
+
+--Workaround of issue #2407 in Facepunch/garrysmod-issues
+for i, c in ipairs(ss.InkColors) do
+	ss.InkColors[i] = ColorAlpha(c, c.a)
+end
 
 ss.CrosshairColors = {
 	2, -- Red -> Orange
@@ -487,7 +270,7 @@ ss.ShooterTermTime = 10 * ss.FrameToSec -- Time to reach terminal velocity
 ss.SquidTrace = {
 	start = vector_origin, endpos = vector_origin,
 	filter = {}, mask = ss.SquidSolidMask,
-	collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
+	collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 	mins = -ss.vector_one, maxs = ss.vector_one,
 }
 

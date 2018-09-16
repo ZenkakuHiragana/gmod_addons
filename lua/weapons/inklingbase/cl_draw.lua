@@ -330,9 +330,8 @@ function SWEP:DrawWorldModelTranslucent()
 		end
 	end
 	
-	for k, v in pairs(self.Bodygroup or {}) do self:SetBodygroup(k, v) end
-	self:SetSkin(self.Skin or 0)
-	ss.ProtectedCall(self.PreDrawWorldModel, self)
+	if ss.ProtectedCall(self.PreDrawWorldModel, self) then return end
+	
 	self:SetupBones()
 	self:DrawModel()
 	local bone_ent = self.Owner -- when the weapon is dropped
@@ -493,10 +492,9 @@ function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
 end
 
 function SWEP:DoDrawCrosshair(x, y)
-	if not ss.GetConVarBool "DrawCrosshair" then return end
-	if vgui.CursorVisible() and not gui.IsGameUIVisible() then
-		x, y = input.GetCursorPos()
-	end
+	self.Cursor = self.Owner:GetEyeTrace().HitPos:ToScreen()
+	if not ss.GetOption "DrawCrosshair" then return end
+	x, y = self.Cursor.x, self.Cursor.y
 	
 	return ss.ProtectedCall(self.DrawCrosshair, self, x, y,
 	ss.ProtectedCall(self.SetupDrawCrosshair, self, x, y))

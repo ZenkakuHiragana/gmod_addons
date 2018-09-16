@@ -2,6 +2,10 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
+SWEP.ADSAngOffset = Angle(1.5, 0, 0)
+SWEP.ADSAngOffset2= Angle(2, 0, 0)
+SWEP.ADSOffset = Vector(-6, 0, 4.5)
+SWEP.ADSOffset2 = Vector(-8, .04, 2.93)
 SWEP.ShootSound = "SplatoonSWEPs.Zap"
 SWEP.Sub = "splatbomb"
 SWEP.Special = "echolocator"
@@ -50,3 +54,45 @@ ss.SetPrimary(SWEP, {
 		SpreadJump		= 60,		-- Time to get spread angle back to normal[frames]
 	},
 })
+
+local function SetViewModel(self)
+	if not IsValid(self.Owner) then return end
+	local vm = self.Owner:GetViewModel()
+	if not IsValid(vm) then return end
+	local pistol = self:GetNWBool("PistolStyle",
+	ss.Options[self.Base][self.ClassName].PistolStyle)
+	self.ViewModel = self.ModelPath .. "c_viewmodel" .. (pistol and "2" or "") .. ".mdl"
+	vm:SetWeaponModel(self.ViewModel, self)
+end
+
+function SWEP:SharedInit()
+	ss.ProtectedCall(self.BaseClass.SharedInit, self)
+	SetViewModel(self)
+end
+
+function SWEP:SharedDeploy()
+	ss.ProtectedCall(self.BaseClass.SharedDeploy, self)
+	SetViewModel(self)
+end
+
+function SWEP:CustomActivity()
+	local armpos = ss.ProtectedCall(self.BaseClass.CustomActivity, self)
+	if not armpos then return end
+	if self:GetNWBool("PistolStyle", ss.Options[self.Base][self.ClassName].PistolStyle) then
+		return "revolver"
+	end
+	
+	return armpos
+end
+
+if SERVER then return end
+function SWEP:GetArmPos()
+	local armpos = self.BaseClass.GetArmPos(self)
+	if not armpos then return end
+	local pistol = self:GetNWBool("PistolStyle", ss.Options[self.Base][self.ClassName].PistolStyle)
+	local offset = pistol and self.ADSOffset2 or self.ADSOffset
+	local ang = pistol and self.ADSAngOffset2 or self.ADSAngOffset
+	self.IronSightsPos[6] = self.IronSightsPos[5] + offset
+	self.IronSightsAng[6] = self.IronSightsAng[5] + ang
+	return 6
+end

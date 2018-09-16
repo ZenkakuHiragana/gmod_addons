@@ -3,20 +3,6 @@ local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_shooter"
 
-function SWEP:GetFOV()
-	return self.ScopedFOV or self.Owner:GetFOV()
-end
-
-function SWEP:TranslateFOV(fov)
-	fov = fov or self.Owner:GetFOV()
-	self.ScopedFOV = nil
-	if not self.Scoped then return end
-	local frac = self:GetScopedProgress(CLIENT)
-	if frac == 0 then return end
-	self.ScopedFOV = Lerp(frac, fov, self.Primary.Scope.FOV)
-	return self.ScopedFOV
-end
-
 function SWEP:GetLerp(frac, min, max, full)
 	return frac < 1 and Lerp(frac, min, max) or full or max
 end
@@ -59,18 +45,18 @@ function SWEP:GetScopedProgress(ping)
 		/ (scope.EndMove - scope.StartMove), 0, 1)
 end
 
-function SWEP:ResetCharge()
-	if not self:GetHolstering() and IsValid(self.Owner)
-	and ss.ChargingEyeSkin[self.Owner:GetModel()] then
-		if self:GetNWInt "PMID" == ss.PLAYER.NOCHANGE then
-			self.Owner:SetSkin(CLIENT and
-			GetConVar "cl_playerskin":GetInt() or
-			self.Owner:GetInfoNum("cl_playerskin", 0))
-		else
-			self.Owner:SetSkin(0)
-		end
+function SWEP:ResetSkin()
+	if not ss.ChargingEyeSkin[self.Owner:GetModel()] then return end
+	if self:GetNWInt "PMID" == ss.PLAYER.NOCHANGE then
+		self.Owner:SetSkin(CLIENT and
+		GetConVar "cl_playerskin":GetInt() or
+		self.Owner:GetInfoNum("cl_playerskin", 0))
+	else
+		self.Owner:SetSkin(0)
 	end
-	
+end
+
+function SWEP:ResetCharge()
 	self:SetCharge(math.huge)
 	self:SetFullChargeFlag(false)
 	self.JumpPower = ss.InklingJumpPower
@@ -109,9 +95,6 @@ end
 function SWEP:SharedPrimaryAttack()
 	if not IsValid(self.Owner) then return end
 	if self:GetCharge() < math.huge then
-		local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
-		if skin then self.Owner:SetSkin(skin) end
-		
 		local prog = self:GetChargeProgress()
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
@@ -149,6 +132,8 @@ function SWEP:SharedPrimaryAttack()
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 	self:SetCharge(CurTime() + self.Primary.MinFreezeTime)
 	self:SetFullChargeFlag(false)
+	self:SendWeaponAnim(ACT_VM_IDLE)
+	self.Owner:SetSkin(ss.ChargingEyeSkin[self.Owner:GetModel()] or self.Owner:GetSkin())
 	
 	if not self:IsFirstTimePredicted() then return end
 	local e = EffectData() e:SetEntity(self)
@@ -164,15 +149,28 @@ end
 
 function SWEP:Move(ply, mv)
 	local p = self.Primary
+	local prog = self:GetChargeProgress(CLIENT)
+	if self:GetNWBool "ToggleADS" then
+		if ply:KeyPressed(IN_USE) then
+			self:SetADS(not self:GetADS())
+		end
+	else
+		self:SetADS(ply:KeyDown(IN_USE))
+	end
+	
+	if CurTime() > self:GetAimTimer() and self.Owner:GetSkin()
+	== ss.ChargingEyeSkin[self.Owner:GetModel()] then
+		self:ResetSkin()
+	end
+	
 	if ply:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end
 	if CurTime() - self:GetCharge() < p.MinChargeTime then return end
-	local prog = self:GetChargeProgress(CLIENT)
 	local inkprog = math.max(p.MinChargeTime / p.MaxChargeTime, prog)
 	local ShootSound = prog > .75 and self.ShootSound2 or self.ShootSound
 	local pitch = 100 + (prog > .75 and 15 or 0) - prog * 20
 	local pos, dir = self:GetFirePosition()
 	local ang = dir:Angle()
-	ang.yaw = self.Owner:GetAngles().yaw
+	ang.yaw = self.Owner:GetAimVector():Angle().yaw
 	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns * (1 - prog)
 	self.Range = self:GetRange()
 	self.InitVelocity = dir * self:GetInkVelocity()
@@ -211,6 +209,7 @@ function SWEP:Move(ply, mv)
 end
 
 function SWEP:CustomDataTables()
+	self:AddNetworkVar("Bool", "ADS")
 	self:AddNetworkVar("Bool", "FullChargeFlag")
 	self:AddNetworkVar("Float", "AimTimer")
 	self:AddNetworkVar("Float", "Charge")

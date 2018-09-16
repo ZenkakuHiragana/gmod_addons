@@ -29,7 +29,7 @@ function SWEP:SetWeaponHoldType(t)
 	if not isstring(t) then return end
 	t = t:lower()
 	local index = assert(ActIndex[t], "SplatoonSWEPs: SWEP:SetWeaponHoldType - ActIndex[] is not set!")
-
+	
 	self.ActivityTranslate = {}
 	self.ActivityTranslate[ ACT_MP_STAND_IDLE ]					= index
 	self.ActivityTranslate[ ACT_MP_WALK ]						= index + 1
@@ -43,12 +43,11 @@ function SWEP:SetWeaponHoldType(t)
 	self.ActivityTranslate[ ACT_MP_JUMP ]						= index + 7
 	self.ActivityTranslate[ ACT_RANGE_ATTACK1 ]					= index + 8
 	self.ActivityTranslate[ ACT_MP_SWIM ]						= index + 9
-
-	-- "normal" jump animation doesn't exist
-	if t == "normal" then
+	
+	if t == "normal" then -- "normal" jump animation doesn't exist
 		self.ActivityTranslate[ACT_MP_JUMP] = ACT_HL2MP_JUMP_SLAM
 	end
-
+	
 	self:SetupWeaponHoldTypeForAI(t)
 end
 

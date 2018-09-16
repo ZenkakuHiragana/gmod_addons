@@ -41,9 +41,8 @@ include "splatoonsweps/text.lua"
 include "userinfo.lua"
 
 local ss = SplatoonSWEPs
-local CVarFlags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
-local CVarEnabled = CreateConVar("sv_splatoonsweps_enabled", "1", CVarFlags, ss.Text.CVarDescription.Enabled)
-if CVarEnabled and not CVarEnabled:GetBool() then SplatoonSWEPs = nil return end
+if not ss.GetOption "Enabled" then SplatoonSWEPs = nil return end
+
 local surf = ss.SequentialSurfaces
 local rt = ss.RenderTarget
 local crashpath = "splatoonsweps/crashdump.txt" -- Existing this means the client crashed before.
@@ -129,7 +128,6 @@ local function GenerateBSPTree()
 	bsp:Close()
 end
 
-CreateConVar("sv_splatoonsweps_ff", "0", CVarFlags, ss.Text.CVarDescription.FF)
 function ss.PrepareInkSurface(write)
 	GenerateBSPTree()
 	
@@ -219,7 +217,7 @@ function ss.PrepareInkSurface(write)
 		INK_SURFACE_DELTA_NORMAL = 2
 	end
 	
-	local rtsize = math.min(ss.RTSize[ss.GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(ss.RTSize[ss.GetOption "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
 	local rtmargin = 4 / rtsize -- Render Target margin
 	local arearatio = 41.3329546960896 / rtsize * -- arearatio[units/pixel], Found by Excel bulldozing
@@ -382,7 +380,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	file.Write(crashpath, "")
 	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
 	
-	local rtsize = math.min(ss.RTSize[ss.GetConVarInt "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(ss.RTSize[ss.GetOption "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	rt.BaseTexture = GetRenderTargetEx(
 		ss.RTName.BaseTexture,
 		rtsize, rtsize,
@@ -455,20 +453,20 @@ end)
 
 function ss.PostPlayerDraw(w, ply) render.SetBlend(1) end
 function ss.PrePlayerDraw(w, ply)
-	local ShouldDraw = Either(w:GetNWBool "BecomeSquid", ply:Crouching(), w:GetInInk())
-	ply:DrawShadow(not ShouldDraw)
-	w:DrawShadow(not ShouldDraw)
-	if ShouldDraw then return true end
+	local ShouldNoDraw = Either(w:GetNWBool "BecomeSquid", ply:Crouching(), w:GetInInk())
+	ply:DrawShadow(not ShouldNoDraw)
+	w:DrawShadow(not ShouldNoDraw)
+	if ShouldNoDraw then return true end
 	if w:IsCarriedByLocalPlayer() then
 		render.SetBlend(w:GetCameraFade())
 	end
 	
-	ss.ProtectedCall(w.ManipulatePlayer, w, ply)
+	return ss.ProtectedCall(w.ManipulatePlayer, w, ply)
 end
 
 function ss.RenderScreenspaceEffects(w)
 	ss.ProtectedCall(w.RenderScreenspaceEffects, w)
-	if not w:GetInInk() or LocalPlayer():ShouldDrawLocalPlayer() or not ss.GetConVarBool "DrawInkOverlay" then return end
+	if not w:GetInInk() or LocalPlayer():ShouldDrawLocalPlayer() or not ss.GetOption "DrawInkOverlay" then return end
 	local color = w:GetInkColorProxy()
 	DrawMaterialOverlay("effects/water_warp01", .1)
 	surface.SetDrawColor(ColorAlpha(color:ToColor(),

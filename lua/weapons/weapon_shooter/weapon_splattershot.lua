@@ -2,6 +2,8 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
+SWEP.ADSAngOffset = Angle(0, 0, 0)
+SWEP.ADSOffset = Vector(0, 0, 1.5)
 SWEP.ShootSound = "SplatoonSWEPs.Splattershot"
 SWEP.Sub = "burstbomb"
 SWEP.Special = "bombrush"
@@ -20,11 +22,20 @@ SWEP.Variations = {
 	},
 	{
 		ClassName = "weapon_heroshot",
+		SharedThink = Either(SERVER, nil, function(self)
+			ss.ProtectedCall(self.BaseClass.SharedThink, self)
+			self.Skin = self:GetNWInt("Level", ss.Options[self.Base][self.ClassName].Level)
+		end),
 	},
 	{
 		ClassName = "weapon_octoshot",
 		ShootSound = "SplatoonSWEPs.Octoshot",
 		Skin = 1,
+		SharedThink = Either(SERVER, nil, function(self)
+			ss.ProtectedCall(self.BaseClass.SharedThink, self)
+			self.Skin = self:GetNWBool("Advanced", ss.Options[self.Base][self.ClassName].Advanced)
+			self.Skin = self.Skin and 1 or 0
+		end),
 	},
 }
 

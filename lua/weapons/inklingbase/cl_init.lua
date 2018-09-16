@@ -115,6 +115,7 @@ function SWEP:Deploy()
 		self:UpdateBonePositions(self.Owner:GetViewModel())
 	end
 	
+	self:GetOptions()
 	return self:SharedDeployBase()
 end
 
@@ -181,10 +182,6 @@ end
 
 function SWEP:IsTPS()
 	return not self:IsCarriedByLocalPlayer() or self.Owner:ShouldDrawLocalPlayer()
-end
-
-function SWEP:GetElements()
-	return self:IsTPS() and self.WElements or self.VElements
 end
 
 function SWEP:TranslateViewmodelPos(pos)

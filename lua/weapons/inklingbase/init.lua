@@ -68,40 +68,13 @@ end
 function SWEP:OnRemove()
 	return self:Holster()
 end
-local Settings = {
-	"Playermodel", "InkColor",
-	"CanHealStand", "CanHealInk",
-	"CanReloadStand", "CanReloadInk",
-	"BecomeSquid", "AvoidWalls",
-}
+
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
+	self:GetOptions()
+	self.Color = ss.GetColor(self:GetNWInt "ColorCode")
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
-	if self.Owner:IsPlayer() and not self.Owner:IsBot() then
-		for i, param in ipairs(Settings) do
-			local value = self.Owner:GetInfoNum(ss.GetConVarName(param), ss.ConVarDefaults[ss.ConVarName[param]])
-			if i == 1 then
-				self:SetNWInt("PMID", value)
-			elseif i == 2 then
-				self:SetNWInt("ColorCode", value)
-			else
-				self:SetNWBool(param, value > 0)
-			end
-		end
-	else
-		for i, param in ipairs(Settings) do
-			if i == 1 then
-				self:SetNWInt("PMID", table.Random(ss.PLAYER))
-			elseif i == 2 then
-				self:SetNWInt("ColorCode", math.random(ss.MAX_COLORS))
-			else
-				self:SetNWBool(param, true)
-			end
-		end
-	end
-	
-	self.Color = ss.GetColor(self:GetNWInt "ColorCode")
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 	self.SquidAvailable = tobool(ss.GetSquidmodel(self:GetNWInt "PMID"))
 	if self.Owner:IsPlayer() then
