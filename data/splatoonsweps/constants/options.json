@@ -16,6 +16,7 @@
 	"Playermodel": 1,
 	"RTResolution": "1",
 	"weapon_charger": {
+		"Southpaw": false,
 		"ToggleADS": false,
 		"UseRTScope": false,
 		"weapon_herocharger": {
@@ -23,6 +24,7 @@
 		}
 	},
 	"weapon_shooter": {
+		"Southpaw": false,
 		"ToggleADS": false,
 		"weapon_heroshot": {
 			"Level": 0

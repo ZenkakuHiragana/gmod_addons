@@ -87,8 +87,8 @@ local function read(arg)
 			local y = bsp.bsp:ReadFloat()
 			local z = bsp.bsp:ReadFloat()
 			return Vector(x, y, z)
-		elseif isfunction(bsp.bsp["Read" .. arg]) then
-			return bsp.bsp["Read" .. arg](bsp.bsp)
+		else
+			return ss.ProtectedCall(bsp.bsp["Read" .. arg], bsp.bsp)
 		end
 	else
 		return bsp.bsp:Read(arg)
@@ -589,8 +589,8 @@ ParseFunction[LUMP.FACES_HDR] = ParseFunction[FACES]
 
 function bsp:Parse(parse_type)
 	local lump = self:GetLump(parse_type or "nil")
-	if parse_type and lump and isfunction(ParseFunction[parse_type]) then
+	if parse_type and lump then
 		self.bsp:Seek(lump.offset)
-		ParseFunction[parse_type](lump)
+		ss.ProtectedCall(ParseFunction[parse_type], lump)
 	end
 end

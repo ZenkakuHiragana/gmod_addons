@@ -18,11 +18,11 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	PlayersReady = {},
 }
 
-include "bsp.lua"
 include "splatoonsweps/const.lua"
 include "network.lua"
 include "splatoonsweps/shared.lua"
 include "splatoonsweps/text.lua"
+include "bsp.lua"
 
 local ss = SplatoonSWEPs
 if not ss.GetOption "Enabled" then SplatoonSWEPs = nil return end

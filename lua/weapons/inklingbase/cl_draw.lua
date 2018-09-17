@@ -276,14 +276,14 @@ function SWEP:ViewModelDrawn(vm)
 			render.SetMaterial(sprite)
 			render.DrawSprite(drawpos, v.size.x, v.size.y, v.color)
 			
-		elseif v.type == "Quad" and isfunction(v.draw_func) then
+		elseif v.type == "Quad" then
 			local drawpos = pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z
 			ang:RotateAroundAxis(ang:Up(), v.angle.y)
 			ang:RotateAroundAxis(ang:Right(), v.angle.p)
 			ang:RotateAroundAxis(ang:Forward(), v.angle.r)
 			
 			if v.is2d then cam.Start3D2D(drawpos, ang, v.size) end
-			v.draw_func(self)
+			ss.ProtectedCall(v.draw_func, self)
 			if v.is2d then cam.End3D2D() end
 		end
 	end
@@ -450,14 +450,14 @@ function SWEP:DrawWorldModelTranslucent()
 			sprite:SetFloat("$alpha", a or 1)
 			sprite:SetFloat("$translucent", t or 0)
 			
-		elseif v.type == "Quad" and isfunction(v.draw_func) then
+		elseif v.type == "Quad" then
 			local drawpos = pos + ang:Forward() * v.pos.x + ang:Right() * v.pos.y + ang:Up() * v.pos.z
 			ang:RotateAroundAxis(ang:Up(), v.angle.y)
 			ang:RotateAroundAxis(ang:Right(), v.angle.p)
 			ang:RotateAroundAxis(ang:Forward(), v.angle.r)
 			
 			if v.is2d then cam.Start3D2D(drawpos, ang, v.size) end
-			v.draw_func(self)
+			ss.ProtectedCall(v.draw_func, self)
 			if v.is2d then cam.End3D2D() end
 		end
 	end

@@ -98,7 +98,6 @@ function SWEP:GetOptions()
 					else
 						self:SetNWInt(alias, value)
 					end
-					print(name, alias, value)
 				end
 			end
 		end

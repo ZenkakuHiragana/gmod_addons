@@ -28,14 +28,14 @@ SWEP.PreViewModelDrawn = ExpandModel
 SWEP.PreDrawWorldModel = ExpandModel
 SWEP.SwayTime = 12 * ss.FrameToSec
 SWEP.IronSightsAng = {
-	Angle(), -- normal
+	Angle(), -- right
 	Angle(), -- left
 	Angle(0, 0, -60), -- top-right
 	Angle(0, 0, -60), -- top-left
 	Angle(), -- center
 }
 SWEP.IronSightsPos = {
-	Vector(), -- normal
+	Vector(), -- right
 	Vector(), -- left
 	Vector(), -- top-right
 	Vector(), -- top-left
@@ -256,10 +256,12 @@ function SWEP:GetViewModelPosition(pos, ang)
 	
 	if not isangle(self.IronSightsAng[armpos]) then return pos, ang end
 	if not isvector(self.IronSightsPos[armpos]) then return pos, ang end
+	
+	local DesiredFlip = self.IronSightsFlip[armpos]
 	if armpos ~= self.ArmPos then
 		self.ArmPos, self.ArmBegin = armpos, SysTime()
 		self.BasePos, self.BaseAng = self.OldPos, self.OldAng
-		self.TransitFlip = self.ViewModelFlip ~= self.IronSightsFlip[armpos]
+		self.TransitFlip = self.ViewModelFlip ~= DesiredFlip
 	end
 	
 	local relpos, relang = LocalToWorld(vector_origin, angle_zero, pos, ang)
@@ -268,7 +270,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 	if self.TransitFlip then
 		if f > .5 then
 			f, self.ArmPos = .5, 5
-			self.ViewModelFlip = self.IronSightsFlip[armpos]
+			self.ViewModelFlip = DesiredFlip
 		end
 		
 		f, armpos = f * 2, 5
