@@ -454,6 +454,14 @@ local function GenerateWeaponIcons(tab, side)
 		if WeaponFilters.Type and WeaponFilters.Type ~= t.Base then continue end
 		if WeaponFilters.Variations == "Original" and (t.Customized or t.SheldonsPicks) then continue end
 		if WeaponFilters.Variations and WeaponFilters.Variations ~= "Original" and not t[WeaponFilters.Variations] then continue end
+		
+		local record = ss.WeaponRecord[LocalPlayer()]
+		if record then
+			t.Recent = record.Recent[t.ClassName] or 0
+			t.Duration = record.Duration[t.ClassName] or 0
+			t.Inked = record.Inked[t.ClassName] or 0
+		end
+		
 		table.insert(SpawnList, t)
 	end
 	
@@ -634,9 +642,9 @@ local function GenerateFilter(tab, side)
 	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Main, "ClassID")
 	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Sub, "SubWeapon")
 	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Special, "SpecialWeapon")
-	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Recent, nil)
-	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Often, nil)
-	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Inked, nil)
+	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Recent, "Recent")
+	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Often, "Duration")
+	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Inked, "Inked")
 	function sort:OnSelect(index, value, data)
 		WeaponFilters.Sort = data
 		GenerateWeaponIcons(tab)

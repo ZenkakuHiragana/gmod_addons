@@ -30,6 +30,12 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function()
 end)
 
 net.Receive("SplatoonSWEPs: Send ink cleanup", ss.ClearAllInk)
+net.Receive("SplatoonSWEPs: Send player data", function()
+	local size = net.ReadUInt(16)
+	local record = util.Decompress(net.ReadData(size))
+	ss.WeaponRecord[LocalPlayer()] = util.JSONToTable(record) or ss.WeaponRecord[LocalPlayer()]
+end)
+
 net.Receive("SplatoonSWEPs: Send an error message", function()
 	local icon = net.ReadUInt(ss.SEND_ERROR_NOTIFY_BITS)
 	local duration = net.ReadUInt(ss.SEND_ERROR_DURATION_BITS)

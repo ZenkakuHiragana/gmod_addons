@@ -30,6 +30,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 		u = {}, v = {},
 		Vertices = {},
 	},
+	WeaponRecord = {},
 }
 
 include "splatoonsweps/const.lua"
@@ -364,7 +365,13 @@ function ss.PrepareInkSurface(write)
 	ss.RenderTarget.Ready = true
 	collectgarbage "collect"
 	net.Start "SplatoonSWEPs: Ready to splat"
+	net.WriteString(LocalPlayer():SteamID64())
 	net.SendToServer()
+	ss.WeaponRecord[LocalPlayer()] = {
+		Duration = {},
+		Inked = {},
+		Recent = {},
+	}
 end
 
 local IMAGE_FORMAT_BGRA5551 = 21

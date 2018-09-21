@@ -10,11 +10,29 @@ util.AddNetworkString "SplatoonSWEPs: Ready to splat"
 util.AddNetworkString "SplatoonSWEPs: Redownload ink data"
 util.AddNetworkString "SplatoonSWEPs: Send an error message"
 util.AddNetworkString "SplatoonSWEPs: Send ink cleanup"
+util.AddNetworkString "SplatoonSWEPs: Send player data"
 util.AddNetworkString "SplatoonSWEPs: Send weapon settings"
 util.AddNetworkString "SplatoonSWEPs: Strip weapon"
 net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 	table.insert(ss.PlayersReady, ply)
 	ss.InitializeMoveEmulation(ply)
+	ss.WeaponRecord[ply] = {
+		Duration = {},
+		Inked = {},
+		Recent = {},
+	}
+	
+	local id = net.ReadString()
+	if ss.mp and id ~= ply:SteamID64() then return end
+	local record = "data/splatoonsweps/record/" .. id .. ".txt"
+	if not file.Exists(record, "GAME") then return end
+	local json = file.Read(record, "GAME")
+	local cmpjson = util.Compress(json)
+	ss.WeaponRecord[ply] = util.JSONToTable(json)
+	net.Start "SplatoonSWEPs: Send player data"
+	net.WriteUInt(cmpjson:len(), 16)
+	net.WriteData(cmpjson, cmpjson:len())
+	net.Send(ply)
 end)
 
 net.Receive("SplatoonSWEPs: Redownload ink data", function(_, ply)

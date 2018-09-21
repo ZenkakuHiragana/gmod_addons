@@ -22,7 +22,7 @@ end
 --   number angle	| Ink rotation in degrees.
 --   number inktype | Shape of ink.
 --   number ratio	| Aspect ratio.
-function ss.Paint(pos, normal, radius, color, angle, inktype, ratio)
+function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classname)
 	inktype = math.floor(inktype)
 	
 	local ang, polys = normal:Angle(), {}
@@ -62,6 +62,10 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio)
 				ratio = ratio,
 				texid = inktype,
 			})
+			
+			ss.WeaponRecord[ply].Inked[classname]
+			= (ss.WeaponRecord[ply].Inked[classname] or 0)
+			- radius^2 * math.pi * ratio
 		end
 	end
 end

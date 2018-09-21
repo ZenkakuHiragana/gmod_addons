@@ -16,6 +16,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	PaintSchedule = {},
 	PlayerHullChanged = {},
 	PlayersReady = {},
+	WeaponRecord = {},
 }
 
 include "splatoonsweps/const.lua"
@@ -157,6 +158,15 @@ end)
 
 hook.Add("PlayerDisconnected", "SplatoonSWEPs: Reset player's readiness", function(ply)
 	table.RemoveByValue(ss.PlayersReady, ply)
+	if not ss.WeaponRecord[ply] then return end
+	local id = ply:SteamID64()
+	local record = "splatoonsweps/record/" .. id .. ".txt"
+	if not file.Exists("data/splatoonsweps/record", "GAME") then
+		file.CreateDir "splatoonsweps/record"
+	end
+	file.Write(record, util.TableToJSON(ss.WeaponRecord[ply], true))
+	
+	ss.WeaponRecord[ply] = nil
 end)
 
 hook.Add("GetFallDamage", "SplatoonSWEPs: Inklings don't take fall damage.", function(ply, speed)

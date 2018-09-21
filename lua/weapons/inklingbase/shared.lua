@@ -220,6 +220,7 @@ function SWEP:SharedDeployBase()
 		self.Owner:SetJumpPower(self.JumpPower)
 		self.Owner:SetColor(color_white)
 		self.Owner:SetCrouchedWalkSpeed(.5)
+		ss.WeaponRecord[self.Owner].Recent[self.ClassName] = -os.time()
 	end
 	
 	ss.ProtectedCall(self.SharedDeploy, self)
@@ -230,6 +231,13 @@ function SWEP:SharedHolsterBase()
 	self:SetHolstering(true)
 	ss.ProtectedCall(self.SharedHolster, self)
 	StopLoopSound(self)
+	
+	if self.Owner:IsPlayer() and ss.WeaponRecord[self.Owner] then
+		ss.WeaponRecord[self.Owner].Duration[self.ClassName]
+		= (ss.WeaponRecord[self.Owner].Duration[self.ClassName] or 0)
+		- (os.time() + ss.WeaponRecord[self.Owner].Recent[self.ClassName])
+	end
+	
 	return true
 end
 

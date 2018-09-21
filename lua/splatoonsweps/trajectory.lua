@@ -70,6 +70,7 @@ function Simulate.weapon_shooter(ink)
 		while Length >= NextLength and ink.SplashCount <= ink.SplashNum do
 			ss.AddInk(ink.filter, ink.InitPos + ink.InitDirection * NextLength, ss.GetDropType(), {
 				Angle = ink.Angle,
+				ClassName = ink.ClassName,
 				Color = ink.Color,
 				SplashInit = ink.WeaponSplashInit,
 			})
@@ -108,7 +109,8 @@ function HitPaint.weapon_shooter(ink, t)
 		sound.Play("SplatoonSWEPs_Ink.HitWorld", t.HitPos)
 	end
 	
-	ss.Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ink.InkType, ratio)
+	ss.Paint(t.HitPos, t.HitNormal, radius, ink.Color,
+	ink.Angle, ink.InkType, ratio, ink.filter, ink.ClassName)
 end
 
 function HitEntity.weapon_shooter(ink, t, w)
@@ -172,6 +174,7 @@ function Simulate.weapon_charger(ink)
 		dropdata.InkRadius = ink.SplashRadius / ink.Ratio
 		local droptable = {
 			Angle = ink.Angle,
+			ClassName = ink.ClassName,
 			Color = ink.Color,
 			SplashInit = ink.WeaponSplashInit,
 		}
@@ -309,7 +312,8 @@ local function ProcessInkQueue(ply)
 		
 		for ink in pairs(ss.PaintSchedule) do
 			if CurTime() > ink.Time then
-				ss.Paint(ink.pos, ink.normal, ink.radius, ink.color, ink.angle, ink.inktype, ink.ratio)
+				ss.Paint(ink.pos, ink.normal, ink.radius, ink.color,
+				ink.angle, ink.inktype, ink.ratio, ink.filter, ink.ClassName)
 				ss.PaintSchedule[ink] = nil
 			end
 		end
@@ -338,6 +342,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 	local t = {
 		Angle = isdrop and isdrop.Angle or w.InitAngle,
 		Base = base,
+		ClassName = w.ClassName,
 		Color = isdrop and isdrop.Color or w:GetNWInt "ColorCode",
 		Info = info,
 		InitDirection = isdrop and -vector_up or w.InitVelocity:GetNormalized(),
