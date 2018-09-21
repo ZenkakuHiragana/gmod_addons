@@ -36,6 +36,12 @@ net.Receive("SplatoonSWEPs: Send player data", function()
 	ss.WeaponRecord[LocalPlayer()] = util.JSONToTable(record) or ss.WeaponRecord[LocalPlayer()]
 end)
 
+net.Receive("SplatoonSWEPs: Send turf inked", function()
+	local inked = net.ReadDouble()
+	local classname = assert(ss.WeaponClassNames[net.ReadUInt(8)], "SplatoonSWEPs: Invalid classname!")
+	ss.WeaponRecord[LocalPlayer()].Inked[classname] = inked
+end)
+
 net.Receive("SplatoonSWEPs: Send an error message", function()
 	local icon = net.ReadUInt(ss.SEND_ERROR_NOTIFY_BITS)
 	local duration = net.ReadUInt(ss.SEND_ERROR_DURATION_BITS)

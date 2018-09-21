@@ -11,6 +11,7 @@ util.AddNetworkString "SplatoonSWEPs: Redownload ink data"
 util.AddNetworkString "SplatoonSWEPs: Send an error message"
 util.AddNetworkString "SplatoonSWEPs: Send ink cleanup"
 util.AddNetworkString "SplatoonSWEPs: Send player data"
+util.AddNetworkString "SplatoonSWEPs: Send turf inked"
 util.AddNetworkString "SplatoonSWEPs: Send weapon settings"
 util.AddNetworkString "SplatoonSWEPs: Strip weapon"
 net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
@@ -22,8 +23,8 @@ net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 		Recent = {},
 	}
 	
-	local id = net.ReadString()
-	if ss.mp and id ~= ply:SteamID64() then return end
+	local id = ss.PlayerID[ply]
+	if not id then return end
 	local record = "data/splatoonsweps/record/" .. id .. ".txt"
 	if not file.Exists(record, "GAME") then return end
 	local json = file.Read(record, "GAME")

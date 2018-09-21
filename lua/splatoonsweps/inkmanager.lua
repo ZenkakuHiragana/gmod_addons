@@ -62,11 +62,18 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 				ratio = ratio,
 				texid = inktype,
 			})
-			
-			ss.WeaponRecord[ply].Inked[classname]
-			= (ss.WeaponRecord[ply].Inked[classname] or 0)
-			- radius^2 * math.pi * ratio
 		end
+	end
+	
+	ss.WeaponRecord[ply].Inked[classname]
+	= (ss.WeaponRecord[ply].Inked[classname] or 0)
+	- radius^2 * math.pi * ratio
+	
+	if ss.sp and SERVER then
+		net.Start "SplatoonSWEPs: Send turf inked"
+		net.WriteDouble(ss.WeaponRecord[ply].Inked[classname])
+		net.WriteUInt(table.KeyFromValue(ss.WeaponClassNames, classname), 8)
+		net.Send(ply)
 	end
 end
 

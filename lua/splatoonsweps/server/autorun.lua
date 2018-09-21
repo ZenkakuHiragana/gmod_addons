@@ -15,6 +15,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	InkShotMaterials = {},
 	PaintSchedule = {},
 	PlayerHullChanged = {},
+	PlayerID = {},
 	PlayersReady = {},
 	WeaponRecord = {},
 }
@@ -156,17 +157,30 @@ hook.Add("PlayerInitialSpawn", "SplatoonSWEPs: Add a player", function(ply)
 	ss.InitializeMoveEmulation(ply)
 end)
 
-hook.Add("PlayerDisconnected", "SplatoonSWEPs: Reset player's readiness", function(ply)
+hook.Add("PlayerAuthed", "SplatoonSWEPs: Store player ID", function(ply, id)
+	ss.PlayerID[ply] = id
+end)
+
+local function SavePlayerData(ply)
 	table.RemoveByValue(ss.PlayersReady, ply)
 	if not ss.WeaponRecord[ply] then return end
-	local id = ply:SteamID64()
+	local id = ss.PlayerID[ply]
+	if not id then return end
 	local record = "splatoonsweps/record/" .. id .. ".txt"
 	if not file.Exists("data/splatoonsweps/record", "GAME") then
 		file.CreateDir "splatoonsweps/record"
 	end
 	file.Write(record, util.TableToJSON(ss.WeaponRecord[ply], true))
 	
+	ss.PlayerID[ply] = nil
 	ss.WeaponRecord[ply] = nil
+end
+
+hook.Add("PlayerDisconnected", "SplatoonSWEPs: Reset player's readiness", SavePlayerData)
+hook.Add("ShutDown", "SplatoonSWEPs: Save player data", function()
+	for k, v in ipairs(player.GetAll()) do
+		SavePlayerData(v)
+	end
 end)
 
 hook.Add("GetFallDamage", "SplatoonSWEPs: Inklings don't take fall damage.", function(ply, speed)

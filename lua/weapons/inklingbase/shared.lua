@@ -148,7 +148,7 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 	self.Color = ss.GetColor(c)
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 	
-	if CLIENT then return end
+	if CLIENT or not self.Owner:IsPlayer() then return end
 	local PMPath = ss.Playermodel[self:GetNWInt "PMID"]
 	if PMPath then
 		if file.Exists(PMPath, "GAME") then
@@ -235,7 +235,7 @@ function SWEP:SharedHolsterBase()
 	if self.Owner:IsPlayer() and ss.WeaponRecord[self.Owner] then
 		ss.WeaponRecord[self.Owner].Duration[self.ClassName]
 		= (ss.WeaponRecord[self.Owner].Duration[self.ClassName] or 0)
-		- (os.time() + ss.WeaponRecord[self.Owner].Recent[self.ClassName])
+		- (os.time() + (ss.WeaponRecord[self.Owner].Recent[self.ClassName] or -os.time()))
 	end
 	
 	return true
