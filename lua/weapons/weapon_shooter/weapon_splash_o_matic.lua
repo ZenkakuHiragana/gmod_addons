@@ -9,6 +9,7 @@ SWEP.Sub = "suctionbomb"
 SWEP.Special = "bombrush"
 SWEP.Variations = {
 	{
+		Customized = true,
 		ClassName = "weapon_splash_o_matic_neo",
 		Sub = "burstbomb",
 		Special = "inkzooka",

@@ -9,12 +9,14 @@ SWEP.Sub = "seeker"
 SWEP.Special = "inkzooka"
 SWEP.Variations = {
 	{
+		Customized = true,
 		ClassName = "weapon_aerospray_rg",
 		Sub = "inkmine",
 		Special = "inkstrike",
 		Skin = 1,
 	},
 	{
+		SheldonsPicks = true,
 		ClassName = "weapon_aerospray_pg",
 		Sub = "burstbomb",
 		Special = "kraken",

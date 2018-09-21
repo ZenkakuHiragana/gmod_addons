@@ -12,12 +12,14 @@ SWEP.Sub = "splatbomb"
 SWEP.Special = "bombrush"
 SWEP.Variations = {
 	{
+		Customized = true,
 		ClassName = "weapon_splatcharger_kelp",
 		Sub = "sprinkler",
 		Special = "killerwail",
 		Bodygroup = {1},
 	},
 	{
+		SheldonsPicks = true,
 		ClassName = "weapon_splatcharger_bento",
 		Sub = "splashwall",
 		Special = "echolocator",
@@ -40,6 +42,7 @@ SWEP.Variations = {
 		Scoped = true,
 	},
 	{
+		Customized = true,
 		ClassName = "weapon_splatterscope_kelp",
 		ScopePos = ScopePos,
 		Sub = "sprinkler",
@@ -48,6 +51,7 @@ SWEP.Variations = {
 		Scoped = true,
 	},
 	{
+		SheldonsPicks = true,
 		ClassName = "weapon_splatterscope_bento",
 		ScopePos = ScopePos,
 		Sub = "splashwall",

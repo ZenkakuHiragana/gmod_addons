@@ -8,6 +8,7 @@ SWEP.ShootSound = "SplatoonSWEPs.Jet"
 SWEP.Sub = "splashwall"
 SWEP.Special = "inkstrike"
 SWEP.Variations = {{
+	Customized = true,
 	ClassName = "weapon_jetsquelcher_custom",
 	Sub = "burstbomb",
 	Special = "kraken",

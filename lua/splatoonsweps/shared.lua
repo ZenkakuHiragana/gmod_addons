@@ -497,6 +497,7 @@ local function RegisterWeapons()
 	if not ss.GetOption "Enabled" then return end
 	
 	local oldSWEP = SWEP
+	local WeaponList = list.GetForEdit "Weapon"
 	for base in pairs(weaponslot) do
 		local LuaFolderPath = "weapons/" .. base
 		for i, LuaFilePath in ipairs(file.Find(LuaFolderPath .. "/weapon_*.lua", "LUA")) do
@@ -517,7 +518,6 @@ local function RegisterWeapons()
 			SWEP.WorldModel = SWEP.ModelPath .. "w_right.mdl"
 			SWEP.Category = ss.Text.Category
 			SWEP.PrintName = ss.Text.PrintNames[SWEP.ClassName]
-			SWEP.Spawnable = true
 			SWEP.Slot = weaponslot[SWEP.Base]
 			SWEP.SlotPos = i
 			
@@ -526,7 +526,6 @@ local function RegisterWeapons()
 				v.Base = base
 				v.Category = ss.Text.Category
 				v.PrintName = ss.Text.PrintNames[v.ClassName]
-				v.Spawnable = true
 				v.ModelPath = v.ModelPath or file.Exists(UniqueModelPath, "GAME") and UniqueModelPath or SWEP.ModelPath
 				v.ViewModel = v.ModelPath .. "c_viewmodel.mdl"
 				v.WorldModel = v.ModelPath .. "w_right.mdl"
@@ -536,6 +535,15 @@ local function RegisterWeapons()
 				list.Add("NPCUsableWeapons", {
 					class = v.ClassName,
 					title = ss.Text.PrintNames[v.ClassName],
+				})
+				
+				table.Merge(WeaponList[v.ClassName], {
+					Base = base,
+					ClassID = table.KeyFromValue(ss.WeaponClassNames, v.ClassName),
+					Customized = v.Customized,
+					SheldonsPicks = v.SheldonsPicks,
+					SpecialWeapon = v.Special,
+					SubWeapon = v.Sub,
 				})
 			end
 			
@@ -548,6 +556,15 @@ local function RegisterWeapons()
 			list.Add("NPCUsableWeapons", {
 				class = SWEP.ClassName,
 				title = SWEP.PrintName,
+			})
+			
+			table.Merge(WeaponList[SWEP.ClassName], {
+				Base = base,
+				ClassID = table.KeyFromValue(ss.WeaponClassNames, SWEP.ClassName),
+				Customized = SWEP.Customized,
+				SheldonsPicks = SWEP.SheldonsPicks,
+				SpecialWeapon = SWEP.Special,
+				SubWeapon = SWEP.Sub,
 			})
 		end
 	end

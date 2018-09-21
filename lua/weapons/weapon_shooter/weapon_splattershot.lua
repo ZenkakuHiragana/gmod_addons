@@ -9,12 +9,14 @@ SWEP.Sub = "burstbomb"
 SWEP.Special = "bombrush"
 SWEP.Variations = {
 	{
+		Customized = true,
 		ClassName = "weapon_splattershot_tentatek",
 		Sub = "suctionbomb",
 		Special = "inkzooka",
 		Skin = 1,
 	},
 	{
+		SheldonsPicks = true,
 		ClassName = "weapon_splattershot_wasabi",
 		Sub = "splatbomb",
 		Special = "inkstrike",
@@ -30,6 +32,8 @@ SWEP.Variations = {
 	{
 		ClassName = "weapon_octoshot",
 		ShootSound = "SplatoonSWEPs.Octoshot",
+		Sub = "suctionbomb",
+		Special = "inkzooka",
 		Skin = 1,
 		SharedThink = Either(SERVER, nil, function(self)
 			ss.ProtectedCall(self.BaseClass.SharedThink, self)

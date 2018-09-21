@@ -73,10 +73,9 @@ function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
 	self:GetOptions()
 	self.Color = ss.GetColor(self:GetNWInt "ColorCode")
+	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
-	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
-	self.SquidAvailable = tobool(ss.GetSquidmodel(self:GetNWInt "PMID"))
 	if self.Owner:IsPlayer() then
 		self.BackupPlayerInfo = {
 			Color = self.Owner:GetColor(),
@@ -112,7 +111,7 @@ function SWEP:Deploy()
 			if submat == "" then submat = nil end
 			self.BackupPlayerInfo.SubMaterial[i] = submat
 		end
-	
+		
 		local PMPath = ss.Playermodel[self:GetNWInt "PMID"]
 		if PMPath then
 			if file.Exists(PMPath, "GAME") then

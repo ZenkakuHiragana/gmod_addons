@@ -12,23 +12,40 @@ local function RegisterConVars(prefix, group)
 		if istable(default) and not default[1] then
 			table.insert(CVarDesc, 1, desc[name])
 			RegisterConVars(prefix .. name:lower() .. "_", default)
-		elseif prefix:find(ServerPrefix) and not isstring(default) then
-			CreateConVar(prefix .. name:lower(), istable(default) and default[1] or -1, ServerFlags, desc[name])
-			if istable(default) then group[name] = default[1] end
-		elseif CLIENT and not istable(default) then
-			default = isbool(default) and (default and 1 or 0) or default
-			CreateClientConVar(prefix .. name:lower(), default, true, true, desc[name])
+			continue
+		end
+		
+		if SERVER then
+			if prefix:find(ServerPrefix) and not isstring(default) then
+				CreateConVar(prefix .. name:lower(),
+				istable(default) and default[1] or -1,
+				ServerFlags, desc[name])
+				if istable(default) then group[name] = default[1] end
+			end
+		else
+			if prefix:find(ClientPrefix) and not istable(default) then
+				default = isbool(default) and (default and 1 or 0) or default
+				CreateClientConVar(prefix .. name:lower(), default, true, true, desc[name])
+			end
+			
+			if prefix:find(ServerPrefix) and not isstring(default) then
+				CreateConVar(prefix .. name:lower(),
+				istable(default) and default[1] or -1,
+				ServerFlags, desc[name])
+				if istable(default) then group[name] = default[1] end
+			end
 		end
 	end
 	
 	table.remove(CVarDesc, 1)
 end
 
-RegisterConVars(ServerPrefix)
 if CLIENT then
-	CVarDesc = {ss.Text.CVarDescription}
 	RegisterConVars(ClientPrefix)
+	CVarDesc = {ss.Text.CVarDescription}
 end
+
+RegisterConVars(ServerPrefix)
 
 -- Arguments:
 --   string name    | The option name.

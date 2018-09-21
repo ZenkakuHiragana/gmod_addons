@@ -407,7 +407,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 		MATERIAL_RT_DEPTH_NONE,
 		ss.RTFlags.Lightmap,
 		CREATERENDERTARGETFLAGS_HDR,
-		IMAGE_FORMAT_RGBA8888 --8192x8192, 256MB
+		IMAGE_FORMAT_RGBA8888 -- 8192x8192, 256MB
 	)
 	rt.Material = CreateMaterial(
 		ss.RTName.RenderTarget,

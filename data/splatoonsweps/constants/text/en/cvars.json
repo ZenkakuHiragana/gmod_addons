@@ -7,7 +7,7 @@
 	"CanReloadStand": "Reload your ink when you are out of ink. (1: enabled, 0: disabled)",
 	"Clear": "Clear all ink in the map.",
 	"DoomStyle": "Bring the weapon viewmodel to the center of the screen. (1: enabled, 0: disabled)",
-	"DrawCrosshair": "Draw Splatoon-styled crosshair. (1: enabled, 0: disabled)",
+	"DrawCrosshair": "Draw Splatoon-like crosshair. (1: enabled, 0: disabled)",
 	"DrawInkOverlay": "Draw ink overlay in firstperson. (1: enabled, 0: disabled)",
 	"Enabled": "Enable or disable SplatoonSWEPs. (1: enabled, 0: disabled)",
 	"FF": "Enable friendly fire. (1: enabled, 0: disabled)",

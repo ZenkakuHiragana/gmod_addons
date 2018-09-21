@@ -8,6 +8,7 @@ SWEP.ShootSound = "SplatoonSWEPs.Dual"
 SWEP.Sub = "splatbomb"
 SWEP.Special = "echolocator"
 SWEP.Variations = {{
+	Customized = true,
 	ClassName = "weapon_dualsquelcher_custom",
 	Sub = "squidbeakon",
 	Special = "killerwail",

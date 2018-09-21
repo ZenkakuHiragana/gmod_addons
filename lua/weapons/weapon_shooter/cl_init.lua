@@ -249,8 +249,11 @@ function SWEP:GetViewModelPosition(pos, ang)
 		elseif ss.GetOption "DoomStyle" then
 			armpos = 5
 		elseif ss.GetOption "MoveViewmodel" and not self:Crouching() then
+			if not self.Cursor then return pos, ang end
 			local x, y = self.Cursor.x, self.Cursor.y
 			armpos = select(3, self:GetFirePosition(self:GetRange() * gui.ScreenToVector(x, y), RenderAngles(), EyePos()))
+		else
+			armpos = 1
 		end
 	end
 	

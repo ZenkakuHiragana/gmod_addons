@@ -11,6 +11,7 @@ SWEP.Sub = "burstbomb"
 SWEP.Special = "echolocator"
 SWEP.Variations = {
 	{
+		Customized = true,
 		ClassName = "weapon_eliter3k_custom",
 		Sub = "squidbeakon",
 		Special = "kraken",
@@ -22,6 +23,7 @@ SWEP.Variations = {
 		Scoped = true,
 	},
 	{
+		Customized = true,
 		ClassName = "weapon_eliter3k_scope_custom",
 		Sub = "squidbeakon",
 		Special = "kraken",

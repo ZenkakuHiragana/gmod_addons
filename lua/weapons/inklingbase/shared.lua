@@ -94,9 +94,13 @@ function SWEP:GetOptions()
 					local alias = isstring(Options[name]) and Options[name] or name
 					local value = g(name, self.Owner)
 					if isbool(value) then
-						self:SetNWBool(alias, value)
+						if self:GetNWBool(alias) ~= value then
+							self:SetNWBool(alias, value)
+						end
 					else
-						self:SetNWInt(alias, value)
+						if self:GetNWInt(alias) ~= value then
+							self:SetNWInt(alias, value)
+						end
 					end
 				end
 			end
@@ -139,6 +143,31 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 	
 	self:SetInInk(self:Crouching() and (onink and onourink or self:GetInWallInk()))
 	self:SetOnEnemyInk(onink and not onourink)
+	
+	self:GetOptions()
+	self.Color = ss.GetColor(c)
+	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
+	
+	if CLIENT then return end
+	local PMPath = ss.Playermodel[self:GetNWInt "PMID"]
+	if PMPath then
+		if file.Exists(PMPath, "GAME") then
+			self.PMTable = {
+				Model = PMPath,
+				Skin = 0,
+				BodyGroups = {},
+				SetOffsets = true,
+				PlayerColor = self:GetInkColorProxy(),
+			}
+			self.Owner:SetPlayerColor(self:GetInkColorProxy())
+		end
+	else
+		local mdl = self.BackupPlayerInfo.Playermodel
+		if mdl.Model ~= self.Owner:GetModel() then
+			self:ChangePlayermodel(mdl)
+			self.Owner:SetPlayerColor(self:GetInkColorProxy())
+		end
+	end
 end
 
 function SWEP:SharedInitBase()

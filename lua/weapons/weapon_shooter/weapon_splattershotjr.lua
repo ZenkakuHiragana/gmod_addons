@@ -8,6 +8,7 @@ SWEP.ShootSound = "SplatoonSWEPs.SplattershotJr"
 SWEP.Sub = "splatbomb"
 SWEP.Special = "bubbler"
 SWEP.Variations = {{
+	Customized = true,
 	ClassName = "weapon_splattershotjr_custom",
 	Sub = "disruptor",
 	Special = "echolocator",

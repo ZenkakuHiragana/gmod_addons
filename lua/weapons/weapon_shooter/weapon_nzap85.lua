@@ -11,12 +11,14 @@ SWEP.Sub = "splatbomb"
 SWEP.Special = "echolocator"
 SWEP.Variations = {
 	{
+		Customized = true,
 		ClassName = "weapon_nzap89",
 		Sub = "sprinkler",
 		Special = "inkstrike",
 		Skin = 1,
 	},
 	{
+		SheldonsPicks = true,
 		ClassName = "weapon_nzap83",
 		Sub = "pointsensor",
 		Special = "kraken",

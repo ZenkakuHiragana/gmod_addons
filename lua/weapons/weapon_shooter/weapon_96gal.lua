@@ -8,6 +8,7 @@ SWEP.ShootSound = "SplatoonSWEPs.96"
 SWEP.Sub = "sprinkler"
 SWEP.Special = "echolocator"
 SWEP.Variations = {{
+	Customized = true,
 	ClassName = "weapon_96gal_deco",
 	Sub = "splashwall",
 	Special = "kraken",

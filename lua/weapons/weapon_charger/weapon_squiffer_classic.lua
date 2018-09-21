@@ -10,12 +10,14 @@ SWEP.Sub = "pointsensor"
 SWEP.Special = "bubbler"
 SWEP.Variations = {
 	{
+		Customized = true,
 		ClassName = "weapon_squiffer_new",
 		Sub = "inkmine",
 		Special = "inkzooka",
 		Skin = 1,
 	},
 	{
+		SheldonsPicks = true,
 		ClassName = "weapon_squiffer_fresh",
 		Sub = "suctionbomb",
 		Special = "kraken",

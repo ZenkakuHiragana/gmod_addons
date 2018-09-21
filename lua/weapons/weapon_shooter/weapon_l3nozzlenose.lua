@@ -8,6 +8,7 @@ SWEP.ShootSound = "SplatoonSWEPs.L-3"
 SWEP.Sub = "disruptor"
 SWEP.Special = "killerwail"
 SWEP.Variations = {{
+	Customized = true,
 	ClassName = "weapon_l3nozzlenose_d",
 	Sub = "burstbomb",
 	Special = "kraken",

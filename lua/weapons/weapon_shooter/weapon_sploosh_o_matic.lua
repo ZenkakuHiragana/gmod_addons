@@ -10,12 +10,14 @@ SWEP.Special = "killerwail"
 SWEP.Skin = 1
 SWEP.Variations = {
 	{
+		Customized = true,
 		ClassName = "weapon_sploosh_o_matic_neo",
 		Sub = "pointsensor",
 		Special = "kraken",
 		Skin = 0,
 	},
 	{
+		SheldonsPicks = true,
 		ClassName = "weapon_sploosh_o_matic_7",
 		Sub = "splatbomb",
 		Special = "inkzooka",

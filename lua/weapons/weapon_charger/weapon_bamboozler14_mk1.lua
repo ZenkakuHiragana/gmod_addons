@@ -10,12 +10,14 @@ SWEP.Sub = "splashwall"
 SWEP.Special = "killerwail"
 SWEP.Variations = {
 	{
+		Customized = true,
 		ClassName = "weapon_bamboozler14_mk2",
 		Sub = "disruptor",
 		Special = "echolocator",
 		Bodygroup = {1},
 	},
 	{
+		SheldonsPicks = true,
 		ClassName = "weapon_bamboozler14_mk3",
 		Sub = "burstbomb",
 		Special = "inkstrike",

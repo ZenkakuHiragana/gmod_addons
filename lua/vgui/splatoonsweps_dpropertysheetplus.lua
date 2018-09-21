@@ -230,4 +230,3 @@ function PANEL:Paint(w, h)
 end
 
 derma.DefineControl("SplatoonSWEPs.DPropertySheetPlus", "", PANEL, "DPropertySheet")
-print "eeh"

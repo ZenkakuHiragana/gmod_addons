@@ -11,6 +11,7 @@ util.AddNetworkString "SplatoonSWEPs: Redownload ink data"
 util.AddNetworkString "SplatoonSWEPs: Send an error message"
 util.AddNetworkString "SplatoonSWEPs: Send ink cleanup"
 util.AddNetworkString "SplatoonSWEPs: Send weapon settings"
+util.AddNetworkString "SplatoonSWEPs: Strip weapon"
 net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 	table.insert(ss.PlayersReady, ply)
 	ss.InitializeMoveEmulation(ply)
@@ -34,4 +35,11 @@ end)
 net.Receive("SplatoonSWEPs: Send ink cleanup", function(_, ply)
 	if not ply:IsAdmin() then return end
 	ss.ClearAllInk()
+end)
+
+net.Receive("SplatoonSWEPs: Strip weapon", function(_, ply)
+	local weapon = ss.WeaponClassNames[net.ReadUInt(8)]
+	if not weapon then return end
+	ply:GetWeapon(weapon):Holster()
+	ply:StripWeapon(weapon)
 end)
