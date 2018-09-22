@@ -247,7 +247,7 @@ function ENT:CreatePulsePistols()
 		clip = 20,
 		numbullets = 1,
 		spread = 150,
-		dmg = 6,
+		dmg = ({1.5, 3, 6})[game.GetSkillLevel()] or 6,
 		ammotype = "Pistol",
 		delay = {
 			firerate = 1/20,

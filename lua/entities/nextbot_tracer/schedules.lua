@@ -22,7 +22,7 @@ local function GetDanger(self)
 			elseif dist < self.Dist.ManhackSqr and v:GetClass():find("manhack") then
 				bravery = math.huge
 			elseif v:IsVehicle() and --vehicle incoming
-				(isfunction(v.GetSpeed) and v:GetSpeed() or v:GetVelocity()) > 15 and
+				(isfunction(v.GetSpeed) and v:GetSpeed() or v:GetVelocity():Length2D()) > 15 and
 				v:GetVelocity():GetNormalized():Dot(self:GetAimVector(v:WorldSpaceCenter())) > 0.65 then
 				
 				bravery = math.huge
@@ -339,6 +339,7 @@ ENT.Schedule:Add(
 	{
 		"CanMeleeAttack",
 		"CanRecall",
+		"EnemyApproaching",
 		"EnemyDead",
 		"HeavyDamage",
 		"InvalidPath",
@@ -349,11 +350,15 @@ ENT.Schedule:Add(
 		"RepeatedDamage",
 	},
 	{
-		{"SetFailSchedule", "RunIntoEnemy"},
+		{"SetFailSchedule", "FireWeapon"},
 		{"SetFaceEnemy", true},
 		"Advance",
-		"StartMove",
-		{"WaitForMovement", {"FireWeapon"}}
+		{"StartMove", {tolerance = ENT.Dist.ShootRange / 2}},
+		{"WaitForMovement", {
+			"Advance",
+			{"StartMove", {tolerance = ENT.Dist.ShootRange / 2}},
+			"FireWeapon",
+		}}
 	}
 )	
 --------------------------------}

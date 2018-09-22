@@ -68,7 +68,7 @@ function ENT.Replacement:BuildConditions(e)
 	if e then
 		--the enemy is approaching me.
 		local enemy_movement = self.Memory.EnemyPosition - self.State.Previous.ApproachingPos
-		c.EnemyApproaching = enemy_movement:LengthSqr() > 6400 and
+		c.EnemyApproaching = enemy_movement:LengthSqr() > 1000 and
 		enemy_movement:GetNormalized():Dot(self:GetAimVector()) > math.cos(math.rad(30))
 		
 		--the enemy is facing me.
@@ -166,7 +166,7 @@ function ENT.Replacement:BuildConditions(e)
 	end
 	
 	--Can I use my abilities now?
-	c.CanBlink = self.BlinkRemaining > 0 and CurTime() > self.Time.Blink
+	c.CanBlink = math.random() < self.BlinkRemaining / 3 and CurTime() > self.Time.Blink
 	c.CanRecall = self.State.Previous.HealthForRecall - self:Health() > self:Health() * self.HP.Recall and CurTime() > self.Time.Recall
 	--I touched someone.
 	c.OnContact = math.abs(CurTime() - self.Time.Touch) < 0.05

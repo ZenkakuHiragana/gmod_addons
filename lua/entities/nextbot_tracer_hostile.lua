@@ -79,6 +79,7 @@ if SERVER then
 		end
 	end)
 else
+	language.Add(classname_hostile, ENT.PrintName)
 	hook.Add("EntityEmitSound", "NextbotTracerHearsSoundHostile", function(t)
 		if not IsValid(t.Entity) then return end
 		for k, v in pairs(ents.FindByClass(classname_hostile)) do
@@ -96,5 +97,5 @@ end
 list.Set("NPC", ENT.classname, {
 	Name = ENT.PrintName,
 	Class = ENT.classname,
-	Category = "GreatZenkakuMan's NPCs"
+	Category = "Overwatch"
 })

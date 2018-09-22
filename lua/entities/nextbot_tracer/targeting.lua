@@ -84,6 +84,7 @@ function ENT.Replacement:CanSee(pos, opt)
 	local opt = opt or {}
 	local e = pos or self.Memory.EnemyPosition
 	local filter = table.Copy(self.breakable_filter)
+	table.insert(filter, self)
 	local tr = util.TraceLine({
 		start = opt.start or self:GetEye().Pos,
 		endpos = e,
@@ -93,7 +94,13 @@ function ENT.Replacement:CanSee(pos, opt)
 	if self.Debug.SeeTrace then
 		debugoverlay.Line(tr.StartPos, tr.HitPos, 3, Color(0, 255, 0, 255), false)
 	end
-	return not tr.StartSolid and not tr.HitWorld and tr.HitPos:DistToSqr(e) < 100e+2
+	
+	if tr.Entity == self:GetEnemy() then return true end
+	for _, v in ipairs(ents.FindInSphere(tr.HitPos, 50)) do
+		if v == self:GetEnemy() then
+			return not tr.StartSolid and not tr.HitWorld
+		end
+	end
 end
 
 --Returns where current enemy or the given entity is looking at.

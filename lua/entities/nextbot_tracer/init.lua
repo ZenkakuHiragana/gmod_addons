@@ -61,7 +61,7 @@ function ENT:InitializeTimers()
 	self.Time.VoiceMeleeFinalBlow = CurTime()	--Speak a final blow voice
 	self.Time.VoiceOnFire = CurTime()			--Speak when on fire
 	
-	self.Time.ApproachingInterval = 0.5			--For "EnemyApproaching" condition
+	self.Time.ApproachingInterval = 0.2			--For "EnemyApproaching" condition
 	self.Time.HealthCheckInterval = 2.5			--For "CanRecall" condition
 	self.Time.RepeatedDamageDuration = 1.2		--If the nextbot has taken damage for this time, set "RepeatedDamage" condition.
 	self.Time.ResetRepeatedDamage = 2.5			--Reset "RepeatedDamage" condition timer after several seconds.
@@ -84,10 +84,19 @@ end
 
 --Defines some variables.
 function ENT:InitializeVariables()
-	self.Equipment = self:CreatePulsePistols() --Weapons info
+	self.Equipment = self:CreatePulsePistols() --Weapon info
 	if not self.Equipment then return end
 	self.EyeHeight = self:GetEye().Pos.z - self:GetPos().z
 	self.DesiredSpeed = self.Speed.Run
+	
+	--Skill adjustment
+	local Skill = ({.5, .8, 1})[game.GetSkillLevel()] or 1
+	self.HP = {
+		HeavyDamage = self.HP.HeavyDamage * Skill,
+		Init = self.HP.Init * Skill,
+		MoreBlink = self.HP.MoreBlink * Skill,
+		Recall = self.HP.Recall,
+	}
 	
 	self.Act.Flinch.Back = self:GetSequenceActivity(
 		self:LookupSequence("flinch_back_01"))
@@ -177,7 +186,6 @@ function ENT:Initialize()
 	
 	--Shared functions
 	self:SetModel(self.Model)
-	self:SetHealth(self.HP.Init)
 	self:AddFlags(bit.bor(FL_NPC, FL_OBJECT, FL_AIMTARGET, FL_FAKECLIENT))
 	self:SetSolid(SOLID_BBOX)
 	self:MakePhysicsObjectAShadow(true, true)
@@ -191,6 +199,7 @@ function ENT:Initialize()
 	
 	self:InitializeRelationship()
 	self:SetUseType(SIMPLE_USE)
+	self:SetHealth(self.HP.Init)
 	self:SetMaxHealth(self.HP.Init)
 	self:StartActivity(self.Act.Idle)
 	self.loco:SetStepHeight(self.StepHeight)
@@ -236,19 +245,7 @@ function ENT:RunBehaviour()
 			if CurTime() > self.Time.FindEnemy then
 				local nearestenemy = self:FindEnemy()
 				if IsValid(nearestenemy) then self:SetEnemy(nearestenemy) end
-				self.Time.FindEnemy = CurTime() + math.Rand(0.5, 1)
-			end
-			
-			--For "EnemyApproaching" condition.
-			if CurTime() > self.Time.ApproachingChecked then
-				self.Time.ApproachingChecked = CurTime() + self.Time.ApproachingInterval
-				self.State.Previous.ApproachingPos = self.Memory.EnemyPosition
-			end
-			
-			--For "CanRecall" condition.
-			if CurTime() > self.Time.HealthChecked then
-				self.Time.HealthChecked = CurTime() + self.Time.HealthCheckInterval
-				self.State.Previous.HealthForRecall = self:Health()
+				self.Time.FindEnemy = CurTime() + math.Rand(0.1, 0.4)
 			end
 			
 			--Recoding my info for recall.
@@ -282,6 +279,18 @@ function ENT:RunBehaviour()
 			
 			self:UpdateEnemyMemory() --Update enemy info.
 			self:BuildConditions(self:GetEnemy()) --Build conditions.
+			
+			--For "EnemyApproaching" condition.
+			if CurTime() > self.Time.ApproachingChecked then
+				self.Time.ApproachingChecked = CurTime() + self.Time.ApproachingInterval
+				self.State.Previous.ApproachingPos = self.Memory.EnemyPosition
+			end
+			
+			--For "CanRecall" condition.
+			if CurTime() > self.Time.HealthChecked then
+				self.Time.HealthChecked = CurTime() + self.Time.HealthCheckInterval
+				self.State.Previous.HealthForRecall = self:Health()
+			end
 			
 			--Stop current schedule if it has an interrupt condition.
 			for i, interrupt in ipairs(self.Schedule[sched].Interrupts) do

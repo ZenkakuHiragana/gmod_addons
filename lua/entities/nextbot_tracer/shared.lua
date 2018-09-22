@@ -92,7 +92,7 @@ ENT.HP = {}
 ENT.HP.HeavyDamage = 15 --If I've taken damage more than that at once, flag as HeavyDamage.
 ENT.HP.Init = 150
 ENT.HP.MoreBlink = 75 --If my health is lower than that, do more blink.
-ENT.HP.Recall = 80 / ENT.HP.Init --Damage fraction to be able to use recall.
+ENT.HP.Recall = .53 --Damage fraction to be able to use recall.
 
 --GetConVar() needs to check if it's valid.  so this function wraps it.
 function ENT:GetConVarBool(var)
@@ -143,7 +143,7 @@ PrecacheParticleSystem("hunter_muzzle_flash_red")
 list.Set("NPC", ENT.classname, {
 	Name = ENT.PrintName,
 	Class = ENT.classname,
-	Category = "GreatZenkakuMan's NPCs"
+	Category = "Overwatch"
 })
 
 --++Debugging functions++---------------------{

@@ -103,7 +103,7 @@ CombatSchedule.Assault = function(self)
 		self:HasCondition("LightDamage"))) then
 		
 		if self:HasCondition("EnemyFacingMe") and 
-			self.Memory.Distance < self.Dist.Blink then
+			self.Memory.Distance < self.Dist.Blink / 3 then
 			return "BlinkTowardEnemy"
 		else
 			return math.random() > 0.5 and "BlinkFromEnemy" or "BlinkSidestep"
@@ -116,13 +116,13 @@ CombatSchedule.Assault = function(self)
 			--The enemy is looking at me.
 			if self:HasCondition("EnemyFacingMe") then
 				--Go behind the enemy.
-				if self.Memory.Distance < self.Dist.Blink then
+				if self.Memory.Distance < self.Dist.Blink * .8 then
 					return "BlinkTowardEnemy"
 				else --Move sideways.
 					return "BlinkSidestep"
 				end
 			elseif self:HasCondition("EnemyApproaching") then
-				return "BlinkTowardEnemy"
+				return "RunAroundAndFire"
 			else --Shoot the enemy from side or back.
 				return "RangeAttack"
 			end
@@ -134,9 +134,9 @@ CombatSchedule.Assault = function(self)
 			end
 		end
 	--The enemy is out of range.
-	elseif self:HasCondition("EnemyTooFar") then
+	elseif self:HasCondition("EnemyTooFar") and not self:HasCondition("EnemyApproaching") then
 		--Blink and approach it.
-		if self:HasCondition("CanBlink") then
+		if self:HasCondition("CanBlink") and self.Memory.Distance > self.Dist.Blink * 2 then
 			return "BlinkTowardEnemy"
 		else --Approach it.
 			if self.State.InterruptCondition == "InvalidPath" then
@@ -147,7 +147,11 @@ CombatSchedule.Assault = function(self)
 		end
 	--The enemy is not visible, chase it.
 	elseif self:HasCondition("EnemyOccluded") then
-		return "AppearUntilSee"
+		if self:HasCondition("EnemyApproaching") then
+			return "HideAndReload"
+		else
+			return "AppearUntilSee"
+		end
 	else
 		return "EscapeLimitedTime"
 	end
@@ -173,7 +177,11 @@ CombatSchedule.Flee = function(self)
 		end
 	else
 		if self:HasCondition("CanBlink") then
-			return "BlinkFromEnemy"
+			if self.Memory.Distance > self.Dist.Blink / 3 then
+				return "BlinkFromEnemy"
+			else
+				return "BlinkTowardEnemy"
+			end
 		elseif self:HasCondition("CanPrimaryAttack") then
 			return "EscapeLimitedTime"
 		else
@@ -193,6 +201,6 @@ function ENT:BuildCombatSchedule()
 		return CombatSchedule[self.State.Mode](self)
 	else
 		self.State.Mode = "Assault"
-		return "Advance"
+		return "RunIntoEnemy"
 	end
 end

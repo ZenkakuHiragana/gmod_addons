@@ -338,7 +338,7 @@ function ENT.Task.SetBlinkDirection(self, mode)
 	elseif mode == "FromEnemy" then
 		dir = -aim
 	elseif mode == "Sidestep" then
-		aim:Rotate(Angle(0, -90, 0))
+		aim:Rotate(Angle(0, -45, 0))
 		
 		if self.Debug.BlinkDestination then
 			debugoverlay.Line(self:GetPos(), self:GetPos() + aim * self.Dist.Blink, 5, Color(255,255,0,255),true)
@@ -435,6 +435,8 @@ function ENT.Task.Blink(self)
 			end
 			break
 		end
+		
+		self:UpdateEnemyMemory()
 		coroutine.yield()
 	end
 	
