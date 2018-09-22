@@ -246,6 +246,8 @@ function HitPaint.weapon_charger(ink, t)
 			inktype = ss.GetDropType(),
 			ratio = 1,
 			Time = CurTime() + i * radius / ink.Speed,
+			filter = ink.filter,
+			ClassName = ink.ClassName,
 		}] = true
 	end
 end

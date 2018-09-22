@@ -25,6 +25,7 @@ function SWEP:ClientInit()
 		local vm = self.Owner:GetViewModel()
 		if not IsValid(vm) then return end
 		if self.RTScope and self:GetNWBool "UseRTScope" then
+			PrintTable(vm:GetMaterials())
 			self.RTName = self.RTName or vm:GetMaterials()[self.RTScopeNum] .. "rt"
 			self.RTMaterial = self.RTMaterial or Material(self.RTName)
 			self.RTMaterial:SetTexture("$basetexture", self.RTScope)
