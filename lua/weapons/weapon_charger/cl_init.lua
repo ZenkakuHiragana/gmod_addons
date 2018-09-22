@@ -25,7 +25,6 @@ function SWEP:ClientInit()
 		local vm = self.Owner:GetViewModel()
 		if not IsValid(vm) then return end
 		if self.RTScope and self:GetNWBool "UseRTScope" then
-			PrintTable(vm:GetMaterials())
 			self.RTName = self.RTName or vm:GetMaterials()[self.RTScopeNum] .. "rt"
 			self.RTMaterial = self.RTMaterial or Material(self.RTName)
 			self.RTMaterial:SetTexture("$basetexture", self.RTScope)
@@ -187,8 +186,8 @@ end
 function SWEP:GetArmPos()
 	local scope = self.Primary.Scope
 	if self:GetADS() then
-		self.IronSightsFlip[6] = self.ViewModelFlip
-		self.SwayTime = scope.SwayTime / 2
+		self.SwayTime = self.TransitFlip and
+		12 * ss.FrameToSec or scope.SwayTime / 2
 		return 6
 	end
 	
@@ -198,8 +197,10 @@ function SWEP:GetArmPos()
 	local SwayTime = self.SwayTime / timescale
 	self.SwayTime = 12 * ss.FrameToSec
 	if prog > scope.StartMove then
-		self.IronSightsFlip[6] = self.ViewModelFlip
-		self.SwayTime = scope.SwayTime
+		if not self.TransitFlip then
+			self.SwayTime = scope.SwayTime
+		end
+		
 		if not self:GetNWBool "UseRTScope" then
 			self.SwayTime = self.SwayTime / 2
 		end

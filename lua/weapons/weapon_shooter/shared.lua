@@ -17,7 +17,8 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	end
 	
 	local col = ss.vector_one * self.Primary.ColRadius
-	local dp = -Vector(0, FirePosition, FirePosition) dp:Rotate(ang)
+	local dy = FirePosition * (self:GetNWBool "Southpaw" and -1 or 1)
+	local dp = -Vector(0, dy, FirePosition) dp:Rotate(ang)
 	local t = ss.SquidTrace
 	t.start, t.endpos = shootpos, shootpos + aim
 	t.mins, t.maxs = -col, col
@@ -43,7 +44,7 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 					dp = vector_up * -FirePosition
 					pos = shootpos
 				else
-					dp = -Vector(0, FirePosition, FirePosition)
+					dp = -Vector(0, dy, FirePosition)
 					for i = 1, negate:len() do
 						local s = negate:sub(i, i)
 						dp[s] = -dp[s]

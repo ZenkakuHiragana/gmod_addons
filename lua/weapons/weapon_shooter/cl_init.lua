@@ -18,6 +18,7 @@ local function ExpandModel(self, vm, weapon, ply)
 	local s = ss.vector_one * fraction
 	self:ManipulateBoneScale(self:LookupBone "root_1" or 0, s)
 	if not IsValid(vm) then return end
+	if self.ViewModelFlip then s.y = -s.y end
 	vm:ManipulateBoneScale(vm:LookupBone "root_1" or 0, s)
 	function vm.GetInkColorProxy()
 		return ss.ProtectedCall(self.GetInkColorProxy, self) or ss.vector_one
@@ -231,6 +232,7 @@ function SWEP:GetArmPos()
 end
 
 local SwayTime = 12 * ss.FrameToSec
+local SouthpawAlt = {2, 1, 4, 3, 5, 6}
 function SWEP:GetViewModelPosition(pos, ang)
 	if not IsValid(self.Owner) then return pos, ang end
 	local vm = self.Owner:GetViewModel()
@@ -255,6 +257,10 @@ function SWEP:GetViewModelPosition(pos, ang)
 		else
 			armpos = 1
 		end
+	end
+	
+	if self:GetNWBool "Southpaw" then
+		armpos = SouthpawAlt[armpos] or armpos
 	end
 	
 	if not isangle(self.IronSightsAng[armpos]) then return pos, ang end

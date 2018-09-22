@@ -677,7 +677,7 @@ local function GenerateWeaponContent(self)
 	local navbar = self.PanelContent.ContentNavBar
 	self.PropPanel.SideOption = vgui.Create("DCategoryList", navbar)
 	self.PropPanel.SideOption:Dock(BOTTOM)
-	self.PropPanel.SideOption:SetSize(navbar:GetWide(), ScrH() * 2 / 3)
+	self.PropPanel.SideOption:SetSize(navbar:GetWide(), ScrH() * .6)
 	function self.PropPanel.SideOption.Think()
 		local panel = self.PropPanel
 		local opt = panel.SideOption
