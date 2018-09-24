@@ -5,7 +5,13 @@ Commit messages are all Japanese.
 The aim of this rework is the following:
 * Working fine on multiplayer game (especially on dedicated servers)
 * More flesh than before! (not just throwing props)
-* Better UI
+* Various options with better UI
+    * Drawing crosshair
+    * "Southpaw" mode
+    * Realistic scope for scoped chargers
+    * DOOM-style viewmodel
+    * Aim down sight
+    * And so on...
 
 ***  
 ## Done
@@ -14,27 +20,24 @@ The aim of this rework is the following:
 * Inkling base system.  
     You can become inkling as well.
 * Basic GUI to change playermodel, ink color, and other settings.  
-    GUI menu is in the context menu.
+    GUI menu is in the weapon tab.
 * All Shooters in Splatoon(WiiU).
 * All Chargers in Splatoon.
 
 ## Currently working on
 * Ink system rework
     * It's somewhat glitchy for now.
-* Rollers
+* Splatlings
     * [ ] Create a base class
-    * [ ] Write a script for swinging
-    * [ ] Write a script for rolling
+    * [ ] Write a script for charging
     * [ ] Draw a crosshair
     * [ ] Write a script to spawn the actual ink
     * [ ] Set ink consumption and other parameters
-    * [ ] Write a script for inkbrushes
 
 ## Upcoming features
 * Sub weapons
 * Blasters
-* Spinners
-* Inkbrushes
+* Rollers and Inkbrushes
 * Sloshers
 
 ## I want to make the following, too
