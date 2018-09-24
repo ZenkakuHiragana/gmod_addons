@@ -15,34 +15,25 @@ The aim of this rework is the following:
     You can become inkling as well.
 * Basic GUI to change playermodel, ink color, and other settings.  
     GUI menu is in the context menu.
-* All Shooters in Splatoon (WiiU)
-* Splat charger and its variations in Splatoon.
-* E-liter 3K and its variations in Splatoon.
+* All Shooters in Splatoon(WiiU).
+* All Chargers in Splatoon.
 
 ## Currently working on
-* Chargers
-    * [x] Create a base class
-    * [x] Write a charging script
-    * [x] Draw a crosshair
-    * [x] Draw a laser sight
-    * [x] Write a script to fire the actual ink
-    * [x] Set an ink consumption and other parameters
-          Squiffers and Bamboozlers are remaining.
-    * [x] Write a script for scoped chargers
-* More effects!
-    * [x] Create muzzle effects (cone-shaped, ring, and mist, for shooters and chargers)
-    * [x] Use Source particle system (.pcf file) to emit muzzle effect
-    * [x] Create ink effects when it's going to paint the world.
-* Weapon models  
-    SWEP Construction Kit can't draw the shadow of the SWEPs.  
-    So I decided to make viewmodels and worldmodels from [Splatoon Full Weapons Pack.][2]  
-    You can view the created SMDs and QCs on [DropBox][3]
+* Ink system rework
+    * It's somewhat glitchy for now.
+* Rollers
+    * [ ] Create a base class
+    * [ ] Write a script for swinging
+    * [ ] Write a script for rolling
+    * [ ] Draw a crosshair
+    * [ ] Write a script to spawn the actual ink
+    * [ ] Set ink consumption and other parameters
+    * [ ] Write a script for inkbrushes
 
 ## Upcoming features
 * Sub weapons
 * Blasters
 * Spinners
-* Rollers
 * Inkbrushes
 * Sloshers
 
