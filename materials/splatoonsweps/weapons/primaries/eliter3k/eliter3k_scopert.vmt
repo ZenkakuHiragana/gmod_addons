@@ -1,6 +1,6 @@
 "VertexLitGeneric"
 {
-	"$basetexture" "splatoonsweps/weapons/primaries/e_liter_3k/e_liter_3k"
+	"$basetexture" "splatoonsweps/weapons/primaries/eliter3k/e_liter_3k"
 	"$basetexturetransform" "center .5 .5 scale -20.35 -20.35 rotate 0 translate .56 .06"
 	"$bumpmap" "splatoonsweps/weapons/primaries/eliter3k/eliter3k_scope_normal"
 	"$lightwarptexture" "splatoonsweps/weapons/primaries/inkling_lightwarp7"
