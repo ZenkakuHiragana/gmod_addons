@@ -1,10 +1,10 @@
 "VertexLitGeneric"
 {
-	"$basetexture" "models/props_splatoon/weapons/primaries/e_liter_3k/e_liter_3k"
+	"$basetexture" "splatoonsweps/weapons/primaries/e_liter_3k/e_liter_3k"
 	"$basetexturetransform" "center .5 .5 scale -20.35 -20.35 rotate 0 translate .56 .06"
 	"$bumpmap" "splatoonsweps/weapons/primaries/eliter3k/eliter3k_scope_normal"
-	"$lightwarptexture" "models/props_splatoon/inklings/inkling_lightwarp7"
-
+	"$lightwarptexture" "splatoonsweps/weapons/primaries/inkling_lightwarp7"
+	"$nocull" "1"
 	"$phong" "1"
 	"$phongexponent" "50"
 	"$phongboost" "5"	

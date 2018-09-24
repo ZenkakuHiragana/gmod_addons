@@ -1,18 +1,13 @@
 "VertexLitGeneric"
 {
-	"$basetexture" "models/props_splatoon/weapons/primaries/splat_charger/splat_charger"
+	"$basetexture" "splatoonsweps/weapons/primaries/splatcharger/splat_charger"
 	"$basetexturetransform" "center .5 .5 scale 15.38 15.38 rotate 0 translate .385 .777"
 	"$bumpmap" "splatoonsweps/weapons/primaries/splatcharger/splatterscope_normal"
-	"$lightwarptexture" "models/props_splatoon/inklings/inkling_lightwarp7"
-//	"$lightwarptexture" "models/props_splatoon/weapons/primaries/shared/weapon_lightwarp"
-
-//	"$detail" "models/props_splatoon/weapons/primaries/splat_charger/splat_charger_trim"
-//	"$detailscale" "1"
-//	"$detailblendfactor" ".5"
-
+	"$lightwarptexture" "splatoonsweps/weapons/primaries/inkling_lightwarp7"
+	"$nocull" "1"
 	"$phong" "1"
 //	"$phongexponent" "150"
-	"$phongexponenttexture" "models/props_splatoon/weapons/primaries/splat_charger/splat_charger_exponent"
+	"$phongexponenttexture" "splatoonsweps/weapons/primaries/splatcharger/splat_charger_exponent"
 	"$phongboost" "12"	
 	"$phongfresnelranges"	"[.3 1 2]"
 	"$halflambert" "1"
@@ -21,5 +16,4 @@
 	"$normalmapalphaenvmapmask" "1"
 
 	"$blendtintbybasealpha"		"1"
-	// "$blendtintcoloroverbase"		"1"
 }
