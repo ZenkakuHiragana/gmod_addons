@@ -29,19 +29,20 @@ function SWEP:ClientInit()
 			self.RTMaterial = self.RTMaterial or Material(self.RTName)
 			self.RTMaterial:SetTexture("$basetexture", self.RTScope)
 			self.RTAttachment = self.RTAttachment or vm:LookupAttachment "scope_end"
-			if not self.RTAttachment then return end
 			vm:SetSubMaterial(self.RTScopeNum - 1, self.RTName)
 			
+			ss.RenderingRTScope = ss.sp
 			local alpha = 1 - self:GetScopedProgress(true)
 			render.PushRenderTarget(self.RTScope)
 			render.RenderView {
-				origin = vm:GetAttachment(self.RTAttachment).Pos,
+				origin = self.ScopeOrigin or vm:GetAttachment(self.RTAttachment).Pos,
 				x = 0, y = 0, w = 512, h = 512, aspectratio = 1,
 				fov = self.Primary.Scope.FOV / 2,
 				drawviewmodel = false,
 			}
 			ss.ProtectedCall(self.HideRTScope, self, alpha)
 			render.PopRenderTarget()
+			ss.RenderingRTScope = nil
 		else
 			vm:SetSubMaterial(self.RTScopeNum - 1)
 		end
@@ -176,6 +177,13 @@ function SWEP:PostDrawViewModel(vm, weapon, ply)
 	ss.ProtectedCall(base.PostDrawViewModel, self, vm, weapon, ply)
 	if not self.Scoped then return end
 	render.SetBlend(1)
+	
+	-- Entity:GetAttachment() for viewmodel returns incorrect value in singleplayer.
+	if ss.mp then return end
+	self.RTAttachment = self.RTAttachment or vm:LookupAttachment "scope_end"
+	if self.RTAttachment then
+		self.ScopeOrigin = vm:GetAttachment(self.RTAttachment).Pos
+	end
 end
 
 function SWEP:PreDrawWorldModel()
