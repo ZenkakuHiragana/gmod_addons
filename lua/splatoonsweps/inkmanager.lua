@@ -89,7 +89,7 @@ end
 --     number radius | Ink characteristic radius.
 --     number ratio  | Ink aspect ratio.
 --     number texid  | Ink pattern ID.
-local MIN_BOUND_AREA = 64 -- minimum ink bounding box area
+local MIN_BOUND_AREA = 1 -- minimum ink bounding box area
 function ss.AddInkRectangle(ink, sz, newink)
 	local nb, nr = newink.bounds, newink.ratio
 	for r, z in pairs(ink) do

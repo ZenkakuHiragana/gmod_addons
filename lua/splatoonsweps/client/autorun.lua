@@ -2,35 +2,35 @@
 -- Clientside SplatoonSWEPs structure
 
 SplatoonSWEPs = SplatoonSWEPs or {
-	AmbientColor = color_white,
-	AreaBound = 0,				
-	AspectSum = 0,				
-	AspectSumX = 0,				
-	AspectSumY = 0,				
-	Displacements = {},			
-	IMesh = {},
-	InkShotMaterials = {},
-	InkQueue = {},
-	Models = {},
-	PaintQueue = {},
-	PaintSchedule = {},
-	PlayerHullChanged = {},		
-	RenderTarget = {},			
-	SequentialSurfaces = {		
-		Angles = {},
-		Areas = {},
-		Bounds = {},
-		DefaultAngles = {},
-		InkCircles = {},
-		Maxs = {},
-		Mins = {},
-		Moved = {},
-		Normals = {},
-		Origins = {},
-		u = {}, v = {},
-		Vertices = {},
+	AmbientColor = color_white,	-- 
+	AreaBound = 0,				-- 
+	AspectSum = 0,				-- 
+	AspectSumX = 0,				-- 
+	AspectSumY = 0,				-- 
+	Displacements = {},			-- 
+	IMesh = {},					-- 
+	InkShotMaterials = {},		-- 
+	InkQueue = {},				-- 
+	Models = {},				-- 
+	PaintQueue = {},			-- 
+	PaintSchedule = {},			-- 
+	PlayerHullChanged = {},		-- 
+	RenderTarget = {},			-- 
+	SequentialSurfaces = {		-- 
+		Angles = {},			-- 
+		Areas = {},				-- 
+		Bounds = {},			-- 
+		DefaultAngles = {},		-- 
+		InkCircles = {},		-- 
+		Maxs = {},				-- 
+		Mins = {},				-- 
+		Moved = {},				-- 
+		Normals = {},			-- 
+		Origins = {},			-- 
+		u = {}, v = {},			-- 
+		Vertices = {},			-- 
 	},
-	WeaponRecord = {},
+	WeaponRecord = {},			-- 
 }
 
 include "splatoonsweps/const.lua"
@@ -460,9 +460,7 @@ end)
 
 function ss.PostPlayerDraw(w, ply) render.SetBlend(1) end
 function ss.PrePlayerDraw(w, ply)
-	local ShouldNoDraw = Either(w:GetNWBool "BecomeSquid", ply:Crouching(), w:GetInInk())
-	ply:DrawShadow(not ShouldNoDraw)
-	w:DrawShadow(not ShouldNoDraw)
+	local ShouldNoDraw = Either(w:GetNWBool "BecomeSquid" and IsValid(w.Squid), ply:Crouching(), w:GetInInk())
 	if ShouldNoDraw then return true end
 	if w:IsCarriedByLocalPlayer() then
 		render.SetBlend(w:GetCameraFade())

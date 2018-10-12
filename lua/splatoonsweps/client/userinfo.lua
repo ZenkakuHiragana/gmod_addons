@@ -246,7 +246,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 	self.Entity:SetSubMaterial()
 	
 	function self:OnRemove()
-		if not self.Weapon then return end
+		if not IsValid(self.Weapon) then return end
 		self.Weapon:Remove()
 	end
 	
@@ -268,7 +268,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 		render.SetScissorRect(leftx, topy, rightx, bottomy, true)
 		
 		self.Entity:DrawModel()
-		if self.Weapon and self.Weapon.Visible then
+		if IsValid(self.Weapon) and self.Weapon.Visible then
 			self.Weapon:SetNoDraw(false)
 			self.Weapon:DrawModel()
 			self.Weapon:SetNoDraw(true)
@@ -295,7 +295,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 				self.Entity:SetSequence "idle_fist"
 			end
 			
-			if self.Weapon then
+			if IsValid(self.Weapon) then
 				self.ClassName = nil
 				self.Weapon.GetInkColorProxy = nil
 				self.Weapon:SetModel "models/error.mdl"
@@ -305,8 +305,8 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 			return
 		end
 		
-		if not self.Weapon then
-			self.Weapon = ents.CreateClientProp()
+		if not IsValid(self.Weapon) then
+			self.Weapon = ClientsideModel "models/error.mdl"
 			self.Weapon:SetPos(-Vector(120))
 			self.Weapon:SetParent(self.Entity)
 			self.Weapon:AddEffects(EF_BONEMERGE)
@@ -577,12 +577,23 @@ local function GeneratePreferenceTab(tab)
 	for i, c in ipairs(ss.Text.PlayermodelNames) do
 		local item = tab.Preference.ModelSelector:Add "SpawnIcon"
 		local model, exists = GetPlayermodel(i)
+		if not exists then model = "models/error.mdl" end
+		item.ID = i
+		item.Model = model
 		item:SetSize(size, size)
 		item:SetModel(model)
 		item:SetToolTip(c)
 		function item:DoClick()
 			local cvar = ss.GetConVar "Playermodel"
 			if cvar then cvar:SetInt(i) end
+		end
+		
+		function item:Think()
+			local new, exists = GetPlayermodel(self.ID)
+			if exists and self.Model ~= new then
+				self:SetModel(new)
+				self.Model = new
+			end
 		end
 	end
 end

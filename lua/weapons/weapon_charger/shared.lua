@@ -30,9 +30,10 @@ function SWEP:GetInkVelocity()
 end
 
 function SWEP:GetChargeProgress(ping)
-	local frac = CurTime() - self:GetCharge() - self.Primary.MinChargeTime
+	local timescale = ss.GetTimeScale(self.Owner)
+	local frac = CurTime() - self:GetCharge() - self.Primary.MinChargeTime / timescale
 	if ping then frac = frac + self:Ping() end
-	return math.Clamp(frac	/ self.Primary.MaxChargeTime, 0, 1)
+	return math.Clamp(frac	/ self.Primary.MaxChargeTime * timescale, 0, 1)
 end
 
 function SWEP:GetScopedProgress(ping)
@@ -47,13 +48,16 @@ end
 
 function SWEP:ResetSkin()
 	if not ss.ChargingEyeSkin[self.Owner:GetModel()] then return end
+	
+	local skin = 0
 	if self:GetNWInt "PMID" == ss.PLAYER.NOCHANGE then
-		self.Owner:SetSkin(CLIENT and
+		skin = CLIENT and
 		GetConVar "cl_playerskin":GetInt() or
-		self.Owner:GetInfoNum("cl_playerskin", 0))
-	else
-		self.Owner:SetSkin(0)
+		self.BackupPlayerInfo.Playermodel.Skin
 	end
+	
+	if self.Owner:GetSkin() == skin then return end
+	self.Owner:SetSkin(skin)
 end
 
 function SWEP:ResetCharge()
@@ -133,7 +137,11 @@ function SWEP:SharedPrimaryAttack()
 	self:SetCharge(CurTime() + self.Primary.MinFreezeTime)
 	self:SetFullChargeFlag(false)
 	self:SendWeaponAnim(ACT_VM_IDLE)
-	self.Owner:SetSkin(ss.ChargingEyeSkin[self.Owner:GetModel()] or self.Owner:GetSkin())
+	
+	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
+	if skin and self.Owner:GetSkin() ~= skin then
+		self.Owner:SetSkin(skin)
+	end
 	
 	if not self:IsFirstTimePredicted() then return end
 	local e = EffectData() e:SetEntity(self)
@@ -158,8 +166,7 @@ function SWEP:Move(ply, mv)
 		self:SetADS(ply:KeyDown(IN_USE))
 	end
 	
-	if CurTime() > self:GetAimTimer() and self.Owner:GetSkin()
-	== ss.ChargingEyeSkin[self.Owner:GetModel()] then
+	if CurTime() > self:GetAimTimer() and self.Owner:GetSkin() == ss.ChargingEyeSkin[self.Owner:GetModel()] then
 		self:ResetSkin()
 	end
 	

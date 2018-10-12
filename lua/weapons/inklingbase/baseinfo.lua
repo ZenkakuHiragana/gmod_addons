@@ -12,7 +12,7 @@ if CLIENT then
 	SWEP.DrawWeaponInfoBox = true
 	SWEP.Instructions = ss.Text.Instructions
 	SWEP.Purpose = ss.Text.Purpose
-	SWEP.RenderGroup = RENDERGROUP_TRANSLUCENT
+	SWEP.RenderGroup = RENDERGROUP_OPAQUE
 	SWEP.SpeechBubbleLid = surface.GetTextureID "gui/speech_lid"
 	SWEP.SwayScale = 1
 	SWEP.UseHands = true

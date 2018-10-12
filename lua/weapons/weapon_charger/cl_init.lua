@@ -14,6 +14,7 @@ SWEP.Crosshair = {
 }
 
 function SWEP:ClientInit()
+	self.MinChargeDeg = self.Primary.MinChargeTime / self.Primary.MaxChargeTime * 360
 	self.IronSightsPos[6] = self.ScopePos
 	self.IronSightsAng[6] = self.ScopeAng
 	self.IronSightsFlip[6] = false
@@ -73,8 +74,13 @@ function SWEP:DrawOuterCircle(t)
 	local r = t.Size.Outer / 2 * scoped
 	local ri = t.Size.Inner / 2 * scoped
 	local rm = t.Size.Middle / 2 * scoped
-	local time = math.max(CurTime() - self:GetCharge() + self:Ping(), 0)
-	local prog = math.Clamp(time / self.Primary.MaxChargeTime, 0, 1) * 360
+	local prog = self:GetChargeProgress(true)
+	local timescale = ss.GetTimeScale(self.Owner)
+	if prog == 0 then
+		prog = math.Clamp(math.max(CurTime() - self:GetCharge() + self:Ping(), 0) / self.Primary.MaxChargeTime * timescale, 0, 1) * 360
+	else
+		prog = prog * (360 - self.MinChargeDeg) + self.MinChargeDeg
+	end
 	
 	draw.NoTexture()
 	surface.SetDrawColor(ColorAlpha(color_black, 192))
@@ -129,19 +135,19 @@ function SWEP:RenderScreenspaceEffects()
 	local padding = surface.DrawTexturedRectUV
 	local u, v = .115, 1
 	local x, y = self.Cursor.x, self.Cursor.y
-	local sx, sy = ScrH() * 4 / 3, ScrH()
-	local ex, ey = x + sx / 2, y + sy / 2 -- End position of x, y
-	x, y = x - sx / 2, y - sy / 2
+	local sx, sy = math.ceil(ScrH() * 4 / 3), ScrH()
+	local ex, ey = math.ceil(x + sx / 2), math.ceil(y + sy / 2) -- End position of x, y
+	x, y = math.floor(x - sx / 2), math.floor(y - sy / 2)
 	
 	MatRefScope:SetFloat("$refractamount", prog * prog * MatRefDefault)
 	for _, material in ipairs {MatRefScope, MatScope} do
-	surface.SetDrawColor(ColorAlpha(color_black, prog * 255))
+		surface.SetDrawColor(ColorAlpha(color_black, prog * 255))
 		surface.SetMaterial(material)
-		surface.DrawTexturedRect(x, y, sx, sy)
-		if x > 0 then padding(0, 0, x, ScrH(), 0, 0, u, v) end
-		if ex < ScrW() then padding(ex, 0, ScrW() - ex, ScrH(), 0, 0, u, v) end
-		if y > 0 then padding(x, 0, sx, y, 0, 0, u, v) end
-		if ey < ScrH() then padding(x, ey, ScrW(), ScrH() - ey, 0, 0, u, v) end
+		surface.DrawTexturedRect(x, y - 1, sx, sy + 1)
+		if x > 0 then padding(-1, -1, x + 1, ScrH() + 1, 0, 0, u, v) end
+		if ex < ScrW() then padding(ex - 1, -1, ScrW() - ex + 1, ScrH() + 1, 0, 0, u, v) end
+		if y > 0 then padding(x, -1, sx, y + 1, 0, 0, u, v) end
+		if ey < ScrH() then padding(x, ey - 1, ScrW(), ScrH() - ey + 1, 0, 0, u, v) end
 	end
 	
 	MatRefScope:SetFloat("$refractamount", MatRefDefault)
@@ -207,19 +213,14 @@ function SWEP:GetArmPos()
 	if prog > scope.StartMove then
 		if not self.TransitFlip then
 			self.SwayTime = scope.SwayTime
-		end
-		
-		if not self:GetNWBool "UseRTScope" then
+			if not self.Owner:OnGround() or self:GetInk() < prog * self.Primary.TakeAmmo then
+				self.SwayTime = scope.SwayTime * self.Primary.EmptyChargeMul
+			end
+		elseif not self:GetNWBool "UseRTScope" then
 			self.SwayTime = self.SwayTime / 2
 		end
 		
-		local mul = self.Primary.EmptyChargeMul
-		local f = (SysTime() - self.ArmBegin) / SwayTime
-		if not self.Owner:OnGround() or self:GetInk() < prog * self.Primary.TakeAmmo then
-			self.SwayTime = scope.SwayTime * mul
-		end
-		
-		self.ArmBegin = SysTime() - f * self.SwayTime / timescale
+		self.ArmBegin = SysTime() - (SysTime() - self.ArmBegin) / SwayTime * self.SwayTime / timescale
 		return 6
 	end
 end

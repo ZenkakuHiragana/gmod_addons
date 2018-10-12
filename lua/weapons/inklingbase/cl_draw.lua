@@ -1,5 +1,5 @@
 
---The way to draw weapon models comes from SWEP Construction Kit.
+-- The way to draw ink tank comes from SWEP Construction Kit.
 local ss = SplatoonSWEPs
 if not ss then return end
 function SWEP:ResetBonePositions(vm)
@@ -175,7 +175,7 @@ end
 function SWEP:MakeSquidModel(id)
 	self.SquidModelNumber = self:GetNWInt "PMID"
 	== ss.PLAYER.OCTO and ss.SQUID.OCTO or ss.SQUID.INKLING
-	local modelpath = ss.Squidmodel[self.SquidModelNumber] --Octopus or squid?
+	local modelpath = ss.Squidmodel[self.SquidModelNumber] -- Octopus or squid?
 	if IsValid(self.Squid) then self.Squid:Remove() end
 	if file.Exists(modelpath, "GAME") then
 		self.Squid = ClientsideModel(modelpath, RENDERGROUP_BOTH)
@@ -296,34 +296,33 @@ function SWEP:GetBombMeterPosition(inkconsumption)
 	return self.BombMeterPosition
 end
 
-function SWEP:DrawWorldModelTranslucent()
+function SWEP:DrawWorldModel()
 	if IsValid(self.Owner) then
 		if self:GetHolstering() then return end
 		if self:Crouching() then
-			if self:GetInInk() then return
-			elseif self:GetNWBool "BecomeSquid" then
-				if IsValid(self.Squid) and not self:GetInInk() then
-					--It seems changing eye position doesn't work.
-					self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
-					 --Move clientside model to player's position.
-					local v = self.Owner:GetVelocity()
-					local a = v:Angle()
-					if v:LengthSqr() < 16 then --Speed limit: 
-						a.p = 0
-					elseif a.p > 45 and a.p <= 90 then --Angle limit: up and down
-						a.p = 45
-					elseif a.p >= 270 and a.p < 300 then
-						a.p = 300
-					else
-						a.r = a.p
-					end
-					a.p, a.y, a.r = a.p - 90, self.Owner:GetAimVector():Angle().yaw, 180
-					self.Squid:SetAngles(a)
-					self.Squid:SetPos(self.Owner:GetPos())
-					self.Squid:DrawModel()
-					self.Squid:DrawShadow(true)
-					self.Squid:CreateShadow()
+			if self:GetInInk() then
+				return
+			elseif self:GetNWBool "BecomeSquid" and IsValid(self.Squid) then
+				-- It seems changing eye position doesn't work.
+				self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
+				-- Move clientside model to player's position.
+				local v = self.Owner:GetVelocity()
+				local a = v:Angle()
+				if v:LengthSqr() < 16 then -- Speed limit
+					a.p = 0
+				elseif a.p > 45 and a.p <= 90 then -- Angle limit: up and down
+					a.p = 45
+				elseif a.p >= 270 and a.p < 300 then
+					a.p = 300
+				else
+					a.r = a.p
 				end
+				a.p, a.y, a.r = a.p - 90, self.Owner:GetAimVector():Angle().yaw, 180
+				self.Squid:SetAngles(a)
+				self.Squid:SetPos(self.Owner:GetPos())
+				self.Squid:DrawModel()
+				self.Squid:DrawShadow(true)
+				self.Squid:CreateShadow()
 				
 				return
 			end
@@ -331,11 +330,11 @@ function SWEP:DrawWorldModelTranslucent()
 	end
 	
 	if ss.ProtectedCall(self.PreDrawWorldModel, self) then return end
-	
 	self:SetupBones()
 	self:DrawModel()
-	local bone_ent = self.Owner -- when the weapon is dropped
-	if not IsValid(bone_ent) then bone_ent = self end
+	
+	local bone_ent = self.Owner
+	if not IsValid(bone_ent) then bone_ent = self end -- When the weapon is dropped
 	if not self:IsCarriedByLocalPlayer() then self:Think() end
 	
 	local cameradistance = 1
@@ -404,14 +403,14 @@ function SWEP:DrawWorldModelTranslucent()
 			end
 			
 			if v.inktank then
-				--Sub weapon usable meter
+				-- Sub weapon usable meter
 				model:ManipulateBonePosition(model:LookupBone "bip_inktank_bombmeter", self.BombMeterPosition)
-				--Ink remaining
+				-- Ink remaining
 				local ink = -17 + 17 * self:GetInk() / ss.MaxInkAmount
 				model:ManipulateBonePosition(model:LookupBone "bip_inktank_ink_core", Vector(ink, 0, 0))
-				--Ink visiblity
+				-- Ink visiblity
 				model:SetBodygroup(model:FindBodygroupByName "Ink", ink < -16.5 and 1 or 0)
-				--Ink wave
+				-- Ink wave
 				for i = 1, 19 do
 					if i ~= 10 and i ~= 11 then
 						local number = tostring(i)
@@ -462,9 +461,8 @@ function SWEP:DrawWorldModelTranslucent()
 		end
 	end
 end
--- SWEP.DrawWorldModelTranslucent = SWEP.DrawWorldModel
 
---Show remaining amount of ink tank
+-- Show remaining amount of ink tank
 function SWEP:CustomAmmoDisplay()
 	self.AmmoDisplay = self.AmmoDisplay or {}
 	self.AmmoDisplay.Draw = true

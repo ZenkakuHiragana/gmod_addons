@@ -110,11 +110,11 @@ function SWEP:SharedPrimaryAttack(able, auto)
 			elseif ss.sp then
 				self.Owner:SendLua "surface.PlaySound(SplatoonSWEPs.TankEmpty)"
 			end
-			self:SetNextPlayEmpty(CurTime() + p.Delay * 2)
+			self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
 			self:SetPreviousHasInk(false)
 		elseif CurTime() > self:GetNextPlayEmpty() then
 			self:EmitSound "SplatoonSWEPs.EmptyShot"
-			self:SetNextPlayEmpty(CurTime() + p.Delay * 2)
+			self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
 		end
 		
 		return

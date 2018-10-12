@@ -220,7 +220,9 @@ function SWEP:SharedDeployBase()
 		self.Owner:SetJumpPower(self.JumpPower)
 		self.Owner:SetColor(color_white)
 		self.Owner:SetCrouchedWalkSpeed(.5)
-		ss.WeaponRecord[self.Owner].Recent[self.ClassName] = -os.time()
+		if ss.WeaponRecord[self.Owner] then
+			ss.WeaponRecord[self.Owner].Recent[self.ClassName] = -os.time()
+		end
 	end
 	
 	ss.ProtectedCall(self.SharedDeploy, self)
@@ -246,6 +248,10 @@ function SWEP:SharedThinkBase()
 	for k, v in pairs(self.Bodygroup or {}) do
 		self:SetBodygroup(k, v)
 	end
+	
+	local ShouldNoDraw = Either(self:GetNWBool "BecomeSquid", self.Owner:Crouching(), self:GetInInk())
+	self.Owner:DrawShadow(not ShouldNoDraw)
+	self:DrawShadow(not ShouldNoDraw)
 	
 	ss.ProtectedCall(self.SharedThink, self)
 end

@@ -24,6 +24,10 @@ function SWEP:ChangePlayermodel(data)
 	
 	self.Owner:SetSubMaterial()
 	self.Owner:SetPlayerColor(data.PlayerColor)
+	if self:GetNWInt "PMID" <= ss.PLAYER.BOY then
+		ss.ProtectedCall(self.Owner.SplatColors, self.Owner)
+	end
+	
 	local hands = self.Owner:GetHands()
 	if IsValid(hands) then
 		local info = player_manager.TranslatePlayerHands(player_manager.TranslateToPlayerModelName(data.Model))
