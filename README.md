@@ -46,7 +46,8 @@ The aim of this rework is the following:
 * Gears and gear abilities
 
 ## How to install this project
-Though this is still work in progress, you can download and test it.
+Though this is still work in progress, you can download and test it.  
+If you test it in multiplayer game, all players have to do as well.
 * Click **Clone or download** on the top-right, then **Download ZIP**.
 * Extract the zip into garrysmod/addons/.
 
