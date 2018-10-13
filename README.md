@@ -45,6 +45,11 @@ The aim of this rework is the following:
 * Dualies, Brellas and some Splatoon 2 features.
 * Gears and gear abilities
 
+## How to install this project
+Though this is still work in progress, you can download and test it.
+* Click **Clone or download** on the top-right, then **Download ZIP**.
+* Extract the zip into garrysmod/addons/.
+
 [1]:https://steamcommunity.com/sharedfiles/filedetails/?id=746789974
 [2]:https://steamcommunity.com/workshop/filedetails/?id=688236142
 [3]:https://www.dropbox.com/sh/c5srxjs38guatmv/AAAsvB8Y-k4KfyNZ4Y_WFEo9a?dl=0
