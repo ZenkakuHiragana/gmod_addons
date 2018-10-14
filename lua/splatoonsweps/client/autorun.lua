@@ -27,7 +27,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 		Moved = {},				-- 
 		Normals = {},			-- 
 		Origins = {},			-- 
-		u = {}, v = {},			-- 
+		u = {}, v = {},		-- 
 		Vertices = {},			-- 
 	},
 	WeaponRecord = {},			-- 
@@ -42,7 +42,19 @@ include "splatoonsweps/text.lua"
 include "userinfo.lua"
 
 local ss = SplatoonSWEPs
-if not ss.GetOption "Enabled" then SplatoonSWEPs = nil return end
+if not ss.GetOption "Enabled" then
+	for h, t in pairs(hook.GetTable()) do
+		for name, func in pairs(t) do
+			if ss.ProtectedCall(name.find, name, "SplatoonSWEPs") then
+				hook.Remove(h, name)
+			end
+		end
+	end
+	
+	table.Empty(SplatoonSWEPs)
+	SplatoonSWEPs = nil
+	return
+end
 
 local surf = ss.SequentialSurfaces
 local rt = ss.RenderTarget

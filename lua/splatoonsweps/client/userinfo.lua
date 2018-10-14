@@ -2,212 +2,7 @@
 -- Config menu
 
 local ss = SplatoonSWEPs
-if not ss then return end
-
-local function PopupConfig(icon, window)
-	window:SetIcon(configicon)
-	window:SetMinWidth(math.max(ScrW() / 3, 500))
-	window:SetMinHeight(math.max(ScrH() / 3, 300))
-	window:SetWidth(math.max(ScrW() / 2, 500))
-	window:SetHeight(math.max(ScrH() / 2, 300))
-	window:SetTitle(ss.Text.ConfigTitle)
-	window:SetDraggable(true)
-	window:SetSizable(true)
-	window:Center()
-	window.btnMinim:SetVisible(false)
-	window.btnMaxim:SetDisabled(false)
-	window.btnMaxim:SetToolTip "Reset the window size"
-	
-	local LabelError = window:Add "DLabel"
-	LabelError:SetPos(window:GetWide() * .4, window:GetTall() / 3 * 2 + 30)
-	LabelError:SetFont "DermaDefaultBold"
-	LabelError:SetText(ss.Text.Error.NotFoundPlayermodel)
-	LabelError:SetTextColor(Color(255, 128, 128))
-	LabelError:SetVisible(false)
-	LabelError:SizeToContents()
-	
-	local function GetColor() -- Get current color for preview model
-		local color = ss.GetColor(ss.GetOption "InkColor")
-		return Vector(color.r, color.g, color.b) / 255
-	end
-	
-	local function GetPlayermodel(i)
-		return ss.Playermodel[i or ss.GetOption "Playermodel"] or
-		player_manager.TranslatePlayerModel(GetConVar "cl_playermodel":GetString())
-	end
-	
-	local function SetPlayerModel(DModelPanel) -- Apply changes to preview model
-		local model = GetPlayermodel()
-		if not file.Exists(model, "GAME") then
-			model = LocalPlayer():GetModel()
-			LabelError:SetVisible(true)
-		else
-			LabelError:SetVisible(false)
-		end
-		
-		DModelPanel:SetModel(model)
-		local ent = DModelPanel.Entity
-		ent:SetPos(-Vector(160, 0, 0))
-		ent:SetSequence "idle_fist"
-		ent.GetPlayerColor = GetColor
-		ent.GetInkColorProxy = GetColor
-		if ss.CheckSplatoonPlayermodels[model] then
-			ent.GetInfoNum = LocalPlayer().GetInfoNum
-			ss.ProtectedCall(LocalPlayer().SplatColors, ent)
-		end
-		
-		local issquid = ss.CheckSplatoonPlayermodels[model]
-		local mins, maxs = ent:GetRenderBounds()
-		local top = issquid and 60 or mins.z + maxs.z
-		local campos = vector_up * top / 2
-		ent:SetEyeTarget(campos)
-		DModelPanel:SetCamPos(campos)
-		DModelPanel:SetLookAt(ent:GetPos() + campos)
-	end
-	
-	local Playermodel = window:Add "DModelPanel" -- Preview playermodel
-	function Playermodel:LayoutEntity() end
-	Playermodel:Dock(LEFT)
-	Playermodel:SetContentAlignment(5)
-	Playermodel:SetCursor "arrow"
-	Playermodel:SetDirectionalLight(BOX_RIGHT, color_white)
-	Playermodel:SetFOV(20)
-	Playermodel:SetWide(window:GetWide() * .35)
-	Playermodel:AlignLeft()
-	Playermodel:AlignTop()
-	SetPlayerModel(Playermodel)
-	
-	local LabelColor = window:Add "DLabel" -- Ink color:
-	LabelColor:SetPos(window:GetWide() * .35, 32)
-	LabelColor:SetText(ss.Text.InkColor)
-	LabelColor:SizeToContents()
-	
-	local CurrentColor = window:Add "DColorButton" -- Current color box on top left
-	CurrentColor:SetCursor "arrow"
-	CurrentColor:SetPos(window:GetWide() * .01, window:GetTall() * .01 + 24)
-	CurrentColor:SetSize(window:GetTall() / 16, window:GetTall() / 16)
-	CurrentColor:SetColor(ss.GetColor(ss.GetOption "InkColor"))
-	
-	local ColorSelector = window:Add "DColorPalette" -- Color picker
-	ColorSelector:SetPos(window:GetWide() * .35, 60)
-	ColorSelector:SetWide(window:GetWide() * .31)
-	ColorSelector:SetButtonSize(math.Round(ColorSelector:GetWide() / math.ceil(ss.MAX_COLORS / 3)))
-	ColorSelector:SetColorButtons(ss.InkColors)
-	for _, color in pairs(ColorSelector:GetChildren()) do
-		local i = color:GetID()
-		color:SetToolTip(ss.Text.ColorNames[i])
-		function color:DoClick()
-			local cvar = ss.GetConVar "InkColor"
-			if cvar then cvar:SetInt(i) end
-			CurrentColor:SetColor(ss.GetColor(i))
-		end
-	end
-	
-	local LabelModel = window:Add "DLabel" -- Playermodel:
-	LabelModel:SetPos(window:GetWide() * .35, window:GetTall() / 2)
-	LabelModel:SetText(ss.Text.Playermodel)
-	LabelModel:SizeToContents()
-	
-	local ModelSelector = window:Add "DIconLayout" -- Playermodel selection box
-	local y = window:GetTall() / 2 + LabelModel:GetTall()
-	ModelSelector:SetPos(window:GetWide() * .35, y)
-	ModelSelector:SetSize(window:GetWide() * .31, window:GetTall() - y)
-	local size = ModelSelector:GetWide() / #ss.Text.PlayermodelNames * 2
-	for i, c in ipairs(ss.Text.PlayermodelNames) do
-		local item = ModelSelector:Add "SpawnIcon"
-		item:SetSize(size, size)
-		item:SetModel(GetPlayermodel(i))
-		item:SetToolTip(c)
-		function item:DoClick()
-			local cvar = ss.GetConVar "Playermodel"
-			if cvar then cvar:SetInt(i) end
-			SetPlayerModel(Playermodel)
-		end
-	end
-	
-	local Options = window:Add "DScrollPanel" -- Group of checkboxes
-	local m = window:GetTall() * .01
-	Options:SetSize(window:GetWide() * .3, window:GetTall())
-	Options:DockMargin(m, m, m, m)
-	Options:DockPadding(m, m, m, m)
-	Options:Dock(RIGHT)
-	
-	local AvoidWalls
-	local OptionsConVar = {
-		"CanHealStand",
-		"CanHealInk",
-		"CanReloadStand",
-		"CanReloadInk",
-		"BecomeSquid",
-		"DrawInkOverlay",
-		"DrawCrosshair",
-		"NewStyleCrosshair",
-		"AvoidWalls",
-		"MoveViewmodel",
-		"DoomStyle",
-	}
-	for i = 1, #OptionsConVar do
-		local Check = Options:Add "DCheckBoxLabel"
-		Check:Dock(TOP)
-		Check:SetText(ss.Text.Options[i])
-		Check:SetConVar(ss.GetConVarName(OptionsConVar[i]))
-		Check:SetValue(ss.GetOption(OptionsConVar[i]))
-		Check:SizeToContents()
-		
-		if OptionsConVar[i] == "AvoidWalls" then
-			AvoidWalls = Check
-		elseif OptionsConVar[i] == "MoveViewmodel" then
-			Check:SetIndent(Options:GetWide() / 8)
-			function AvoidWalls:OnChange(checked)
-				Check:SetEnabled(checked)
-			end
-		end
-	end
-	
-	Options:InvalidateParent()
-	local before = ss.RenderTarget.BaseTexture:Width()
-	local ComboRes = Options:Add "DComboBox"
-	local ypos = math.min(Options:GetTall() * .85, Options:GetTall() - 60)
-	ComboRes:SetSortItems(false)
-	ComboRes:SetPos(0, ypos)
-	ComboRes:SetSize(Options:GetWide() * .85, 17)
-	ComboRes:SetToolTip(ss.Text.DescRTResolution)
-	ComboRes:SetValue(ss.Text.RTResolutionName[ss.GetOption "RTResolution" + 1])
-	for i = 1, #ss.Text.RTResolutionName do
-		ComboRes:AddChoice(ss.Text.RTResolutionName[i])
-	end
-	
-	local LabelResReq = Options:Add "DLabel"
-	LabelResReq:SetFont "DermaDefaultBold"
-	LabelResReq:SetPos(0, ypos - ComboRes:GetTall())
-	LabelResReq:SetText(ss.Text.RTRestartRequired)
-	LabelResReq:SetTextColor(Color(255, 128, 128))
-	LabelResReq:SetToolTip(ss.Text.DescRTResolution)
-	LabelResReq:SetVisible(before ~= ss.RTSize[ss.GetOption "RTResolution"])
-	LabelResReq:SizeToContents()
-	
-	local LabelRes = Options:Add "DLabel" -- Ink buffer size:
-	LabelRes:SetPos(0, ypos - ComboRes:GetTall() - LabelResReq:GetTall())
-	LabelRes:SetText(ss.Text.RTResolution)
-	LabelRes:SetToolTip(ss.Text.DescRTResolution)
-	LabelRes:SizeToContents()
-	
-	function ComboRes:OnSelect(index, value, data)
-		local cvar = ss.GetConVar "RTResolution"
-		if cvar then cvar:SetInt(index - 1) end
-		LabelResReq:SetVisible(before ~= ss.RTSize[index - 1])
-	end
-end
-
--- list.Set("DesktopWindows", "SplatoonSWEPs: Config menu", {
-	-- title = "SplatoonSWEPs",
-	-- icon = configicon,
-	-- width = 0,
-	-- height = 0,
-	-- onewindow = true,
-	-- init = PopupConfig,
--- })
-
+if not (ss and ss.GetOption "Enabled") then return end
 local dividerratio = 1 / 4
 local previewratio = .69
 local configicon = "splatoonsweps/icons/config.png"
@@ -223,14 +18,15 @@ local function GetPlayermodel(i)
 	local model = ss.Playermodel[i or ss.GetOption "Playermodel"] or
 	player_manager.TranslatePlayerModel(GetConVar "cl_playermodel":GetString())
 	local exists = file.Exists(model, "GAME")
-	if not exists then model = LocalPlayer():GetModel() end
+	if not exists and IsValid(LocalPlayer()) then
+		model = LocalPlayer():GetModel()
+	end
+	
 	return model, exists
 end
 
 local function SetPlayerModel(self) -- Apply changes to preview model
 	local model, exists = GetPlayermodel()
-	-- LabelError:SetVisible(not exists)
-	
 	local issquid = ss.CheckSplatoonPlayermodels[model]
 	local campos = issquid and 26 or 34
 	self.AnimTime = SysTime()
@@ -542,13 +338,16 @@ local function GeneratePreferenceTab(tab)
 	tab.Preference = tab:AddSheet("", vgui.Create "DPanel", "icon64/tool.png")
 	tab.Preference.Panel:DockMargin(8, 8, 8, 8)
 	tab.Preference.Panel:DockPadding(8, 8, 8, 8)
-	tab.Preference.LabelColor = tab.Preference.Panel:Add "DLabel" -- Ink color:
+	
+	-- "Ink color:" Label
+	tab.Preference.LabelColor = tab.Preference.Panel:Add "DLabel"
 	tab.Preference.LabelColor:Dock(TOP)
 	tab.Preference.LabelColor:SetText(ss.Text.InkColor)
 	tab.Preference.LabelColor:SetTextColor(tab.Preference.LabelColor:GetSkin().Colours.Label.Dark)
 	tab.Preference.LabelColor:SizeToContents()
 	
-	tab.Preference.ColorSelector = tab.Preference.Panel:Add "DColorPalette" -- Color picker
+	-- Color picker
+	tab.Preference.ColorSelector = tab.Preference.Panel:Add "DColorPalette"
 	tab.Preference.ColorSelector:Dock(TOP)
 	tab.Preference.ColorSelector:SetWide(ScrW() * .16)
 	tab.Preference.ColorSelector:SetColorButtons(ss.InkColors)
@@ -564,13 +363,15 @@ local function GeneratePreferenceTab(tab)
 		end
 	end
 	
-	tab.Preference.LabelModel = tab.Preference.Panel:Add "DLabel" -- Playermodel:
+	-- "Playermodel:" Label
+	tab.Preference.LabelModel = tab.Preference.Panel:Add "DLabel"
 	tab.Preference.LabelModel:Dock(TOP)
 	tab.Preference.LabelModel:SetText("\n\n" .. ss.Text.Playermodel)
 	tab.Preference.LabelModel:SetTextColor(tab.Preference.LabelModel:GetSkin().Colours.Label.Dark)
 	tab.Preference.LabelModel:SizeToContents()
 	
-	tab.Preference.ModelSelector = tab.Preference.Panel:Add "DIconLayout" -- Playermodel selection box
+	-- Playermodel selection box
+	tab.Preference.ModelSelector = tab.Preference.Panel:Add "DIconLayout"
 	tab.Preference.ModelSelector:Dock(TOP)
 	tab.Preference.ModelSelector:SetSize(ScrW() * .16, ScrH() * .16)
 	local size = tab.Preference.ModelSelector:GetWide() / #ss.Text.PlayermodelNames * 2
@@ -595,6 +396,50 @@ local function GeneratePreferenceTab(tab)
 				self.Model = new
 			end
 		end
+	end
+	
+	-- Ink resolution combo box
+	tab.Preference.ResolutionSelector = tab.Preference.Panel:Add "DComboBox"
+	tab.Preference.ResolutionSelector:SetSortItems(false)
+	tab.Preference.ResolutionSelector:Dock(BOTTOM)
+	tab.Preference.ResolutionSelector:SetSize(300, 17)
+	tab.Preference.ResolutionSelector:SetToolTip(ss.Text.DescRTResolution)
+	tab.Preference.ResolutionSelector:SetValue(ss.Text.RTResolutionName[ss.GetOption "RTResolution" + 1])
+	for i = 1, #ss.Text.RTResolutionName do
+		tab.Preference.ResolutionSelector:AddChoice(ss.Text.RTResolutionName[i])
+	end
+	
+	-- "Ink buffer size:" Label
+	tab.Preference.LabelResolution = tab.Preference.Panel:Add "DLabel"
+	tab.Preference.LabelResolution:Dock(BOTTOM)
+	tab.Preference.LabelResolution:SetText(ss.Text.RTResolution)
+	tab.Preference.LabelResolution:SetToolTip(ss.Text.DescRTResolution)
+	tab.Preference.LabelResolution:SetTextColor(tab.Preference.LabelResolution:GetSkin().Colours.Label.Dark)
+	tab.Preference.LabelResolution:SizeToContents()
+	
+	-- "Restart required" Label
+	tab.Preference.LabelResetRequired = tab.Preference.Panel:Add "DLabel"
+	tab.Preference.LabelResetRequired:SetFont "DermaDefaultBold"
+	tab.Preference.LabelResetRequired:Dock(BOTTOM)
+	tab.Preference.LabelResetRequired:SetText(ss.Text.RTRestartRequired)
+	tab.Preference.LabelResetRequired:SetTextColor(Color(255, 128, 128))
+	tab.Preference.LabelResetRequired:SetToolTip(ss.Text.DescRTResolution)
+	tab.Preference.LabelResetRequired:SetVisible(false)
+	tab.Preference.LabelResetRequired:SizeToContents()
+	
+	local RTSize
+	function tab.Preference.Panel:Think()
+		local selected = tab.Preference.ResolutionSelector:GetSelectedID() or ss.GetOption "RTResolution" + 1
+		selected = selected - 1
+		tab.Preference.LabelResetRequired:SetVisible(RTSize and RTSize ~= ss.RTSize[selected])
+		if RTSize or not ss.RenderTarget.BaseTexture then return end
+		RTSize = ss.RenderTarget.BaseTexture:Width()
+	end
+	
+	function tab.Preference.ResolutionSelector:OnSelect(index, value, data)
+		local cvar = ss.GetConVar "RTResolution"
+		if not cvar then return end
+		cvar:SetInt(index - 1)
 	end
 end
 
@@ -699,8 +544,8 @@ local function GenerateWeaponContent(self)
 		end
 		
 		local w = ss.IsValidInkling(LocalPlayer())
-		if self.WeaponClass == (w and w.ClassName) then return end
-		self.WeaponClass = w and w.ClassName
+		if self.PropPanel.SideOption.WeaponClass == (w and w.ClassName) then return end
+		self.PropPanel.SideOption.WeaponClass = w and w.ClassName
 		GenerateWeaponSpecificOptions(tab, self.PropPanel.SideOption)
 	end
 	

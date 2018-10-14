@@ -9,31 +9,31 @@ local function RegisterConVars(prefix, group)
 	local desc = CVarDesc[1]
 	group = group or ss.Options
 	for name, default in pairs(group) do
-		if istable(default) and not default[1] then
+		if istable(default) and default[1] == nil then
 			table.insert(CVarDesc, 1, desc[name])
 			RegisterConVars(prefix .. name:lower() .. "_", default)
 			continue
 		end
 		
-		if SERVER then
-			if prefix:find(ServerPrefix) and not isstring(default) then
-				CreateConVar(prefix .. name:lower(),
-				istable(default) and default[1] or -1,
-				ServerFlags, desc[name])
-				if istable(default) then group[name] = default[1] end
-			end
-		else
-			if prefix:find(ClientPrefix) and not istable(default) then
-				default = isbool(default) and (default and 1 or 0) or default
-				CreateClientConVar(prefix .. name:lower(), default, true, true, desc[name])
+		local IsServerside = istable(default)
+		local IsClientside = isstring(default)
+		if CLIENT and prefix:find(ClientPrefix) and not IsServerside then
+			default = isbool(default) and (default and 1 or 0) or default
+			CreateClientConVar(prefix .. name:lower(), default, true, true, desc[name])
+		end
+		
+		if prefix:find(ServerPrefix) and not IsClientside then
+			if IsServerside then
+				default = default[1]
+				group[name] = default
+				if isbool(default) then
+					default = default and "1" or "0"
+				end
+			else
+				default = -1
 			end
 			
-			if prefix:find(ServerPrefix) and not isstring(default) then
-				CreateConVar(prefix .. name:lower(),
-				istable(default) and default[1] or -1,
-				ServerFlags, desc[name])
-				if istable(default) then group[name] = default[1] end
-			end
+			CreateConVar(prefix .. name:lower(), default, ServerFlags, desc[name])
 		end
 	end
 	

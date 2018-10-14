@@ -27,7 +27,19 @@ include "splatoonsweps/text.lua"
 include "bsp.lua"
 
 local ss = SplatoonSWEPs
-if not ss.GetOption "Enabled" then SplatoonSWEPs = nil return end
+if not ss.GetOption "Enabled" then
+	for h, t in pairs(hook.GetTable()) do
+		for name, func in pairs(t) do
+			if ss.ProtectedCall(name.find, name, "SplatoonSWEPs") then
+				hook.Remove(h, name)
+			end
+		end
+	end
+	
+	table.Empty(SplatoonSWEPs)
+	SplatoonSWEPs = nil
+	return
+end
 
 concommand.Add("sv_splatoonsweps_clear", function(ply, cmd, args, argstr)
 	if not IsValid(ply) and game.IsDedicated() or IsValid(ply) and ply:IsAdmin() then

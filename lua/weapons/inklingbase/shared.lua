@@ -249,7 +249,7 @@ function SWEP:SharedThinkBase()
 		self:SetBodygroup(k, v)
 	end
 	
-	local ShouldNoDraw = Either(self:GetNWBool "BecomeSquid", self.Owner:Crouching(), self:GetInInk())
+	local ShouldNoDraw = Either(self:GetNWBool "BecomeSquid", self:Crouching(), self:GetInInk())
 	self.Owner:DrawShadow(not ShouldNoDraw)
 	self:DrawShadow(not ShouldNoDraw)
 	

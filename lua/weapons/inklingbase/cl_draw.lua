@@ -297,8 +297,8 @@ function SWEP:GetBombMeterPosition(inkconsumption)
 end
 
 function SWEP:DrawWorldModel()
+	if self:GetHolstering() then return end
 	if IsValid(self.Owner) then
-		if self:GetHolstering() then return end
 		if self:Crouching() then
 			if self:GetInInk() then
 				return
@@ -330,14 +330,18 @@ function SWEP:DrawWorldModel()
 	end
 	
 	if ss.ProtectedCall(self.PreDrawWorldModel, self) then return end
+	if not self:IsCarriedByLocalPlayer() then self:Think() end
 	self:SetupBones()
 	self:DrawModel()
-	
-	local bone_ent = self.Owner
-	if not IsValid(bone_ent) then bone_ent = self end -- When the weapon is dropped
-	if not self:IsCarriedByLocalPlayer() then self:Think() end
+end
+
+function SWEP:DrawWorldModelTranslucent()
+	if self:GetHolstering() then return end
+	if IsValid(self.Owner) and self:Crouching() then return end
 	
 	local cameradistance = 1
+	local bone_ent = self.Owner
+	if not IsValid(bone_ent) then bone_ent = self end -- When the weapon is dropped
 	if self:IsCarriedByLocalPlayer() then
 		cameradistance = self:GetCameraFade()
 	end

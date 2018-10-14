@@ -39,7 +39,6 @@ include "movement.lua"
 include "sound.lua"
 include "trajectory.lua"
 include "weapons.lua"
-cleanup.Register(ss.CleanupTypeInk)
 
 -- Returns which sides the polygon specified by given vertices is.
 -- Arguments:
@@ -434,16 +433,7 @@ function ss.GetTimeScale(ply)
 	and ply:GetLaggedMovementValue() or 1)
 end
 
--- Overriding footstep sound stops calling other PlayerFootstep hooks in other addons.
--- I decided to have one of their hook run my function.
-local FootstepTrace = vector_up * -20
-local hostkey, hostfunc, multisteps = hostkey, hostfunc, multisteps
-for k, v in pairs(hook.GetTable().PlayerFootstep or {}) do
-	if hostkey and hostfunc then multisteps = true break end
-	if isstring(k) then hostkey, hostfunc = k, v end
-end
-
--- This is my footstep hook.
+-- Play footstep sound of ink.
 function ss.PlayerFootstep(w, ply, pos, foot, soundname, volume, filter)
 	if SERVER and ss.mp then return end
 	if ply:Crouching() and w:GetNWBool "BecomeSquid" and w:GetGroundColor() < 0
@@ -456,19 +446,7 @@ function ss.PlayerFootstep(w, ply, pos, foot, soundname, volume, filter)
 	return soundname:find "chainlink" and true or nil
 end
 
-if hostkey and hostfunc then
-	hook.GetTable().PlayerFootstep[hostkey] = function(...)
-		local mystep = ss.hook "PlayerFootstep" (...)
-		local a, b, c, d, e, f = hostfunc(...)
-		if a == true then
-			return a, b, c, d, e, f
-		else
-			return mystep
-		end
-	end
-else -- No footstep hook is there.
-	hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", ss.hook "PlayerFootstep")
-end
+hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", ss.hook "PlayerFootstep")
 
 local weaponslot = {
 	weapon_roller = 0,
@@ -542,6 +520,7 @@ local function RegisterWeapons()
 					ClassID = table.KeyFromValue(ss.WeaponClassNames, v.ClassName),
 					Customized = v.Customized,
 					SheldonsPicks = v.SheldonsPicks,
+					Spawnable = true,
 					SpecialWeapon = v.Special,
 					SubWeapon = v.Sub,
 				})
@@ -563,6 +542,7 @@ local function RegisterWeapons()
 				ClassID = table.KeyFromValue(ss.WeaponClassNames, SWEP.ClassName),
 				Customized = SWEP.Customized,
 				SheldonsPicks = SWEP.SheldonsPicks,
+				Spawnable = true,
 				SpecialWeapon = SWEP.Special,
 				SubWeapon = SWEP.Sub,
 			})
@@ -576,6 +556,10 @@ hook.Add("PreGamemodeLoaded", "SplatoonSWEPs: Set weapon printnames", RegisterWe
 cvars.AddChangeCallback("gmod_language", function(convar, old, new)
 	CompileFile "splatoonsweps/text.lua" ()
 end, "SplatoonSWEPs: OnLanguageChanged")
+
+if ss.GetOption "Enabled" then
+	cleanup.Register(ss.CleanupTypeInk)
+end
 
 local nest = nil
 for hookname in pairs {CalcMainActivity = true, TranslateActivity = true} do
