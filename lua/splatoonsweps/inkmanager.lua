@@ -31,9 +31,9 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 		polys[i] = ss.To3D(v * radius, pos, ang)
 	end
 	
-	local inkqueue = 0
-	local rectsize = radius * rootpi
-	local sizevec = Vector(rectsize, rectsize)
+	if ss.mp and SERVER then SuppressHostEvents(ply) end
+	
+	local sizevec = Vector(radius, radius) * rootpi
 	local mins, maxs = ss.GetBoundingBox(polys, MIN_BOUND)
 	for node in ss.BSPPairs(polys) do
 		local surf = SERVER and node.Surfaces or ss.SequentialSurfaces
@@ -45,6 +45,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			
 			local e = EffectData()
 			e:SetAttachment(color)
+			e:SetEntity(ply)
 			e:SetFlags(inktype)
 			e:SetOrigin(pos)
 			e:SetScale(SERVER and index or i * (ss.Displacements[i] and -1 or 1))
@@ -64,6 +65,8 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			})
 		end
 	end
+	
+	if ss.mp and SERVER then SuppressHostEvents() end
 	
 	ss.WeaponRecord[ply].Inked[classname]
 	= (ss.WeaponRecord[ply].Inked[classname] or 0)
