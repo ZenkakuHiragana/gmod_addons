@@ -438,8 +438,6 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 			["$nolod"] = "1",
 			["$alpha"] = ".95",
 			["$alphatest"] = "1",
-			["$alphatestreference"] = ".5",
-			["$allowalphatocoverage"] = "1",
 		}
 	)
 	rt.WaterMaterial = CreateMaterial(

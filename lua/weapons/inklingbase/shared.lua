@@ -149,6 +149,8 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 	
 	if CLIENT or not self.Owner:IsPlayer() then return end
+	self.Owner:SetPlayerColor(self:GetInkColorProxy())
+	
 	local PMPath = ss.Playermodel[self:GetNWInt "PMID"]
 	if PMPath then
 		if file.Exists(PMPath, "GAME") then
@@ -159,13 +161,11 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 				SetOffsets = true,
 				PlayerColor = self:GetInkColorProxy(),
 			}
-			self.Owner:SetPlayerColor(self:GetInkColorProxy())
 		end
 	else
 		local mdl = self.BackupPlayerInfo.Playermodel
 		if mdl.Model ~= self.Owner:GetModel() then
 			self:ChangePlayermodel(mdl)
-			self.Owner:SetPlayerColor(self:GetInkColorProxy())
 		end
 	end
 end
