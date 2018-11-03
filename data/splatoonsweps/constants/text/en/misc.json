@@ -5,9 +5,9 @@
 	"CleanupInkMessage": "Cleaned up SplatoonSWEPs ink.",
 	"DescRTResolution": "Buffer size used in ink system.\nTo apply the change, restart your GMOD client.\nHigher option needs more VRAM.\nMake sure your graphics card has enough space of video memory.",
 	"Sidemenu": {
-		"CommonOptions": "Common options",
+		"CommonOptions": "Common preferences",
 		"Equipped": "Equipped",
-		"Specific": "Weapon-specific options",
+		"Specific": "Weapon-specific preferences",
 		"SortPrefix": "Sort: ",
 		"Sort": {
 			"Name": "Name",
