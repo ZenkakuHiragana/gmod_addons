@@ -142,9 +142,9 @@ if SERVER then
 				self.v.PressedKeys["Shift"] = false
 				self.v.PressedKeys["Space"] = false
 			elseif not IsValid(self.v:GetDriver()) and --The vehicle is normal vehicle.
-				self.v.GetDriver = self.v.OldGetDriver or self.v.GetDriver
 				isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) and 
 				isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) then
+				self.v.GetDriver = self.v.OldGetDriver or self.v.GetDriver
 				self.v:StartEngine(false) --Reset states.
 				self.v:SetHandbrake(true)
 				self.v:SetThrottle(0)
