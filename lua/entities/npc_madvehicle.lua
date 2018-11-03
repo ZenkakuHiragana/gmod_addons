@@ -207,7 +207,8 @@ if SERVER then
 			(self.v.IsScar and (self.v:IsDestroyed() or self.v.Fuel <= 0)) or --It's SCAR and destroyed or out of fuel.
 			(self.v.IsSimfphyscar and (self.v:GetCurHealth() <= 0)) then --It's Simfphys Vehicle and destroyed.
 			SafeRemoveEntity(self) --Then go back to normal.
-		return end
+			return
+		end
 		
 		self:SetPos(self.v:GetPos() + vector_up * self.CollisionHeight)
 		if not self:Validate(self.e) then --If it doesn't have an enemy.
@@ -392,10 +393,6 @@ if SERVER then
 				v:AddEntityRelationship(self, relationship, 0) --But NPCs who aren't using relationship system don't.
 			end
 		end
-	end
-	
-	function ENT:GetInfoNum(cvarname, default) --For Simfphys vehicles.
-		return default
 	end
 else --if CLIENT
 	function ENT:Initialize()
