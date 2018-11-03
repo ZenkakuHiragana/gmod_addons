@@ -18,20 +18,21 @@ ENT.Modelname = "models/props_wasteland/cargo_container01.mdl"
 
 if SERVER then	
 	--Setting ConVars.
-	CreateConVar("madvehicle_targetplayer", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets players.")
-	CreateConVar("madvehicle_targetnextbot", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets nextbots.")
-	CreateConVar("madvehicle_targetmilitary", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets military NPCs(Human grunts and assassins).")
-	CreateConVar("madvehicle_targetmetropolice", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets metropolices and manhacks.")
-	CreateConVar("madvehicle_targetcombine", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets combine forces.")
-	CreateConVar("madvehicle_targetcitizen", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets citizen characters.")
-	CreateConVar("madvehicle_targetzombie", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets zombies.")
-	CreateConVar("madvehicle_targetantlion", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets antlions.")
-	CreateConVar("madvehicle_targetother", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets NPCs who aren't affected by any other Mad Vehicle ConVars.")
-	CreateConVar("madvehicle_enemyrange", 4500, FCVAR_ARCHIVE, "Mad Vehicle: Mad Vehicle targets an enemy within this range.")
-	CreateConVar("madvehicle_detectionrange", 30, FCVAR_ARCHIVE, "Mad Vehicle: A vehicle within this distance will become mad.")
-	CreateConVar("madvehicle_playmusic", 0, FCVAR_ARCHIVE, "Mad Vehicle: If 1, the vehicles play a music.")
-	CreateConVar("madvehicle_deleteonstuck", 10, FCVAR_ARCHIVE, "Mad Vehicle: Deletes Mad Vehicle if it gets stuck for the given seconds. 0 to disable.")
-	CreateConVar("madvehicle_soundlevel", 85, FCVAR_ARCHIVE, "Mad Vehicle: The sound level of the music.")
+	local TargetPlayer = CreateConVar("madvehicle_targetplayer", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets players.")
+	local TargetNextbot = CreateConVar("madvehicle_targetnextbot", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets nextbots.")
+	local TargetMilitary = CreateConVar("madvehicle_targetmilitary", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets military NPCs(Human grunts and assassins).")
+	local TargetMetropolice = CreateConVar("madvehicle_targetmetropolice", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets metropolices and manhacks.")
+	local TargetCombine = CreateConVar("madvehicle_targetcombine", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets combine forces.")
+	local TargetCitizen = CreateConVar("madvehicle_targetcitizen", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets citizen characters.")
+	local TargetZombie = CreateConVar("madvehicle_targetzombie", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets zombies.")
+	local TargetAntlion = CreateConVar("madvehicle_targetantlion", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets antlions.")
+	local TargetOther = CreateConVar("madvehicle_targetother", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets NPCs who aren't affected by any other Mad Vehicle ConVars.")
+	local TargetVehicle = CreateConVar("madvehicle_targetvehicle", 0, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets other vehicles.")
+	local EnemyRange = CreateConVar("madvehicle_enemyrange", 4500, FCVAR_ARCHIVE, "Mad Vehicle: Mad Vehicle targets an enemy within this range.")
+	local DetectionRange = CreateConVar("madvehicle_detectionrange", 30, FCVAR_ARCHIVE, "Mad Vehicle: A vehicle within this distance will become mad.")
+	local PlayMusic = CreateConVar("madvehicle_playmusic", 0, FCVAR_ARCHIVE, "Mad Vehicle: If 1, the vehicles play a music.")
+	local DeleteOnStuck = CreateConVar("madvehicle_deleteonstuck", 10, FCVAR_ARCHIVE, "Mad Vehicle: Deletes Mad Vehicle if it gets stuck for the given seconds. 0 to disable.")
+	local SoundLevel = CreateConVar("madvehicle_soundlevel", 85, FCVAR_ARCHIVE, "Mad Vehicle: The sound level of the music.")
 	
 	--Target NPC filter using NPC:Classify().
 	local antlion_class = {
@@ -72,25 +73,28 @@ if SERVER then
 		if v:IsNPC() then
 			local c = v:Classify()
 			if antlion_class[c] then
-				return GetConVar("madvehicle_targetantlion"):GetBool()
+				return TargetAntlion:GetBool()
 			elseif citizen_class[c] then
-				return GetConVar("madvehicle_targetcitizen"):GetBool()
+				return TargetCitizen:GetBool()
 			elseif combine_class[c] then
-				return GetConVar("madvehicle_targetcombine"):GetBool()
+				return TargetCombine:GetBool()
 			elseif police_class[c] then
-				return GetConVar("madvehicle_targetmetropolice"):GetBool()
+				return TargetMetropolice:GetBool()
 			elseif military_class[c] then
-				return GetConVar("madvehicle_targetmilitary"):GetBool()
+				return TargetMilitary:GetBool()
 			elseif zombie_class[c] then
-				return GetConVar("madvehicle_targetzombie"):GetBool()
+				return TargetZombie:GetBool()
 			else
-				return GetConVar("madvehicle_targetother"):GetBool()
+				return TargetOther:GetBool()
 			end
-		elseif v.Type == "nextbot" and GetConVar("madvehicle_targetnextbot"):GetBool() then
+		elseif v.Type == "nextbot" and TargetNextbot:GetBool() then
 			return true
-		elseif v:IsPlayer() and GetConVar("madvehicle_targetplayer"):GetBool() then
+		elseif v:IsPlayer() and TargetPlayer:GetBool() then
 			return true
+		elseif v:IsVehicle() and TargetVehicle:GetBool() then
+			return v.IsScar and v:HasDriver() or isfunction(v.GetDriver) and IsValid(v:GetDriver())
 		end
+		
 		return false
 	end
 	
@@ -125,6 +129,7 @@ if SERVER then
 					self.v:NotTurning()
 				end
 			elseif self.v.IsSimfphyscar then --The vehicle is Simfphys Vehicle.
+				self.v.GetDriver = self.v.OldGetDriver or self.v.GetDriver
 				if not IsValid(self.v:GetDriver()) then --If there's no driver, stop the engine.
 					self.v:SetActive(false)
 					self.v:StopEngine()
@@ -137,6 +142,7 @@ if SERVER then
 				self.v.PressedKeys["Shift"] = false
 				self.v.PressedKeys["Space"] = false
 			elseif not IsValid(self.v:GetDriver()) and --The vehicle is normal vehicle.
+				self.v.GetDriver = self.v.OldGetDriver or self.v.GetDriver
 				isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) and 
 				isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) then
 				self.v:StartEngine(false) --Reset states.
@@ -178,7 +184,7 @@ if SERVER then
 			IsValid(v) and --Not a NULL entity.
 			v:GetClass() ~= "npc_madvehicle" and --Not me.
 			v:WorldSpaceCenter():DistToSqr(self.v:WorldSpaceCenter()) < self.TargetRange and --Within a distance.
-			(v:IsNPC() or v.Type == "nextbot" or 
+			(v:IsNPC() or v:IsVehicle() or v.Type == "nextbot" or
 			(v:IsPlayer() and v:Alive() and not GetConVar("ai_ignoreplayers"):GetBool()))
 		if not valid then return false end
 		
@@ -322,14 +328,14 @@ if SERVER then
 		self:SetModel(self.Modelname)
 		
 		--Pick up a vehicle in the given sphere.
-		local distance = GetConVar("madvehicle_detectionrange"):GetFloat()
+		local distance = DetectionRange:GetFloat()
 		for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
 			if v:IsVehicle() then
 				if v.IsScar then --If it's a SCAR.
 					if not v:HasDriver() then --If driver's seat is empty.
 						self.v = v
-						self.v.HasDriver = function() return true end --SCAR script assumes there's a driver.
-						self.v.SpecialThink = function() end --Tanks or something sometimes make errors so disable thinking.
+						v.HasDriver = function() return true end --SCAR script assumes there's a driver.
+						v.SpecialThink = function() end --Tanks or something sometimes make errors so disable thinking.
 						v:StartCar()
 					end
 				elseif v.IsSimfphyscar and v:IsInitialized() then --If it's a Simfphys Vehicle.
@@ -337,12 +343,16 @@ if SERVER then
 						self.v = v
 						v:SetActive(true)
 						v:StartEngine()
+						v.OldGetDriver = v.GetDriver
+						function v:GetDriver() return self end
 					end
 				elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then --Normal vehicles should use these functions. (SCAR and Simfphys cannot.)
 					if isfunction(v.GetWheelCount) and v:GetWheelCount() and not IsValid(v:GetDriver()) then
 						self.v = v
 						v:EnableEngine(true)
 						v:StartEngine(true)
+						v.OldGetDriver = v.GetDriver
+						function v:GetDriver() return self end
 					end
 				end
 			end
@@ -357,7 +367,7 @@ if SERVER then
 		if not isvector(max) then min, max = self.v:GetModelBounds() end --If getting hit box bounds is failed, get model bounds instead.
 		if not isvector(max) then max = vector_up * math.random(80, 200) end --If even getting model bounds is failed, set a random value.
 		self.moving = CurTime()
-		self.TargetRange = GetConVar("madvehicle_enemyrange"):GetFloat()^2 --Target range is squared to prevent from calculating sqrt()
+		self.TargetRange = EnemyRange:GetFloat()^2 --Target range is squared to prevent from doing sqrt()
 		
 		local tr = util.TraceHull({start = self.v:GetPos() + vector_up * max.z, 
 			endpos = self.v:GetPos(), ignoreworld = true,
@@ -366,10 +376,10 @@ if SERVER then
 		if self.CollisionHeight < 10 then self.CollisionHeight = max.z end
 		self.v:DeleteOnRemove(self)
 		
-		if GetConVar("madvehicle_playmusic"):GetBool() and 
+		if PlayMusic:GetBool() and 
 			#ents.FindByClass("npc_madvehicle") < 2 then --Only one Mad Vehicle can play the music.
 			self.loop = CreateSound(self, "madvehicle_music.wav")
-			self.loop:SetSoundLevel(GetConVar("madvehicle_soundlevel"):GetInt())
+			self.loop:SetSoundLevel(SoundLevel:GetInt())
 			self.loop:Play()
 		end
 		
