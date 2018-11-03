@@ -92,7 +92,9 @@ if SERVER then
 		elseif v:IsPlayer() and TargetPlayer:GetBool() then
 			return true
 		elseif v:IsVehicle() and TargetVehicle:GetBool() then
-			return v.IsScar and v:HasDriver() or isfunction(v.GetDriver) and IsValid(v:GetDriver())
+			return IsValid(v.MadVehicle)
+			or v.IsScar and v:HasDriver()
+			or isfunction(v.GetDriver) and IsValid(v:GetDriver())
 		end
 		
 		return false
@@ -119,6 +121,7 @@ if SERVER then
 	function ENT:OnRemove()
 		--By undoing, driiving, diving in water, or getting stuck, and the vehicle is remaining.
 		if IsValid(self.v) and self.v:IsVehicle() then
+			self.v.MadVehicle = nil
 			if self.v.IsScar then --If the vehicle is SCAR.
 				self.v.HasDriver = self.v.BaseClass.HasDriver --Restore some functions.
 				self.v.SpecialThink = self.v.BaseClass.SpecialThink
@@ -182,7 +185,8 @@ if SERVER then
 	function ENT:Validate(v)
 		local valid = 
 			IsValid(v) and --Not a NULL entity.
-			v:GetClass() ~= "npc_madvehicle" and --Not me.
+			v.MadVehicle ~= self and --It's mad and not my vehicle
+			v:GetClass() ~= "npc_madvehicle" and --Not me
 			v:WorldSpaceCenter():DistToSqr(self.v:WorldSpaceCenter()) < self.TargetRange and --Within a distance.
 			(v:IsNPC() or v:IsVehicle() or v.Type == "nextbot" or
 			(v:IsPlayer() and v:Alive() and not GetConVar("ai_ignoreplayers"):GetBool()))
@@ -337,22 +341,21 @@ if SERVER then
 						v.HasDriver = function() return true end --SCAR script assumes there's a driver.
 						v.SpecialThink = function() end --Tanks or something sometimes make errors so disable thinking.
 						v:StartCar()
+						v.MadVehicle = self
 					end
 				elseif v.IsSimfphyscar and v:IsInitialized() then --If it's a Simfphys Vehicle.
 					if not IsValid(v:GetDriver()) then --Fortunately, Simfphys Vehicles can use GetDriver()
 						self.v = v
 						v:SetActive(true)
 						v:StartEngine()
-						v.OldGetDriver = v.GetDriver
-						function v:GetDriver() return self end
+						v.MadVehicle = self
 					end
 				elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then --Normal vehicles should use these functions. (SCAR and Simfphys cannot.)
 					if isfunction(v.GetWheelCount) and v:GetWheelCount() and not IsValid(v:GetDriver()) then
 						self.v = v
 						v:EnableEngine(true)
 						v:StartEngine(true)
-						v.OldGetDriver = v.GetDriver
-						function v:GetDriver() return self end
+						v.MadVehicle = self
 					end
 				end
 			end
@@ -389,6 +392,10 @@ if SERVER then
 				v:AddEntityRelationship(self, relationship, 0) --But NPCs who aren't using relationship system don't.
 			end
 		end
+	end
+	
+	function ENT:GetInfoNum(cvarname, default) --For Simfphys vehicles.
+		return default
 	end
 else --if CLIENT
 	function ENT:Initialize()
