@@ -205,7 +205,8 @@ if SERVER then
 			IsValid(self.v:GetDriver()) or --it has an driver.
 			self:WaterLevel() > 1 or --It fall into water.
 			(self.v.IsScar and (self.v:IsDestroyed() or self.v.Fuel <= 0)) or --It's SCAR and destroyed or out of fuel.
-			(self.v.IsSimfphyscar and (self.v:GetCurHealth() <= 0)) then --It's Simfphys Vehicle and destroyed.
+			(self.v.IsSimfphyscar and (self.v:GetCurHealth() <= 0)) or --It's Simfphys Vehicle and destroyed.
+			(VC and self.v:GetClass() == "prop_vehicle_jeep" and self.v:VC_GetHealth(false) < 1) then -- VCMod adds health system to vehicles.
 			SafeRemoveEntity(self) --Then go back to normal.
 			return
 		end
