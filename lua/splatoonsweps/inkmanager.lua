@@ -33,7 +33,10 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	
 	if ss.mp and SERVER then SuppressHostEvents(ply) end
 	
-	local sizevec = Vector(radius, radius) * rootpi
+	local boundsize = radius * rootpi * ratio / 2
+	local axis = Vector(0, 1)
+	axis:Rotate(Angle(0, 90 + angle, 0))
+	
 	local mins, maxs = ss.GetBoundingBox(polys, MIN_BOUND)
 	for node in ss.BSPPairs(polys) do
 		local surf = SERVER and node.Surfaces or ss.SequentialSurfaces
@@ -53,10 +56,21 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			util.Effect("SplatoonSWEPsDrawInk", e)
 			
 			local pos2d = ss.To2D(pos, surf.Origins[i], surf.Angles[i])
-			local bmins, bmaxs = pos2d - sizevec, pos2d + sizevec
+			local t, bounds = radius * ratio, {} -- 0 <= t <= 2 * radius, step radius * ratio
+			while t <= radius * (2 - ratio) do
+				local p = pos2d - axis * (radius - t)
+				bounds[{p.x - boundsize, p.y - boundsize, p.x + boundsize, p.y + boundsize}] = true
+				t = t + radius * ratio
+			end
+			
+			if ratio < .75 then
+				t = pos2d + axis * radius * (1 - ratio)
+				bounds[{t.x - boundsize, t.y - boundsize, t.x + boundsize, t.y + boundsize}] = true
+			end
+			
 			ss.AddInkRectangle(surf.InkCircles[i], CurTime(), {
 				angle = localang,
-				bounds = {bmins.x, bmins.y, bmaxs.x, bmaxs.y},
+				bounds = bounds,
 				color = color,
 				pos = pos2d,
 				radius = radius,
@@ -86,7 +100,7 @@ end
 --   number sz       | Ink surface Z-position.
 --   table newink    | A table which describes the new ink.
 --     number angle  | Ink pattern angle in degrees.
---     table bounds  | Ink bounding box, {min.x, min.y, max.x, max.y}
+--     table bounds  | Ink bounding box, {[{min.x, min.y, max.x, max.y}] = true, ...}
 --     number color  | Color code.
 --     Vector pos    | Ink position in surface-related system.
 --     number radius | Ink characteristic radius.
@@ -94,42 +108,37 @@ end
 --     number texid  | Ink pattern ID.
 local MIN_BOUND_AREA = 1 -- minimum ink bounding box area
 function ss.AddInkRectangle(ink, sz, newink)
-	local nb, nr = newink.bounds, newink.ratio
 	for r, z in pairs(ink) do
-		local bounds, lr = r.bounds, r.lastratio
-		if not next(bounds) then
-			if lr > .6 then
-				ink[r] = nil
-			else
-				r.lastratio = lr + 1e-4
-			end
-		else
-			for b in pairs(bounds) do
-				local n1, n2, n3, n4 = unpack(nb) -- xmin, ymin, xmax, ymax
-				local b1, b2, b3, b4 = unpack(b)
-				if (b3 - b1) * (b4 - b2) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
-				if n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2 then continue end
-				r.lastratio, r.bounds[b] = nr
-				local x = {n1, n3, b1, b3} table.sort(x)
-				local y = {n2, n4, b2, b4} table.sort(y)
-				local x1, x2, x3, x4 = unpack(x)
-				local y1, y2, y3, y4 = unpack(y)
-				local t = {
-					{x1, y1, x2, y2}, {x2, y1, x3, y2}, {x3, y1, x4, y2},
-					{x1, y2, x2, y3}, {x2, y2, x3, y3}, {x3, y2, x4, y3},
-					{x1, y3, x2, y4}, {x2, y3, x3, y4}, {x3, y3, x4, y4},
-				}
-				for i = 1, 9 do
-					local c = t[i]
-					local c1, c2, c3, c4 = unpack(c)
-					r.bounds[c] = b1 < c3 and b3 > c1 and b2 < c4 and b4 > c2 and
-						(n1 >= c3 or n3 <= c1 or n2 >= c4 or n4 <= c2) or nil
+		if next(r.bounds) then
+			for nb in pairs(newink.bounds) do
+				for b in pairs(r.bounds) do
+					local n1, n2, n3, n4 = unpack(nb) -- xmin, ymin, xmax, ymax
+					local b1, b2, b3, b4 = unpack(b)
+					if (b3 - b1) * (b4 - b2) < MIN_BOUND_AREA then r.bounds[b] = nil continue end
+					if n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2 then continue end
+					r.bounds[b] = nil
+					local x = {n1, n3, b1, b3} table.sort(x)
+					local y = {n2, n4, b2, b4} table.sort(y)
+					local x1, x2, x3, x4 = unpack(x)
+					local y1, y2, y3, y4 = unpack(y)
+					local t = {
+						{x1, y1, x2, y2}, {x2, y1, x3, y2}, {x3, y1, x4, y2},
+						{x1, y2, x2, y3}, {x2, y2, x3, y3}, {x3, y2, x4, y3},
+						{x1, y3, x2, y4}, {x2, y3, x3, y4}, {x3, y3, x4, y4},
+					}
+					for i = 1, 9 do
+						local c = t[i]
+						local c1, c2, c3, c4 = unpack(c)
+						r.bounds[c] = b1 < c3 and b3 > c1 and b2 < c4 and b4 > c2 and
+							(n1 >= c3 or n3 <= c1 or n2 >= c4 or n4 <= c2) or nil
+					end
 				end
 			end
+		else
+			ink[r] = nil
 		end
 	end
 	
-	newink.bounds = {[nb] = true}
 	ink[newink] = sz
 end
 
