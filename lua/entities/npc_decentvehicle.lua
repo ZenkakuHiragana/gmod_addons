@@ -8,7 +8,7 @@ list.Set("NPC", "npc_decentvehicle", {
 DecentVehicleDestination = nil
 
 ENT.Base = "base_entity"
-ENT.Type = "ai"
+ENT.Type = "anim"
 
 ENT.PrintName = "Decent Vehicle"
 ENT.Author = "Himajin Jichiku"
@@ -16,7 +16,7 @@ ENT.Contact = ""
 ENT.Purpose = "Decent Vehicle."
 ENT.Instruction = ""
 ENT.Spawnable = false
-ENT.Modelname = "models/props_wasteland/cargo_container01.mdl"
+ENT.Modelname = "models/player/gman_high.mdl"
 
 if SERVER then
 	local DetectionRange = CreateConVar("madvehicle_detectionrange", 30, FCVAR_ARCHIVE, "Mad Vehicle: A vehicle within this distance will become mad.")
@@ -48,6 +48,13 @@ if SERVER then
 				self.v.PressedKeys["D"] = false
 				self.v.PressedKeys["Shift"] = false
 				self.v.PressedKeys["Space"] = false
+				
+				self.v.Light_R = false
+				self.v.Light_L = false
+				net.Start("simfphys_turnsignal")
+				net.WriteEntity(self.v)
+				net.WriteInt(0, 32)
+				net.Broadcast()
 			elseif not IsValid(self.v:GetDriver()) and --The vehicle is normal vehicle.
 				isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) and 
 				isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) then
@@ -115,8 +122,68 @@ if SERVER then
 			self.v:SetActive(true)
 			self.v:StartEngine()
 			self.v:PlayerSteerVehicle(self, steer < 0 and -steer or 0, steer > 0 and steer or 0)
+			
+			local steering_s = self.v:GetVehicleSteer()
+			if steering_s >= .5 then
+				if self.v.Light_R == nil or not self.v.Light_R then
+					net.Start("simfphys_turnsignal")
+					net.WriteEntity(self.v)
+					net.WriteInt(3, 32)
+					net.Broadcast()
+					self.v.Light_R = true
+				end
+			elseif steering_s <= -.5 then
+				if self.v.Light_L == nil or not self.v.Light_L then
+					net.Start("simfphys_turnsignal")
+					net.WriteEntity(self.v)
+					net.WriteInt(2, 32)
+					net.Broadcast()
+					self.v.Light_L = true
+				end
+			end
+			
+			if steering_s < .5 and steering_s > -.5 then
+				net.Start("simfphys_turnsignal")
+				net.WriteEntity(self.v)
+				net.WriteInt(0, 32)
+				net.Broadcast()
+				self.v.Light_R = false
+				self.v.Light_L = false
+			end
 		elseif isfunction(self.v.SetSteering) then
 			self.v:SetSteering(steer, 0)
+			
+			if not VC then return end
+			if not (IsValid(self) and IsValid(self.v)) then return end
+			local states = self.v:VC_getStates()
+			if steering >= .5 then
+				if not states.TurnLightRightOn then
+					self.v:VC_setTurnLightRight(true)
+				end
+			else
+				if not states.TurnLightLeftOn then
+					self.v:VC_setTurnLightLeft(true)
+				end
+			end
+			
+			if -.5 < steering and steering < .5 then
+				self.v:VC_setTurnLightLeft(false)
+				self.v:VC_setTurnLightRight(false)
+			end
+		end
+	end
+	
+	function ENT:GetDriverPos()
+		if self.v.IsScar then
+			local seat = self.v.Seats[1]
+			return seat:GetPos(), seat:GetAngles() + Angle(0, 90, 0)
+		elseif self.v.IsSimfphyscar then
+			local seat = self.v.DriverSeat
+			return seat:GetPos(), seat:GetAngles() + Angle(0, 90, 0)
+		else
+			local att = self.v:GetAttachment(self.v:LookupAttachment("vehicle_feet_passenger0"))
+			if not att then return end
+			return att.Pos, att.Ang
 		end
 	end
 	
@@ -133,7 +200,6 @@ if SERVER then
 			return
 		end
 		
-		self:SetPos(self.v:GetPos() + vector_up * self.CollisionHeight)
 		if not DecentVehicleDestination or DecentVehicleDestination:Distance(self:GetPos()) < 100 then --If it doesn't have an enemy.
 			--Stop moving.
 			self:SetHandbrake(true)
@@ -164,13 +230,6 @@ if SERVER then
 			local steer = right.z > 0 and steer_amount or -steer_amount --Actual steering parameter.
 			if vectdot < -0.12 then steer = steer * -1 end
 			
-			--If the vehicle is too close to the enemy or the vehicle shouldn't go backward, invert the throttle.
-			-- if (dist:Length2DSqr() < 250000 and vectdot < 0) then
-				-- throttle = throttle * -1
-			-- end
-			
-			-- throttle = throttle * math.Clamp(dist:Length2D() / (self.v:GetSpeed() * 100 + 1), 0, 1)
-			
 			self:SetHandbrake(false)
 			if dist:Length2D() * .8 < self.v:GetVelocity():Length() + 50 then
 				throttle = 0
@@ -178,7 +237,6 @@ if SERVER then
 					self:SetHandbrake(true)
 				end
 			end
-			print(throttle, dist:Length2D(), self.v:GetVelocity():Length())
 			
 			--Set steering parameter.
 			local ph = self.v:GetPhysicsObject()
@@ -191,7 +249,6 @@ if SERVER then
 	end
 	
 	function ENT:Initialize()
-		self:SetNoDraw(true)
 		self:SetMoveType(MOVETYPE_NONE)
 		self:SetModel(self.Modelname)
 		
@@ -236,6 +293,12 @@ if SERVER then
 		e:SetEntity(self.v)
 		util.Effect("propspawn", e) --Perform a spawn effect.
 		
+		local seatpos, seatang = self:GetDriverPos()
+		self:SetSequence("drive_jeep")
+		self:SetPos(seatpos)
+		self:SetAngles(seatang)
+		self:SetParent(self.v)
+		
 		local min, max = self.v:GetHitBoxBounds(0, 0) --NPCs aim at the top of the vehicle referred by hit box.
 		if not isvector(max) then min, max = self.v:GetModelBounds() end --If getting hit box bounds is failed, get model bounds instead.
 		if not isvector(max) then max = vector_up * math.random(80, 200) end --If even getting model bounds is failed, set a random value.
@@ -249,8 +312,15 @@ if SERVER then
 		self.v:DeleteOnRemove(self)
 	end
 else --if CLIENT
+	function ENT:Draw()
+		local pos = self:GetPos()
+		self:SetPos(pos)
+		self:SetupBones()
+		self:DrawModel()
+		self:SetPos(pos)
+	end
+	
 	function ENT:Initialize()
-		self:SetNoDraw(true)
 		self:SetMoveType(MOVETYPE_NONE)
 		self:SetModel(self.Modelname)
 	end
