@@ -156,7 +156,7 @@ if SERVER then
 			if not VC then return end
 			if not (IsValid(self) and IsValid(self.v)) then return end
 			local states = self.v:VC_getStates()
-			if steering >= .5 then
+			if steer >= .5 then
 				if not states.TurnLightRightOn then
 					self.v:VC_setTurnLightRight(true)
 				end
@@ -166,7 +166,7 @@ if SERVER then
 				end
 			end
 			
-			if -.5 < steering and steering < .5 then
+			if -.5 < steer and steer < .5 then
 				self.v:VC_setTurnLightLeft(false)
 				self.v:VC_setTurnLightRight(false)
 			end
