@@ -5,118 +5,22 @@ list.Set("NPC", "npc_decentvehicle", {
 	Category = "GreatZenkakuMan's NPCs"
 })
 
+DecentVehicleDestination = nil
+
 ENT.Base = "base_entity"
 ENT.Type = "ai"
 
-ENT.PrintName = "Mad Vehicle"
+ENT.PrintName = "Decent Vehicle"
 ENT.Author = "Himajin Jichiku"
 ENT.Contact = ""
-ENT.Purpose = "Mad Vehicle."
+ENT.Purpose = "Decent Vehicle."
 ENT.Instruction = ""
 ENT.Spawnable = false
 ENT.Modelname = "models/props_wasteland/cargo_container01.mdl"
 
-if SERVER then	
-	--Setting ConVars.
-	local TargetPlayer = CreateConVar("madvehicle_targetplayer", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets players.")
-	local TargetNextbot = CreateConVar("madvehicle_targetnextbot", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets nextbots.")
-	local TargetMilitary = CreateConVar("madvehicle_targetmilitary", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets military NPCs(Human grunts and assassins).")
-	local TargetMetropolice = CreateConVar("madvehicle_targetmetropolice", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets metropolices and manhacks.")
-	local TargetCombine = CreateConVar("madvehicle_targetcombine", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets combine forces.")
-	local TargetCitizen = CreateConVar("madvehicle_targetcitizen", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets citizen characters.")
-	local TargetZombie = CreateConVar("madvehicle_targetzombie", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets zombies.")
-	local TargetAntlion = CreateConVar("madvehicle_targetantlion", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets antlions.")
-	local TargetOther = CreateConVar("madvehicle_targetother", 1, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets NPCs who aren't affected by any other Mad Vehicle ConVars.")
-	local TargetVehicle = CreateConVar("madvehicle_targetvehicle", 0, FCVAR_ARCHIVE, "Mad Vehicle: Whether or not Mad Vehicle targets other vehicles.")
-	local EnemyRange = CreateConVar("madvehicle_enemyrange", 4500, FCVAR_ARCHIVE, "Mad Vehicle: Mad Vehicle targets an enemy within this range.")
+if SERVER then
 	local DetectionRange = CreateConVar("madvehicle_detectionrange", 30, FCVAR_ARCHIVE, "Mad Vehicle: A vehicle within this distance will become mad.")
-	local PlayMusic = CreateConVar("madvehicle_playmusic", 0, FCVAR_ARCHIVE, "Mad Vehicle: If 1, the vehicles play a music.")
 	local DeleteOnStuck = CreateConVar("madvehicle_deleteonstuck", 10, FCVAR_ARCHIVE, "Mad Vehicle: Deletes Mad Vehicle if it gets stuck for the given seconds. 0 to disable.")
-	local SoundLevel = CreateConVar("madvehicle_soundlevel", 85, FCVAR_ARCHIVE, "Mad Vehicle: The sound level of the music.")
-	
-	--Target NPC filter using NPC:Classify().
-	local antlion_class = {
-		[CLASS_ANTLION] = true,
-	}
-	local citizen_class = {
-		[CLASS_NONE] = true,
-		[CLASS_PLAYER] = true,
-		[CLASS_PLAYER_ALLY] = true,
-		[CLASS_PLAYER_ALLY_VITAL] = true,
-		[CLASS_CITIZEN_PASSIVE] = true,
-		[CLASS_CITIZEN_REBEL] = true,
-		[CLASS_VORTIGAUNT] = true,
-	}
-	local combine_class = {
-		[CLASS_COMBINE] = true,
-		[CLASS_COMBINE_GUNSHIP] = true,
-		[CLASS_SCANNER] = true,
-		[CLASS_STALKER] = true,
-		[CLASS_PROTOSNIPER] = true,
-		[CLASS_HACKED_ROLLERMINE] = true,
-		[CLASS_COMBINE_HUNTER] = true,
-	}
-	local military_class = {
-		[CLASS_MILITARY] = true,
-	}
-	local police_class = {
-		[CLASS_MANHACK] = true,
-		[CLASS_METROPOLICE] = true,
-	}
-	local zombie_class = {
-		[CLASS_HEADCRAB] = true,
-		[CLASS_ZOMBIE] = true,
-	}
-	
-	--Pass some ConVar settings.
-	local function PassConVarFilter(v)
-		if v:IsNPC() then
-			local c = v:Classify()
-			if antlion_class[c] then
-				return TargetAntlion:GetBool()
-			elseif citizen_class[c] then
-				return TargetCitizen:GetBool()
-			elseif combine_class[c] then
-				return TargetCombine:GetBool()
-			elseif police_class[c] then
-				return TargetMetropolice:GetBool()
-			elseif military_class[c] then
-				return TargetMilitary:GetBool()
-			elseif zombie_class[c] then
-				return TargetZombie:GetBool()
-			else
-				return TargetOther:GetBool()
-			end
-		elseif v.Type == "nextbot" and TargetNextbot:GetBool() then
-			return true
-		elseif v:IsPlayer() and TargetPlayer:GetBool() then
-			return true
-		elseif v:IsVehicle() and TargetVehicle:GetBool() then
-			return IsValid(v.MadVehicle)
-			or v.IsScar and v:HasDriver()
-			or isfunction(v.GetDriver) and IsValid(v:GetDriver())
-		end
-		
-		return false
-	end
-	
-	--Everyone hates Mad Vehicle.
-	hook.Add("OnEntityCreated", "MadVehicleIsAlone!", function(e)
-		if IsValid(e) and e:GetClass() ~= "npc_madvehicle" then
-			local t = "MadVehicle_hate_" .. e:EntIndex()
-			if isfunction(e.AddEntityRelationship) then
-				timer.Create(t, 2, 0, function()
-					if not IsValid(e) then timer.Remove(t) return end
-					for k, v in pairs(ents.FindByClass("npc_madvehicle")) do
-						if IsValid(v) then
-							local relationship = PassConVarFilter(e) and D_HT or D_NU
-							e:AddEntityRelationship(v, relationship, 0)
-						end
-					end
-				end)
-			end
-		end
-	end)
 	
 	function ENT:OnRemove()
 		--By undoing, driiving, diving in water, or getting stuck, and the vehicle is remaining.
@@ -158,51 +62,69 @@ if SERVER then
 			e:SetEntity(self.v)
 			util.Effect("propspawn", e) --Perform a spawn effect.
 		end
-		
-		if self.loop then --If it's playing the music, stop it.
-			self.loop:Stop()
-		end
 	end
 	
-	--Find an enemy around.
-	function ENT:TargetEnemy()
-		local t = ents.FindInSphere(self.v:WorldSpaceCenter(), math.sqrt(self.TargetRange))
-		local distance, nearest = math.huge, nil --The nearest enemy is the target.
-		for k, v in pairs(t) do
-			if self:Validate(v) then
-				local d = v:WorldSpaceCenter():DistToSqr(self.v:WorldSpaceCenter())
-				if distance > d then
-					distance = d
-					nearest = v
-				end
+	function ENT:SetHandbrake(status)
+		if self.v.IsScar then
+			if status then
+				self.v:HandBrakeOn()
+			else
+				self.v:HandBrakeOff()
 			end
+		elseif self.v.IsSimfphyscar then
+			self.v:SetActive(true)
+			self.v:StartEngine()
+			self.v.PressedKeys = self.v.PressedKeys or {}
+			self.v.PressedKeys["Space"] = status
+		elseif isfunction(self.v.SetHandbrake) then
+			self.v:SetHandbrake(status)
 		end
-		
-		return nearest
 	end
 	
-	--Validate the given entity.
-	function ENT:Validate(v)
-		local valid = 
-			IsValid(v) and --Not a NULL entity.
-			v.MadVehicle ~= self and --It's mad and not my vehicle
-			v:GetClass() ~= "npc_madvehicle" and --Not me
-			v:WorldSpaceCenter():DistToSqr(self.v:WorldSpaceCenter()) < self.TargetRange and --Within a distance.
-			(v:IsNPC() or v:IsVehicle() or v.Type == "nextbot" or
-			(v:IsPlayer() and v:Alive() and not GetConVar("ai_ignoreplayers"):GetBool()))
-		if not valid then return false end
-		
-		--If the entity is flying, return false.
-		local onground = util.QuickTrace(v:GetPos(), -vector_up * self.CollisionHeight, {v, self, self.v})
-		if not onground.Hit then return false end
-		
-		return PassConVarFilter(v)
+	function ENT:SetThrottle(throttle)
+		if self.v.IsScar then
+			if throttle > 0 then
+				self.v:GoForward(throttle)
+			elseif throttle < 0 then
+				self.v:GoBack(-throttle)
+			else
+				self.v:GoNeutral()
+			end
+		elseif self.v.IsSimfphyscar then
+			self.v:SetActive(true)
+			self.v:StartEngine()
+			self.v.PressedKeys = self.v.PressedKeys or {}
+			self.v.PressedKeys["Shift"] = false
+			self.v.PressedKeys["W"] = throttle > 0
+			self.v.PressedKeys["S"] = throttle < 0
+		elseif isfunction(self.v.SetThrottle) then
+			self.v:SetThrottle(throttle)
+		end
+	end
+	
+	function ENT:SetSteering(steer)
+		if self.v.IsScar then
+			if steer > 0 then
+				self.v:TurnRight(steer)
+			elseif steer < 0 then
+				self.v:TurnLeft(-steer)
+			else
+				self.v:NotTurning()
+			end
+		elseif self.v.IsSimfphyscar then
+			self.v:SetActive(true)
+			self.v:StartEngine()
+			self.v:PlayerSteerVehicle(self, steer < 0 and -steer or 0, steer > 0 and steer or 0)
+		elseif isfunction(self.v.SetSteering) then
+			self.v:SetSteering(steer, 0)
+		end
 	end
 	
 	function ENT:Think()
 		if not IsValid(self.v) or --The tied vehicle goes NULL.
 			not self.v:IsVehicle() or --Somehow it become non-vehicle entity.
-			IsValid(self.v:GetDriver()) or --it has an driver.
+			not self.v.MadVehicle or --Somehow it's not mad.
+			IsValid(self.v:GetDriver()) or --It has an driver.
 			self:WaterLevel() > 1 or --It fall into water.
 			(self.v.IsScar and (self.v:IsDestroyed() or self.v.Fuel <= 0)) or --It's SCAR and destroyed or out of fuel.
 			(self.v.IsSimfphyscar and (self.v:GetCurHealth() <= 0)) or --It's Simfphys Vehicle and destroyed.
@@ -212,33 +134,11 @@ if SERVER then
 		end
 		
 		self:SetPos(self.v:GetPos() + vector_up * self.CollisionHeight)
-		if not self:Validate(self.e) then --If it doesn't have an enemy.
+		if not DecentVehicleDestination or DecentVehicleDestination:Distance(self:GetPos()) < 100 then --If it doesn't have an enemy.
 			--Stop moving.
-			if self.v.IsScar then
-				self.v:GoNeutral()
-				self.v:NotTurning()
-				self.v:HandBrakeOn()
-			elseif self.v.IsSimfphyscar then
-				self.v:SetActive(true)
-				self.v:StartEngine()
-				self.v.PressedKeys = self.v.PressedKeys or {}
-				self.v.PressedKeys["W"] = false
-				self.v.PressedKeys["A"] = false
-				self.v.PressedKeys["S"] = false
-				self.v.PressedKeys["D"] = false
-				self.v.PressedKeys["Shift"] = false
-				self.v.PressedKeys["Space"] = true
-			elseif isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) and isfunction(self.v.SetHandbrake) then
-				self.v:SetThrottle(0)
-				self.v:SetSteering(0, 0)
-				self.v:SetHandbrake(true)
-			end
-			
-			local enemy = self:TargetEnemy() --Find an enemy.
-			if IsValid(enemy) then
-				self.e = enemy
-				self.moving = CurTime()
-			end
+			self:SetHandbrake(true)
+			self:SetThrottle(0)
+			self:SetSteering(0)
 		else --It does.
 			if self.v:GetVelocity():LengthSqr() > 40000 then --If it's moving, resets the stuck timer.
 				self.moving = CurTime()
@@ -247,33 +147,15 @@ if SERVER then
 			local timeout = GetConVar("madvehicle_deleteonstuck"):GetFloat()
 			if timeout and timeout > 0 then
 				if CurTime() > self.moving + timeout then --If it has got stuck for enough time.
-					local enemy = self:TargetEnemy()
-					if IsValid(enemy) and self.e ~= enemy then --Find a new enemy and reset the timer.
-						self.e = enemy
-						self.moving = CurTime()
-					else --Go back to normal when no enemy is found.
-						SafeRemoveEntity(self)
-						return
-					end
+					SafeRemoveEntity(self)
+					return
 				end
 			end
 			
 			--Drive the vehicle.
-			--Set handbrake off.
-			if self.v.IsScar then
-				self.v:HandBrakeOff()
-			elseif self.v.IsSimfphyscar then
-				self.v:SetActive(true)
-				self.v:StartEngine()
-				self.v.PressedKeys = self.v.PressedKeys or {}
-				self.v.PressedKeys["Space"] = false
-			elseif isfunction(self.v.SetHandbrake) then
-				self.v:SetHandbrake(false)
-			end
-			
 			local forward = self.v.IsSimfphyscar and --Forward vector.
 				self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Forward() or self.v:GetForward()
-			local dist = self.e:WorldSpaceCenter() - self.v:WorldSpaceCenter() --Distance between the vehicle and the enemy.
+			local dist = DecentVehicleDestination - self.v:WorldSpaceCenter() --Distance between the vehicle and the enemy.
 			local vect = dist:GetNormalized() --Enemy direction vector.
 			local vectdot = vect:Dot(self.v:GetVelocity()) --Dot product, velocity and direction.
 			local throttle = dist:Dot(forward) > 0 and 1 or -1 --Throttle depends on their positional relationship.
@@ -283,49 +165,29 @@ if SERVER then
 			if vectdot < -0.12 then steer = steer * -1 end
 			
 			--If the vehicle is too close to the enemy or the vehicle shouldn't go backward, invert the throttle.
-			if (dist:Length2DSqr() < 250000 and vectdot < 0) or 
-				(self.v:GetVelocity():LengthSqr() < 40000 and dist:Length2DSqr() < 20000) then
-				throttle = -1
-			end
-			--Set throttle.
-			if self.v.IsScar then
-				if throttle > 0 then
-					self.v:GoForward(throttle)
-				else
-					self.v:GoBack(-throttle)
+			-- if (dist:Length2DSqr() < 250000 and vectdot < 0) then
+				-- throttle = throttle * -1
+			-- end
+			
+			-- throttle = throttle * math.Clamp(dist:Length2D() / (self.v:GetSpeed() * 100 + 1), 0, 1)
+			
+			self:SetHandbrake(false)
+			if dist:Length2D() * .8 < self.v:GetVelocity():Length() + 50 then
+				throttle = 0
+				if dist:Length2D() < self.v:GetVelocity():Length() then
+					self:SetHandbrake(true)
 				end
-			elseif self.v.IsSimfphyscar then
-				self.v:SetActive(true)
-				self.v:StartEngine()
-				self.v.PressedKeys = self.v.PressedKeys or {}
-				self.v.PressedKeys["Shift"] = false
-				self.v.PressedKeys["W"] = throttle > 0
-				self.v.PressedKeys["S"] = throttle <= 0
-			elseif isfunction(self.v.SetThrottle) then
-				self.v:SetThrottle(throttle)
 			end
+			print(throttle, dist:Length2D(), self.v:GetVelocity():Length())
 			
 			--Set steering parameter.
 			local ph = self.v:GetPhysicsObject()
 			if not (ph and IsValid(ph)) then return end
 			if ph:GetAngleVelocity().y > 120 then return end --If the vehicle is spinning, don't change.
 			if math.abs(steer) < 0.15 then steer = 0 end --If direction is almost straight, set 0.
-			if self.v.IsScar then
-				if steer > 0 then
-					self.v:TurnRight(steer)
-				elseif steer < 0 then
-					self.v:TurnLeft(-steer)
-				else
-					self.v:NotTurning()
-				end
-			elseif self.v.IsSimfphyscar then
-				self.v:SetActive(true)
-				self.v:StartEngine()
-				self.v:PlayerSteerVehicle(self, steer < 0 and -steer or 0, steer > 0 and steer or 0)
-			elseif isfunction(self.v.SetSteering) then
-				self.v:SetSteering(steer, 0)
-			end
-		end --if not self:Validate(self.e)
+			self:SetThrottle(throttle)
+			self:SetSteering(steer)
+		end
 	end
 	
 	function ENT:Initialize()
@@ -336,7 +198,7 @@ if SERVER then
 		--Pick up a vehicle in the given sphere.
 		local distance = DetectionRange:GetFloat()
 		for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
-			if v:IsVehicle() then
+			if v:IsVehicle() and not v.MadVehicle then
 				if v.IsScar then --If it's a SCAR.
 					if not v:HasDriver() then --If driver's seat is empty.
 						self.v = v
@@ -363,7 +225,13 @@ if SERVER then
 			end
 		end
 	
-		if not IsValid(self.v) then SafeRemoveEntity(self) return end --When there's no vehicle, remove Mad Vehicle.
+		if not IsValid(self.v) then --When there's no vehicle, remove Decent Vehicle.
+			DecentVehicleDestination = self:GetPos() --Set a destination.
+			BroadcastLua "notification.AddLegacy(\"Global Decent Vehicle's destination has been set!\", NOTIFY_GENERIC, 3)"
+			SafeRemoveEntity(self)
+			return
+		end
+		
 		local e = EffectData()
 		e:SetEntity(self.v)
 		util.Effect("propspawn", e) --Perform a spawn effect.
@@ -372,7 +240,6 @@ if SERVER then
 		if not isvector(max) then min, max = self.v:GetModelBounds() end --If getting hit box bounds is failed, get model bounds instead.
 		if not isvector(max) then max = vector_up * math.random(80, 200) end --If even getting model bounds is failed, set a random value.
 		self.moving = CurTime()
-		self.TargetRange = EnemyRange:GetFloat()^2 --Target range is squared to prevent from doing sqrt()
 		
 		local tr = util.TraceHull({start = self.v:GetPos() + vector_up * max.z, 
 			endpos = self.v:GetPos(), ignoreworld = true,
@@ -380,20 +247,6 @@ if SERVER then
 		self.CollisionHeight = tr.HitPos.z - self.v:GetPos().z
 		if self.CollisionHeight < 10 then self.CollisionHeight = max.z end
 		self.v:DeleteOnRemove(self)
-		
-		if PlayMusic:GetBool() and 
-			#ents.FindByClass("npc_madvehicle") < 2 then --Only one Mad Vehicle can play the music.
-			self.loop = CreateSound(self, "madvehicle_music.wav")
-			self.loop:SetSoundLevel(SoundLevel:GetInt())
-			self.loop:Play()
-		end
-		
-		for k, v in pairs(ents.GetAll()) do --Everyone hates Mad Vehicle.
-			if IsValid(v) and isfunction(v.AddEntityRelationship) then
-				local relationship = PassConVarFilter(v) and D_HT or D_NU
-				v:AddEntityRelationship(self, relationship, 0) --But NPCs who aren't using relationship system don't.
-			end
-		end
 	end
 else --if CLIENT
 	function ENT:Initialize()
@@ -416,3 +269,9 @@ function ENT:GetInfoNum(key, default)
 	elseif isnumber(default) then return default end
 	return 0
 end
+
+hook.Add("Tick", "Decent Vehicle's destination", function()
+	if not DecentVehicleDestination then return end
+	debugoverlay.Cross(DecentVehicleDestination, 20, .1, Color(0, 255, 0), true)
+	debugoverlay.Line(DecentVehicleDestination, DecentVehicleDestination + vector_up * 100, .1, Color(0, 255, 0), true)
+end)
