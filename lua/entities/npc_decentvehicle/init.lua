@@ -7,8 +7,16 @@ include "playermeta.lua"
 ENT.Throttle = 0
 ENT.Steering = 0
 ENT.HandBrake = false
+ENT.Waypoint = nil
+ENT.NextWaypoint = nil
+ENT.PrevWaypoint = nil
+ENT.RecentSpeed = 0
+ENT.RecentSpeedHistory = {}
+ENT.RecentHistoryIndex = 1
+ENT.Prependicular = 0
 
-DecentVehicleDestination = nil
+local dvd = DecentVehicleDestination
+local RecentSpeedCount = 20
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
 
@@ -163,87 +171,115 @@ function ENT:GetVehicleParams()
 end
 
 function ENT:Think()
-	if not IsValid(self.v) or --The tied vehicle goes NULL.
-		not self.v:IsVehicle() or --Somehow it become non-vehicle entity.
-		not self.v.DecentVehicle or --Somehow it's a normal vehicle.
-		-- self.v:GetDriver() ~= self.v.DecentVehicle or --It has an driver.
-		self:WaterLevel() > 1 or --It fall into water.
-		(self.v.IsScar and (self.v:IsDestroyed() or self.v.Fuel <= 0)) or --It's SCAR and destroyed or out of fuel.
-		(self.v.IsSimfphyscar and (self.v:GetCurHealth() <= 0)) or --It's Simfphys Vehicle and destroyed.
+	if not IsValid(self.v) or -- The tied vehicle goes NULL.
+		not self.v:IsVehicle() or -- Somehow it become non-vehicle entity.
+		not self.v.DecentVehicle or -- Somehow it's a normal vehicle.
+		-- self.v:GetDriver() ~= self.v.DecentVehicle or -- It has an driver.
+		self:WaterLevel() > 1 or -- It fall into water.
+		(self.v.IsScar and (self.v:IsDestroyed() or self.v.Fuel <= 0)) or -- It's SCAR and destroyed or out of fuel.
+		(self.v.IsSimfphyscar and (self.v:GetCurHealth() <= 0)) or -- It's Simfphys Vehicle and destroyed.
 		(VC and self.v:GetClass() == "prop_vehicle_jeep" and self.v:VC_GetHealth(false) < 1) then -- VCMod adds health system to vehicles.
-		SafeRemoveEntity(self) --Then go back to normal.
+		SafeRemoveEntity(self) -- Then go back to normal.
 		return
 	end
 	
-	if not DecentVehicleDestination or DecentVehicleDestination:Distance(self:GetPos()) < self.v:BoundingRadius() then
-		--Stop moving.
+	local velocity = self.v:GetVelocity()
+	local speed = velocity:Length()
+	if not self.Waypoint then
+		-- Stop moving.
 		self:SetHandbrake(true)
 		self:SetThrottle(0)
 		self:SetSteering(0)
+		
+		local Nearest = dvd.GetNearestWaypoint(self:GetPos())
+		if Nearest then
+			if Nearest.Target:Distance(self.v:WorldSpaceCenter()) > self.v:BoundingRadius() then
+				self.Waypoint = Nearest
+				self.NextWaypoint = dvd.Waypoints[self.Waypoint.Neighbors[math.random(#self.Waypoint.Neighbors)] or -1]
+			end
+		end
 	else
 		local ph = self.v:GetPhysicsObject()
 		if not IsValid(ph) then return end
 		
-		--Drive the vehicle.
+		-- Drive the vehicle.
 		local forward = self:GetVehicleForward()
-		local dist = DecentVehicleDestination - self.v:WorldSpaceCenter() --Distance between the vehicle and the destination.
+		local dist = self.Waypoint.Target - self.v:WorldSpaceCenter() -- Distance between the vehicle and the destination.
 		local distLength2D = dist:Length2D()
-		local velocity = self.v:GetVelocity()
-		local dir = dist:GetNormalized() --Direction vector of the destination.
-		local speed = velocity:Length()
-		local handbrake = distLength2D < speed / self.MaxSpeed + self.BrakePower
-		local orientation = dist:Dot(forward)
-		local throttle = orientation > 0 and 1 or -1 --Throttle depends on their positional relationship.
+		local dir = dist:GetNormalized() -- Direction vector of the destination.
+		local orientation = dir:Dot(forward)
+		local handbrake = distLength2D < speed * self.Prependicular * orientation / self.MaxSpeed + self.BrakePower
+		local throttle = orientation > 0 and 1 or -1 -- Throttle depends on their positional relationship.
 		throttle = throttle * math.min(distLength2D / self.MaxSpeed, 1)
-		if distLength2D < self.MaxSpeed * 3 and speed / self.MaxSpeed > .6 then throttle = 0 end
+		if distLength2D < self.MaxSpeed * 5 and speed * self.Prependicular * orientation / self.MaxSpeed > .5 then throttle = 0 end
 		if handbrake then
 			throttle = velocity:Dot(forward) < 0 and 1 or -1
 		end
 		
-		--Set steering parameter.
-		local right = dir:Cross(forward) --The destination is right side or not.
+		-- Set steering parameter.
+		local right = dir:Cross(forward) -- The destination is right side or not.
 		local dirdot = dir:Dot(velocity)
-		local steer_amount = right:Length()^0.8 --Steering parameter.
+		local steer_amount = right:Length() -- Steering parameter.
 		local steer = right.z > 0 and steer_amount or -steer_amount --Actual steering parameter.
-		if dirdot < -0.12 then steer = steer * -1 end
+		if self.RecentSpeed > self.MaxSpeed / 20 and dirdot < -0.12 then steer = steer * -1 end
 		if math.abs(steer) < 0.15 then steer = 0 end --If direction is almost straight, set 0.
 		if orientation < 0 and distLength2D > self.MaxRevSpeed then
 			steer, throttle = right.z > 0 and -1 or 1, -.5
 		end
 		
-		-- print(throttle, steer)
+		print(throttle, steer)
 		self:SetHandbrake(handbrake)
-		self:SetThrottle(math.abs(throttle) > .03 and throttle or 0)
-		if ph:GetAngleVelocity().y < 120 then --If the vehicle is spinning, don't change.
+		self:SetThrottle(throttle)
+		if ph:GetAngleVelocity().y < 120 then -- If the vehicle is spinning, don't change.
 			self:SetSteering(steer)
 		end
+		
+		debugoverlay.Sphere(self.Waypoint.Target, 50, .2, Color(0, 255, 0))
+		if distLength2D < math.max(self.v:BoundingRadius(), self.RecentSpeed / 2 * math.max(0, velocity:GetNormalized():Dot(forward))) then
+			self.PrevWaypoint = self.Waypoint
+			self.Waypoint = self.NextWaypoint
+			if self.Waypoint then
+				self.NextWaypoint = DecentVehicleDestination.Waypoints[self.Waypoint.Neighbors[math.random(#self.Waypoint.Neighbors)] or -1]
+			end
+		end
 	end
+	
+	self.RecentSpeedHistory[self.RecentHistoryIndex] = speed
+	self.RecentHistoryIndex = self.RecentHistoryIndex % RecentSpeedCount + 1
+	self.RecentSpeed = 0
+	for i = 1, #self.RecentSpeedHistory do
+		self.RecentSpeed = self.RecentSpeed + self.RecentSpeedHistory[i]
+	end
+	
+	self.RecentSpeed = self.RecentSpeed / RecentSpeedCount	
+	self.Prependicular = 1 - (self.PrevWaypoint and self.Waypoint and self.NextWaypoint and (self.Waypoint.Target - self.PrevWaypoint.Target):GetNormalized():Dot((self.NextWaypoint.Target - self.Waypoint.Target):GetNormalized()) or 0)^2
 end
 
 function ENT:Initialize()
 	self:SetModel(self.Modelname)
 	self:SetMoveType(MOVETYPE_NONE)
 	self:PhysicsInit(SOLID_BBOX)
+	self.RecentSpeedHistory = {}
 	
-	--Pick up a vehicle in the given sphere.
+	-- Pick up a vehicle in the given sphere.
 	local distance = DetectionRange:GetFloat()
 	for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
 		if v:IsVehicle() and not v.DecentVehicle then
-			if v.IsScar then --If it's a SCAR.
-				if not v:HasDriver() then --If driver's seat is empty.
+			if v.IsScar then -- If it's a SCAR.
+				if not v:HasDriver() then -- If driver's seat is empty.
 					self.v = v
 					self.OldSpecialThink = v.SpecialThink
 					v.AIController = self
-					v.SpecialThink = function() end --Tanks or something sometimes make errors so disable thinking.
+					v.SpecialThink = function() end -- Tanks or something sometimes make errors so disable thinking.
 					v.DecentVehicle = self
 				end
-			elseif v.IsSimfphyscar and v:IsInitialized() then --If it's a Simfphys Vehicle.
-				if not IsValid(v:GetDriver()) then --Fortunately, Simfphys Vehicles can use GetDriver()
+			elseif v.IsSimfphyscar and v:IsInitialized() then -- If it's a Simfphys Vehicle.
+				if not IsValid(v:GetDriver()) then -- Fortunately, Simfphys Vehicles can use GetDriver()
 					self.v = v
 					v.DecentVehicle = self
 					v.RemoteDriver = self
 				end
-			elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then --Normal vehicles should use these functions. (SCAR and Simfphys cannot.)
+			elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then -- Normal vehicles should use these functions. (SCAR and Simfphys cannot.)
 				if isfunction(v.GetWheelCount) and v:GetWheelCount() and not IsValid(v:GetDriver()) then
 					self.v = v
 					v.OldGetDriver = self.v.GetDriver
@@ -255,17 +291,12 @@ function ENT:Initialize()
 			end
 		end
 	end
-
-	if not IsValid(self.v) then --When there's no vehicle, remove Decent Vehicle.
-		DecentVehicleDestination = self:GetPos() --Set a destination.
-		BroadcastLua "notification.AddLegacy(\"Global Decent Vehicle's destination has been set!\", NOTIFY_GENERIC, 3)"
-		SafeRemoveEntity(self)
-		return
-	end
+	
+	if not IsValid(self.v) then SafeRemoveEntity(self) return end
 	
 	local e = EffectData()
 	e:SetEntity(self.v)
-	util.Effect("propspawn", e) --Perform a spawn effect.
+	util.Effect("propspawn", e) -- Perform a spawn effect.
 	
 	local seatpos, seatang = self:GetDriverPos()
 	self:SetSequence("drive_jeep")
@@ -273,9 +304,9 @@ function ENT:Initialize()
 	self:SetAngles(seatang)
 	self:SetParent(self.v)
 	
-	local min, max = self.v:GetHitBoxBounds(0, 0) --NPCs aim at the top of the vehicle referred by hit box.
-	if not isvector(max) then min, max = self.v:GetModelBounds() end --If getting hit box bounds is failed, get model bounds instead.
-	if not isvector(max) then max = vector_up * math.random(80, 200) end --If even getting model bounds is failed, set a random value.
+	local min, max = self.v:GetHitBoxBounds(0, 0) -- NPCs aim at the top of the vehicle referred by hit box.
+	if not isvector(max) then min, max = self.v:GetModelBounds() end -- If getting hit box bounds is failed, get model bounds instead.
+	if not isvector(max) then max = vector_up * math.random(80, 200) end -- If even getting model bounds is failed, set a random value.
 	self.moving = CurTime()
 	
 	local tr = util.TraceHull({start = self.v:GetPos() + vector_up * max.z, 
@@ -292,17 +323,17 @@ end
 function ENT:OnRemove()
 	if not (IsValid(self.v) and self.v:IsVehicle()) then return end
 	self.v.DecentVehicle = nil
-	if self.v.IsScar then --If the vehicle is SCAR.
+	if self.v.IsScar then -- If the vehicle is SCAR.
 		self.v.AIController = nil
 		self.v.SpecialThink, self.OldSpecialThink = self.OldSpecialThink or self.v.SpecialThink
 		self.v.GetDriver, self.v.OldGetDriver = self.v.OldGetDriver or self.v.GetDriver
-		if not self.v:HasDriver() then --If there's no driver, stop the engine.
+		if not self.v:HasDriver() then -- If there's no driver, stop the engine.
 			self.v:TurnOffCar()
 			self.v:HandBrakeOn()
 			self.v:GoNeutral()
 			self.v:NotTurning()
 		end
-	elseif self.v.IsSimfphyscar then --The vehicle is Simfphys Vehicle.
+	elseif self.v.IsSimfphyscar then -- The vehicle is Simfphys Vehicle.
 		self.v.RemoteDriver = nil
 		self.v:SetActive(false)
 		self.v:StopEngine()
@@ -320,11 +351,11 @@ function ENT:OnRemove()
 		net.WriteEntity(self.v)
 		net.WriteInt(0, 32)
 		net.Broadcast()
-	elseif not IsValid(self.v:GetDriver()) and --The vehicle is normal vehicle.
+	elseif not IsValid(self.v:GetDriver()) and -- The vehicle is normal vehicle.
 		isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) and 
 		isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) then
 		self.v.GetDriver, self.v.OldGetDriver = self.v.OldGetDriver or self.v.GetDriver
-		self.v:StartEngine(false) --Reset states.
+		self.v:StartEngine(false) -- Reset states.
 		self.v:SetHandbrake(true)
 		self.v:SetThrottle(0)
 		self.v:SetSteering(0, 0)
@@ -332,7 +363,7 @@ function ENT:OnRemove()
 	
 	local e = EffectData()
 	e:SetEntity(self.v)
-	util.Effect("propspawn", e) --Perform a spawn effect.
+	util.Effect("propspawn", e) -- Perform a spawn effect.
 	
 	hook.Run("PlayerLeaveVehicle", self, self.v)
 end
