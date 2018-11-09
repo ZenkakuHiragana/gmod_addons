@@ -229,8 +229,8 @@ function ENT:Think()
 		local throttle = orientation > 0 and 1 or -1 -- Throttle depends on their positional relationship.
 		local limit = self.Waypoint.SpeedLimit
 		limit = (limit + (self.NextWaypoint and self.NextWaypoint.SpeedLimit or limit)) / 2
-		local limitedmax = math.min(self.MaxSpeed, self.Waypoint.SpeedLimit)
-		throttle = throttle * (1 - currentspeed / limitedmax)
+		limit = math.min(self.MaxSpeed, limit)
+		throttle = throttle * (1 - currentspeed / limit)
 		if distLength2D < self.MaxSpeed * 5
 		and speed * self.Prependicular * orientation > .5 then
 			throttle = 0
