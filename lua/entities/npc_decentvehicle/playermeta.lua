@@ -33,8 +33,14 @@ if SERVER then
 	local vehiclemeta = FindMetaTable "Vehicle"
 	local GetDriver = vehiclemeta.GetDriver
 	function vehiclemeta:GetDriver(...)
-		return not self.IsSimfphyscar and self.DecentVehicle or GetDriver(self, ...)
+		if self.DecentVehicle and self.__IsSW_Motorbike then
+			return self.DecentVehicle
+		end
+		
+		return GetDriver(self, ...)
 	end
+	
+	local playermeta = FindMetaTable "Player"
 else
 	function ENT:KeyDown() return false end
 end

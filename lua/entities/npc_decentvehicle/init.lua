@@ -14,6 +14,7 @@ ENT.RecentSpeed = 0
 ENT.RecentSpeedHistory = {}
 ENT.RecentHistoryIndex = 1
 ENT.Prependicular = 0
+ENT.WaitUntilNext = CurTime()
 
 local dvd = DecentVehicleDestination
 local RecentSpeedCount = 20
@@ -39,7 +40,7 @@ function ENT:SetHandbrake(brake)
 			self.v:HandBrakeOff()
 		end
 	elseif self.v.IsSimfphyscar then
-		self.v.PressedKeys["Space"] = brake
+		self.v.PressedKeys.Space = brake
 	elseif isfunction(self.v.SetHandbrake) then
 		self.v:SetHandbrake(brake)
 	end
@@ -56,8 +57,8 @@ function ENT:SetThrottle(throttle)
 			self.v:GoNeutral()
 		end
 	elseif self.v.IsSimfphyscar then
-		self.v.PressedKeys["W"] = throttle > 0
-		self.v.PressedKeys["S"] = throttle < 0
+		self.v.PressedKeys.W = throttle > .01
+		self.v.PressedKeys.S = throttle < -.01
 	elseif isfunction(self.v.SetThrottle) then
 		self.v:SetThrottle(throttle)
 	end
@@ -74,56 +75,46 @@ function ENT:SetSteering(steer)
 			self.v:NotTurning()
 		end
 	elseif self.v.IsSimfphyscar then
-		self.v:PlayerSteerVehicle(self, steer < 0 and -steer or 0, steer > 0 and steer or 0)
-		local steering_s = self.v:GetVehicleSteer()
-		self.v.PressedKeys["A"] = steer < -.01 -- and steer < steering_s and steering_s < 0
-		self.v.PressedKeys["D"] = steer > .01 -- and 0 < steering_s and steering_s < steer
+		local s = self.v:GetVehicleSteer()
+		self.v:PlayerSteerVehicle(self, -math.min(steer, 0), math.max(steer, 0))
+		self.v.PressedKeys.A = steer < -.01 and steer < s and s < 0
+		self.v.PressedKeys.D = steer > .01 and 0 < s and s < steer
 		
-		if steering_s >= .5 then
-			if self.v.Light_R == nil or not self.v.Light_R then
-				net.Start("simfphys_turnsignal")
+		if self.Waypoint and self.Waypoint.UseTurnLights then
+			if math.abs(s) < .5 then
+				net.Start "simfphys_turnsignal"
+				net.WriteEntity(self.v)
+				net.WriteInt(0, 32)
+				net.Broadcast()
+				self.v.Light_R = nil
+				self.v.Light_L = nil
+			elseif s >= .5 and not self.v.Light_R then
+				net.Start "simfphys_turnsignal"
 				net.WriteEntity(self.v)
 				net.WriteInt(3, 32)
 				net.Broadcast()
 				self.v.Light_R = true
-			end
-		elseif steering_s <= -.5 then
-			if self.v.Light_L == nil or not self.v.Light_L then
-				net.Start("simfphys_turnsignal")
+			elseif not self.v.Light_L then
+				net.Start "simfphys_turnsignal"
 				net.WriteEntity(self.v)
 				net.WriteInt(2, 32)
 				net.Broadcast()
 				self.v.Light_L = true
 			end
 		end
-		
-		if steering_s < .5 and steering_s > -.5 then
-			net.Start("simfphys_turnsignal")
-			net.WriteEntity(self.v)
-			net.WriteInt(0, 32)
-			net.Broadcast()
-			self.v.Light_R = false
-			self.v.Light_L = false
-		end
 	elseif isfunction(self.v.SetSteering) then
 		self.v:SetSteering(steer, 0)
 		
-		if not VC then return end
-		if not (IsValid(self) and IsValid(self.v)) then return end
-		local states = self.v:VC_getStates()
-		if steer >= .5 then
-			if not states.TurnLightRightOn then
+		if VC and self.Waypoint and self.Waypoint.UseTurnLights then
+			local states = self.v:VC_getStates()
+			if math.abs(steer) < .5 then
+				self.v:VC_setTurnLightLeft(false)
+				self.v:VC_setTurnLightRight(false)
+			elseif steer >= .5 and not states.TurnLightRightOn then
 				self.v:VC_setTurnLightRight(true)
-			end
-		else
-			if not states.TurnLightLeftOn then
+			elseif not states.TurnLightLeftOn then
 				self.v:VC_setTurnLightLeft(true)
 			end
-		end
-		
-		if -.5 < steer and steer < .5 then
-			self.v:VC_setTurnLightLeft(false)
-			self.v:VC_setTurnLightRight(false)
 		end
 	end
 end
@@ -136,7 +127,7 @@ function ENT:GetDriverPos()
 		local seat = self.v.DriverSeat
 		return seat:GetPos(), seat:GetAngles() + Angle(0, 90, 0)
 	else
-		local att = self.v:LookupAttachment("vehicle_feet_passenger0")
+		local att = self.v:LookupAttachment "vehicle_feet_passenger0"
 		if not att then return end
 		att = self.v:GetAttachment(att)
 		return att.Pos, att.Ang
@@ -168,6 +159,11 @@ function ENT:GetVehicleParams()
 		self.MaxRevSpeed = engine.maxRevSpeed or 100
 		self.MaxSteeringAngle = steering.degreesSlow or 45
 	end
+	
+	print("Brake Power: ", self.BrakePower)
+	print("Max Speed: ", self.MaxSpeed)
+	print("Max Reverse Speed: ", self.MaxRevSpeed)
+	print("Max Steering Angle: ", self.MaxSteeringAngle)
 end
 
 function ENT:Think()
@@ -184,18 +180,22 @@ function ENT:Think()
 	end
 	
 	local velocity = self.v:GetVelocity()
-	local speed = velocity:Length()
-	if not self.Waypoint then
+	local speed = self.RecentSpeed / self.MaxSpeed
+	local currentspeed = velocity:Length()
+	if not self.Waypoint or CurTime() < self.WaitUntilNext then
 		-- Stop moving.
 		self:SetHandbrake(true)
 		self:SetThrottle(0)
 		self:SetSteering(0)
 		
-		local Nearest = dvd.GetNearestWaypoint(self:GetPos())
-		if Nearest then
-			if Nearest.Target:Distance(self.v:WorldSpaceCenter()) > self.v:BoundingRadius() then
-				self.Waypoint = Nearest
-				self.NextWaypoint = dvd.Waypoints[self.Waypoint.Neighbors[math.random(#self.Waypoint.Neighbors)] or -1]
+		if CurTime() > self.WaitUntilNext then
+			local Nearest = dvd.GetNearestWaypoint(self:GetPos())
+			if Nearest then
+				local NextWaypoint = dvd.Waypoints[Nearest.Neighbors[math.random(#Nearest.Neighbors)] or -1]
+				if NextWaypoint then
+					self.Waypoint = Nearest
+					self.NextWaypoint = NextWaypoint
+				end
 			end
 		end
 	else
@@ -208,11 +208,18 @@ function ENT:Think()
 		local distLength2D = dist:Length2D()
 		local dir = dist:GetNormalized() -- Direction vector of the destination.
 		local orientation = dir:Dot(forward)
-		local handbrake = distLength2D < speed * self.Prependicular * orientation / self.MaxSpeed + self.BrakePower
+		local handbrake = distLength2D < self.RecentSpeed * self.Prependicular * orientation / self.BrakePower
 		local throttle = orientation > 0 and 1 or -1 -- Throttle depends on their positional relationship.
-		throttle = throttle * math.min(distLength2D / self.MaxSpeed, 1)
-		if distLength2D < self.MaxSpeed * 5 and speed * self.Prependicular * orientation / self.MaxSpeed > .5 then throttle = 0 end
-		if handbrake then
+		local limit = self.Waypoint.SpeedLimit
+		limit = (limit + (self.NextWaypoint and self.NextWaypoint.SpeedLimit or limit)) / 2
+		local limitedmax = math.min(self.MaxSpeed, self.Waypoint.SpeedLimit)
+		throttle = throttle * (1 - currentspeed / limitedmax)
+		if distLength2D < self.MaxSpeed * 5
+		and speed * self.Prependicular * orientation > .5 then
+			throttle = 0
+		end
+		
+		if handbrake and speed > .05 then
 			throttle = velocity:Dot(forward) < 0 and 1 or -1
 		end
 		
@@ -221,38 +228,48 @@ function ENT:Think()
 		local dirdot = dir:Dot(velocity)
 		local steer_amount = right:Length() -- Steering parameter.
 		local steer = right.z > 0 and steer_amount or -steer_amount --Actual steering parameter.
-		if self.RecentSpeed > self.MaxSpeed / 20 and dirdot < -0.12 then steer = steer * -1 end
-		if math.abs(steer) < 0.15 then steer = 0 end --If direction is almost straight, set 0.
-		if orientation < 0 and distLength2D > self.MaxRevSpeed then
+		if speed > .05 and dirdot < -.12 then
+			steer = steer * -1
+		end
+		
+		if math.abs(orientation) < .1
+		or orientation < 0
+		and distLength2D > self.MaxRevSpeed then
 			steer, throttle = right.z > 0 and -1 or 1, -.5
 		end
 		
-		print(throttle, steer)
 		self:SetHandbrake(handbrake)
 		self:SetThrottle(throttle)
 		if ph:GetAngleVelocity().y < 120 then -- If the vehicle is spinning, don't change.
 			self:SetSteering(steer)
 		end
 		
+		print(
+		"Throttle: " .. math.Round(throttle, 1),
+		"Steering: " .. math.Round(steer, 1),
+		"HandBrake: " .. tostring(handbrake),
+		"Speed: " .. math.Round(self.RecentSpeed, 1))
 		debugoverlay.Sphere(self.Waypoint.Target, 50, .2, Color(0, 255, 0))
-		if distLength2D < math.max(self.v:BoundingRadius(), self.RecentSpeed / 2 * math.max(0, velocity:GetNormalized():Dot(forward))) then
+		if distLength2D < math.max(self.v:BoundingRadius(), self.RecentSpeed * math.max(0, velocity:GetNormalized():Dot(forward)) * .5) then
 			self.PrevWaypoint = self.Waypoint
 			self.Waypoint = self.NextWaypoint
 			if self.Waypoint then
 				self.NextWaypoint = DecentVehicleDestination.Waypoints[self.Waypoint.Neighbors[math.random(#self.Waypoint.Neighbors)] or -1]
+				self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
 			end
 		end
 	end
 	
-	self.RecentSpeedHistory[self.RecentHistoryIndex] = speed
+	self.RecentSpeedHistory[self.RecentHistoryIndex] = currentspeed
 	self.RecentHistoryIndex = self.RecentHistoryIndex % RecentSpeedCount + 1
 	self.RecentSpeed = 0
 	for i = 1, #self.RecentSpeedHistory do
 		self.RecentSpeed = self.RecentSpeed + self.RecentSpeedHistory[i]
 	end
 	
-	self.RecentSpeed = self.RecentSpeed / RecentSpeedCount	
-	self.Prependicular = 1 - (self.PrevWaypoint and self.Waypoint and self.NextWaypoint and (self.Waypoint.Target - self.PrevWaypoint.Target):GetNormalized():Dot((self.NextWaypoint.Target - self.Waypoint.Target):GetNormalized()) or 0)^2
+	self.RecentSpeed = self.RecentSpeed / #self.RecentSpeedHistory	
+	self.Prependicular = 1 - (self.PrevWaypoint and self.Waypoint and self.NextWaypoint and
+	(self.Waypoint.Target - self.PrevWaypoint.Target):GetNormalized():Dot((self.NextWaypoint.Target - self.Waypoint.Target):GetNormalized()) or 0)
 end
 
 function ENT:Initialize()
@@ -282,8 +299,6 @@ function ENT:Initialize()
 			elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then -- Normal vehicles should use these functions. (SCAR and Simfphys cannot.)
 				if isfunction(v.GetWheelCount) and v:GetWheelCount() and not IsValid(v:GetDriver()) then
 					self.v = v
-					v.OldGetDriver = self.v.GetDriver
-					v.GetDriver = function(self, ...) return self.DecentVehicle or self:OldGetDriver(...) end
 					v:EnableEngine(true)
 					v:StartEngine(true)
 					v.DecentVehicle = self
@@ -299,7 +314,7 @@ function ENT:Initialize()
 	util.Effect("propspawn", e) -- Perform a spawn effect.
 	
 	local seatpos, seatang = self:GetDriverPos()
-	self:SetSequence("drive_jeep")
+	self:SetSequence "drive_jeep"
 	self:SetPos(seatpos)
 	self:SetAngles(seatang)
 	self:SetParent(self.v)
@@ -338,23 +353,22 @@ function ENT:OnRemove()
 		self.v:SetActive(false)
 		self.v:StopEngine()
 		
-		self.v.PressedKeys["W"] = false
-		self.v.PressedKeys["A"] = false
-		self.v.PressedKeys["S"] = false
-		self.v.PressedKeys["D"] = false
-		self.v.PressedKeys["Shift"] = false
-		self.v.PressedKeys["Space"] = false
+		self.v.PressedKeys.W = false
+		self.v.PressedKeys.A = false
+		self.v.PressedKeys.S = false
+		self.v.PressedKeys.D = false
+		self.v.PressedKeys.Shift = false
+		self.v.PressedKeys.Space = false
 		
 		self.v.Light_R = false
 		self.v.Light_L = false
-		net.Start("simfphys_turnsignal")
+		net.Start "simfphys_turnsignal"
 		net.WriteEntity(self.v)
 		net.WriteInt(0, 32)
 		net.Broadcast()
 	elseif not IsValid(self.v:GetDriver()) and -- The vehicle is normal vehicle.
 		isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) and 
 		isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) then
-		self.v.GetDriver, self.v.OldGetDriver = self.v.OldGetDriver or self.v.GetDriver
 		self.v:StartEngine(false) -- Reset states.
 		self.v:SetHandbrake(true)
 		self.v:SetThrottle(0)
