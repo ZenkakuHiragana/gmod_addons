@@ -12,12 +12,15 @@ ENT.NextWaypoint = nil
 ENT.PrevWaypoint = nil
 ENT.RecentSpeed = 0
 ENT.RecentSpeedHistory = {}
-ENT.RecentHistoryIndex = 1
+ENT.RecentSpeedIndex = 1
+ENT.RecentSteer = 0
+ENT.RecentSteerHistory = {}
+ENT.RecentSteerIndex = 1
 ENT.Prependicular = 0
 ENT.WaitUntilNext = CurTime()
 
 local dvd = DecentVehicleDestination
-local RecentSpeedCount = 20
+local RecentCount = 20
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
 
@@ -80,40 +83,53 @@ function ENT:SetSteering(steer)
 		self.v.PressedKeys.A = steer < -.01 and steer < s and s < 0
 		self.v.PressedKeys.D = steer > .01 and 0 < s and s < steer
 		
-		if self.Waypoint and self.Waypoint.UseTurnLights then
-			if math.abs(s) < .5 then
-				net.Start "simfphys_turnsignal"
-				net.WriteEntity(self.v)
-				net.WriteInt(0, 32)
-				net.Broadcast()
-				self.v.Light_R = nil
-				self.v.Light_L = nil
-			elseif s >= .5 and not self.v.Light_R then
-				net.Start "simfphys_turnsignal"
-				net.WriteEntity(self.v)
-				net.WriteInt(3, 32)
-				net.Broadcast()
-				self.v.Light_R = true
-			elseif not self.v.Light_L then
-				net.Start "simfphys_turnsignal"
-				net.WriteEntity(self.v)
-				net.WriteInt(2, 32)
-				net.Broadcast()
-				self.v.Light_L = true
+		if self.Waypoint then
+			if self.Waypoint.UseTurnLights then
+				if self.RecentSteer >= .5 and not self.v.Light_R then
+					net.Start "simfphys_turnsignal"
+					net.WriteEntity(self.v)
+					net.WriteInt(3, 32)
+					net.Broadcast()
+					self.v.Light_R = true
+					return
+				elseif self.RecentSteer <= .5 and not self.v.Light_L then
+					net.Start "simfphys_turnsignal"
+					net.WriteEntity(self.v)
+					net.WriteInt(2, 32)
+					net.Broadcast()
+					self.v.Light_L = true
+					return
+				end
 			end
+			
+			net.Start "simfphys_turnsignal"
+			net.WriteEntity(self.v)
+			net.WriteInt(0, 32)
+			net.Broadcast()
+			self.v.Light_R = nil
+			self.v.Light_L = nil
 		end
 	elseif isfunction(self.v.SetSteering) then
 		self.v:SetSteering(steer, 0)
 		
-		if VC and self.Waypoint and self.Waypoint.UseTurnLights then
+		if VC and self.Waypoint then
 			local states = self.v:VC_getStates()
-			if math.abs(steer) < .5 then
-				self.v:VC_setTurnLightLeft(false)
+			if self.Waypoint.UseTurnLights then
+				if self.RecentSteer >= .2 and not states.TurnLightRightOn then
+					self.v:VC_setTurnLightRight(true)
+					return
+				elseif self.RecentSteer <= -.2 and not states.TurnLightLeftOn then
+					self.v:VC_setTurnLightLeft(true)
+					return
+				end
+			end
+			
+			if states.TurnLightRightOn then
 				self.v:VC_setTurnLightRight(false)
-			elseif steer >= .5 and not states.TurnLightRightOn then
-				self.v:VC_setTurnLightRight(true)
-			elseif not states.TurnLightLeftOn then
-				self.v:VC_setTurnLightLeft(true)
+			end
+			
+			if states.TurnLightLeftOn then
+				self.v:VC_setTurnLightLeft(false)
 			end
 		end
 	end
@@ -181,6 +197,7 @@ function ENT:Think()
 	
 	local velocity = self.v:GetVelocity()
 	local speed = self.RecentSpeed / self.MaxSpeed
+	local steer = 0
 	local currentspeed = velocity:Length()
 	if not self.Waypoint or CurTime() < self.WaitUntilNext then
 		-- Stop moving.
@@ -226,8 +243,8 @@ function ENT:Think()
 		-- Set steering parameter.
 		local right = dir:Cross(forward) -- The destination is right side or not.
 		local dirdot = dir:Dot(velocity)
-		local steer_amount = right:Length() -- Steering parameter.
-		local steer = right.z > 0 and steer_amount or -steer_amount --Actual steering parameter.
+		local steer_amount = right:Length()^.8 -- Steering parameter.
+		steer = right.z > 0 and steer_amount or -steer_amount --Actual steering parameter.
 		if speed > .05 and dirdot < -.12 then
 			steer = steer * -1
 		end
@@ -260,14 +277,21 @@ function ENT:Think()
 		end
 	end
 	
-	self.RecentSpeedHistory[self.RecentHistoryIndex] = currentspeed
-	self.RecentHistoryIndex = self.RecentHistoryIndex % RecentSpeedCount + 1
-	self.RecentSpeed = 0
+	self.RecentSpeedHistory[self.RecentSpeedIndex] = currentspeed
+	self.RecentSpeedIndex = self.RecentSpeedIndex % RecentCount + 1
+	self.RecentSteerHistory[self.RecentSteerIndex] = steer
+	self.RecentSteerIndex = self.RecentSteerIndex % RecentCount + 1
+	self.RecentSpeed, self.RecentSteer = 0, 0
 	for i = 1, #self.RecentSpeedHistory do
 		self.RecentSpeed = self.RecentSpeed + self.RecentSpeedHistory[i]
 	end
 	
+	for i = 1, #self.RecentSteerHistory do
+		self.RecentSteer = self.RecentSteer + self.RecentSteerHistory[i]
+	end
+	
 	self.RecentSpeed = self.RecentSpeed / #self.RecentSpeedHistory	
+	self.RecentSteer = self.RecentSteer / #self.RecentSteerHistory
 	self.Prependicular = 1 - (self.PrevWaypoint and self.Waypoint and self.NextWaypoint and
 	(self.Waypoint.Target - self.PrevWaypoint.Target):GetNormalized():Dot((self.NextWaypoint.Target - self.Waypoint.Target):GetNormalized()) or 0)
 end
