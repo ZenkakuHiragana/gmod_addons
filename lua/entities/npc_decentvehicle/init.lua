@@ -251,11 +251,11 @@ function ENT:Think()
 		"Speed: " .. math.Round(self.RecentSpeed, 1))
 		debugoverlay.Sphere(self.Waypoint.Target, 50, .2, Color(0, 255, 0))
 		if distLength2D < math.max(self.v:BoundingRadius(), self.RecentSpeed * math.max(0, velocity:GetNormalized():Dot(forward)) * .5) then
+			self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
 			self.PrevWaypoint = self.Waypoint
 			self.Waypoint = self.NextWaypoint
 			if self.Waypoint then
 				self.NextWaypoint = DecentVehicleDestination.Waypoints[self.Waypoint.Neighbors[math.random(#self.Waypoint.Neighbors)] or -1]
-				self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
 			end
 		end
 	end

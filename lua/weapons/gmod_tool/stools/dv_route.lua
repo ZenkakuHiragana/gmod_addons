@@ -18,12 +18,14 @@ if CLIENT then
 	language.Add("tool.dv_route.desc", "Create your own routes for vehicles!")
 	language.Add("tool.dv_route.left", "Create new waypoint or select a waypoint to link.")
 	language.Add("tool.dv_route.left_1", "Select another waypoint you want to link to.  Select the same waypoint to remove it.")
-	language.Add("tool.dv_route.right", "Update waypoint")
+	language.Add("tool.dv_route.right", "Update waypoint.")
 	
 	language.Add("tool.dv_route.wait", "Wait time [seconds]")
-	language.Add("tool.dv_route.shouldblink", "Should use turn signal?")
+	language.Add("tool.dv_route.wait.help", "After Decent Vehicles reached the waypoint, they wait for this seconds.")
+	language.Add("tool.dv_route.shouldblink", "Use turn signals")
+	language.Add("tool.dv_route.shouldblink.help", "If checked, Decent Vehicles will use turn signals when they go to the waypoint.")
 	language.Add("tool.dv_route.speed", "Max speed [km/h]")
-	language.Add("tool.dv_route.showpoints", "Draw waypoints.")
+	language.Add("tool.dv_route.showpoints", "Draw waypoints")
 end
 
 local KilometerPerHourToHammerUnitsPerSecond = 1000 * 3.2808399 * 16 / 3600
@@ -91,40 +93,20 @@ function TOOL:RightClick(trace)
 end
 
 local ConVarsDefault = TOOL:BuildConVarList()
-
-function TOOL.BuildCPanel(panel)
-	panel:AddControl( "ComboBox", { MenuButton = 1, Folder = "decentvehicle", Options = { [ "#preset.default" ] = ConVarsDefault }, CVars = table.GetKeys( ConVarsDefault ) } )
-	panel:AddControl("Header", { Text = "", Description = "Create route for driver." })
-
-	panel:AddControl("CheckBox", {
-		Label = "#tool.dv_route.shouldblink",
-		Type = "int",
-		Min = "0",
-		Max = "1",
-		Command = "dv_route_shouldblink"
-	})
-
-	panel:AddControl("CheckBox", {
-		Label = "#tool.dv_route.showpoints",
-		Type = "int",
-		Min = "0",
-		Max = "1",
-		Command = "dv_route_showpoints"
-	})
+local ConVarsList = table.GetKeys(ConVarsDefault)
+function TOOL.BuildCPanel(CPanel)
+	local ControlPresets = vgui.Create("ControlPresets", CPanel)
+	ControlPresets:SetPreset "decentvehicle"
+	ControlPresets:AddOption("#preset.default", ConVarsDefault)
+	for k, v in pairs(ConVarsList) do
+		ControlPresets:AddConVar(v)
+	end
 	
-	panel:AddControl("Slider", {
-		Label = "#tool.dv_route.wait",
-		Type = "int",
-		Min = "0",
-		Max = "100",
-		Command = "dv_route_wait"
-	})
-	
-	panel:AddControl("Slider", {
-		Label = "#tool.dv_route.speed",
-		Type = "int",
-		Min = "5",
-		Max = "100",
-		Command = "dv_route_speed"
-	})
+	CPanel:AddItem(ControlPresets)
+	CPanel:Help "Create routes for Decent Vehicles."
+	CPanel:CheckBox("#tool.dv_route.showpoints", "dv_route_showpoints")
+	CPanel:CheckBox("#tool.dv_route.shouldblink", "dv_route_shouldblink"):SetToolTip "#tool.dv_route.shouldblink.help"
+	CPanel:NumSlider("#tool.dv_route.wait", "dv_route_wait", 0, 100, 2):SetToolTip "#tool.dv_route.wait.help"
+	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 100, 0)
+	CPanel:InvalidateLayout()
 end
