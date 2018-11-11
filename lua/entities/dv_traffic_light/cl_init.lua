@@ -1,8 +1,14 @@
 include "shared.lua"
 
 local material = Material "sprites/light_ignorez"
+local Colors = {Color(0, 255, 0), Color(255, 191, 0), Color(255, 0, 0)}
+local SpritePos = {-11.2, 0, 11.2}
 function ENT:DrawTranslucent()
 	self:DrawModel()
+	
+	local color = self:GetNWInt "DVTL_LightColor"
+	self.SpriteColor = Colors[color]
+	self.SpritePos = SpritePos[color]
 	
 	local LightPos = self:GetPos() + self:GetForward() * -2 + self:GetUp() * self.SpritePos
 	local dlight = DynamicLight(self:EntIndex())
