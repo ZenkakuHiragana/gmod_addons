@@ -110,6 +110,10 @@ function ss.CustomPrimary.weapon_charger(p, info)
 	p.Scope.SwayTime = (info.Scope.EndMove - info.Scope.StartMove) * p.MaxChargeTime
 end
 
+function ss.CustomPrimary.weapon_splatling(p, info)
+	ss.CustomPrimary.weapon_shooter(p, info)
+end
+
 function ss.SetViewModelMods(weapon, mods)
 	weapon.ViewModelBoneMods = weapon.ViewModelBoneMods or {}
 	for bone, mod in pairs(mods) do

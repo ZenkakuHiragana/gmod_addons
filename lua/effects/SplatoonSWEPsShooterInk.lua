@@ -13,23 +13,13 @@ function EFFECT:Init(e)
 	local f = e:GetFlags()
 	local p = self.Weapon.Primary
 	self.IsDrop = bit.band(f, 1) > 0
-	self.IsShooter = self.Weapon.Base == "weapon_shooter"
+	self.IsCharger = self.Weapon.Base == "weapon_charger"
 	self.InitTime = CurTime() - self.Weapon:Ping() * bit.band(f, 128) / 128
 	self.TrailInitTime = self.InitTime + ss.ShooterTrailDelay
 	self.TruePos, self.TrueAng, self.TrueVelocity = e:GetOrigin(), e:GetAngles(), e:GetStart()
 	self.AppPos, self.AppAng = self.Weapon:GetMuzzlePosition()
 	self.Speed = self.TrueVelocity:Length()
-	if self.IsShooter then
-		local StraightTime = self.IsDrop and 0 or p.Straight + ss.ShooterDecreaseFrame / 2
-		self.AppVelocity = (self.TruePos + self.TrueVelocity * StraightTime - self.AppPos) / StraightTime
-		self.SplashInit = e:GetAttachment() * p.SplashInterval / p.SplashPatterns
-		self.SplashNum = e:GetScale()
-		if self.IsDrop then
-			self.AppPos, self.AppAng, self.AppVelocity = self.TruePos, self.TrueAng, vector_origin
-		end
-		
-		self.TrailPos = self.AppPos
-	else
+	if self.IsCharger then
 		self.Charge = e:GetMagnitude()
 		self.Damage = self.Weapon:GetLerp(self.Charge, p.MinDamage, p.MaxDamage, p.Damage)
 		self.IsCritical = self.Damage >= 100
@@ -48,6 +38,16 @@ function EFFECT:Init(e)
 			self.TrailPos = self.AppPos - self.TrueAng:Forward() * self.SplashInterval
 			self.TrailInitTime = self.InitTime
 		end
+	else
+		local StraightTime = self.IsDrop and 0 or p.Straight + ss.ShooterDecreaseFrame / 2
+		self.AppVelocity = (self.TruePos + self.TrueVelocity * StraightTime - self.AppPos) / StraightTime
+		self.SplashInit = e:GetAttachment() * p.SplashInterval / p.SplashPatterns
+		self.SplashNum = e:GetScale()
+		if self.IsDrop then
+			self.AppPos, self.AppAng, self.AppVelocity = self.TruePos, self.TrueAng, vector_origin
+		end
+		
+		self.TrailPos = self.AppPos
 	end
 	
 	self.TrailAng = self.AppAng
@@ -278,7 +278,7 @@ function EFFECT:Think()
 	local TruePos, TrueStart, AppPos, TrailPos = Vector(), Vector(), Vector(), Vector()
 	local TrueAng, AppAng, TrailAng = Angle(), Angle(), Angle()
 	
-	if not self.IsDrop and self.IsShooter and CurTime() < self.TrailInitTime then
+	if not (self.IsDrop or self.IsCharger) and CurTime() < self.TrailInitTime then
 		local aim = ss.ProtectedCall(w.Owner.GetAimVector, w.Owner) or w.Owner:GetForward()
 		self.TrailPos, self.TrailAng = w:GetMuzzlePosition()
 		self.TrailVelocity = aim * self.Speed
@@ -289,10 +289,10 @@ function EFFECT:Think()
 		[{AppPos, AppAng, Vector()}] = {self.AppPos, self.AppAng, self.AppVelocity, LifeTime, self.PrevTime},
 		[{TrailPos, TrailAng, Vector()}] = {self.TrailPos, self.TrailAng, self.TrailVelocity, TrailTime, self.TrailPrevTime},
 	} do
-		if self.IsShooter then
-			self:Simulate(unpack(table.Add(from, to)))
-		else
+		if self.IsCharger then
 			self:SimulateCharger(unpack(table.Add(from, to)))
+		else
+			self:Simulate(unpack(table.Add(from, to)))
 		end
 	end
 	
@@ -317,11 +317,11 @@ function EFFECT:Think()
 	self:SetColor(self.Color)
 	self:DrawModel()
 	
-	if self.IsShooter then
+	if self.IsCharger then
+		self:CreateChargerDrops(tr)
+	else
 		self:CreateDrops(tr)
 		TrailPos = LerpVector(math.Clamp((TrailTime - Straight) / TrailLagTime, 0, 1), TrailPos, AppPos)
-	else
-		self:CreateChargerDrops(tr)
 	end
 	
 	return true
