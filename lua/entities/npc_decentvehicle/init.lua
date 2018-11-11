@@ -85,14 +85,14 @@ function ENT:SetSteering(steer)
 		
 		if self.Waypoint then
 			if self.Waypoint.UseTurnLights then
-				if self.RecentSteer >= .5 and not self.v.Light_R then
+				if s >= .5 and not self.v.Light_R then
 					net.Start "simfphys_turnsignal"
 					net.WriteEntity(self.v)
 					net.WriteInt(3, 32)
 					net.Broadcast()
 					self.v.Light_R = true
 					return
-				elseif self.RecentSteer <= .5 and not self.v.Light_L then
+				elseif s <= -.5 and not self.v.Light_L then
 					net.Start "simfphys_turnsignal"
 					net.WriteEntity(self.v)
 					net.WriteInt(2, 32)
@@ -182,6 +182,18 @@ function ENT:GetVehicleParams()
 	print("Max Steering Angle: ", self.MaxSteeringAngle)
 end
 
+function ENT:GetNextWaypoint()
+	local suggestion = {}
+	for i, n in ipairs(self.Waypoint.Neighbors) do
+		local w = dvd.Waypoints[n]	
+		if w and (self.Waypoint.Target - self.v:GetPos()):Dot(w.Target - self.Waypoint.Target) > 0 then
+			table.insert(suggestion, dvd.Waypoints[n])
+		end
+	end
+	
+	return suggestion[math.random(#suggestion)]
+end
+
 function ENT:Think()
 	if not IsValid(self.v) or -- The tied vehicle goes NULL.
 		not self.v:IsVehicle() or -- Somehow it become non-vehicle entity.
@@ -199,13 +211,15 @@ function ENT:Think()
 	local speed = self.RecentSpeed / self.MaxSpeed
 	local steer = 0
 	local currentspeed = velocity:Length()
-	if not self.Waypoint or CurTime() < self.WaitUntilNext then
+	if not self.Waypoint or CurTime() < self.WaitUntilNext
+	or (self.PrevWaypoint and self.PrevWaypoint.TrafficLight
+	and self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3) then
 		-- Stop moving.
 		self:SetHandbrake(true)
 		self:SetThrottle(0)
 		self:SetSteering(0)
 		
-		if CurTime() > self.WaitUntilNext then
+		if not self.Waypoint then
 			local Nearest = dvd.GetNearestWaypoint(self:GetPos())
 			if Nearest then
 				local NextWaypoint = dvd.Waypoints[Nearest.Neighbors[math.random(#Nearest.Neighbors)] or -1]
@@ -225,18 +239,24 @@ function ENT:Think()
 		local distLength2D = dist:Length2D()
 		local dir = dist:GetNormalized() -- Direction vector of the destination.
 		local orientation = dir:Dot(forward)
-		local handbrake = distLength2D < self.RecentSpeed * self.Prependicular * orientation / self.BrakePower
 		local throttle = orientation > 0 and 1 or -1 -- Throttle depends on their positional relationship.
 		local limit = self.Waypoint.SpeedLimit
 		limit = (limit + (self.NextWaypoint and self.NextWaypoint.SpeedLimit or limit)) / 2
 		limit = math.min(self.MaxSpeed, limit)
+		
+		local handbrake = distLength2D < self.RecentSpeed / limit * self.Prependicular * orientation / self.BrakePower
+		if self.Waypoint.TrafficLight
+		and self.Waypoint.TrafficLight:GetNWInt "DVTL_LightColor" > 1 then
+			limit = limit / 2
+		end
+		
 		throttle = throttle * (1 - currentspeed / limit)
 		if distLength2D < self.MaxSpeed * 5
-		and speed * self.Prependicular * orientation > .5 then
+		and currentspeed / limit * self.Prependicular * orientation > .5 then
 			throttle = 0
 		end
 		
-		if handbrake and speed > .05 then
+		if handbrake and speed > .1 then
 			throttle = velocity:Dot(forward) < 0 and 1 or -1
 		end
 		
@@ -272,7 +292,7 @@ function ENT:Think()
 			self.PrevWaypoint = self.Waypoint
 			self.Waypoint = self.NextWaypoint
 			if self.Waypoint then
-				self.NextWaypoint = DecentVehicleDestination.Waypoints[self.Waypoint.Neighbors[math.random(#self.Waypoint.Neighbors)] or -1]
+				self.NextWaypoint = self:GetNextWaypoint()
 			end
 		end
 	end

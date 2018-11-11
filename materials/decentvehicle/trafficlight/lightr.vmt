@@ -1,0 +1,35 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "decentvehicle/trafficlight/light"
+	"$bumpmap" "decentvehicle/trafficlight/kraska_dk"
+	"$nodecal" "1"
+	"$phong" "1"
+	"$phongexponent" "27"
+	"$phongboost"	"1.3"
+	"$envmap" "env_cubemap"
+	"$envmapfresnel" "1.65"
+	"$phongfresnelranges" "[.4 .7 .74]"
+	"$envmaptint" "[0.4 0.4 0.4]"
+	"$phongfix" "{20 20 20}"
+
+	Proxies
+	{
+		Equals
+		{
+			srcVar1	$color
+			resultVar	$phongtint
+		}
+		Add
+		{
+			srcVar1 $phongfix
+			srcVar2 $phongtint
+			resultVar $phongtint
+		}
+	}
+
+}
+
+
+
+
+

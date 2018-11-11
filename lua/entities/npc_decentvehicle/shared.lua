@@ -15,6 +15,6 @@ ENT.PrintName = "Decent Vehicle"
 ENT.Author = "GreatZenkakuMan"
 ENT.Contact = ""
 ENT.Purpose = "Decent Vehicle."
-ENT.Instruction = ""
+ENT.Instructions = ""
 ENT.Spawnable = false
 ENT.Modelname = "models/player/gman_high.mdl"
