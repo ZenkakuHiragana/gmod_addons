@@ -446,6 +446,50 @@ function ss.PlayerFootstep(w, ply, pos, foot, soundname, volume, filter)
 	return soundname:find "chainlink" and true or nil
 end
 
+
+function ss.KeyPress(self, ply, key)
+	if ss.KeyMaskFind[key] then
+		self.LastKeyDown[key] = CurTime()
+		self:SetKey(key)
+		if CurTime() > self:GetCooldown() then
+			self:SetThrowing(self:GetThrowing() and key == IN_ATTACK2)
+		end
+	end
+	
+	ss.ProtectedCall(self.KeyPress, self, ply, key)
+end
+
+function ss.KeyRelease(self, ply, key)
+	if CurTime() < self:GetNextSecondaryFire() then return end
+	local keytable, keytime = {}, {}
+	for _, k in ipairs(ss.KeyMask) do
+		local t = self.LastKeyDown[k] or 0
+		if self.Owner:KeyDown(k) then table.insert(keytime, t) end
+		keytable[t] = k -- [Last time key down] = key
+	end
+	
+	self:SetKey(keytable[math.max(unpack(keytime))] or 0)
+	ss.ProtectedCall(self.KeyRelease, self, ply, key)
+	
+	if not ss.KeyMaskFind[key] then return end
+	if not (self:GetThrowing() and key == IN_ATTACK2) then return end
+	self:AddSchedule(ss.SubWeaponThrowTime, 1, function() self:SetThrowing(false) end)
+	
+	local time = CurTime() + ss.SubWeaponThrowTime
+	self:SetCooldown(time)
+	self:SetThrowAnimTime(CurTime())
+	self:SetNextPrimaryFire(time)
+	self:SetNextSecondaryFire(time)
+	self:SendWeaponAnim(ss.ViewModel.Throw)
+	
+	local hasink = self:GetInk() > 0
+	local able = hasink and not self:CheckCannotStandup()
+	ss.ProtectedCall(self.SharedSecondaryAttack, self, able)
+	ss.ProtectedCall(Either(SERVER, self.ServerSecondaryAttack, self.ClientSecondaryAttack), self, able)
+end
+
+hook.Add("KeyPress", "SplatoonSWEPs: Check a valid key", ss.hook "KeyPress")
+hook.Add("KeyRelease", "SplatoonSWEPs: Throw sub weapon", ss.hook "KeyRelease")
 hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", ss.hook "PlayerFootstep")
 
 local weaponslot = {
@@ -520,7 +564,6 @@ local function RegisterWeapons()
 					ClassID = table.KeyFromValue(ss.WeaponClassNames, v.ClassName),
 					Customized = v.Customized,
 					SheldonsPicks = v.SheldonsPicks,
-					Spawnable = true,
 					SpecialWeapon = v.Special,
 					SubWeapon = v.Sub,
 				})
@@ -542,7 +585,6 @@ local function RegisterWeapons()
 				ClassID = table.KeyFromValue(ss.WeaponClassNames, SWEP.ClassName),
 				Customized = SWEP.Customized,
 				SheldonsPicks = SWEP.SheldonsPicks,
-				Spawnable = true,
 				SpecialWeapon = SWEP.Special,
 				SubWeapon = SWEP.Sub,
 			})

@@ -10,17 +10,15 @@
 	"DrawInkOverlay": "インクオーバーレイの描画",
 	"MoveViewmodel": "ビューモデルを動かす",
 	"NewStyleCrosshair": "Splatoon 2風の照準",
+	"Southpaw": "左利き",
+	"ToggleADS": "アイアンサイト 切り替え/ホールド",
 	"weapon_charger": {
-		"Southpaw": "左利き",
-		"ToggleADS": "アイアンサイト 切り替え/ホールド",
 		"UseRTScope": "リアルなスコープを使う",
 		"weapon_herocharger": {
 			"Level": "ヒーローチャージャーのレベル"
 		}
 	},
 	"weapon_shooter": {
-		"Southpaw": "左利き",
-		"ToggleADS": "アイアンサイト 切り替え/ホールド",
 		"weapon_heroshot": {
 			"Level": "ヒーローシューターのレベル"
 		},

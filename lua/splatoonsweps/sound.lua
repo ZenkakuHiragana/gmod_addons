@@ -263,7 +263,7 @@ sound.Add { -- N-Zap 85 / 89 / 83
 	pitch = WeaponSoundPitch,
 }
 
-----------------------------------------
+-----------------------------------------------------------
 
 local WeakShotLevel = 75
 sound.Add { -- Splat Charger / Kelp / Bento
@@ -325,6 +325,89 @@ sound.Add { -- Bamboozler Mk.I / Mk.II / MK.III, Fully charged
 	name = "SplatoonSWEPs.BamboozlerFull",
 	level = WeaponSoundLevel,
 	sound = "splatoonsweps/weapons/charger/bamboozler1.mp3",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+-----------------------------------------------------------
+
+sound.Add { -- Heavy Splatling / Deco / Remix, 1st spin-up
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.HeavySplatling",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/splatling/heavysplatling0.mp3",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Heavy Splatling / Deco / Remix, 2nd spin-up
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.HeavySplatling2",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/splatling/heavysplatling1.mp3",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Heavy Splatling / Deco / Remix, Fully charged
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.HeavySplatlingFull",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/splatling/heavysplatling2.wav",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Hydra Splatling / Custom, 1st spin-up
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.HydraSplatling",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/splatling/hydrasplatling0.mp3",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Hydra Splatling / Custom, 2nd spin-up
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.HydraSplatling2",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/splatling/hydrasplatling1.mp3",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Hydra Splatling / Custom, Fully charged
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.HydraSplatlingFull",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/splatling/hydrasplatling2.wav",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Mini Splatling / Zink / Refurbished, 1st spin-up
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.MiniSplatling",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/splatling/minisplatling0.mp3",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Mini Splatling / Zink / Refurbished, 2nd spin-up
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.MiniSplatling2",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/splatling/minisplatling1.mp3",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Mini Splatling / Zink / Refurbished, Fully charged
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.MiniSplatlingFull",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/splatling/minisplatling2.wav",
 	volume = WeaponSoundVolume,
 	pitch = 100,
 }

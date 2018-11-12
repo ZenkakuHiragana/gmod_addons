@@ -150,7 +150,7 @@ function SWEP:SharedPrimaryAttack()
 end
 
 function SWEP:KeyPress(ply, key)
-	if key == IN_ATTACK then return end
+	if not ss.KeyMaskFind[key] or key == IN_ATTACK then return end
 	self:ResetCharge()
 	self:SetCooldown(CurTime())
 end
@@ -172,6 +172,7 @@ function SWEP:Move(ply, mv)
 	
 	if ply:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end
 	if CurTime() - self:GetCharge() < p.MinChargeTime then return end
+	if SERVER and ss.mp then SuppressHostEvents(ply) end
 	local inkprog = math.max(p.MinChargeTime / p.MaxChargeTime, prog)
 	local ShootSound = prog > .75 and self.ShootSound2 or self.ShootSound
 	local pitch = 100 + (prog > .75 and 15 or 0) - prog * 20
@@ -213,6 +214,7 @@ function SWEP:Move(ply, mv)
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self:ResetSequence "fire"
 	ply:SetAnimation(PLAYER_ATTACK1)
+	if SERVER and ss.mp then SuppressHostEvents() end
 end
 
 function SWEP:CustomDataTables()

@@ -10,17 +10,15 @@
 	"DrawInkOverlay": "Draw ink overlay",
 	"MoveViewmodel": "Move Viewmodel",
 	"NewStyleCrosshair": "Use new style crosshair",
+	"Southpaw": "Left hand mode",
+	"ToggleADS": "ADS toggle/hold",
 	"weapon_charger": {
-		"Southpaw": "Southpaw",
-		"ToggleADS": "ADS toggle/hold",
 		"UseRTScope": "Use realistic scope",
 		"weapon_herocharger": {
 			"Level": "Hero Charger Level"
 		}
 	},
 	"weapon_shooter": {
-		"Southpaw": "Southpaw",
-		"ToggleADS": "ADS toggle/hold",
 		"weapon_heroshot": {
 			"Level": "Hero Shot Level"
 		},

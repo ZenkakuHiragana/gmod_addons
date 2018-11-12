@@ -213,7 +213,7 @@ function SWEP:ViewModelDrawn(vm)
 	if self.SurpressDrawingVM or self:GetHolstering() or
 	not (IsValid(self) and IsValid(self.Owner)) then return end
 	local bone_ent = self.Owner
-	self:UpdateBonePositions(vm)
+	-- self:UpdateBonePositions(vm)
 	
 	for k, name in ipairs(self.vRenderOrder) do
 		local v = self.VElements[name]

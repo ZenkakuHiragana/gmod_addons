@@ -88,7 +88,7 @@ end
 function HitPaint.weapon_shooter(ink, t)
 	local ratio = 1
 	local radius = ink.InkRadius
-	if not ink.IsDrop and ink.Base == "weapon_shooter"
+	if not ink.IsDrop and ink.Base ~= "weapon_charger"
 	and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
 		local actual = (t.HitPos - ink.InitPos):Length2D()
 		local min = SplashDistance + ss.mPaintNearDistance
@@ -282,6 +282,10 @@ function HitEntity.weapon_charger(ink, t, w)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
+Simulate.weapon_splatling = Simulate.weapon_shooter
+HitPaint.weapon_splatling = HitPaint.weapon_shooter
+HitEntity.weapon_splatling = HitEntity.weapon_shooter
+
 local function ProcessInkQueue(ply)
 	while true do
 		for ink in pairs(ss.InkQueue) do
@@ -365,20 +369,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		start = pos,
 	}
 	
-	if base == "weapon_shooter" then
-		table.Merge(t, {
-			InkRadius = info.InkRadius,
-			MinRadius = info.MinRadius,
-			PlayHitSound = isdrop and info.PlayHitSound or nil,
-			Range = isdrop and 0 or info.InitVelocity * info.Straight,
-			SplashCount = 0,
-			SplashInit = info.SplashInterval / info.SplashPatterns * w.SplashInit,
-			SplashInitMul = isdrop and 0 or w.SplashInit,
-			SplashMinRadius = info.SplashRadius * info.MinRadius / info.InkRadius,
-			SplashNum = isdrop and 0 or w.SplashNum,
-			SplashRadius = info.SplashRadius,
-		})
-	elseif base == "weapon_charger" then
+	if base == "weapon_charger" then
 		local prog = w:GetChargeProgress()
 		local Speed = w:GetInkVelocity()
 		local SplashRadius = Lerp(prog, info.MinSplashRadius, info.MaxSplashRadius)
@@ -400,6 +391,19 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 			SplashRadius = SplashRadius,
 			Straight = w.Range / Speed,
 			StraightPos = pos + t.InitDirection * w.Range,
+		})
+	else
+		table.Merge(t, {
+			InkRadius = info.InkRadius,
+			MinRadius = info.MinRadius,
+			PlayHitSound = isdrop and info.PlayHitSound or nil,
+			Range = isdrop and 0 or info.InitVelocity * info.Straight,
+			SplashCount = 0,
+			SplashInit = info.SplashInterval / info.SplashPatterns * w.SplashInit,
+			SplashInitMul = isdrop and 0 or w.SplashInit,
+			SplashMinRadius = info.SplashRadius * info.MinRadius / info.InkRadius,
+			SplashNum = isdrop and 0 or w.SplashNum,
+			SplashRadius = info.SplashRadius,
 		})
 	end
 	

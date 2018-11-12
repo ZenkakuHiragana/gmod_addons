@@ -132,13 +132,18 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		self:SetBias(math.min(self:GetBias() + p.SpreadBiasStep, p.SpreadBias))
 	end
 	
-	local sgn = math.Round(util.SharedRandom(rand, 0, 1, CurTime())) * 2 - 1
-	local SelectInterval = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 2)
-	local frac = util.SharedRandom(rand,
-		SelectInterval and self:GetBias() or 0,
-		SelectInterval and 1 or self:GetBias(), CurTime() * 3)
-	local rx = sgn * frac * DegRandX
-	local ry = sgn * frac * DegRandY
+	local sgnx = math.Round(util.SharedRandom(rand, 0, 1, CurTime())) * 2 - 1
+	local sgny = math.Round(util.SharedRandom(rand, 0, 1, CurTime() * 2)) * 2 - 1
+	local SelectIntervalX = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 3)
+	local SelectIntervalY = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 4)
+	local fracx = util.SharedRandom(rand,
+		SelectIntervalX and self:GetBias() or 0,
+		SelectIntervalX and 1 or self:GetBias(), CurTime() * 5)
+	local fracy = util.SharedRandom(rand,
+		SelectIntervalY and self:GetBias() or 0,
+		SelectIntervalY and 1 or self:GetBias(), CurTime() * 6)
+	local rx = sgnx * fracx * DegRandX
+	local ry = sgny * fracy * DegRandY
 	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
 	angle_initvelocity:RotateAroundAxis(right:Cross(dir), rx)
 	angle_initvelocity:RotateAroundAxis(right, ry)
@@ -148,10 +153,10 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	self.SplashNum = math.floor(p.SplashNum) + math.Round(util.SharedRandom("SplatoonSWEPs: SplashNum", 0, 1))
 	self:SetSplashInitMul(self:GetSplashInitMul() + (p.TripleShotDelay and 3 or 1))
 	self:SetPreviousHasInk(true)
-	self:EmitSound(self.ShootSound)
 	self:ResetSequence "fire"
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
+	self:EmitSound(self.ShootSound)
 	if self:IsFirstTimePredicted() then
 		local rnda = p.Recoil * -1
 		local rndb = p.Recoil * math.Rand(-1, 1)

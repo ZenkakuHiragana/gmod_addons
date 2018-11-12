@@ -18,7 +18,7 @@ function SWEP:ClientInit()
 	self.IronSightsPos[6] = self.ScopePos
 	self.IronSightsAng[6] = self.ScopeAng
 	self.IronSightsFlip[6] = false
-	self.BaseClass.BaseClass.ClientInit(self)
+	self:GetBase().ClientInit(self)
 	
 	if not self.Scoped then return end
 	self.RTScope = GetRenderTarget(ss.RTName.RTScope, 512, 512)
@@ -172,15 +172,13 @@ function SWEP:TranslateFOV(fov)
 end
 
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
-	local base = self.BaseClass.BaseClass
-	ss.ProtectedCall(base.PreViewModelDrawn, self, vm, weapon, ply)
+	ss.ProtectedCall(self:GetBase().PreViewModelDrawn, self, vm, weapon, ply)
 	if self:GetNWBool "UseRTScope" then return end
 	render.SetBlend((1 - self:GetScopedProgress(true))^2)
 end
 
 function SWEP:PostDrawViewModel(vm, weapon, ply)
-	local base = self.BaseClass.BaseClass
-	ss.ProtectedCall(base.PostDrawViewModel, self, vm, weapon, ply)
+	ss.ProtectedCall(self:GetBase().PostDrawViewModel, self, vm, weapon, ply)
 	if not self.Scoped then return end
 	render.SetBlend(1)
 	

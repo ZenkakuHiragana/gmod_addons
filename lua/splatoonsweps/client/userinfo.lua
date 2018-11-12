@@ -110,7 +110,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 		end
 		
 		if self.ClassName ~= w.ClassName then
-			self.Entity:SetSequence "idle_passive"
+			self.Entity:SetSequence(w.Base == "weapon_splatling" and "idle_crossbow" or "idle_passive")
 			self.Weapon.Visible = true
 			self.Weapon:SetModel(w.ModelPath .. "w_right.mdl")
 			for i, v in pairs(w.Bodygroup or {}) do

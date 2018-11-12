@@ -56,9 +56,9 @@ function ss.CustomPrimary.weapon_shooter(p, info)
 	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
 	p.MinDamageTime = info.Delay.MinDamage * ss.FrameToSec
 	p.DecreaseDamage = info.Delay.DecreaseDamage * ss.FrameToSec
-	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
 	p.AimDuration = info.Delay.Aim * ss.FrameToSec
 	p.ColRadius = info.ColRadius or ss.mColRadius
+	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
 	p.Range = p.InitVelocity * (p.Straight + ss.ShooterDecreaseFrame / 2)
 	
 	if not info.Delay.TripleShot then return end
@@ -112,6 +112,20 @@ end
 
 function ss.CustomPrimary.weapon_splatling(p, info)
 	ss.CustomPrimary.weapon_shooter(p, info)
+	p.Automatic = true
+	p.EmptyChargeMul = info.EmptyChargeMul
+	p.JumpPower = info.JumpMul * ss.InklingJumpPower
+	p.MoveSpeedCharge = info.MoveSpeedCharge * ss.ToHammerUnitsPerSec
+	p.SpreadVelocity = info.SpreadVelocity
+	p.SpreadBiasVelocity = info.SpreadBiasVelocity
+	p.InkRadiusMul = info.InkScale
+	p.MinChargeTime = info.Delay.MinCharge * ss.FrameToSec
+	p.MaxChargeTime = {info.Delay.MaxCharge[1] * ss.FrameToSec, info.Delay.MaxCharge[2] * ss.FrameToSec}
+	p.FireDuration = {info.Delay.FireDuration[1] * ss.FrameToSec, info.Delay.FireDuration[2] * ss.FrameToSec}
+	p.MinVelocity = info.MinVelocity * ss.ToHammerUnitsPerSec
+	p.MediumVelocity = info.MediumVelocity * ss.ToHammerUnitsPerSec
+	p.MaxTakeAmmo = p.TakeAmmo
+	p.TakeAmmo = p.TakeAmmo / (info.Delay.FireDuration[2] / info.Delay.Fire)
 end
 
 function ss.SetViewModelMods(weapon, mods)

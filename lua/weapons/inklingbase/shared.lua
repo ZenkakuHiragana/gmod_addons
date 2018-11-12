@@ -5,8 +5,6 @@ local ss = SplatoonSWEPs
 if not ss then return end
 
 ss.AddTimerFramework(SWEP)
-local KeyMask = {IN_ATTACK, IN_DUCK, IN_ATTACK2}
-local KeyMaskFind = {[IN_ATTACK] = true, [IN_DUCK] = true, [IN_ATTACK2] = true}
 local function PlayLoopSound(self)
 	local playlist = {self.SwimSound, self.EnemyInkSound}
 	ss.ProtectedCall(self.AddPlaylist, self, playlist)
@@ -39,6 +37,16 @@ function SWEP:ChangeViewModel(act)
 	if SERVER then SuppressHostEvents(self.Owner) end
 	self:SendWeaponAnim(act)
 	if SERVER then SuppressHostEvents() end
+end
+
+function SWEP:GetBase(BaseClassName)
+	BaseClassName = BaseClassName or "inklingbase"
+	local base = self.BaseClass
+	while base and base.Base ~= BaseClassName do
+		base = base.BaseClass
+	end
+	
+	return base
 end
 
 -- Speed on humanoid form = base speed * ability factor
@@ -75,6 +83,8 @@ local Options = {
 	CanReloadInk = true,
 	BecomeSquid = true,
 	AvoidWalls = true,
+	Southpaw = true,
+	ToggleADS = true,
 }
 function SWEP:GetOptions()
 	if not self:IsMine() then return end
@@ -175,7 +185,7 @@ function SWEP:SharedInitBase()
 	self.SwimSound = CreateSound(self, ss.SwimSound)
 	self.EnemyInkSound = CreateSound(self, ss.EnemyInkSound)
 	self.LastKeyDown = {}
-	for _, k in ipairs(KeyMask) do
+	for _, k in ipairs(ss.KeyMask) do
 		self.LastKeyDown[k] = CurTime()
 	end
 	
@@ -293,8 +303,10 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	local reloadtime = self.Primary.ReloadDelay / timescale
 	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
 	self.ReloadSchedule:SetLastCalled(CurTime() + reloadtime)
+	if SERVER and ss.mp then SuppressHostEvents(self.Owner) end
 	ss.ProtectedCall(self.SharedPrimaryAttack, self, able, auto)
 	ss.ProtectedCall(Either(SERVER, self.ServerPrimaryAttack, self.ClientPrimaryAttack), self, able, auto)
+	if SERVER and ss.mp then SuppressHostEvents() end
 end
 
 function SWEP:SecondaryAttack() -- Use sub weapon
@@ -310,49 +322,6 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 		self.Owner:AnimResetGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD)
 	end
 end
-
-function ss.KeyPress(self, ply, key)
-	if not KeyMaskFind[key] then return end
-	self.LastKeyDown[key] = CurTime()
-	self:SetKey(key)
-	if CurTime() > self:GetCooldown() then
-		self:SetThrowing(self:GetThrowing() and key == IN_ATTACK2)
-	end
-	
-	ss.ProtectedCall(self.KeyPress, self, ply, key)
-end
-
-function ss.KeyRelease(self, ply, key)
-	if CurTime() < self:GetNextSecondaryFire() then return end
-	if not KeyMaskFind[key] then return end
-	local keytable, keytime = {}, {}
-	for _, k in ipairs(KeyMask) do
-		local t = self.LastKeyDown[k] or 0
-		if self.Owner:KeyDown(k) then table.insert(keytime, t) end
-		keytable[t] = k -- [Last time key down] = key
-	end
-	
-	self:SetKey(keytable[math.max(unpack(keytime))] or 0)
-	ss.ProtectedCall(self.KeyRelease, self, ply, key)
-	
-	if not (self:GetThrowing() and key == IN_ATTACK2) then return end
-	self:AddSchedule(ss.SubWeaponThrowTime, 1, function() self:SetThrowing(false) end)
-	
-	local time = CurTime() + ss.SubWeaponThrowTime
-	self:SetCooldown(time)
-	self:SetThrowAnimTime(CurTime())
-	self:SetNextPrimaryFire(time)
-	self:SetNextSecondaryFire(time)
-	self:SendWeaponAnim(ss.ViewModel.Throw)
-	
-	local hasink = self:GetInk() > 0
-	local able = hasink and not self:CheckCannotStandup()
-	ss.ProtectedCall(self.SharedSecondaryAttack, self, able)
-	ss.ProtectedCall(Either(SERVER, self.ServerSecondaryAttack, self.ClientSecondaryAttack), self, able)
-end
-
-hook.Add("KeyPress", "SplatoonSWEPs: Check a valid key", ss.hook "KeyPress")
-hook.Add("KeyRelease", "SplatoonSWEPs: Throw sub weapon", ss.hook "KeyRelease")
 -- End of predicted hooks
 
 local NetworkVarNotifyNOTCalledOnClient = true

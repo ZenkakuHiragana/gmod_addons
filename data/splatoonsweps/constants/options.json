@@ -15,17 +15,15 @@
 	"NewStyleCrosshair": false,
 	"Playermodel": 1,
 	"RTResolution": "1",
+	"Southpaw": false,
+	"ToggleADS": false,
 	"weapon_charger": {
-		"Southpaw": false,
-		"ToggleADS": false,
 		"UseRTScope": false,
 		"weapon_herocharger": {
 			"Level": 0
 		}
 	},
 	"weapon_shooter": {
-		"Southpaw": false,
-		"ToggleADS": false,
 		"weapon_heroshot": {
 			"Level": 0
 		},

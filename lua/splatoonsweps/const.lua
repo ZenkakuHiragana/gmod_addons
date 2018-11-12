@@ -210,6 +210,8 @@ ss.Particles = {
 game.AddParticles "particles/splatoonsweps.pcf"
 for _, p in pairs(ss.Particles) do PrecacheParticleSystem(p) end
 
+ss.KeyMask = {IN_ATTACK, IN_DUCK, IN_ATTACK2}
+ss.KeyMaskFind = {[IN_ATTACK] = true, [IN_DUCK] = true, [IN_ATTACK2] = true}
 ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
 ss.InkGravityMul = 15

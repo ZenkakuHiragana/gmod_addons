@@ -245,10 +245,10 @@ function SWEP:GetViewModelPosition(pos, ang)
 	end
 	
 	local armpos = ss.ProtectedCall(self.GetArmPos, self)
-	if not armpos then
-		if self:GetThrowing() then
-			armpos = 1
-		elseif ss.GetOption "DoomStyle" then
+	if self:GetThrowing() then
+		armpos = 1
+	elseif not armpos then
+		if ss.GetOption "DoomStyle" then
 			armpos = 5
 		elseif ss.GetOption "MoveViewmodel" and not self:Crouching() then
 			if not self.Cursor then return pos, ang end

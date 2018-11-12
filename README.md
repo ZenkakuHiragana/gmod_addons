@@ -7,7 +7,7 @@ The aim of this rework is the following:
 * More flesh than before! (not just throwing props)
 * Various options with better UI
     * Drawing crosshair
-    * "Southpaw" mode
+    * Left hand mode
     * Realistic scope for scoped chargers
     * DOOM-style viewmodel
     * Aim down sight
@@ -16,7 +16,6 @@ The aim of this rework is the following:
 ***  
 ## Done
 * A new ink system  
-    ... but it should be updated for upcoming features
 * Inkling base system.  
     You can become inkling as well.
 * Basic GUI to change playermodel, ink color, and other settings.  
@@ -25,13 +24,11 @@ The aim of this rework is the following:
 * All Chargers in Splatoon.
 
 ## Currently working on
-* Ink system rework
-    * It's somewhat glitchy for now.
 * Splatlings
-    * [ ] Create a base class
-    * [ ] Write a script for charging
+    * [x] Create a base class
+    * [x] Write a script for charging
     * [ ] Draw a crosshair
-    * [ ] Write a script to spawn the actual ink
+    * [x] Write a script to spawn the actual ink
     * [ ] Set ink consumption and other parameters
 
 ## Upcoming features
