@@ -73,6 +73,7 @@ SWEP.SharedDeploy = SWEP.ResetCharge
 SWEP.SharedHolster = SWEP.ResetCharge
 function SWEP:AddPlaylist(p) table.insert(p, self.AimSound) end
 function SWEP:PlayChargeSound()
+	if ss.mp and (SERVER or not IsFirstTimePredicted()) then return end
 	local prog = self:GetChargeProgress()
 	if 0 < prog and prog < 1 then
 		self.AimSound:PlayEx(1, math.max(self.AimSound:GetPitch(), prog * 99 + 1))
@@ -80,11 +81,7 @@ function SWEP:PlayChargeSound()
 		self.AimSound:Stop()
 		self.AimSound:ChangePitch(1)
 		if prog == 1 and not self:GetFullChargeFlag() then
-			if ss.mp and CLIENT then
-				surface.PlaySound(ss.ChargerBeep)
-			else
-				self.Owner:SendLua "surface.PlaySound(SplatoonSWEPs.ChargerBeep)"
-			end
+			ss.EmitSound(self.Owner, ss.ChargerBeep)
 		end
 	end
 end
@@ -102,22 +99,14 @@ function SWEP:SharedPrimaryAttack()
 		local prog = self:GetChargeProgress()
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
-		if ss.sp or CLIENT and self:IsFirstTimePredicted() then self:PlayChargeSound() end
+		self:PlayChargeSound()
 		if prog == 0 then return end
 		local EnoughInk = self:GetInk() >= prog * self.Primary.TakeAmmo
 		if not self.Owner:OnGround() or not EnoughInk then
 			self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
 			if not (self.NotEnoughInk or EnoughInk) then
 				self.NotEnoughInk = true
-				if CLIENT then
-					if ss.mp then
-						if IsFirstTimePredicted() and self:IsCarriedByLocalPlayer() then
-							surface.PlaySound(ss.TankEmpty)
-						end
-					else
-						self.Owner:SendLua "surface.PlaySound(SplatoonSWEPs.TankEmpty)"
-					end
-				end
+				ss.EmitSound(self.Owner, ss.TankEmpty)
 			end
 		end
 		

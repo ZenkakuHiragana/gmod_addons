@@ -29,10 +29,9 @@ function SWEP:ResetCharge()
 	self:SetFullChargeFlag(false)
 	self:SetFireInk(0)
 	self.JumpPower = ss.InklingJumpPower
-	if ss.mp and SERVER then return end
+	if ss.mp and CLIENT and not IsFirstTimePredicted() then return end
 	for _, s in ipairs(self.SpinupSound) do s:Stop() end
 	self.AimSound:Stop()
-	self.AimSound:ChangePitch(1)
 end
 
 SWEP.SharedDeploy = SWEP.ResetCharge
@@ -43,7 +42,8 @@ function SWEP:AddPlaylist(p)
 end
 
 function SWEP:PlayChargeSound()
-	local prog = self:GetChargeProgress()
+	if ss.mp and CLIENT and not IsFirstTimePredicted() then return end
+	local prog = self:GetChargeProgress(CLIENT)
 	if prog == 1 then
 		self.AimSound:Stop()
 		self.SpinupSound[1]:Stop()
@@ -84,22 +84,14 @@ function SWEP:SharedPrimaryAttack()
 		local prog = self:GetChargeProgress()
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
-		if ss.sp or CLIENT and self:IsFirstTimePredicted() then self:PlayChargeSound() end
+		self:PlayChargeSound()
 		if prog == 0 then return end
 		local EnoughInk = self:GetInk() >= prog * self.Primary.MaxTakeAmmo
 		if not self.Owner:OnGround() or not EnoughInk then
 			self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
 			if not (self.NotEnoughInk or EnoughInk) then
 				self.NotEnoughInk = true
-				if CLIENT then
-					if ss.mp then
-						if IsFirstTimePredicted() and self:IsCarriedByLocalPlayer() then
-							surface.PlaySound(ss.TankEmpty)
-						end
-					else
-						self.Owner:SendLua "surface.PlaySound(SplatoonSWEPs.TankEmpty)"
-					end
-				end
+				ss.EmitSound(self.Owner, ss.TankEmpty)
 			end
 		end
 		
@@ -132,9 +124,8 @@ function SWEP:KeyPress(ply, key)
 	self:SetCooldown(CurTime())
 end
 
+local rand = "SplatoonSWEPs: Spread"
 function SWEP:Move(ply, mv)
-	local p = self.Primary
-	local prog = self:GetChargeProgress(CLIENT)
 	if self:GetNWBool "ToggleADS" then
 		if ply:KeyPressed(IN_USE) then
 			self:SetADS(not self:GetADS())
@@ -142,7 +133,7 @@ function SWEP:Move(ply, mv)
 	else
 		self:SetADS(ply:KeyDown(IN_USE))
 	end
-	-- print(self:GetSpreadJumpFraction())
+	
 	if ply:OnGround() then
 		if CurTime() - self:GetJump() < self.Primary.SpreadJumpDelay then
 			self:SetJump(self:GetJump() - FrameTime() / 2)
@@ -153,41 +144,11 @@ function SWEP:Move(ply, mv)
 		self:ResetSkin()
 	end
 	
-	if ply:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end
-	if CurTime() - self:GetCharge() < p.MinChargeTime then return end
-	local Duration
-	if prog < self.MediumCharge then
-		Duration = self.Primary.FireDuration[1] * prog
-	else
-		Duration = Lerp((prog - self.MediumCharge) / (1 - self.MediumCharge), self.Primary.FireDuration[1], self.Primary.FireDuration[2])
-	end
-	
-	self:SetFireAt(prog)
-	self:ResetCharge()
-	self:SetFireInk(math.floor(Duration / self.Primary.Delay) + 1)
-end
-
-function SWEP:CustomDataTables()
-	self:AddNetworkVar("Bool", "ADS")
-	self:AddNetworkVar("Bool", "FullChargeFlag")
-	self:AddNetworkVar("Float", "AimTimer")
-	self:AddNetworkVar("Float", "Bias")
-	self:AddNetworkVar("Float", "BiasVelocity")
-	self:AddNetworkVar("Float", "Charge")
-	self:AddNetworkVar("Float", "FireAt")
-	self:AddNetworkVar("Float", "Jump")
-	self:AddNetworkVar("Int", "FireInk")
-	self:AddNetworkVar("Int", "SplashInitMul")
-	
-	local rand = "SplatoonSWEPs: Spread"
-	self.FireSplatling = self:AddNetworkSchedule(0, function(self, schedule)
-		if self:GetFireInk() == 0 then return end
-		if self:GetHolstering() then return end
+	if self:GetFireInk() > 0 then
 		if self:CheckCannotStandup() then return end
 		if self:GetThrowing() then return end
-		if ss.sp and CLIENT then return end
+		if CLIENT and (ss.sp or not self:IsMine()) then return end
 		if self:GetNextPrimaryFire() > CurTime() then return end
-		if not IsValid(self.Owner) then return end
 		if SERVER and ss.mp then SuppressHostEvents(self.Owner) end
 		
 		local p = self.Primary
@@ -196,8 +157,8 @@ function SWEP:CustomDataTables()
 		local reloadtime = self.Primary.ReloadDelay / timescale
 		self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / timescale)
 		self:SetAimTimer(CurTime() + p.AimDuration)
-		self:SetInk(math.max(0, self:GetInk() - p.TakeAmmo))
 		self:SetFireInk(self:GetFireInk() - 1)
+		self:SetInk(math.max(0, self:GetInk() - p.TakeAmmo))
 		self:SetCooldown(math.max(self:GetCooldown(),
 		CurTime() + math.min(p.Delay, p.CrouchDelay) / timescale))
 		self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
@@ -207,7 +168,7 @@ function SWEP:CustomDataTables()
 		local right = self.Owner:GetRight()
 		local ang = dir:Angle()
 		local angle_initvelocity = Angle(ang)
-		local DegRandX, DegRandY = self:GetSpread()
+		local rx, ry = self:GetSpread()
 		if self:GetAimTimer() < 1 then
 			self:SetBias(p.SpreadBiasJump)
 		else
@@ -220,24 +181,12 @@ function SWEP:CustomDataTables()
 			self:SetBiasVelocity(math.min(self:GetBiasVelocity() + p.SpreadBiasStep, p.SpreadBiasVelocity))
 		end
 		
-		local sgnx = math.Round(util.SharedRandom(rand, 0, 1, CurTime())) * 2 - 1
-		local sgny = math.Round(util.SharedRandom(rand, 0, 1, CurTime() * 2)) * 2 - 1
-		local sgnv = math.Round(util.SharedRandom(rand, 0, 1, CurTime() * 3)) * 2 - 1
-		local SelectIntervalX = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 4)
-		local SelectIntervalY = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 5)
-		local SelectIntervalV = self:GetBiasVelocity() > util.SharedRandom(rand, 0, 1, CurTime() * 6)
-		local fracx = util.SharedRandom(rand,
-			SelectIntervalX and self:GetBias() or 0,
-			SelectIntervalX and 1 or self:GetBias(), CurTime() * 7)
-		local fracy = util.SharedRandom(rand,
-			SelectIntervalY and self:GetBias() or 0,
-			SelectIntervalY and 1 or self:GetBias(), CurTime() * 8)
+		local prog, InitVelocity = self:GetFireAt()
+		local sgnv = math.Round(util.SharedRandom(rand, 0, 1, CurTime() * 7)) * 2 - 1
+		local SelectIntervalV = self:GetBiasVelocity() > util.SharedRandom(rand, 0, 1, CurTime() * 8)
 		local fracv = util.SharedRandom(rand,
 			SelectIntervalV and self:GetBias() or 0,
 			SelectIntervalV and 1 or self:GetBiasVelocity(), CurTime() * 9)
-		local rx = sgnx * fracx * DegRandX
-		local ry = sgny * fracy * DegRandY
-		local prog, InitVelocity = self:GetFireAt()
 		if prog < self.MediumCharge then
 			InitVelocity = Lerp(prog, p.MinVelocity, p.MediumVelocity)
 		else
@@ -276,7 +225,34 @@ function SWEP:CustomDataTables()
 		end
 		
 		if SERVER and ss.mp then SuppressHostEvents() end
-	end)
+	else
+		local p = self.Primary
+		if ply:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end
+		if CurTime() - self:GetCharge() < p.MinChargeTime then return end
+		local prog, Duration = self:GetChargeProgress()
+		if prog < self.MediumCharge then
+			Duration = self.Primary.FireDuration[1] * prog
+		else
+			Duration = Lerp((prog - self.MediumCharge) / (1 - self.MediumCharge), self.Primary.FireDuration[1], self.Primary.FireDuration[2])
+		end
+		
+		self:SetFireAt(prog)
+		self:ResetCharge()
+		self:SetFireInk(math.floor(Duration / self.Primary.Delay) + 1)
+	end
+end
+
+function SWEP:CustomDataTables()
+	self:AddNetworkVar("Bool", "ADS")
+	self:AddNetworkVar("Bool", "FullChargeFlag")
+	self:AddNetworkVar("Float", "AimTimer")
+	self:AddNetworkVar("Float", "Bias")
+	self:AddNetworkVar("Float", "BiasVelocity")
+	self:AddNetworkVar("Float", "Charge")
+	self:AddNetworkVar("Float", "FireAt")
+	self:AddNetworkVar("Float", "Jump")
+	self:AddNetworkVar("Int", "FireInk")
+	self:AddNetworkVar("Int", "SplashInitMul")
 end
 
 function SWEP:CustomMoveSpeed()

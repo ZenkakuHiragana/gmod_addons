@@ -321,7 +321,7 @@ function SWEP:SetupDrawCrosshair()
 end
 
 function SWEP:DrawCrosshair(x, y, t)
-	self:DrawFourLines(t, self:GetSpread())
+	self:DrawFourLines(t, self:GetSpreadAmount())
 	self:DrawHitCrossBG(t)
 	self:DrawOuterCircle(t)
 	self:DrawHitCross(t)

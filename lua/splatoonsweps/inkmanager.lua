@@ -24,6 +24,7 @@ end
 --   number ratio	| Aspect ratio.
 function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classname)
 	inktype = math.floor(inktype)
+	angle = math.NormalizeAngle(angle)
 	
 	local ang, polys = normal:Angle(), {}
 	ang.roll = math.abs(normal.z) > ss.MAX_COS_DEG_DIFF and angle * normal.z or ang.yaw
@@ -33,10 +34,6 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	
 	if ss.mp and SERVER then SuppressHostEvents(ply) end
 	
-	local boundsize = radius * rootpi * ratio / 2
-	local axis = Vector(0, 1)
-	axis:Rotate(Angle(0, 90 + angle, 0))
-	
 	local mins, maxs = ss.GetBoundingBox(polys, MIN_BOUND)
 	for node in ss.BSPPairs(polys) do
 		local surf = SERVER and node.Surfaces or ss.SequentialSurfaces
@@ -44,7 +41,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			if surf.Normals[i]:Dot(normal) <= ss.MAX_COS_DEG_DIFF * ((SERVER and index < 0 or CLIENT and ss.Displacements[i]) and .5 or 1) or
 			not ss.CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
 			local _, localang = WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle())
-			localang = surf.DefaultAngles[i] + ang.yaw - localang.roll
+			localang = ang.yaw - localang.roll + surf.DefaultAngles[i]
 			
 			local e = EffectData()
 			e:SetAttachment(color)
@@ -55,28 +52,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			e:SetStart(Vector(radius, localang, ratio))
 			util.Effect("SplatoonSWEPsDrawInk", e)
 			
-			local pos2d = ss.To2D(pos, surf.Origins[i], surf.Angles[i])
-			local t, bounds = radius * ratio, {} -- 0 <= t <= 2 * radius, step radius * ratio
-			while t <= radius * (2 - ratio) do
-				local p = pos2d - axis * (radius - t)
-				bounds[{p.x - boundsize, p.y - boundsize, p.x + boundsize, p.y + boundsize}] = true
-				t = t + radius * ratio
-			end
-			
-			if ratio < .75 then
-				t = pos2d + axis * radius * (1 - ratio)
-				bounds[{t.x - boundsize, t.y - boundsize, t.x + boundsize, t.y + boundsize}] = true
-			end
-			
-			ss.AddInkRectangle(surf.InkCircles[i], CurTime(), {
-				angle = localang,
-				bounds = bounds,
-				color = color,
-				pos = pos2d,
-				radius = radius,
-				ratio = ratio,
-				texid = inktype,
-			})
+			ss.AddInkRectangle(color, i, inktype, localang, pos, radius, ratio, surf)
 		end
 	end
 	
@@ -94,20 +70,37 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	end
 end
 
--- Records a new ink to ink history.
--- Arguments:
---   table ink       | Ink history table. node.Surfaces.InkCircle or SequentialSurfaces.InkCircle
---   number sz       | Ink surface Z-position.
---   table newink    | A table which describes the new ink.
---     number angle  | Ink pattern angle in degrees.
---     table bounds  | Ink bounding box, {[{min.x, min.y, max.x, max.y}] = true, ...}
---     number color  | Color code.
---     Vector pos    | Ink position in surface-related system.
---     number radius | Ink characteristic radius.
---     number ratio  | Ink aspect ratio.
---     number texid  | Ink pattern ID.
+-- Internal function to record a new ink to ink history.
 local MIN_BOUND_AREA = 1 -- minimum ink bounding box area
-function ss.AddInkRectangle(ink, sz, newink)
+function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, surf)
+	ratio = math.Clamp(ratio, 0, 1)
+	local boundsize = radius * rootpi * ratio / 2
+	local axis = Vector(0, 1)
+	axis:Rotate(Angle(0, -localang, 0))
+	local pos2d = ss.To2D(pos, surf.Origins[id], surf.Angles[id])
+	local t, bounds = radius * ratio, {} -- 0 <= t <= 2 * radius, step radius * ratio
+	while t <= radius * (2 - ratio) do
+		local p = pos2d - axis * (radius - t)
+		bounds[{p.x - boundsize, p.y - boundsize, p.x + boundsize, p.y + boundsize}] = true
+		t = t + radius * ratio
+	end
+	
+	if ratio < .75 then
+		t = pos2d + axis * radius * (1 - ratio)
+		bounds[{t.x - boundsize, t.y - boundsize, t.x + boundsize, t.y + boundsize}] = true
+	end
+	
+	local newink = {
+		angle = localang,
+		bounds = bounds,
+		color = color,
+		pos = pos2d,
+		radius = radius,
+		ratio = ratio,
+		texid = inktype,
+	}
+	
+	local ink = surf.InkCircles[id]
 	for r, z in pairs(ink) do
 		if next(r.bounds) then
 			for nb in pairs(newink.bounds) do
@@ -139,7 +132,7 @@ function ss.AddInkRectangle(ink, sz, newink)
 		end
 	end
 	
-	ink[newink] = sz
+	ink[newink] = CurTime()
 end
 
 -- Takes a TraceResult and returns ink color of its HitPos.

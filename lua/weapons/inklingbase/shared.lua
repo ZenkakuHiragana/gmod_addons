@@ -9,7 +9,6 @@ local function PlayLoopSound(self)
 	local playlist = {self.SwimSound, self.EnemyInkSound}
 	ss.ProtectedCall(self.AddPlaylist, self, playlist)
 	for _, s in ipairs(playlist) do
-		if s:IsPlaying() then continue end
 		s:PlayEx(0, 100)
 	end
 end

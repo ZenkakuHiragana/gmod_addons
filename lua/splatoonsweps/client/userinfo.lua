@@ -242,11 +242,12 @@ end
 local function GenerateWeaponIcons(tab, side)
 	tab.Weapon.List.IconList:Clear()
 	
-	local WeaponList = list.Get "Weapon"
+	local WeaponList = list.GetForEdit "Weapon"
 	local SpawnList = {}
 	for _, c in ipairs(ss.WeaponClassNames) do
 		local t = WeaponList[c]
 		if not t then continue end
+		t.Spawnable = true -- Write it here to be spawnable and not listed as normal weapon
 		if WeaponFilters.Equipped and not LocalPlayer():HasWeapon(t.ClassName) then continue end
 		if WeaponFilters.Type and WeaponFilters.Type ~= t.Base then continue end
 		if WeaponFilters.Variations == "Original" and (t.Customized or t.SheldonsPicks) then continue end

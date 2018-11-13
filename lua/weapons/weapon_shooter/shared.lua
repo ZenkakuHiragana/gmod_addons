@@ -72,14 +72,14 @@ function SWEP:GetSpreadJumpFraction()
 	return math.Clamp(frac / self.Primary.SpreadJumpDelay, 0, 1)
 end
 
-function SWEP:GetSpread()
+function SWEP:GetSpreadAmount()
 	return Lerp(self:GetSpreadJumpFraction(),
 	self.Primary.SpreadJump, self.Primary.Spread),
 	ss.mDegRandomY
 end
 
 function SWEP:SharedInit()
-	self.NextPlayEmpty = CurTime()
+	self:SetNextPlayEmpty(CurTime())
 	self:SetAimTimer(CurTime())
 end
 
@@ -89,6 +89,24 @@ function SWEP:SharedDeploy()
 end
 
 local rand = "SplatoonSWEPs: Spread"
+function SWEP:GetSpread()
+	local DegRandX, DegRandY = self:GetSpreadAmount()
+	local sgnx = math.Round(util.SharedRandom(rand, 0, 1, CurTime())) * 2 - 1
+	local sgny = math.Round(util.SharedRandom(rand, 0, 1, CurTime() * 2)) * 2 - 1
+	local SelectIntervalX = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 3)
+	local SelectIntervalY = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 4)
+	local fracx = util.SharedRandom(rand,
+		SelectIntervalX and self:GetBias() or 0,
+		SelectIntervalX and 1 or self:GetBias(), CurTime() * 5)
+	local fracy = util.SharedRandom(rand,
+		SelectIntervalY and self:GetBias() or 0,
+		SelectIntervalY and 1 or self:GetBias(), CurTime() * 6)
+	local rx = sgnx * fracx * DegRandX
+	local ry = sgny * fracy * DegRandY
+	
+	return rx, ry
+end
+
 function SWEP:SharedPrimaryAttack(able, auto)
 	if not IsValid(self.Owner) then return end
 	local p = self.Primary
@@ -103,13 +121,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	if not able then
 		if p.TripleShotDelay then self:SetCooldown(CurTime()) end
 		if self:GetPreviousHasInk() then
-			if ss.mp and CLIENT then
-				if self:IsFirstTimePredicted() and self:IsCarriedByLocalPlayer() then
-					surface.PlaySound(ss.TankEmpty)
-				end
-			elseif ss.sp then
-				self.Owner:SendLua "surface.PlaySound(SplatoonSWEPs.TankEmpty)"
-			end
+			ss.EmitSound(self.Owner, ss.TankEmpty)
 			self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
 			self:SetPreviousHasInk(false)
 		elseif CurTime() > self:GetNextPlayEmpty() then
@@ -123,8 +135,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	local pos, dir = self:GetFirePosition()
 	local right = self.Owner:GetRight()
 	local ang = dir:Angle()
-	local angle_initvelocity = Angle(ang)
-	local DegRandX, DegRandY = self:GetSpread()
+	local rx, ry = self:GetSpread()
 	if self:GetAimTimer() < 1 then
 		self:SetBias(p.SpreadBiasJump)
 	else
@@ -132,23 +143,10 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		self:SetBias(math.min(self:GetBias() + p.SpreadBiasStep, p.SpreadBias))
 	end
 	
-	local sgnx = math.Round(util.SharedRandom(rand, 0, 1, CurTime())) * 2 - 1
-	local sgny = math.Round(util.SharedRandom(rand, 0, 1, CurTime() * 2)) * 2 - 1
-	local SelectIntervalX = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 3)
-	local SelectIntervalY = self:GetBias() > util.SharedRandom(rand, 0, 1, CurTime() * 4)
-	local fracx = util.SharedRandom(rand,
-		SelectIntervalX and self:GetBias() or 0,
-		SelectIntervalX and 1 or self:GetBias(), CurTime() * 5)
-	local fracy = util.SharedRandom(rand,
-		SelectIntervalY and self:GetBias() or 0,
-		SelectIntervalY and 1 or self:GetBias(), CurTime() * 6)
-	local rx = sgnx * fracx * DegRandX
-	local ry = sgny * fracy * DegRandY
-	ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
-	angle_initvelocity:RotateAroundAxis(right:Cross(dir), rx)
-	angle_initvelocity:RotateAroundAxis(right, ry)
-	self.InitVelocity = angle_initvelocity:Forward() * p.InitVelocity
-	self.InitAngle = angle_initvelocity.yaw
+	ang:RotateAroundAxis(right:Cross(dir), rx)
+	ang:RotateAroundAxis(right, ry)
+	self.InitVelocity = ang:Forward() * p.InitVelocity
+	self.InitAngle = ang.yaw
 	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns
 	self.SplashNum = math.floor(p.SplashNum) + math.Round(util.SharedRandom("SplatoonSWEPs: SplashNum", 0, 1))
 	self:SetSplashInitMul(self:GetSplashInitMul() + (p.TripleShotDelay and 3 or 1))
@@ -165,7 +163,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		
 		local e = EffectData()
 		e:SetAttachment(self.SplashInit)
-		e:SetAngles(angle_initvelocity)
+		e:SetAngles(ang)
 		e:SetColor(self:GetNWInt "ColorCode")
 		e:SetEntity(self)
 		e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)

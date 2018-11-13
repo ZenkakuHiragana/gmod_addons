@@ -433,8 +433,27 @@ function ss.GetTimeScale(ply)
 	and ply:GetLaggedMovementValue() or 1)
 end
 
+-- Play a sound that can be heard only one player.
+-- Arguments:
+--   Player ply			| The player who can hear it.
+--   string soundName	| The sound to play.
+function ss.EmitSound(ply, soundName, soundLevel, pitchPercent, volume, channel)
+	if SERVER and ss.mp then
+		net.Start "SplatoonSWEPs: Send a sound"
+		net.WriteString(soundName)
+		net.WriteUInt(soundLevel or 75, 9)
+		net.WriteUInt(pitchPercent or 100, 8)
+		net.WriteFloat(volume or 1)
+		net.WriteUInt((channel or CHAN_AUTO) + 1, 8)
+		net.Send(ply)
+		return
+	elseif CLIENT and IsFirstTimePredicted() or ss.sp then
+		ply:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
+	end
+end
+
 -- Play footstep sound of ink.
-function ss.PlayerFootstep(w, ply, pos, foot, soundname, volume, filter)
+function ss.PlayerFootstep(w, ply, pos, foot, soundName, volume, filter)
 	if SERVER and ss.mp then return end
 	if ply:Crouching() and w:GetNWBool "BecomeSquid" and w:GetGroundColor() < 0
 	or not ply:Crouching() and w:GetGroundColor() >= 0 then
@@ -443,7 +462,7 @@ function ss.PlayerFootstep(w, ply, pos, foot, soundname, volume, filter)
 	end
 	
 	if not ply:Crouching() then return end
-	return soundname:find "chainlink" and true or nil
+	return soundName:find "chainlink" and true or nil
 end
 
 
@@ -564,6 +583,7 @@ local function RegisterWeapons()
 					ClassID = table.KeyFromValue(ss.WeaponClassNames, v.ClassName),
 					Customized = v.Customized,
 					SheldonsPicks = v.SheldonsPicks,
+					Spawnable = SERVER,
 					SpecialWeapon = v.Special,
 					SubWeapon = v.Sub,
 				})
@@ -585,6 +605,7 @@ local function RegisterWeapons()
 				ClassID = table.KeyFromValue(ss.WeaponClassNames, SWEP.ClassName),
 				Customized = SWEP.Customized,
 				SheldonsPicks = SWEP.SheldonsPicks,
+				Spawnable = SERVER,
 				SpecialWeapon = SWEP.Special,
 				SubWeapon = SWEP.Sub,
 			})
