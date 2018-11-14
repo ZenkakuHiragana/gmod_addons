@@ -10,6 +10,20 @@ function SWEP:GetChargeProgress(ping)
 	return math.Clamp(frac	/ self.Primary.MaxChargeTime[2] * timescale, 0, 1)
 end
 
+function SWEP:GetInitVelocity()
+	local p = self.Primary
+	local prog = self:GetFireInk() > 0 and self:GetFireAt() or self:GetChargeProgress(CLIENT)
+	if prog < self.MediumCharge then
+		return Lerp(prog, p.MinVelocity, p.MediumVelocity)
+	else
+		return Lerp(prog - self.MediumCharge, p.MediumVelocity, p.InitVelocity)
+	end
+end
+
+function SWEP:GetRange()
+	return self:GetInitVelocity() * (self.Primary.Straight + ss.ShooterDecreaseFrame / 2)
+end
+
 function SWEP:ResetSkin()
 	if not ss.ChargingEyeSkin[self.Owner:GetModel()] then return end
 	
@@ -26,7 +40,8 @@ end
 
 function SWEP:ResetCharge()
 	self:SetCharge(math.huge)
-	self:SetFullChargeFlag(false)
+	self.FullChargeFlag = false
+	self.NotEnoughInk = false
 	self:SetFireInk(0)
 	self.JumpPower = ss.InklingJumpPower
 	if ss.mp and CLIENT and not IsFirstTimePredicted() then return end
@@ -43,13 +58,16 @@ end
 
 function SWEP:PlayChargeSound()
 	if ss.mp and CLIENT and not IsFirstTimePredicted() then return end
-	local prog = self:GetChargeProgress(CLIENT)
+	local prog = self:GetChargeProgress()
 	if prog == 1 then
 		self.AimSound:Stop()
 		self.SpinupSound[1]:Stop()
 		self.SpinupSound[2]:Stop()
 		self.SpinupSound[3]:Play()
-		self.BeepSound:PlayEx(1, 115)
+		if (CLIENT or ss.sp) and self.FullChargeFlag then
+			self:EmitSound(ss.ChargerBeep, 75, 115)
+			self.FullChargeFlag = false
+		end
 	elseif prog > 0 then
 		self.AimSound:PlayEx(.75, math.max(self.AimSound:GetPitch(), prog * 90 + 1))
 		self.SpinupSound[3]:Stop()
@@ -59,17 +77,19 @@ function SWEP:PlayChargeSound()
 			self.SpinupSound[2]:ChangePitch(1)
 		else
 			prog = (prog - self.MediumCharge) / (1 - self.MediumCharge)
-			self.BeepSound:PlayEx(1, 100)
 			self.SpinupSound[2]:PlayEx(1, math.max(self.SpinupSound[2]:GetPitch(), 80 + prog * 20))
 			self.SpinupSound[1]:Stop()
 			self.SpinupSound[1]:ChangePitch(1)
+			if (CLIENT or ss.sp) and not self.FullChargeFlag then
+				self:EmitSound(ss.ChargerBeep)
+				self.FullChargeFlag = true
+			end
 		end
 	end
 end
 
 function SWEP:SharedInit()
 	self.AimSound = CreateSound(self, ss.ChargerAim)
-	self.BeepSound = CreateSound(self, ss.ChargerBeep)
 	self.SpinupSound = {}
 	for _, s in ipairs(self.ChargeSound) do table.insert(self.SpinupSound, CreateSound(self, s)) end
 	self.AirTimeFraction = 1 - 1 / self.Primary.EmptyChargeMul
@@ -89,26 +109,20 @@ function SWEP:SharedPrimaryAttack()
 		local EnoughInk = self:GetInk() >= prog * self.Primary.MaxTakeAmmo
 		if not self.Owner:OnGround() or not EnoughInk then
 			self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
-			if not (self.NotEnoughInk or EnoughInk) then
+			if (ss.sp or CLIENT) and not (self.NotEnoughInk or EnoughInk) then
 				self.NotEnoughInk = true
 				ss.EmitSound(self.Owner, ss.TankEmpty)
 			end
 		end
 		
-		if prog == 1 then
-			self:SetFullChargeFlag(false)
-		elseif prog > self.MediumCharge and not self:GetFullChargeFlag() then
-			self:SetFullChargeFlag(true)
-		end
-		
 		return
 	end
 	
+	self.FullChargeFlag = false
 	self.AimSound:PlayEx(0, 1)
 	self.SpinupSound[1]:Play()
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 	self:SetCharge(CurTime())
-	self:SetFullChargeFlag(false)
 	self:SendWeaponAnim(ACT_VM_IDLE)
 	
 	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
@@ -181,17 +195,12 @@ function SWEP:Move(ply, mv)
 			self:SetBiasVelocity(math.min(self:GetBiasVelocity() + p.SpreadBiasStep, p.SpreadBiasVelocity))
 		end
 		
-		local prog, InitVelocity = self:GetFireAt()
+		local InitVelocity = self:GetInitVelocity()
 		local sgnv = math.Round(util.SharedRandom(rand, 0, 1, CurTime() * 7)) * 2 - 1
 		local SelectIntervalV = self:GetBiasVelocity() > util.SharedRandom(rand, 0, 1, CurTime() * 8)
 		local fracv = util.SharedRandom(rand,
 			SelectIntervalV and self:GetBias() or 0,
 			SelectIntervalV and 1 or self:GetBiasVelocity(), CurTime() * 9)
-		if prog < self.MediumCharge then
-			InitVelocity = Lerp(prog, p.MinVelocity, p.MediumVelocity)
-		else
-			InitVelocity = Lerp(prog - self.MediumCharge, p.MediumVelocity, p.InitVelocity)
-		end
 		
 		ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
 		angle_initvelocity:RotateAroundAxis(right:Cross(dir), rx)
@@ -244,7 +253,6 @@ end
 
 function SWEP:CustomDataTables()
 	self:AddNetworkVar("Bool", "ADS")
-	self:AddNetworkVar("Bool", "FullChargeFlag")
 	self:AddNetworkVar("Float", "AimTimer")
 	self:AddNetworkVar("Float", "Bias")
 	self:AddNetworkVar("Float", "BiasVelocity")
@@ -261,18 +269,13 @@ function SWEP:CustomMoveSpeed()
 	self.InklingSpeed, self.Primary.MoveSpeedCharge) or self.InklingSpeed
 end
 
-function SWEP:GetAnimWeight()
-	return (self:GetFireAt() + .5) / 1.5
-end
-
 function SWEP:CustomActivity()
 	local at = self:GetAimTimer()
 	if CLIENT and self:IsCarriedByLocalPlayer() then at = at - self:Ping() end
 	if CurTime() > at then return "crossbow" end
 	local aimpos = select(3, self:GetFirePosition())
-	aimpos = (aimpos == 3 or aimpos == 4) and "rpg" or "crossbow"
-	return (self:GetADS() or self.Scoped
-	and self:GetChargeProgress(CLIENT) > self.Primary.Scope.StartMove)
-	and not ss.ChargingEyeSkin[self.Owner:GetModel()]
-	and "ar2" or aimpos
+	return self:GetADS() and not ss.ChargingEyeSkin[self.Owner:GetModel()]
+	and "ar2" or (aimpos == 3 or aimpos == 4) and "rpg" or "crossbow"
 end
+
+function SWEP:UpdateAnimation(ply, vel, max) end

@@ -465,6 +465,24 @@ function ss.PlayerFootstep(w, ply, pos, foot, soundName, volume, filter)
 	return soundName:find "chainlink" and true or nil
 end
 
+function ss.UpdateAnimation(w, ply, velocity, maxseqspeed)
+	ss.ProtectedCall(w.UpdateAnimation, w, ply, velocity, maxseqspeed)
+	
+	if not w:GetThrowing() then return end
+	
+	ply:AnimSetGestureWeight(GESTURE_SLOT_ATTACK_AND_RELOAD, 1)
+	
+	local f = (CurTime() - w:GetThrowAnimTime()) / ss.SubWeaponThrowTime
+	if CLIENT and w:IsCarriedByLocalPlayer() then
+		f = f + LocalPlayer():Ping() / 1000 / ss.SubWeaponThrowTime
+	end
+	
+	if 0 <= f and f <= 1 then
+		ply:AddVCDSequenceToGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD,
+		ply:SelectWeightedSequence(ACT_HL2MP_GESTURE_RANGE_ATTACK_GRENADE),
+		Lerp(f, 0, .55), true)
+	end
+end
 
 function ss.KeyPress(self, ply, key)
 	if ss.KeyMaskFind[key] then
@@ -507,9 +525,10 @@ function ss.KeyRelease(self, ply, key)
 	ss.ProtectedCall(Either(SERVER, self.ServerSecondaryAttack, self.ClientSecondaryAttack), self, able)
 end
 
+hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", ss.hook "PlayerFootstep")
+hook.Add("UpdateAnimation", "SplatoonSWEPs: Adjust TPS animation speed", ss.hook "UpdateAnimation")
 hook.Add("KeyPress", "SplatoonSWEPs: Check a valid key", ss.hook "KeyPress")
 hook.Add("KeyRelease", "SplatoonSWEPs: Throw sub weapon", ss.hook "KeyRelease")
-hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", ss.hook "PlayerFootstep")
 
 local weaponslot = {
 	weapon_roller = 0,

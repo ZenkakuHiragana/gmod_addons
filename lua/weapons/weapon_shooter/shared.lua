@@ -1,9 +1,7 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
-
 SWEP.Base = "inklingbase"
-SWEP.PrintName = "Shooter base"
 
 local FirePosition = 10
 function SWEP:GetRange() return self.Primary.Range end

@@ -156,27 +156,6 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 	self:GetOptions()
 	self.Color = ss.GetColor(c)
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
-	
-	if CLIENT or not self.Owner:IsPlayer() then return end
-	self.Owner:SetPlayerColor(self:GetInkColorProxy())
-	
-	local PMPath = ss.Playermodel[self:GetNWInt "PMID"]
-	if PMPath then
-		if file.Exists(PMPath, "GAME") then
-			self.PMTable = {
-				Model = PMPath,
-				Skin = 0,
-				BodyGroups = {},
-				SetOffsets = true,
-				PlayerColor = self:GetInkColorProxy(),
-			}
-		end
-	else
-		local mdl = self.BackupPlayerInfo.Playermodel
-		if mdl.Model ~= self.Owner:GetModel() then
-			self:ChangePlayermodel(mdl)
-		end
-	end
 end
 
 function SWEP:SharedInitBase()

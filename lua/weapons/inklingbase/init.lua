@@ -173,12 +173,35 @@ end
 
 function SWEP:Think()
 	if not IsValid(self.Owner) or self:GetHolstering() then return end
-	if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
-		self:ChangePlayermodel(self.PMTable)
-	end
-	
 	self:ProcessSchedules()
 	self:UpdateInkState()
 	self:SharedThinkBase()
 	ss.ProtectedCall(self.ServerThink, self)
+	
+	if not self.Owner:IsPlayer() then return end
+	local PMPath = ss.Playermodel[self:GetNWInt "PMID"]
+	if PMPath then
+		if file.Exists(PMPath, "GAME") then
+			self.PMTable = {
+				Model = PMPath,
+				Skin = 0,
+				BodyGroups = {},
+				SetOffsets = true,
+				PlayerColor = self:GetInkColorProxy(),
+			}
+		end
+		
+		if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
+			self:ChangePlayermodel(self.PMTable)
+		end
+	else
+		local mdl = self.BackupPlayerInfo.Playermodel
+		if mdl.Model ~= self.Owner:GetModel() then
+			self:ChangePlayermodel(mdl)
+		end
+	end
+	
+	if self.Owner:GetPlayerColor() ~= self:GetInkColorProxy() then
+		self.Owner:SetPlayerColor(self:GetInkColorProxy())
+	end
 end

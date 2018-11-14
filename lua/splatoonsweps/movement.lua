@@ -1813,7 +1813,7 @@ local AttackMask = bit.bnot(IN_ATTACK)
 local DuckMask = bit.bnot(IN_DUCK)
 function ss.MoveHook(w, p, m)
 	ply, mv = p, m
-	-- ss.ProtectedCall(w.Move, w, p, m)
+	ss.ProtectedCall(w.Move, w, p, m)
 	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and w:GetOnEnemyInk() and ply:KeyDown(IN_DUCK)
 	w.PreventCrouching = w:GetKey() ~= 0 and w:GetKey() ~= IN_DUCK or CurTime() < w:GetCooldown()
 	if w.PreventCrouching or w.EnemyInkPreventCrouching then

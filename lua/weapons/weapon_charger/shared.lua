@@ -62,7 +62,8 @@ end
 
 function SWEP:ResetCharge()
 	self:SetCharge(math.huge)
-	self:SetFullChargeFlag(false)
+	self.FullChargeFlag = false
+	self.NotEnoughInk = false
 	self.JumpPower = ss.InklingJumpPower
 	if ss.mp and SERVER then return end
 	self.AimSound:Stop()
@@ -80,8 +81,9 @@ function SWEP:PlayChargeSound()
 	else
 		self.AimSound:Stop()
 		self.AimSound:ChangePitch(1)
-		if prog == 1 and not self:GetFullChargeFlag() then
+		if prog == 1 and not self.FullChargeFlag then
 			ss.EmitSound(self.Owner, ss.ChargerBeep)
+			self.FullChargeFlag = true
 		end
 	end
 end
@@ -104,14 +106,10 @@ function SWEP:SharedPrimaryAttack()
 		local EnoughInk = self:GetInk() >= prog * self.Primary.TakeAmmo
 		if not self.Owner:OnGround() or not EnoughInk then
 			self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
-			if not (self.NotEnoughInk or EnoughInk) then
+			if (ss.sp or CLIENT) and not (self.NotEnoughInk or EnoughInk) then
 				self.NotEnoughInk = true
 				ss.EmitSound(self.Owner, ss.TankEmpty)
 			end
-		end
-		
-		if prog == 1 and not self:GetFullChargeFlag() then
-			self:SetFullChargeFlag(true)
 		end
 		
 		return
@@ -121,10 +119,10 @@ function SWEP:SharedPrimaryAttack()
 		self:SetSplashInitMul(0)
 	end
 	
+	self.FullChargeFlag = false
 	self.AimSound:PlayEx(0, 1)
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 	self:SetCharge(CurTime() + self.Primary.MinFreezeTime)
-	self:SetFullChargeFlag(false)
 	self:SendWeaponAnim(ACT_VM_IDLE)
 	
 	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
@@ -172,7 +170,6 @@ function SWEP:Move(ply, mv)
 	self.Range = self:GetRange()
 	self.InitVelocity = dir * self:GetInkVelocity()
 	self.InitAngle = ang.yaw
-	self.NotEnoughInk = false
 	if self:IsFirstTimePredicted() then
 		local rnda = p.Recoil * -1
 		local rndb = p.Recoil * math.Rand(-1, 1)
@@ -208,7 +205,6 @@ end
 
 function SWEP:CustomDataTables()
 	self:AddNetworkVar("Bool", "ADS")
-	self:AddNetworkVar("Bool", "FullChargeFlag")
 	self:AddNetworkVar("Float", "AimTimer")
 	self:AddNetworkVar("Float", "Charge")
 	self:AddNetworkVar("Float", "FireAt")

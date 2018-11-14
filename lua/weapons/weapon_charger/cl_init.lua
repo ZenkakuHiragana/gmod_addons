@@ -67,7 +67,6 @@ function SWEP:GetScopedSize()
 	return 1 + (self:GetNWBool "UseRTScope" and self:IsTPS() and 0 or self:GetScopedProgress(true))
 end
 
-function SWEP:ClientPrimaryAttack() end
 function SWEP:DrawFourLines(t) end
 function SWEP:DrawOuterCircle(t)
 	local scoped = self:GetScopedSize()
@@ -102,7 +101,7 @@ function SWEP:DrawInnerCircle(t)
 	if scoped == 2 then return end
 	draw.NoTexture()
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss.DrawArc(self.Cursor.x, self.Cursor.y, s + innerwidth, innerwidth)
+	ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s + innerwidth, innerwidth)
 end
 
 function SWEP:DrawCenterDot(t) -- Center circle
@@ -111,9 +110,9 @@ function SWEP:DrawCenterDot(t) -- Center circle
 	draw.NoTexture()
 	if scoped < 2 then
 		surface.SetDrawColor(self.Crosshair.color_circle)
-		ss.DrawArc(self.Cursor.x, self.Cursor.y, s + innerwidth)
+		ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s + innerwidth)
 		surface.SetDrawColor(self.Crosshair.color_nohit)
-		ss.DrawArc(self.Cursor.x, self.Cursor.y, s)
+		ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s)
 	end
 	
 	if not t.Trace.Hit then return end
@@ -155,6 +154,7 @@ end
 
 function SWEP:DrawCrosshair(x, y, t)
 	if self:GetCharge() == math.huge then return end
+	t.EndPosScreen = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range):ToScreen()
 	t.CrosshairDarkColor = ColorAlpha(t.CrosshairColor, 192)
 	t.CrosshairDarkColor.r, t.CrosshairDarkColor.g, t.CrosshairDarkColor.b
 	= t.CrosshairDarkColor.r / 2, t.CrosshairDarkColor.g / 2, t.CrosshairDarkColor.b / 2

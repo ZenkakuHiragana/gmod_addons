@@ -27,7 +27,7 @@ The aim of this rework is the following:
 * Splatlings
     * [x] Create a base class
     * [x] Write a script for charging
-    * [ ] Draw a crosshair
+    * [x] Draw a crosshair
     * [x] Write a script to spawn the actual ink
     * [ ] Set ink consumption and other parameters
 

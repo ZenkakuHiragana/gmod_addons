@@ -96,6 +96,7 @@ function SWEP:GetCrosshairTrace(t)
 	tr.mins = -tr.maxs
 	
 	t.Trace = util.TraceHull(tr)
+	t.EndPosScreen = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self:GetRange()):ToScreen()
 	t.HitPosScreen = t.Trace.HitPos:ToScreen()
 	t.HitEntity = IsValid(t.Trace.Entity) and t.Trace.Entity:Health() > 0
 	t.Distance = t.Trace.HitPos:Distance(t.pos)
@@ -127,15 +128,15 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 	local linesize = t.Size.Outer * (1.5 - frac)
 	for i = 1, 4 do
 		local rot = dir:Angle()
-		local mx, my = i > 2 and 1 or -1, bit.band(i, 3) > 1 and 1 or -1
-		rot:RotateAroundAxis(yaw, spreadx * mx)
-		rot:RotateAroundAxis(pitch, spready * my)
+		local sgnx, sgny = i > 2 and 1 or -1, bit.band(i, 3) > 1 and 1 or -1
+		rot:RotateAroundAxis(yaw, spreadx * sgnx)
+		rot:RotateAroundAxis(pitch, spready * sgny)
 		
 		local endpos = pos + rot:Forward() * self:GetRange() * frac
 		local hit = endpos:ToScreen()
 		if not hit.visible then continue end
-		hit.x = hit.x - linesize * mx * (t.HitEntity and .75 or 1)
-		hit.y = hit.y - linesize * my * (t.HitEntity and .75 or 1)
+		hit.x = hit.x - linesize * sgnx * (t.HitEntity and .75 or 1)
+		hit.y = hit.y - linesize * sgny * (t.HitEntity and .75 or 1)
 		surface.SetDrawColor(basecolor)
 		surface.SetMaterial(ss.Materials.Crosshair.Line)
 		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
@@ -178,7 +179,7 @@ function SWEP:DrawOuterCircle(t)
 	
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_circle)
-	ss.DrawArc(self.Cursor.x, self.Cursor.y, r, r - ri)
+	ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, r, r - ri)
 end
 
 function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
@@ -210,7 +211,7 @@ function SWEP:DrawInnerCircle(t)
 	
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss.DrawArc(self.Cursor.x, self.Cursor.y, s, thickness)
+	ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s, thickness)
 end
 
 function SWEP:DrawCenterDot(t) -- Center circle
@@ -221,7 +222,7 @@ function SWEP:DrawCenterDot(t) -- Center circle
 	
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_nohit)
-	ss.DrawArc(self.Cursor.x, self.Cursor.y, s)
+	ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s)
 end
 
 function SWEP:GetArmPos()
