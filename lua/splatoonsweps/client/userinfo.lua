@@ -113,6 +113,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 			self.Entity:SetSequence(w.Base == "weapon_splatling" and "idle_crossbow" or "idle_passive")
 			self.Weapon.Visible = true
 			self.Weapon:SetModel(w.ModelPath .. "w_right.mdl")
+			self.Weapon:SetSkin(w.Skin or 0)
 			for i, v in pairs(w.Bodygroup or {}) do
 				self.Weapon:SetBodygroup(i, v)
 			end
@@ -120,11 +121,6 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 			function self.Weapon:GetInkColorProxy()
 				return w:GetInkColorProxy()
 			end
-		end
-		
-		self.Weapon:SetSkin(w.Skin or 0)
-		for i = 0, self.Weapon:GetNumBodyGroups() do
-			self.Weapon:SetBodygroup(i, 0)
 		end
 		
 		self.AnimTime = SysTime()
