@@ -26,7 +26,7 @@ function ENT:Initialize()
 	self:DrawShadow(false)
 	self:Fire "DisableCollision"
 	self:SetNWInt("DVTL_LightColor", 1)
-	self.Pattern = math.random() > .5 and "A" or "B"
+	self:SetPattern(1)
 end
 
 function ENT:SpawnFunction(ply, tr, ClassName)
@@ -41,7 +41,7 @@ function ENT:SpawnFunction(ply, tr, ClassName)
 end
 
 function ENT:Think()
-	local color = dvd.TrafficLights[self.Pattern].Light
+	local color = dvd.TrafficLights[self:GetPattern()].Light
 	self:SetNWInt("DVTL_LightColor", color)
 	
 	for i = 1, 3 do

@@ -1,15 +1,7 @@
 
 -- This script stands for a framework of Decent Vehicle's waypoints.
 
-DecentVehicleDestination = DecentVehicleDestination or {
-	TLDuration = {33, 4, 40 + 3}, -- Sign duration of each light color, Green, Yellow, Red.
-	TrafficLights = {
-		A = {Time = CurTime() + 33, Light = 1},   -- Light pattern A
-		B = {Time = CurTime() + 40, Light = 3}, -- Light pattern B
-	},
-	Waypoints = {},
-	WaypointSize = 20,
-}
+include "autorun/decentvehicle.lua"
 
 local dvd = DecentVehicleDestination
 -- The waypoints are held in normal table.

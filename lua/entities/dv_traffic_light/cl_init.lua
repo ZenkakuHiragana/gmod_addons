@@ -47,6 +47,7 @@ function ENT:DrawTranslucent()
 end
 
 function ENT:Initialize()
+	self:SetPattern(1)
 	self:SetNWInt("DVTL_LightColor", 1)
 	self.PixVis = util.GetPixelVisibleHandle()
 end

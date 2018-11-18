@@ -1,10 +1,7 @@
 
 -- This script stands for a framework of Decent Vehicle's waypoints.
 
-DecentVehicleDestination = DecentVehicleDestination or {
-	Waypoints = {},
-	WaypointSize = 20,
-}
+include "autorun/decentvehicle.lua"
 
 local dvd = DecentVehicleDestination
 -- The waypoints are held in normal table.
