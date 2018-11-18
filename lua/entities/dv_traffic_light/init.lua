@@ -2,7 +2,6 @@ AddCSLuaFile "cl_init.lua"
 AddCSLuaFile "shared.lua"
 include "shared.lua"
 
-local Time = {36, 4, 40} -- Green, Yellow, Red
 local lr = "decentvehicle/trafficlight/lr"
 local ly = "decentvehicle/trafficlight/ly"
 local lg = "decentvehicle/trafficlight/lg"
@@ -26,6 +25,7 @@ function ENT:Initialize()
 	self:DrawShadow(false)
 	self:Fire "DisableCollision"
 	self:SetNWInt("DVTL_LightColor", 1)
+	self.Pattern = math.random() > .5 and "A" or "B"
 end
 
 function ENT:SpawnFunction(ply, tr, ClassName)
@@ -40,14 +40,10 @@ function ENT:SpawnFunction(ply, tr, ClassName)
 end
 
 function ENT:Think()
-	self:SetNWInt("DVTL_LightColor", self:GetNWInt "DVTL_LightColor" % 3 + 1)
-	
-	local color = self:GetNWInt "DVTL_LightColor"
-	self:NextThink(CurTime() + Time[color])
+	local color = dvd.TrafficLights[self.Pattern].LightTable
+	self:SetNWInt("DVTL_LightColor", color)
 	
 	for i = 1, 3 do
 		self:SetSubMaterial(i, LightTable[color][i])
 	end
-	
-	return true
 end

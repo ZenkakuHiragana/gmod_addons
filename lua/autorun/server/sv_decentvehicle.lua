@@ -2,6 +2,11 @@
 -- This script stands for a framework of Decent Vehicle's waypoints.
 
 DecentVehicleDestination = DecentVehicleDestination or {
+	TLDuration = {36, 4, 40}, -- Sign duration of each light color, Green, Yellow, Red.
+	TrafficLights = {
+		A = {Time = CurTime() + 0, Light = 1},   -- Light pattern A
+		B = {Time = CurTime() + 60, Light = 3}, -- Light pattern B
+	},
 	Waypoints = {},
 	WaypointSize = 20,
 }
@@ -34,6 +39,14 @@ hook.Add("InitPostEntity", "Decent Vehicle: Load waypoints", function()
 			if IsValid(ph) then ph:Sleep() end
 			w.TrafficLight = trafficlight
 		end
+	end
+end)
+
+hook.Add("Tick", "Decent Vehicle: Control traffic lights", function()
+	for PatternName, TL in pairs(dvd.TrafficLights) do
+		if CurTime() < TL.Time then continue end
+		TL.Light = TL.Light % 3 + 1
+		TL.Time = CurTime() + dvd.TLDuration[TL.Light]
 	end
 end)
 
