@@ -2,10 +2,10 @@
 -- This script stands for a framework of Decent Vehicle's waypoints.
 
 DecentVehicleDestination = DecentVehicleDestination or {
-	TLDuration = {36, 4, 40}, -- Sign duration of each light color, Green, Yellow, Red.
+	TLDuration = {33, 4, 40 + 3}, -- Sign duration of each light color, Green, Yellow, Red.
 	TrafficLights = {
-		A = {Time = CurTime() + 0, Light = 1},   -- Light pattern A
-		B = {Time = CurTime() + 60, Light = 3}, -- Light pattern B
+		A = {Time = CurTime() + 33, Light = 1},   -- Light pattern A
+		B = {Time = CurTime() + 40, Light = 3}, -- Light pattern B
 	},
 	Waypoints = {},
 	WaypointSize = 20,

@@ -2,6 +2,7 @@ AddCSLuaFile "cl_init.lua"
 AddCSLuaFile "shared.lua"
 include "shared.lua"
 
+local dvd = DecentVehicleDestination
 local lr = "decentvehicle/trafficlight/lr"
 local ly = "decentvehicle/trafficlight/ly"
 local lg = "decentvehicle/trafficlight/lg"
@@ -40,7 +41,7 @@ function ENT:SpawnFunction(ply, tr, ClassName)
 end
 
 function ENT:Think()
-	local color = dvd.TrafficLights[self.Pattern].LightTable
+	local color = dvd.TrafficLights[self.Pattern].Light
 	self:SetNWInt("DVTL_LightColor", color)
 	
 	for i = 1, 3 do
