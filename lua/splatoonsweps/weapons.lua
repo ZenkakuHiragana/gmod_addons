@@ -126,6 +126,8 @@ function ss.CustomPrimary.weapon_splatling(p, info)
 	p.MediumVelocity = info.MediumVelocity * ss.ToHammerUnitsPerSec
 	p.MaxTakeAmmo = p.TakeAmmo
 	p.TakeAmmo = p.TakeAmmo / (info.Delay.FireDuration[2] / info.Delay.Fire)
+	if not info.PaintNearDistance then return end
+	p.PaintNearDistance = info.PaintNearDistance * ss.ToHammerUnits
 end
 
 function ss.SetViewModelMods(weapon, mods)

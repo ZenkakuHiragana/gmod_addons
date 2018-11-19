@@ -91,7 +91,7 @@ function HitPaint.weapon_shooter(ink, t)
 	if not ink.IsDrop and ink.Base ~= "weapon_charger"
 	and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
 		local actual = (t.HitPos - ink.InitPos):Length2D()
-		local min = SplashDistance + ss.mPaintNearDistance
+		local min = SplashDistance + ink.PaintNearDistance
 		if actual > min then
 			local max = ss.mPaintFarDistance
 			local stretch = (actual - min) / max + 0.5
@@ -396,6 +396,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		table.Merge(t, {
 			InkRadius = info.InkRadius,
 			MinRadius = info.MinRadius,
+			PaintNearDistance = info.PaintNearDistance or ss.mPaintNearDistance,
 			PlayHitSound = isdrop and info.PlayHitSound or nil,
 			Range = isdrop and 0 or info.InitVelocity * info.Straight,
 			SplashCount = 0,

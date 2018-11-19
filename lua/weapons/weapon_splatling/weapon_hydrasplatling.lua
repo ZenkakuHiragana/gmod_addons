@@ -4,13 +4,13 @@ local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
 SWEP.ShootSound = "SplatoonSWEPs.52"
 SWEP.ChargeSound = {"SplatoonSWEPs.HydraSplatling", "SplatoonSWEPs.HydraSplatling2", "SplatoonSWEPs.HydraSplatlingFull"}
-SWEP.Sub = "pointsensor"
-SWEP.Special = "bubbler"
+SWEP.Sub = "splatbomb"
+SWEP.Special = "echolocator"
 SWEP.Variations = {{
 	Customized = true,
 	ClassName = "weapon_hydrasplatling_custom",
-	Sub = "inkmine",
-	Special = "inkzooka",
+	Sub = "sprinkler",
+	Special = "bubbler",
 	Bodygroup = {1},
 }}
 
