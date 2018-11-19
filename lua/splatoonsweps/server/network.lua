@@ -58,8 +58,10 @@ net.Receive("SplatoonSWEPs: Send ink cleanup", function(_, ply)
 end)
 
 net.Receive("SplatoonSWEPs: Strip weapon", function(_, ply)
-	local weapon = ss.WeaponClassNames[net.ReadUInt(8)]
-	if not weapon then return end
-	ply:GetWeapon(weapon):Holster()
-	ply:StripWeapon(weapon)
+	local weaponClass = ss.WeaponClassNames[net.ReadUInt(8)]
+	if not weaponClass then return end
+	local weapon = ply:GetWeapon(weaponClass)
+	if not IsValid(weapon) then return end
+	ss.ProtectedCall(weapon.Holster, weapon)
+	ply:StripWeapon(weaponClass)
 end)
