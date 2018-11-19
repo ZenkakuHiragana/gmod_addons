@@ -5,6 +5,7 @@ function ENT:InVehicle() return true end
 function ENT:GetVehicle() return self.v end
 function ENT:GetViewEntity() return NULL end
 function ENT:Give() end
+function ENT:SelectWeapon() end
 function ENT:SetEyeAngles() end
 function ENT:UniqueID() return player.GetByID(1):UniqueID() end
 
