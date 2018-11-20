@@ -25,10 +25,10 @@ The aim of this rework is the following:
 * All Splatlings in Splatoon.
 
 ## Currently working on
-* Optimization
-* Explosive ink for bombs and Blasters
-    [ ] Make effects
-    [ ] Set up properties, damage system, etc
+* Optimization  
+* Explosive ink for bombs and Blasters  
+    * [ ] Make effects  
+    * [ ] Set up properties, damage system, etc
 
 ## Upcoming features
 * Sub weapons
