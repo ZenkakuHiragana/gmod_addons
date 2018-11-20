@@ -22,14 +22,13 @@ The aim of this rework is the following:
     GUI menu is in the weapon tab.
 * All Shooters in Splatoon(WiiU).
 * All Chargers in Splatoon.
+* All Splatlings in Splatoon.
 
 ## Currently working on
-* Splatlings
-    * [x] Create a base class
-    * [x] Write a script for charging
-    * [x] Draw a crosshair
-    * [x] Write a script to spawn the actual ink
-    * [ ] Set ink consumption and other parameters
+* Optimization
+* Explosive ink for bombs and Blasters
+    [ ] Make effects
+    [ ] Set up properties, damage system, etc
 
 ## Upcoming features
 * Sub weapons
