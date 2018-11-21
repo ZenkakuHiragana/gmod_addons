@@ -10,19 +10,27 @@ ENT.HandBrake = false
 ENT.Waypoint = nil
 ENT.NextWaypoint = nil
 ENT.PrevWaypoint = nil
-ENT.RecentSpeed = 0
-ENT.RecentSpeedHistory = {}
-ENT.RecentSpeedIndex = 1
-ENT.RecentSteer = 0
-ENT.RecentSteerHistory = {}
-ENT.RecentSteerIndex = 1
+ENT.SteeringInt = 0 -- Steering integration
+ENT.SteeringOld = 0 -- Steering difference = (diff - self.SteerDiff) / FrameTime()
+ENT.ThrottleInt = 0
+ENT.ThrottleOld = 0
 ENT.Prependicular = 0
 ENT.WaitUntilNext = CurTime()
 
+local sPID = Vector(1.6, .2, .2) -- PID parameters of steering
+local tPID = Vector(1, 0, 0) -- PID parameters of throttle
 local dvd = DecentVehicleDestination
-local RecentCount = 20
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
+
+local function GetDiffNormal(v1, v2)
+	return (v1 - v2):GetNormalized()
+end
+
+-- Get angle between vector AB and vector BC.
+local function GetDeg(A, B, C)
+	return GetDiffNormal(B, A):Dot(GetDiffNormal(C, B))
+end
 
 function ENT:GetVehicleForward()
 	if self.v.IsScar then
@@ -50,6 +58,7 @@ function ENT:SetHandbrake(brake)
 end
 
 function ENT:SetThrottle(throttle)
+	throttle = math.Clamp(throttle, -1, 1)
 	self.Throttle = throttle
 	if self.v.IsScar then
 		if throttle > 0 then
@@ -67,21 +76,22 @@ function ENT:SetThrottle(throttle)
 	end
 end
 
-function ENT:SetSteering(steer)
-	self.Steering = steer
+function ENT:SetSteering(steering)
+	steering = math.Clamp(steering, -1, 1)
+	self.Steering = steering
 	if self.v.IsScar then
-		if steer > 0 then
-			self.v:TurnRight(steer)
-		elseif steer < 0 then
-			self.v:TurnLeft(-steer)
+		if steering > 0 then
+			self.v:TurnRight(steering)
+		elseif steering < 0 then
+			self.v:TurnLeft(-steering)
 		else
 			self.v:NotTurning()
 		end
 	elseif self.v.IsSimfphyscar then
 		local s = self.v:GetVehicleSteer()
-		self.v:PlayerSteerVehicle(self, -math.min(steer, 0), math.max(steer, 0))
-		self.v.PressedKeys.A = steer < -.01 and steer < s and s < 0
-		self.v.PressedKeys.D = steer > .01 and 0 < s and s < steer
+		self.v:PlayerSteerVehicle(self, -math.min(steering, 0), math.max(steering, 0))
+		self.v.PressedKeys.A = steering < -.01 and steering < s and s < 0
+		self.v.PressedKeys.D = steering > .01 and 0 < s and s < steering
 		
 		if self.Waypoint then
 			if self.Waypoint.UseTurnLights then
@@ -110,15 +120,15 @@ function ENT:SetSteering(steer)
 			self.v.Light_L = nil
 		end
 	elseif isfunction(self.v.SetSteering) then
-		self.v:SetSteering(steer, 0)
+		self.v:SetSteering(steering, 0)
 		
 		if VC and self.Waypoint then
 			local states = self.v:VC_getStates()
 			if self.Waypoint.UseTurnLights then
-				if self.RecentSteer >= .2 and not states.TurnLightRightOn then
+				if steering >= .2 and not states.TurnLightRightOn then
 					self.v:VC_setTurnLightRight(true)
 					return
-				elseif self.RecentSteer <= -.2 and not states.TurnLightLeftOn then
+				elseif steering <= -.2 and not states.TurnLightLeftOn then
 					self.v:VC_setTurnLightLeft(true)
 					return
 				end
@@ -195,6 +205,7 @@ function ENT:GetNextWaypoint()
 end
 
 function ENT:Think()
+	self:NextThink(CurTime())
 	if not IsValid(self.v) or -- The tied vehicle goes NULL.
 		not self.v:IsVehicle() or -- Somehow it become non-vehicle entity.
 		not self.v.DecentVehicle or -- Somehow it's a normal vehicle.
@@ -207,10 +218,6 @@ function ENT:Think()
 		return
 	end
 	
-	local velocity = self.v:GetVelocity()
-	local speed = self.RecentSpeed / self.MaxSpeed
-	local steer = 0
-	local currentspeed = velocity:Length()
 	if not self.Waypoint or CurTime() < self.WaitUntilNext
 	or (self.PrevWaypoint and self.PrevWaypoint.TrafficLight
 	and self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3) then
@@ -218,6 +225,8 @@ function ENT:Think()
 		self:SetHandbrake(true)
 		self:SetThrottle(0)
 		self:SetSteering(0)
+		self.SteeringInt, self.SteeringOld = 0, 0
+		self.ThrottleInt, self.ThrottleOld = 0, 0
 		
 		if not self.Waypoint then
 			local Nearest = dvd.GetNearestWaypoint(self:GetPos())
@@ -229,65 +238,61 @@ function ENT:Think()
 				end
 			end
 		end
-	else
+	else -- Drive the vehicle.
 		local ph = self.v:GetPhysicsObject()
 		if not IsValid(ph) then return end
-		
-		-- Drive the vehicle.
+		local sPID = dvd.PID.Steering[self.v:GetClass()] or sPID
+		local tPID = dvd.PID.Throttle[self.v:GetClass()] or tPID
+		local throttle = 1 -- The output throttle
+		local steering = 0 -- The output steering
+		local handbrake = false -- The output handbrake
+		local velocity = self.v:GetVelocity()
+		local currentspeed = velocity:Length()
+		local vehiclepos = self.v:WorldSpaceCenter()
 		local forward = self:GetVehicleForward()
-		local dist = self.Waypoint.Target - self.v:WorldSpaceCenter() -- Distance between the vehicle and the destination.
-		local distLength2D = dist:Length2D()
-		local dir = dist:GetNormalized() -- Direction vector of the destination.
-		local orientation = dir:Dot(forward)
-		local throttle = orientation > 0 and 1 or -1 -- Throttle depends on their positional relationship.
-		local limit = self.Waypoint.SpeedLimit
-		limit = (limit + (self.NextWaypoint and self.NextWaypoint.SpeedLimit or limit)) / 2
-		limit = math.min(self.MaxSpeed, limit)
-		
-		local handbrake = distLength2D < self.RecentSpeed / limit * self.Prependicular * orientation / self.BrakePower
-		if self.Waypoint.TrafficLight
-		and self.Waypoint.TrafficLight:GetNWInt "DVTL_LightColor" > 1 then
-			limit = limit / 2
+		local dest = self.Waypoint.Target - vehiclepos
+		local destlength = dest:Length()
+		local todestination = dest:GetNormalized()
+		local maxspeed = self.Waypoint.SpeedLimit
+		if self.PrevWaypoint then
+			local total = self.Waypoint.Target:Distance(self.PrevWaypoint.Target)
+			local frac = 1 - destlength / total
+			if self.NextWaypoint then
+				maxspeed = Lerp(frac, maxspeed, self.NextWaypoint.SpeedLimit)
+			end
+			
+			maxspeed = maxspeed * Lerp(frac, 1, 1 - self.Prependicular)
 		end
 		
-		throttle = throttle * (1 - currentspeed / limit)
-		if distLength2D < self.MaxSpeed * 5
-		and currentspeed / limit * self.Prependicular * orientation > .5 then
-			throttle = 0
-		end
+		maxspeed = math.min(maxspeed, self.MaxSpeed)
+		local relspeed = currentspeed / maxspeed
+		local cross = todestination:Cross(forward)
+		local steering_dot = cross:Dot(self.v:GetUp())
+		local steering_differece = (steering_dot - self.SteeringOld) / FrameTime()
+		self.SteeringInt = self.SteeringInt + steering_dot * FrameTime()
+		self.SteeringOld = steering_dot
+		steering = sPID.x * steering_dot + sPID.y * self.SteeringInt + sPID.z * steering_differece
 		
-		if handbrake and speed > .1 then
-			throttle = velocity:Dot(forward) < 0 and 1 or -1
-		end
+		local speed_difference = maxspeed - currentspeed
+		local throttle_difference = (speed_difference - self.ThrottleOld) / FrameTime()
+		self.ThrottleInt = self.ThrottleInt + speed_difference * FrameTime()
+		self.ThrottleOld = speed_difference
+		throttle = tPID.x * speed_difference + tPID.y * self.ThrottleInt + tPID.z * throttle_difference
 		
-		-- Set steering parameter.
-		local right = dir:Cross(forward) -- The destination is right side or not.
-		local dirdot = dir:Dot(velocity)
-		local steer_amount = right:Length()^.8 -- Steering parameter.
-		steer = right.z > 0 and steer_amount or -steer_amount --Actual steering parameter.
-		if speed > .05 and dirdot < -.12 then
-			steer = steer * -1
-		end
-		
-		if math.abs(orientation) < .1
-		or orientation < 0
-		and distLength2D > self.MaxRevSpeed then
-			steer, throttle = right.z > 0 and -1 or 1, -.5
+		local goback = forward:Dot(todestination) < 0 and -1 or 1
+		if goback < 0 and destlength > self.MaxRevSpeed then
+			throttle, steering = .5, math.abs(steering) > .1 and (steering > 0 and -1 or 1) or 0
 		end
 		
 		self:SetHandbrake(handbrake)
-		self:SetThrottle(throttle)
-		if ph:GetAngleVelocity().y < 120 then -- If the vehicle is spinning, don't change.
-			self:SetSteering(steer)
-		end
+		self:SetThrottle(throttle * goback)
+		self:SetSteering(steering)
 		
-		print(
-		"Throttle: " .. math.Round(throttle, 1),
-		"Steering: " .. math.Round(steer, 1),
-		"HandBrake: " .. tostring(handbrake),
-		"Speed: " .. math.Round(self.RecentSpeed, 1))
+		print("Throttle", math.Round(throttle, 3), "Steering", math.Round(steering, 3), "Max speed", math.Round(maxspeed, 3))
 		debugoverlay.Sphere(self.Waypoint.Target, 50, .2, Color(0, 255, 0))
-		if distLength2D < math.max(self.v:BoundingRadius(), self.RecentSpeed * math.max(0, velocity:GetNormalized():Dot(forward)) * .5) then
+		
+		if self.Waypoint.Target:Distance(vehiclepos) < math.max(self.v:BoundingRadius(),
+		currentspeed * math.max(0, velocity:GetNormalized():Dot(forward)) * .5) then
 			self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
 			self.PrevWaypoint = self.Waypoint
 			self.Waypoint = self.NextWaypoint
@@ -297,30 +302,18 @@ function ENT:Think()
 		end
 	end
 	
-	self.RecentSpeedHistory[self.RecentSpeedIndex] = currentspeed
-	self.RecentSpeedIndex = self.RecentSpeedIndex % RecentCount + 1
-	self.RecentSteerHistory[self.RecentSteerIndex] = steer
-	self.RecentSteerIndex = self.RecentSteerIndex % RecentCount + 1
-	self.RecentSpeed, self.RecentSteer = 0, 0
-	for i = 1, #self.RecentSpeedHistory do
-		self.RecentSpeed = self.RecentSpeed + self.RecentSpeedHistory[i]
+	self.Prependicular = 1
+	if self.PrevWaypoint and self.Waypoint and self.NextWaypoint then
+		self.Prependicular = 1 - .8 * GetDeg(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
 	end
 	
-	for i = 1, #self.RecentSteerHistory do
-		self.RecentSteer = self.RecentSteer + self.RecentSteerHistory[i]
-	end
-	
-	self.RecentSpeed = self.RecentSpeed / #self.RecentSpeedHistory	
-	self.RecentSteer = self.RecentSteer / #self.RecentSteerHistory
-	self.Prependicular = 1 - (self.PrevWaypoint and self.Waypoint and self.NextWaypoint and
-	(self.Waypoint.Target - self.PrevWaypoint.Target):GetNormalized():Dot((self.NextWaypoint.Target - self.Waypoint.Target):GetNormalized()) or 0)
+	return true
 end
 
 function ENT:Initialize()
 	self:SetModel(self.Modelname)
 	self:SetMoveType(MOVETYPE_NONE)
 	self:PhysicsInit(SOLID_BBOX)
-	self.RecentSpeedHistory = {}
 	
 	-- Pick up a vehicle in the given sphere.
 	local distance = DetectionRange:GetFloat()
