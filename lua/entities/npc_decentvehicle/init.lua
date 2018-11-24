@@ -17,7 +17,8 @@ ENT.ThrottleOld = 0
 ENT.Prependicular = 0
 ENT.WaitUntilNext = CurTime()
 
-local sPID = Vector(1.6, .2, .2) -- PID parameters of steering
+local KphToHUps = 1000 * 3.2808399 * 16 / 3600
+local sPID = Vector(1.5, .2, .2) -- PID parameters of steering
 local tPID = Vector(1, 0, 0) -- PID parameters of throttle
 local dvd = DecentVehicleDestination
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
@@ -256,7 +257,7 @@ function ENT:Think()
 		local maxspeed = self.Waypoint.SpeedLimit
 		if self.PrevWaypoint then
 			local total = self.Waypoint.Target:Distance(self.PrevWaypoint.Target)
-			local frac = 1 - destlength / total
+			local frac = (1 - destlength / total)^2
 			if self.NextWaypoint then
 				maxspeed = Lerp(frac, maxspeed, self.NextWaypoint.SpeedLimit)
 			end
@@ -288,7 +289,7 @@ function ENT:Think()
 		self:SetThrottle(throttle * goback)
 		self:SetSteering(steering)
 		
-		print("Throttle", math.Round(throttle, 3), "Steering", math.Round(steering, 3), "Max speed", math.Round(maxspeed, 3))
+		print("Throttle", math.Round(throttle, 3), "Steering", math.Round(steering, 3), "Max speed", math.Round(maxspeed / KphToHUps, 3), "Relative speed", math.Round(currentspeed / maxspeed, 5))
 		debugoverlay.Sphere(self.Waypoint.Target, 50, .2, Color(0, 255, 0))
 		
 		if self.Waypoint.Target:Distance(vehiclepos) < math.max(self.v:BoundingRadius(),
@@ -304,7 +305,7 @@ function ENT:Think()
 	
 	self.Prependicular = 1
 	if self.PrevWaypoint and self.Waypoint and self.NextWaypoint then
-		self.Prependicular = 1 - .8 * GetDeg(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
+		self.Prependicular = 1 - GetDeg(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
 	end
 	
 	return true
