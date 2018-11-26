@@ -15,6 +15,14 @@ util.AddNetworkString "Decent Vehicle: Traffic light"
 util.AddNetworkString "Decent Vehicle: Retrive waypoints"
 hook.Add("PostCleanupMap", "Decent Vehicle: Clean up waypoints", function()
 	dvd.Waypoints = {}
+	for id, undolist in pairs(undo.GetTable()) do
+		for i, undotable in pairs(undolist) do
+			if not undotable.Functions then continue end
+			if not undotable.Functions[1] then continue end
+			if undotable.Functions[1][1] ~= dvd.UndoWaypoint then continue end
+			undolist[i] = nil
+		end
+	end
 end)
 
 hook.Add("InitPostEntity", "Decent Vehicle: Load waypoints", function()
@@ -132,7 +140,7 @@ function dvd.UndoWaypoint(undoinfo)
 	for i, w in SortedPairsByMemberValue(dvd.Waypoints, "Time", true) do
 		if undoinfo.Owner == w.Owner then
 			dvd.RemoveWaypoint(i)
-			break
+			return
 		end
 	end
 end
@@ -199,4 +207,25 @@ function dvd.AddTrafficLight(id, traffic)
 	net.WriteUInt(id, 24)
 	net.WriteEntity(traffic or NULL)
 	net.Broadcast()
+end
+
+-- Gets a waypoint connected from the given randomly.
+-- Argument:
+--   table waypoint	| The given waypoint.
+--   Vector pos		| If specified, removes waypoints that makes U-turn from suggestions.
+-- Returning:
+--   table waypoint | The connected waypoint.
+function dvd.GetRandomNeighbor(waypoint, pos)
+	if not waypoint.Neighbors then return end
+	
+	local suggestion = {}
+	for i, n in ipairs(waypoint.Neighbors) do
+		local w = dvd.Waypoints[n]
+		if not w then continue end
+		if not pos or (waypoint.Target - pos):Dot(w.Target - waypoint.Target) > 0 then
+			table.insert(suggestion, w)
+		end
+	end
+	
+	return suggestion[math.random(#suggestion)]
 end
