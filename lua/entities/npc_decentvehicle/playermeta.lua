@@ -40,8 +40,6 @@ if SERVER then
 		
 		return GetDriver(self, ...)
 	end
-	
-	local playermeta = FindMetaTable "Player"
 else
 	function ENT:KeyDown() return false end
 end

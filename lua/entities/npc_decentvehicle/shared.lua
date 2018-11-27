@@ -17,4 +17,3 @@ ENT.Contact = ""
 ENT.Purpose = "Decent Vehicle."
 ENT.Instructions = ""
 ENT.Spawnable = false
-ENT.Modelname = "models/player/gman_high.mdl"

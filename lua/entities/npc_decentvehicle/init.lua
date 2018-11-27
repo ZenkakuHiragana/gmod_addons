@@ -25,18 +25,14 @@ local dvd = DecentVehicleDestination
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
 
-local function GetDiffNormal(v1, v2)
-	return (v1 - v2):GetNormalized()
+-- Get angle between vector A and B.
+local function GetDeg(A, B)
+	return A:GetNormalized():Dot(B:GetNormalized())
 end
 
 -- Get angle between vector AB and BC.
 local function GetDeg3(A, B, C)
-	return GetDiffNormal(B, A):Dot(GetDiffNormal(C, B))
-end
-
--- Get angle between vector A and B.
-local function GetDeg(A, B)
-	return A:GetNormalized():Dot(B:GetNormalized())
+	return dvd.GetAng(B - A, C - B)
 end
 
 function ENT:GetVehicleForward()
@@ -245,8 +241,8 @@ function ENT:StopDriving()
 	local nw = dvd.Waypoints[w.Neighbors[math.random(#w.Neighbors)] or -1]
 	if not nw then return end
 	
-	self.Waypoint = w
-	self.NextWaypoint = nw
+	self.Waypoint = table.remove(self.WaypointList, 1) or w
+	self.NextWaypoint = table.remove(self.WaypointList, 1) or self.Waypoint == w and nw or nil
 end
 
 -- Drive the vehicle toward ENT.Waypoint.Target.
@@ -285,7 +281,7 @@ function ENT:DriveToWaypoint()
 	
 	-- Prevents from going backward
 	local goback = forward:Dot(todestination)
-	local velocitydot = GetDeg(velocity, forward)
+	local velocitydot = dvd.GetAng(velocity, forward)
 	if goback < 0 and destlength > self.MaxRevSpeed / 2 then
 		throttle, steering = .2, steering > 0 and -1 or 1
 	end
@@ -316,7 +312,7 @@ function ENT:Think()
 	
 	self.Prependicular = 1
 	if self.Waypoint and self.NextWaypoint and self.PrevWaypoint then
-		self.Prependicular = 1 - GetDeg3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
+		self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
 	end
 	
 	return true
@@ -360,10 +356,18 @@ function ENT:Initialize()
 	
 	self:SetParent(self.v)
 	self:GetVehicleParams()
+	self:SetNoDraw(true)
 	self:SetMoveType(MOVETYPE_NONE)
 	self.WaypointList = {}
 	self.v:DeleteOnRemove(self)
 	hook.Run("PlayerEnteredVehicle", self, self.v)
+	
+	-- A* pathfinding test
+	timer.Simple(1, function()
+		if not (IsValid(self) and IsValid(self.v)) then return end
+		self.WaypointList = dvd.GetRouteVector(self.v:GetPos(), Entity(1):GetEyeTrace().HitPos)
+		self.Waypoint, self.PrevWaypoint, self.NextWaypoint = nil
+	end)
 end
 
 function ENT:OnRemove()

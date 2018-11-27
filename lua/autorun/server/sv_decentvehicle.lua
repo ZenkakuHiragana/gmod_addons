@@ -72,6 +72,10 @@ concommand.Add("dv_route_save", function(ply)
 	ply:SendLua "notification.AddLegacy(\"Decent Vehicle: Waypoints saved!\", NOTIFY_GENERIC, 5)"
 end)
 
+local function GetWaypointFromID(id)
+	return assert(dvd.Waypoints[id], "Decent Vehicle: Waypoint is not found!")
+end
+
 net.Receive("Decent Vehicle: Retrive waypoints", function(_, ply)
 	local id = net.ReadUInt(24)
 	net.Start "Decent Vehicle: Retrive waypoints"
@@ -81,19 +85,16 @@ net.Receive("Decent Vehicle: Retrive waypoints", function(_, ply)
 		return
 	end
 	
+	local waypoint = GetWaypointFromID(id)
 	net.WriteUInt(id, 24)
-	net.WriteVector(dvd.Waypoints[id].Target)
-	net.WriteEntity(dvd.Waypoints[id].TrafficLight or NULL)
-	net.WriteUInt(#dvd.Waypoints[id].Neighbors, 14)
-	for i, n in ipairs(dvd.Waypoints[id].Neighbors) do
+	net.WriteVector(waypoint.Target)
+	net.WriteEntity(waypoint.TrafficLight or NULL)
+	net.WriteUInt(#waypoint.Neighbors, 14)
+	for i, n in ipairs(waypoint.Neighbors) do
 		net.WriteUInt(n, 24)
 	end
 	net.Send(ply)
 end)
-
-local function GetWaypointFromID(id)
-	return assert(dvd.Waypoints[id], "Decent Vehicle: Waypoint is not found!")
-end
 
 -- Creates a new waypoint at given position.
 -- The new ID is always #dvd.Waypoints.
@@ -153,6 +154,7 @@ end
 --   table waypoint		| The found waypoint.  Can be nil.
 --   number waypointID	| The ID of found waypoint.
 function dvd.GetNearestWaypoint(pos, radius)
+	if not isvector(pos) then return end
 	local mindist, waypoint, waypointID = radius and radius^2 or math.huge, nil, nil
 	for i, w in ipairs(dvd.Waypoints) do
 		local distance = w.Target:DistToSqr(pos)
@@ -220,7 +222,7 @@ function dvd.GetRandomNeighbor(waypoint, pos)
 	
 	local suggestion = {}
 	for i, n in ipairs(waypoint.Neighbors) do
-		local w = dvd.Waypoints[n]
+		local w = GetWaypointFromID(n)
 		if not w then continue end
 		if not pos or (waypoint.Target - pos):Dot(w.Target - waypoint.Target) > 0 then
 			table.insert(suggestion, w)
@@ -228,4 +230,131 @@ function dvd.GetRandomNeighbor(waypoint, pos)
 	end
 	
 	return suggestion[math.random(#suggestion)]
+end
+
+-- Retrives a table of waypoints that represents the route
+-- from start to one of the destination in endpos.
+-- Using A* pathfinding algorithm.
+-- Arguments:
+--   number start	| The beginning waypoint ID.
+--   table endpos	| A table of destination waypoint IDs. {[ID] = true}
+-- Returning:
+--   table route	| List of waypoints.  start is the first, endpos is the last.
+function dvd.GetRoute(start, endpos)
+	if not (isnumber(start) and istable(endpos)) then return end
+	
+	local nodes, opens = {}, {}
+	local function CreateNode(id)
+		nodes[id] = {
+			estimate = 0,
+			closed = nil,
+			cost = 0,
+			id = id,
+			parent = nil,
+			score = 0,
+		}
+		
+		return nodes[id]
+	end
+	
+	local function EstimateCost(node)
+		node = GetWaypointFromID(node.id).Target
+		local cost = math.huge
+		for id in pairs(endpos) do
+			cost = math.min(cost, node:Distance(GetWaypointFromID(id).Target))
+		end
+		
+		return cost
+	end
+	
+	local function AddToOpenList(node, parent)
+		if parent then
+			local nodepos = GetWaypointFromID(node.id).Target
+			local parentpos = GetWaypointFromID(parent.id).Target
+			local cost = parentpos:Distance(nodepos)
+			local grandpa = parent.parent
+			if grandpa then -- Angle between waypoints is considered as cost
+				local gppos = GetWaypointFromID(grandpa.id).Target
+				cost = cost --* (2 - dvd.GetAng3(gppos, parentpos, nodepos))
+			end
+			
+			node.cost = parent.cost + cost
+		end
+		
+		node.closed = false
+		node.estimate = EstimateCost(node)
+		node.parent = parent
+		node.score = node.estimate + node.cost
+		
+		-- Open list is binary heap
+		table.insert(opens, node.id)
+		local i = #opens
+		local p = math.floor(i / 2)
+		while i > 0 and p > 0 and nodes[opens[i]].score < nodes[opens[p]].score do
+			opens[i], opens[p] = opens[p], opens[i]
+			i, p = p, math.floor(p / 2)
+		end
+	end
+	
+	start = CreateNode(start)
+	for id in pairs(endpos) do
+		endpos[id] = CreateNode(id)
+	end
+	
+	AddToOpenList(start)
+	while #opens > 0 do
+		local current = opens[1] -- Pop a node which has minimum cost.
+		opens[1] = opens[#opens]
+		opens[#opens] = nil
+		
+		local i = 1 -- Down-heap on the open list
+		while i <= #opens do
+			local c = i * 2
+			if not opens[c] then break end
+			c = c + (opens[c + 1] and nodes[opens[c]].score > nodes[opens[c + 1]].score and 1 or 0)
+			if nodes[opens[c]].score >= nodes[opens[i]].score then break end
+			opens[i], opens[c] = opens[c], opens[i]
+			i = c
+		end
+		
+		if nodes[current].closed then continue end
+		if endpos[current] then
+			current = nodes[current]
+			local route = {}
+			while current.parent do
+				debugoverlay.Sphere(GetWaypointFromID(current.id).Target, 30, 5, Color(0, 255, 0))
+				debugoverlay.SweptBox(GetWaypointFromID(current.parent.id).Target, GetWaypointFromID(current.id).Target, Vector(-10, -10, -10), Vector(10, 10, 10), angle_zero, 5, Color(0, 255, 0))
+				table.insert(route, 1, (GetWaypointFromID(current.id)))
+				current = current.parent
+			end
+			
+			return route
+		end
+		
+		nodes[current].closed = true
+		for i, n in ipairs(GetWaypointFromID(nodes[current].id).Neighbors) do
+			if nodes[n] and nodes[n].closed ~= nil then continue end
+			AddToOpenList(nodes[n] or CreateNode(n), nodes[current])
+		end
+	end
+end
+
+-- Retrives a table of waypoints that represents the route
+-- from start to one of the destination in endpos.
+-- Arguments:
+--   Vector start	| The beginning position.
+--   table endpos	| A table of Vectors that represent destinations.  Can also be a Vector.
+-- Returning:
+--   table route	| The same as returning value of dvd.GetRoute()
+function dvd.GetRouteVector(start, endpos)
+	if isvector(endpos) then endpos = {endpos} end
+	if not (isvector(start) and istable(endpos)) then return end
+	local endpostable = {}
+	for _, p in ipairs(endpos) do
+		local id = select(2, dvd.GetNearestWaypoint(p))
+		if not id then continue end
+		endpostable[id] = true
+	end
+	
+	return dvd.GetRoute(select(2, dvd.GetNearestWaypoint(start)), endpostable)
 end
