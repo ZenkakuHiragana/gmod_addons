@@ -43,6 +43,7 @@ function TOOL:LeftClick(trace)
 		return true
 	end
 	
+	local bidirectional = self:GetClientNumber "bidirectional" > 0
 	local shouldblink = self:GetClientNumber "shouldblink"
 	local speed = self:GetClientNumber "speed"
 	local wait = self:GetClientNumber "wait"
@@ -60,7 +61,7 @@ function TOOL:LeftClick(trace)
 		newpoint.SpeedLimit = speed * KilometerPerHourToHammerUnitsPerSecond
 		if dvd.Waypoints[oldpointID] then
 			dvd.AddNeighbor(oldpointID, self.WaypointID)
-			if self:GetClientNumber "bidirectional" > 0 then
+			if bidirectional then
 				dvd.AddNeighbor(self.WaypointID, oldpointID)
 			end
 		end
@@ -80,8 +81,14 @@ function TOOL:LeftClick(trace)
 		if self.WaypointID > -1 then
 			if table.HasValue(dvd.Waypoints[self.WaypointID].Neighbors, waypointID) then
 				dvd.RemoveNeighbor(self.WaypointID, waypointID)
+				if bidirectional then
+					dvd.RemoveNeighbor(waypointID, self.WaypointID)
+				end
 			else
 				dvd.AddNeighbor(self.WaypointID, waypointID)
+				if bidirectional then
+					dvd.AddNeighbor(waypointID, self.WaypointID)
+				end
 			end
 		end
 		

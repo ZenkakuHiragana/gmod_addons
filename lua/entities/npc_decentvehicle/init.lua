@@ -19,8 +19,8 @@ ENT.Prependicular = 0 -- If the next waypoint needs to turn quickly, this is clo
 ENT.WaitUntilNext = CurTime()
 
 local KphToHUps = 1000 * 3.2808399 * 16 / 3600
-local sPID = Vector(2.2, 0, .5) -- PID parameters of steering
-local tPID = Vector(1, 0, 0) -- PID parameters of throttle
+local sPID = Vector(5, 0, .5) -- PID parameters of steering
+local tPID = Vector(2, 0, 0) -- PID parameters of throttle
 local dvd = DecentVehicleDestination
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
@@ -45,6 +45,53 @@ function ENT:GetVehicleForward()
 	end
 end
 
+function ENT:EstimateAccel()
+	if self.v.IsScar then
+		local phys = self.v:GetPhysicsObject()
+		local velVec = phys:GetVelocity()
+		local vel = velVec:Length()
+		local dir = velVec:Dot(self:GetForward())
+		local force = 1
+		if self.v.DriveStatus == 1 then -- Brake or forward
+			if dir < 0 and vel > 40 then -- BRAKE
+				force = self.v.BreakForce
+			elseif self.v.IsOn and vel < self.v.MaxSpeed and self.v:HasFuel() then -- FORWARD
+				force = self.v.Acceleration
+			end
+		else -- Brake or reverse
+			if dir > vel * .9 and vel > 10 then -- BRAKE
+				force = self.v.BreakForce * 1.5
+			elseif self.v.IsOn and vel < self.v.ReverseMaxSpeed and self.v:HasFuel() then -- REVERSE
+				force = self.v.ReverseForce		
+			end
+		end
+		
+		return math.max(force * self.v.WheelTorqTraction, 1)
+	elseif self.v.IsSimfphyscar then
+		return self.v:GetMaxTorque() * 2 - math.Clamp(self.v.ForwardSpeed, -self.v.Brake, self.v.Brake)
+	else
+		local forward = self.v:GetForward()
+		local gearratio = self.GearRatio[self.v:GetOperatingParams().gear + 1]
+		local numwheels = self.v:GetWheelCount()
+		local wheelangvelocity = 0
+		local wheeldirvelocity = 0
+		local damping, rotdamping = 0, 0
+		for i = 0, numwheels - 1 do
+			local w = self.v:GetWheel(i)
+			wheelangvelocity = wheelangvelocity + math.rad(math.abs(w:GetAngleVelocity().x)) / numwheels
+			wheeldirvelocity = wheeldirvelocity + w:GetVelocity():Dot(forward) / numwheels
+		end
+		
+		for i, a in ipairs(self.v:GetVehicleParams().axles) do
+			damping = damping + a.wheels_damping * wheeldirvelocity / a.wheels_mass
+			rotdamping = rotdamping + a.wheels_rotdamping * wheelangvelocity
+		end
+		
+		return 552 * (self.HorsePower * self.AxleRatio * gearratio - rotdamping * math.sqrt(2))
+		* self.WheelCoefficient / self.Mass - damping * math.sqrt(2) - physenv.GetGravity():Dot(forward)
+	end
+end
+
 function ENT:SetHandbrake(brake)
 	self.HandBrake = brake
 	if self.v.IsScar then
@@ -61,7 +108,6 @@ function ENT:SetHandbrake(brake)
 end
 
 function ENT:SetThrottle(throttle)
-	throttle = math.Clamp(throttle, -1, 1)
 	self.Throttle = throttle
 	if self.v.IsScar then
 		if throttle > 0 then
@@ -162,16 +208,31 @@ function ENT:GetVehicleParams()
 	elseif isfunction(self.v.GetVehicleParams) then
 		local params = self.v:GetVehicleParams()
 		local axles = params.axles
+		local body = params.body
 		local engine = params.engine
 		local steering = params.steering
 		self.BrakePower = 0
+		self.AxleFactor = 0
+		self.Mass = body.massOverride
+		self.WheelRadius = 0
+		local minr, maxr = math.huge, -math.huge
 		for _, axle in ipairs(axles) do
 			self.BrakePower = self.BrakePower + axle.brakeFactor
+			self.AxleFactor = self.AxleFactor + axle.torqueFactor / axle.wheels_radius
+			self.Mass = self.Mass + axle.wheels_mass * params.wheelsPerAxle
+			self.WheelRadius = self.WheelRadius + axle.wheels_radius / #axles
+			minr, maxr = math.min(minr, axle.wheels_radius), math.max(maxr, axle.wheels_radius)
 		end
 		
+		self.WheelRatio = minr / maxr
+		self.WheelCoefficient = 1 / math.sqrt(self.WheelRadius * self.WheelRatio)
 		self.MaxSpeed = engine.maxSpeed or 100
 		self.MaxRevSpeed = engine.maxRevSpeed or 100
 		self.MaxSteeringAngle = steering.degreesSlow or 45
+		self.HorsePower = engine.horsepower
+		self.GearCount = engine.gearCount
+		self.GearRatio = engine.gearRatio
+		self.AxleRatio = engine.axleRatio
 	end
 	
 	print("Brake Power: ", self.BrakePower)
@@ -245,6 +306,28 @@ function ENT:StopDriving()
 	self.NextWaypoint = table.remove(self.WaypointList, 1) or self.Waypoint == w and nw or nil
 end
 
+local function GetOldThrottle(self)
+	local forward = self:GetVehicleForward()
+	local vehiclepos = self.v:WorldSpaceCenter()
+	local velocity = self.v:GetVelocity()
+	local currentspeed = velocity:Dot(forward)
+	local dist = self.Waypoint.Target - vehiclepos
+	local distLength2D = dist:Length2D()
+	local dir = dist:GetNormalized() -- Direction vector of the destination.
+	local orientation = dir:Dot(forward)
+	local throttle = orientation > 0 and 1 or -1
+	local limit = self.Waypoint.SpeedLimit
+	if self.NextWaypoint then limit = (limit + self.NextWaypoint.SpeedLimit) / 2 end
+	limit = math.min(self.MaxSpeed, limit)
+	
+	throttle = throttle * (1 - currentspeed / limit)
+	if math.abs(orientation) < .1 or orientation < 0 and distLength2D > self.MaxRevSpeed then
+		throttle = -.5
+	end
+
+	return throttle
+end
+
 -- Drive the vehicle toward ENT.Waypoint.Target.
 -- Returning:
 --   bool arrived	| Has the vehicle arrived at the current destination.
@@ -273,6 +356,7 @@ function ENT:DriveToWaypoint()
 	self.SteeringOld = steering_angle
 	steering = sPID.x * steering_angle + sPID.y * self.SteeringInt + sPID.z * steering_differece
 	
+	local estimateaccel = math.abs(self:EstimateAccel())
 	local speed_difference = maxspeed - currentspeed
 	local throttle_difference = (speed_difference - self.ThrottleOld) / FrameTime()
 	self.ThrottleInt = self.ThrottleInt + speed_difference * FrameTime()
@@ -282,15 +366,17 @@ function ENT:DriveToWaypoint()
 	-- Prevents from going backward
 	local goback = forward:Dot(todestination)
 	local velocitydot = dvd.GetAng(velocity, forward)
-	if goback < 0 and destlength > self.MaxRevSpeed / 2 then
-		throttle, steering = .2, steering > 0 and -1 or 1
+	goback = math.abs(goback) > .1 and goback < 0 and -1 or 1
+	if goback < 0 then
+		steering = steering > 0 and -1 or 1
 	end
 	
 	-- Handbrake when intending to go backward and actually moving forward or vise-versa
 	handbrake = goback * velocitydot < 0 
-	
+	print(throttle / estimateaccel * goback, currentspeed / maxspeed)
 	self:SetHandbrake(handbrake)
-	self:SetThrottle(throttle * (goback < 0 and -1 or 1))
+	self:SetThrottle(GetOldThrottle(self))
+	self:SetThrottle(throttle / estimateaccel * goback)
 	self:SetSteering(steering)
 	
 	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), currentspeed * math.max(0, velocitydot) * .5)
@@ -342,6 +428,7 @@ function ENT:Initialize()
 					self.v = v
 					v:EnableEngine(true)
 					v:StartEngine(true)
+					v:SetSaveValue("m_hNPCDriver", self)
 					v.DecentVehicle = self
 				end
 			end
@@ -358,6 +445,7 @@ function ENT:Initialize()
 	self:GetVehicleParams()
 	self:SetNoDraw(true)
 	self:SetMoveType(MOVETYPE_NONE)
+	self:PhysicsInit(SOLID_VPHYSICS)
 	self.WaypointList = {}
 	self.v:DeleteOnRemove(self)
 	hook.Run("PlayerEnteredVehicle", self, self.v)
@@ -409,6 +497,7 @@ function ENT:OnRemove()
 		self.v:SetHandbrake(true)
 		self.v:SetThrottle(0)
 		self.v:SetSteering(0, 0)
+		self.v:SetSaveValue("m_hNPCDriver", NULL)
 	end
 	
 	local e = EffectData()
@@ -417,7 +506,3 @@ function ENT:OnRemove()
 	
 	hook.Run("PlayerLeaveVehicle", self, self.v)
 end
-
-hook.Add("CanPlayerEnterVehicle", "Decent Vehicle: Occupy the driver seat", function(ply, vehicle, role)
-	return vehicle.DecentVehicle and role ~= 0 or nil
-end)

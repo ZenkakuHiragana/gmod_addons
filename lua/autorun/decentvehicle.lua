@@ -45,3 +45,21 @@ end
 function dvd.GetAng3(A, B, C)
 	return dvd.GetAng(B - A, C - B)
 end
+
+local function AddVehicle(t, class)
+	list.Set("Vehicles", class, t)
+end
+
+AddVehicle({
+	-- Required information
+	Name = "Jeep",
+	Model = "models/buggy.mdl",
+	Class = "prop_vehicle_jeep_old",
+	Category = "Chairs",
+
+	-- Optional information
+	Author = "GreatZenkakuMan",
+	Information = "Test for DV control",
+
+	KeyValues = {vehiclescript = "jeep_dv.txt"}
+}, "DV test")
