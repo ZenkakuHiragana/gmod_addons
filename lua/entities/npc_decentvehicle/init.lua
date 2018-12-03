@@ -19,8 +19,8 @@ ENT.Prependicular = 0 -- If the next waypoint needs to turn quickly, this is clo
 ENT.WaitUntilNext = CurTime()
 
 local KphToHUps = 1000 * 3.2808399 * 16 / 3600
-local sPID = Vector(5, 0, .5) -- PID parameters of steering
-local tPID = Vector(2, 0, 0) -- PID parameters of throttle
+local sPID = Vector(4, 0, 0) -- PID parameters of steering
+local tPID = Vector(1, 0, 0) -- PID parameters of throttle
 local dvd = DecentVehicleDestination
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
@@ -42,6 +42,26 @@ function ENT:GetVehicleForward()
 		return self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Forward()
 	else
 		return self.v:GetForward()
+	end
+end
+
+function ENT:GetVehicleRight()
+	if self.v.IsScar then
+		return self.v:GetRight()
+	elseif self.v.IsSimfphyscar then
+		return self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Right()
+	else
+		return self.v:GetRight()
+	end
+end
+
+function ENT:GetVehicleUp()
+	if self.v.IsScar then
+		return self.v:GetUp()
+	elseif self.v.IsSimfphyscar then
+		return self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Up()
+	else
+		return self.v:GetUp()
 	end
 end
 
@@ -265,8 +285,6 @@ function ENT:GetCurrentMaxSpeed()
 		maxspeed = maxspeed * Lerp(frac, 1, 1 - self.Prependicular)
 	end
 	
-	-- If the vehicle is turning sharply, slow down
-	maxspeed = maxspeed * math.max(.2, 1 - math.abs(self.Steering))
 	return math.Clamp(maxspeed, 1, self.MaxSpeed)
 end
 
@@ -294,6 +312,10 @@ function ENT:StopDriving()
 	self:SetSteering(0)
 	self.SteeringInt, self.SteeringOld = 0, 0
 	self.ThrottleInt, self.ThrottleOld = 0, 0
+	if IsValid(self.NPCDriver) then
+		self.NPCDriver:SetSaveValue("m_vecDesiredPosition", vector_origin)
+		self.NPCDriver:SetSaveValue("m_vecDesiredPosition", vector_origin)
+	end
 	
 	if self.Waypoint then return end
 	local w = dvd.GetNearestWaypoint(self.v:GetPos())
@@ -342,7 +364,8 @@ function ENT:DriveToWaypoint()
 	local forward = self:GetVehicleForward()
 	local vehiclepos = self.v:WorldSpaceCenter()
 	local velocity = self.v:GetVelocity()
-	local currentspeed = velocity:Dot(forward)
+	local velocitydot = velocity:Dot(forward)
+	local currentspeed = math.abs(velocitydot)
 	local dest = targetpos - vehiclepos
 	local destlength = dest:Length()
 	local todestination = dest:GetNormalized()
@@ -350,7 +373,7 @@ function ENT:DriveToWaypoint()
 	local relspeed = currentspeed / maxspeed
 	local cross = todestination:Cross(forward)
 	
-	local steering_angle = math.asin(cross:Dot(self.v:GetUp())) / math.pi * 2
+	local steering_angle = math.asin(cross:Dot(self:GetVehicleUp())) / math.pi * 2
 	local steering_differece = (steering_angle - self.SteeringOld) / FrameTime()
 	self.SteeringInt = self.SteeringInt + steering_angle * FrameTime()
 	self.SteeringOld = steering_angle
@@ -365,21 +388,32 @@ function ENT:DriveToWaypoint()
 	
 	-- Prevents from going backward
 	local goback = forward:Dot(todestination)
-	local velocitydot = dvd.GetAng(velocity, forward)
+	local approach = velocity:Dot(todestination) / velocity:Length()
+	-- Handbrake when intending to go backward and actually moving forward or vise-versa
 	goback = math.abs(goback) > .1 and goback < 0 and -1 or 1
+	handbrake = goback * velocitydot < 0 or math.abs(approach) < .5 and currentspeed > 50
+	
 	if goback < 0 then
 		steering = steering > 0 and -1 or 1
+	elseif handbrake and not (self.v.IsScar or self.v.IsSimfphyscar) then
+		steering = -steering
 	end
 	
-	-- Handbrake when intending to go backward and actually moving forward or vise-versa
-	handbrake = goback * velocitydot < 0 
-	print(throttle / estimateaccel * goback, currentspeed / maxspeed)
+	if velocitydot * goback * throttle < 0 then
+		throttle = 0 -- The solution of the brake issue.
+	end
+	
+	if IsValid(self.NPCDriver) then
+		local desiredvelocity = todestination * maxspeed
+		self.NPCDriver:SetSaveValue("m_vecDesiredPosition", self.Waypoint.Target)
+		self.NPCDriver:SetSaveValue("m_vecDesiredVelocity", desiredvelocity)
+	end
+	
 	self:SetHandbrake(handbrake)
-	self:SetThrottle(GetOldThrottle(self))
-	self:SetThrottle(throttle / estimateaccel * goback)
+	self:SetThrottle(math.Clamp(throttle / estimateaccel, -1, 1) * goback)
 	self:SetSteering(steering)
 	
-	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), currentspeed * math.max(0, velocitydot) * .5)
+	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), math.max(0, velocitydot) * .5)
 end
 
 function ENT:Think()
@@ -387,6 +421,12 @@ function ENT:Think()
 	if not self:IsValidVehicle() then SafeRemoveEntity(self) return end
 	if self:ShouldStop() then self:StopDriving() return true end
 	debugoverlay.Sphere(self.Waypoint.Target, 50, .1, Color(0, 255, 0))
+	if self.PrevWaypoint then
+		debugoverlay.SweptBox(self.PrevWaypoint.Target, self.Waypoint.Target, -Vector(10, 10, 10), Vector(10, 10, 10), angle_zero, .1, Color(255, 255, 0))
+	end
+	if self.NextWaypoint then
+		debugoverlay.SweptBox(self.NextWaypoint.Target, self.Waypoint.Target, -Vector(10, 10, 10), Vector(10, 10, 10), angle_zero, .1, Color(0, 255, 0))
+	end
 	if not self:DriveToWaypoint() then return true end
 	-- When it arrives at the current waypoint.
 	self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
@@ -428,8 +468,29 @@ function ENT:Initialize()
 					self.v = v
 					v:EnableEngine(true)
 					v:StartEngine(true)
-					v:SetSaveValue("m_hNPCDriver", self)
+					-- v:SetSaveValue("m_hNPCDriver", self)
+					-- v:SetSaveValue("m_hPlayer", Entity(1))
+					-- Entity(1):SetSaveValue("m_hVehicle", v)
 					v.DecentVehicle = self
+					local oldname = v:GetName()
+					v:SetName "decentvehicle"
+					self.NPCDriver = ents.Create "npc_vehicledriver"
+					self.NPCDriver:Spawn()
+					self.NPCDriver:SetKeyValue("Vehicle", "decentvehicle")
+					self.NPCDriver:Activate()
+					self.NPCDriver:Fire "StartForward"
+					self.NPCDriver:Fire("SetDriversMaxSpeed", "100")
+					self.NPCDriver:Fire("SetDriversMinSpeed", "0")
+					self.NPCDriver.InVehicle = self.InVehicle
+					function self.NPCDriver.KeyDown(_, key)
+						return key == IN_FORWARD and self.Throttle > 0
+						or key == IN_BACK and self.Throttle < 0
+						or key == IN_MOVELEFT and self.Steering < 0
+						or key == IN_MOVERIGHT and self.Steering > 0
+						or key == IN_JUMP and self.HandBrake
+						or false
+					end
+					v:SetName(oldname or "")
 				end
 			end
 		end
@@ -451,11 +512,11 @@ function ENT:Initialize()
 	hook.Run("PlayerEnteredVehicle", self, self.v)
 	
 	-- A* pathfinding test
-	timer.Simple(1, function()
-		if not (IsValid(self) and IsValid(self.v)) then return end
-		self.WaypointList = dvd.GetRouteVector(self.v:GetPos(), Entity(1):GetEyeTrace().HitPos)
-		self.Waypoint, self.PrevWaypoint, self.NextWaypoint = nil
-	end)
+	-- timer.Simple(1, function()
+		-- if not (IsValid(self) and IsValid(self.v)) then return end
+		-- self.WaypointList = dvd.GetRouteVector(self.v:GetPos(), Entity(1):GetEyeTrace().HitPos)
+		-- self.Waypoint, self.PrevWaypoint, self.NextWaypoint = nil
+	-- end)
 end
 
 function ENT:OnRemove()
@@ -490,14 +551,17 @@ function ENT:OnRemove()
 		net.WriteEntity(self.v)
 		net.WriteInt(0, 32)
 		net.Broadcast()
-	elseif not IsValid(self.v:GetDriver()) and -- The vehicle is normal vehicle.
-		isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) and 
+	elseif isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) and 
 		isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) then
 		self.v:StartEngine(false) -- Reset states.
 		self.v:SetHandbrake(true)
 		self.v:SetThrottle(0)
 		self.v:SetSteering(0, 0)
-		self.v:SetSaveValue("m_hNPCDriver", NULL)
+	end
+	
+	if IsValid(self.NPCDriver) then
+		self.NPCDriver:Fire "Stop"
+		SafeRemoveEntity(self.NPCDriver)
 	end
 	
 	local e = EffectData()
