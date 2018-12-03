@@ -108,7 +108,7 @@ function ENT:EstimateAccel()
 		end
 		
 		return 552 * (self.HorsePower * self.AxleRatio * gearratio - rotdamping * math.sqrt(2))
-		* self.WheelCoefficient / self.Mass - damping * math.sqrt(2) - physenv.GetGravity():Dot(forward)
+		* self.WheelCoefficient / self.Mass - damping * math.sqrt(2) + physenv.GetGravity():Dot(forward)
 	end
 end
 
@@ -391,8 +391,8 @@ function ENT:DriveToWaypoint()
 	local approach = velocity:Dot(todestination) / velocity:Length()
 	-- Handbrake when intending to go backward and actually moving forward or vise-versa
 	goback = math.abs(goback) > .1 and goback < 0 and -1 or 1
-	handbrake = goback * velocitydot < 0 or math.abs(approach) < .5 and currentspeed > 50
-	
+	handbrake = goback * velocitydot < 0 or math.abs(approach) < .5 and currentspeed > math.max(100, maxspeed * .2)
+	print(currentspeed / KphToHUps)
 	if goback < 0 then
 		steering = steering > 0 and -1 or 1
 	elseif handbrake and not (self.v.IsScar or self.v.IsSimfphyscar) then
