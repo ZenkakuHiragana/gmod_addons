@@ -306,7 +306,46 @@ function ENT:ShouldStop()
 	if self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then return true end
 end
 
+function ENT:ShouldRefuel()
+	if self.v.IsScar then
+		return self.v.FuelPercent < .25
+	elseif self.v.IsSimfphyscar then
+		return self.v:GetFuel() < self.v:GetMaxFuel() / 4
+	elseif VC then
+		return self.v:VC_fuelGet(false) < self.v:VC_fuelGetMax() / 4
+	end
+end
+
+function ENT:Refuel()
+	hook.Run("Decent Vehicle: OnRefuel", self)
+	if self.v.IsScar then
+		self.v.Fuel = self.v.MaxFuel
+		self.v.FuelPercent = 1
+	elseif self.v.IsSimfphyscar then
+		self.v:SetFuel(self.v:GetMaxFuel())
+	elseif VC then
+		self.v:VC_fuelSet(self.v:VC_fuelGetMax())
+	end
+end
+
+function ENT:FindRoute(routetype)
+	if #self.WaypointList > 0 then return end
+	if routetype == "FuelStation" then
+		local routes = select(2, dvd.GetFuelStations())
+		local destinations = {}
+		for i, id in ipairs(routes) do
+			destinations[id] = true
+		end
+		
+		self.WaypointList = dvd.GetRoute(select(2,
+		dvd.GetNearestWaypoint(self.Waypoint.Target)), destinations) or {}
+		
+		self.NextWaypoint = table.remove(self.WaypointList)
+	end
+end
+
 function ENT:StopDriving()
+	hook.Run("Decent Vehicle: StopDriving", self)
 	self:SetHandbrake(true)
 	self:SetThrottle(0)
 	self:SetSteering(0)
@@ -324,30 +363,8 @@ function ENT:StopDriving()
 	local nw = dvd.Waypoints[w.Neighbors[math.random(#w.Neighbors)] or -1]
 	if not nw then return end
 	
-	self.Waypoint = table.remove(self.WaypointList, 1) or w
-	self.NextWaypoint = table.remove(self.WaypointList, 1) or self.Waypoint == w and nw or nil
-end
-
-local function GetOldThrottle(self)
-	local forward = self:GetVehicleForward()
-	local vehiclepos = self.v:WorldSpaceCenter()
-	local velocity = self.v:GetVelocity()
-	local currentspeed = velocity:Dot(forward)
-	local dist = self.Waypoint.Target - vehiclepos
-	local distLength2D = dist:Length2D()
-	local dir = dist:GetNormalized() -- Direction vector of the destination.
-	local orientation = dir:Dot(forward)
-	local throttle = orientation > 0 and 1 or -1
-	local limit = self.Waypoint.SpeedLimit
-	if self.NextWaypoint then limit = (limit + self.NextWaypoint.SpeedLimit) / 2 end
-	limit = math.min(self.MaxSpeed, limit)
-	
-	throttle = throttle * (1 - currentspeed / limit)
-	if math.abs(orientation) < .1 or orientation < 0 and distLength2D > self.MaxRevSpeed then
-		throttle = -.5
-	end
-
-	return throttle
+	self.Waypoint = table.remove(self.WaypointList) or w
+	self.NextWaypoint = table.remove(self.WaypointList) or self.Waypoint == w and nw or nil
 end
 
 -- Drive the vehicle toward ENT.Waypoint.Target.
@@ -392,7 +409,7 @@ function ENT:DriveToWaypoint()
 	-- Handbrake when intending to go backward and actually moving forward or vise-versa
 	goback = math.abs(goback) > .1 and goback < 0 and -1 or 1
 	handbrake = goback * velocitydot < 0 or math.abs(approach) < .5 and currentspeed > math.max(100, maxspeed * .2)
-	print(currentspeed / KphToHUps)
+	
 	if goback < 0 then
 		steering = steering > 0 and -1 or 1
 	elseif handbrake and not (self.v.IsScar or self.v.IsSimfphyscar) then
@@ -413,6 +430,15 @@ function ENT:DriveToWaypoint()
 	self:SetThrottle(math.Clamp(throttle / estimateaccel, -1, 1) * goback)
 	self:SetSteering(steering)
 	
+	debugoverlay.Sphere(self.Waypoint.Target, 50, .1, Color(0, 255, 0))
+	-- if self.PrevWaypoint then
+		-- debugoverlay.SweptBox(self.PrevWaypoint.Target, self.Waypoint.Target, -Vector(10, 10, 10), Vector(10, 10, 10), angle_zero, .1, Color(255, 255, 0))
+	-- end
+	-- if self.NextWaypoint then
+		-- debugoverlay.SweptBox(self.NextWaypoint.Target, self.Waypoint.Target, -Vector(10, 10, 10), Vector(10, 10, 10), angle_zero, .1, Color(0, 255, 0))
+	-- end
+	
+	hook.Run("Decent Vehicle: Drive", self)
 	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), math.max(0, velocitydot) * .5)
 end
 
@@ -420,20 +446,17 @@ function ENT:Think()
 	self:NextThink(CurTime())
 	if not self:IsValidVehicle() then SafeRemoveEntity(self) return end
 	if self:ShouldStop() then self:StopDriving() return true end
-	debugoverlay.Sphere(self.Waypoint.Target, 50, .1, Color(0, 255, 0))
-	if self.PrevWaypoint then
-		debugoverlay.SweptBox(self.PrevWaypoint.Target, self.Waypoint.Target, -Vector(10, 10, 10), Vector(10, 10, 10), angle_zero, .1, Color(255, 255, 0))
-	end
-	if self.NextWaypoint then
-		debugoverlay.SweptBox(self.NextWaypoint.Target, self.Waypoint.Target, -Vector(10, 10, 10), Vector(10, 10, 10), angle_zero, .1, Color(0, 255, 0))
-	end
 	if not self:DriveToWaypoint() then return true end
+	
 	-- When it arrives at the current waypoint.
+	hook.Run("Decent Vehicle: OnReachedWaypoint", self)
+	if self.Waypoint.FuelStation then self:Refuel() end
+	if self:ShouldRefuel() then self:FindRoute "FuelStation" end
 	self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
 	self.PrevWaypoint = self.Waypoint
 	self.Waypoint = self.NextWaypoint
 	if self.Waypoint then
-		self.NextWaypoint = table.remove(self.WaypointList, 1) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos())
+		self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos())
 	end
 	
 	self.Prependicular = 1

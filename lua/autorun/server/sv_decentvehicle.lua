@@ -166,6 +166,21 @@ function dvd.GetNearestWaypoint(pos, radius)
 	return waypoint, waypointID
 end
 
+-- Gets all fuel station points in the map.
+-- Returnings:
+--   table fuelstations	| A sequential table contains all fuel stations.
+--   table fuelIDs		| A sequential table contains all IDs of fuel station.
+function dvd.GetFuelStations()
+	local fuelstations, fuelIDs = {}, {}
+	for i, w in ipairs(dvd.Waypoints) do
+		if not w.FuelStation then continue end
+		table.insert(fuelstations, w)
+		table.insert(fuelIDs, i)
+	end
+	
+	return fuelstations, fuelIDs
+end
+
 -- Adds a link between two waypoints.
 -- The link is one-way, one to another.
 -- Arguments:
@@ -239,7 +254,7 @@ end
 --   number start	| The beginning waypoint ID.
 --   table endpos	| A table of destination waypoint IDs. {[ID] = true}
 -- Returning:
---   table route	| List of waypoints.  start is the first, endpos is the last.
+--   table route	| List of waypoints.  start is the last, endpos is the first.
 function dvd.GetRoute(start, endpos)
 	if not (isnumber(start) and istable(endpos)) then return end
 	
@@ -324,7 +339,7 @@ function dvd.GetRoute(start, endpos)
 			while current.parent do
 				debugoverlay.Sphere(GetWaypointFromID(current.id).Target, 30, 5, Color(0, 255, 0))
 				debugoverlay.SweptBox(GetWaypointFromID(current.parent.id).Target, GetWaypointFromID(current.id).Target, Vector(-10, -10, -10), Vector(10, 10, 10), angle_zero, 5, Color(0, 255, 0))
-				table.insert(route, 1, (GetWaypointFromID(current.id)))
+				table.insert(route, (GetWaypointFromID(current.id)))
 				current = current.parent
 			end
 			

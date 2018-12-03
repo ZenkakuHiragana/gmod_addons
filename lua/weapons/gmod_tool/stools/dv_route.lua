@@ -9,6 +9,7 @@ TOOL.Information = {
 
 TOOL.WaypointID = -1
 TOOL.ClientConVar["bidirectional"] = 0
+TOOL.ClientConVar["fuel"] = 0
 TOOL.ClientConVar["shouldblink"] = 0
 TOOL.ClientConVar["showpoints"] = 1
 TOOL.ClientConVar["speed"] = 40
@@ -23,6 +24,8 @@ if CLIENT then
 	
 	language.Add("tool.dv_route.bidirectional", "Bi-directional link")
 	language.Add("tool.dv_route.bidirectional.help", "If you create a new waypoint, connect bi-directional link automatically.")
+	language.Add("tool.dv_route.fuel", "Fuel station")
+	language.Add("tool.dv_route.fuel.help", "Decent Vehicles will go here to refuel its car.")
 	language.Add("tool.dv_route.save", "Save waypoints")
 	language.Add("tool.dv_route.shouldblink", "Use turn signals")
 	language.Add("tool.dv_route.shouldblink.help", "If checked, Decent Vehicles will use turn signals when they go to the waypoint.")
@@ -44,7 +47,8 @@ function TOOL:LeftClick(trace)
 	end
 	
 	local bidirectional = self:GetClientNumber "bidirectional" > 0
-	local shouldblink = self:GetClientNumber "shouldblink"
+	local fuel = self:GetClientNumber "fuel" > 0
+	local shouldblink = self:GetClientNumber "shouldblink" > 0
 	local speed = self:GetClientNumber "speed"
 	local wait = self:GetClientNumber "wait"
 	local pos = trace.HitPos
@@ -56,7 +60,8 @@ function TOOL:LeftClick(trace)
 		dvd.AddTrafficLight(self.WaypointID, self.TrafficLight)
 		newpoint.Owner = self:GetOwner()
 		newpoint.Time = CurTime()
-		newpoint.UseTurnLights = shouldblink > 0
+		newpoint.FuelStation = fuel
+		newpoint.UseTurnLights = shouldblink
 		newpoint.WaitUntilNext = wait
 		newpoint.SpeedLimit = speed * KilometerPerHourToHammerUnitsPerSecond
 		if dvd.Waypoints[oldpointID] then
@@ -106,14 +111,16 @@ end
 
 function TOOL:RightClick(trace)
 	if CLIENT then return end
-	local shouldblink = self:GetClientNumber("shouldblink", 0)
-	local wait = self:GetClientNumber("wait", 0)
-	local speed = self:GetClientNumber("speed", 0)
+	local fuel = self:GetClientNumber "fuel" > 0
+	local shouldblink = self:GetClientNumber "shouldblink" > 0
+	local wait = self:GetClientNumber "wait"
+	local speed = self:GetClientNumber "speed"
 	local pos = trace.HitPos
 	local waypoint = dvd.GetNearestWaypoint(pos, dvd.WaypointSize)
 	if not waypoint then return end
 	
-	waypoint.UseTurnLights = shouldblink > 0
+	waypoint.FuelStation = fuel
+	waypoint.UseTurnLights = shouldblink
 	waypoint.WaitUntilNext = wait
 	waypoint.SpeedLimit = speed * KilometerPerHourToHammerUnitsPerSecond
 	
@@ -136,6 +143,7 @@ function TOOL.BuildCPanel(CPanel)
 	CPanel:CheckBox("#tool.dv_route.showpoints", "dv_route_showpoints")
 	CPanel:CheckBox("#tool.dv_route.shouldblink", "dv_route_shouldblink"):SetToolTip "#tool.dv_route.shouldblink.help"
 	CPanel:CheckBox("#tool.dv_route.bidirectional", "dv_route_bidirectional"):SetToolTip "#tool.dv_route.bidirectional.help"
+	CPanel:CheckBox("#tool.dv_route.fuel", "dv_route_fuel"):SetToolTip "#tool.dv_route.fuel.help"
 	CPanel:NumSlider("#tool.dv_route.wait", "dv_route_wait", 0, 100, 2):SetToolTip "#tool.dv_route.wait.help"
 	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 100, 0)
 	CPanel:Button("#tool.dv_route.save", "dv_route_save")
