@@ -3,6 +3,7 @@ AddCSLuaFile "shared.lua"
 AddCSLuaFile "playermeta.lua"
 include "shared.lua"
 include "playermeta.lua"
+include "api.lua"
 
 ENT.Throttle = 0
 ENT.Steering = 0
@@ -17,6 +18,7 @@ ENT.ThrottleInt = 0 -- Throttle integration
 ENT.ThrottleOld = 0 -- Throttle difference = (diff - self.ThrottleOld) / FrameTime()
 ENT.Prependicular = 0 -- If the next waypoint needs to turn quickly, this is close to 1.
 ENT.WaitUntilNext = CurTime()
+ENT.RefuelThreshold = .25
 
 local KphToHUps = 1000 * 3.2808399 * 16 / 3600
 local sPID = Vector(4, 0, 0) -- PID parameters of steering
@@ -24,6 +26,8 @@ local tPID = Vector(1, 0, 0) -- PID parameters of throttle
 local dvd = DecentVehicleDestination
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
+local TurnonLights = CreateConVar("decentvehicle_turnonlights", 0,
+FCVAR_ARCHIVE, "Decent Vehicle: Whether or not Decent Vehicle enables lights if it is night.")
 
 -- Get angle between vector A and B.
 local function GetDeg(A, B)
@@ -35,34 +39,11 @@ local function GetDeg3(A, B, C)
 	return dvd.GetAng(B - A, C - B)
 end
 
-function ENT:GetVehicleForward()
-	if self.v.IsScar then
-		return self.v:GetForward()
-	elseif self.v.IsSimfphyscar then
-		return self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Forward()
-	else
-		return self.v:GetForward()
-	end
-end
-
-function ENT:GetVehicleRight()
-	if self.v.IsScar then
-		return self.v:GetRight()
-	elseif self.v.IsSimfphyscar then
-		return self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Right()
-	else
-		return self.v:GetRight()
-	end
-end
-
-function ENT:GetVehicleUp()
-	if self.v.IsScar then
-		return self.v:GetUp()
-	elseif self.v.IsSimfphyscar then
-		return self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Up()
-	else
-		return self.v:GetUp()
-	end
+local function OnCollide(vehicle, data)
+	local self = vehicle.DecentVehicle
+	if not self then return end
+	self.Emergency = data.Speed > 200 and not data.HitEntity:IsPlayer()
+	hook.Run("Decent Vehicle: OnCollide", self, vehicle, data)
 end
 
 function ENT:EstimateAccel()
@@ -109,108 +90,6 @@ function ENT:EstimateAccel()
 		
 		return 552 * (self.HorsePower * self.AxleRatio * gearratio - rotdamping * math.sqrt(2))
 		* self.WheelCoefficient / self.Mass - damping * math.sqrt(2) + physenv.GetGravity():Dot(forward)
-	end
-end
-
-function ENT:SetHandbrake(brake)
-	self.HandBrake = brake
-	if self.v.IsScar then
-		if brake then
-			self.v:HandBrakeOn()
-		else
-			self.v:HandBrakeOff()
-		end
-	elseif self.v.IsSimfphyscar then
-		self.v.PressedKeys.Space = brake
-	elseif isfunction(self.v.SetHandbrake) then
-		self.v:SetHandbrake(brake)
-	end
-end
-
-function ENT:SetThrottle(throttle)
-	self.Throttle = throttle
-	if self.v.IsScar then
-		if throttle > 0 then
-			self.v:GoForward(throttle)
-		elseif throttle < 0 then
-			self.v:GoBack(-throttle)
-		else
-			self.v:GoNeutral()
-		end
-	elseif self.v.IsSimfphyscar then
-		self.v.PressedKeys.W = throttle > .01
-		self.v.PressedKeys.S = throttle < -.01
-	elseif isfunction(self.v.SetThrottle) then
-		self.v:SetThrottle(throttle)
-	end
-end
-
-function ENT:SetSteering(steering)
-	steering = math.Clamp(steering, -1, 1)
-	self.Steering = steering
-	if self.v.IsScar then
-		if steering > 0 then
-			self.v:TurnRight(steering)
-		elseif steering < 0 then
-			self.v:TurnLeft(-steering)
-		else
-			self.v:NotTurning()
-		end
-	elseif self.v.IsSimfphyscar then
-		local s = self.v:GetVehicleSteer()
-		self.v:PlayerSteerVehicle(self, -math.min(steering, 0), math.max(steering, 0))
-		self.v.PressedKeys.A = steering < -.01 and steering < s and s < 0
-		self.v.PressedKeys.D = steering > .01 and 0 < s and s < steering
-		
-		if self.Waypoint then
-			if self.Waypoint.UseTurnLights then
-				if s >= .5 and not self.v.Light_R then
-					net.Start "simfphys_turnsignal"
-					net.WriteEntity(self.v)
-					net.WriteInt(3, 32)
-					net.Broadcast()
-					self.v.Light_R = true
-					return
-				elseif s <= -.5 and not self.v.Light_L then
-					net.Start "simfphys_turnsignal"
-					net.WriteEntity(self.v)
-					net.WriteInt(2, 32)
-					net.Broadcast()
-					self.v.Light_L = true
-					return
-				end
-			end
-			
-			net.Start "simfphys_turnsignal"
-			net.WriteEntity(self.v)
-			net.WriteInt(0, 32)
-			net.Broadcast()
-			self.v.Light_R = nil
-			self.v.Light_L = nil
-		end
-	elseif isfunction(self.v.SetSteering) then
-		self.v:SetSteering(steering, 0)
-		
-		if VC and self.Waypoint then
-			local states = self.v:VC_getStates()
-			if self.Waypoint.UseTurnLights then
-				if steering >= .2 and not states.TurnLightRightOn then
-					self.v:VC_setTurnLightRight(true)
-					return
-				elseif steering <= -.2 and not states.TurnLightLeftOn then
-					self.v:VC_setTurnLightLeft(true)
-					return
-				end
-			end
-			
-			if states.TurnLightRightOn then
-				self.v:VC_setTurnLightRight(false)
-			end
-			
-			if states.TurnLightLeftOn then
-				self.v:VC_setTurnLightLeft(false)
-			end
-		end
 	end
 end
 
@@ -308,19 +187,18 @@ end
 
 function ENT:ShouldRefuel()
 	if self.v.IsScar then
-		return self.v.FuelPercent < .25
+		return self.v:GetFuelPercent() < self.RefuelThreshold
 	elseif self.v.IsSimfphyscar then
-		return self.v:GetFuel() < self.v:GetMaxFuel() / 4
+		return self.v:GetFuel() / self.v:GetMaxFuel() < self.RefuelThreshold
 	elseif VC then
-		return self.v:VC_fuelGet(false) < self.v:VC_fuelGetMax() / 4
+		return self.v:VC_fuelGet(false) / self.v:VC_fuelGetMax() < self.RefuelThreshold
 	end
 end
 
 function ENT:Refuel()
 	hook.Run("Decent Vehicle: OnRefuel", self)
 	if self.v.IsScar then
-		self.v.Fuel = self.v.MaxFuel
-		self.v.FuelPercent = 1
+		self.v:Refuel()
 	elseif self.v.IsSimfphyscar then
 		self.v:SetFuel(self.v:GetMaxFuel())
 	elseif VC then
@@ -328,20 +206,25 @@ function ENT:Refuel()
 	end
 end
 
+function ENT:FindFuelStation()
+	local routes = select(2, dvd.GetFuelStations())
+	local destinations = {}
+	for i, id in ipairs(routes) do
+		destinations[id] = true
+	end
+	
+	local route = dvd.GetRoute(select(2, dvd.GetNearestWaypoint(self.Waypoint.Target)), destinations)
+	if not route then return end
+	
+	self.WaypointList = route
+	return true
+end
+
 function ENT:FindRoute(routetype)
 	if #self.WaypointList > 0 then return end
-	if routetype == "FuelStation" then
-		local routes = select(2, dvd.GetFuelStations())
-		local destinations = {}
-		for i, id in ipairs(routes) do
-			destinations[id] = true
-		end
-		
-		self.WaypointList = dvd.GetRoute(select(2,
-		dvd.GetNearestWaypoint(self.Waypoint.Target)), destinations) or {}
-		
-		self.NextWaypoint = table.remove(self.WaypointList)
-	end
+	if not isfunction(self["Find" .. routetype]) then return end
+	if not self["Find" .. routetype](self) then return end
+	self.NextWaypoint = table.remove(self.WaypointList)
 end
 
 function ENT:StopDriving()
@@ -442,28 +325,102 @@ function ENT:DriveToWaypoint()
 	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), math.max(0, velocitydot) * .5)
 end
 
+function ENT:StormFox()
+	if not StormFox then return end
+	self.v.Wipers = StormFox.IsRaining()
+	
+	if TurnonLights:GetBool() then
+		if StormFox.IsNight() then
+			if self.Lights == nil or not self.Lights then
+				if self.v:GetClass() == "prop_vehicle_jeep" then
+					if VC then
+						self.v:VC_setLowBeams(true)
+						self.Lights = true
+					end
+				elseif self.v:GetClass() == "gmod_sent_vehicle_fphysics_base" then
+					self.v:SetLightsEnabled(true)
+				end
+			end
+		else
+			if self.Lights then
+				if self.v:GetClass() == "gmod_sent_vehicle_fphysics_base" then
+					self.v:SetLightsEnabled(true)
+				elseif self.v:GetClass() == "prop_vehicle_jeep" and VC then
+					self.v:VC_setLowBeams(false)
+					self.Lights = false
+				end
+			end
+		end
+	else
+		if self.Lights then
+			if self.v.IsSimfphyscar then
+				self.v:SetLightsEnabled(true)
+			elseif not self.v.IsScar and VC then
+				self.v:VC_setLowBeams(false)
+				self.Lights = false
+			end
+		end
+	end
+end
+
+function ENT:DoTrace()
+	local forward = self:GetVehicleForward()
+	local vehiclepos = self.v:WorldSpaceCenter()
+	local velocity = self.v:GetVelocity()
+	local velocitydot = velocity:Dot(forward)
+	local currentspeed = math.abs(velocitydot)
+	local goback = velocitydot < 0 and -1 or 1
+	local filter = {self, self.v}
+	local delta = vector_up * 10
+	if self.v.IsSimfphyscar then
+		filter = self.v.VehicleData.filter
+		table.insert(filter, self)
+		table.insert(filter, self.v)
+	end
+	
+	local tracepos = vehiclepos + delta + forward * (currentspeed + 1300) * goback
+	self.Trace = util.TraceHull {
+		start = vehiclepos + delta,
+		endpos = tracepos,
+		maxs = Vector(30, 30, 30),
+		mins = Vector(-30, -30, -30),
+		filter = filter,
+	}
+	
+	if IsValid(self.Trace.Entity) then
+		hook.Run("Decent Vehicle: OnEntityHit", self, self.Trace.Entity)
+	end
+	
+	local pos = self.Trace.HitPos
+	if IsValid(self.Trace.Entity) then pos = self.Trace.Entity:GetPos() end
+	debugoverlay.Cross(pos, 30, .25, Color(255, 0, 0), true)
+	debugoverlay.Line(vehiclepos, pos, .1, self.v:GetColor())
+	debugoverlay.SweptBox(vehiclepos + delta, tracepos, Vector(-30, -30, -30), Vector(30, 30, 30), angle_zero, .05, Color(0, 255, 0))
+end
+
 function ENT:Think()
 	self:NextThink(CurTime())
 	if not self:IsValidVehicle() then SafeRemoveEntity(self) return end
-	if self:ShouldStop() then self:StopDriving() return true end
-	if not self:DriveToWaypoint() then return true end
-	
-	-- When it arrives at the current waypoint.
-	hook.Run("Decent Vehicle: OnReachedWaypoint", self)
-	if self.Waypoint.FuelStation then self:Refuel() end
-	if self:ShouldRefuel() then self:FindRoute "FuelStation" end
-	self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
-	self.PrevWaypoint = self.Waypoint
-	self.Waypoint = self.NextWaypoint
-	if self.Waypoint then
-		self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos())
+	if self:ShouldStop() then
+		self:StopDriving()
+	elseif self:DriveToWaypoint() then
+		-- When it arrives at the current waypoint.
+		hook.Run("Decent Vehicle: OnReachedWaypoint", self)
+		if self.Waypoint.FuelStation then self:Refuel() end
+		if self:ShouldRefuel() then self:FindRoute "FuelStation" end
+		self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
+		self.PrevWaypoint, self.Waypoint = self.Waypoint, self.NextWaypoint
+		if self.Waypoint then
+			self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos())
+		end
+		
+		self.Prependicular = 1
+		if self.Waypoint and self.NextWaypoint and self.PrevWaypoint then
+			self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
+		end
 	end
 	
-	self.Prependicular = 1
-	if self.Waypoint and self.NextWaypoint and self.PrevWaypoint then
-		self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
-	end
-	
+	self:DoTrace()
 	return true
 end
 
@@ -473,28 +430,32 @@ function ENT:Initialize()
 	for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
 		if v:IsVehicle() and not v.DecentVehicle then
 			if v.IsScar then -- If it's a SCAR.
-				if not v:HasDriver() then -- If driver's seat is empty.
+				if not (v:HasDriver() or v:IsLocked()) then -- If driver's seat is empty.
 					self.v = v
 					self.OldSpecialThink = v.SpecialThink
 					v.AIController = self
 					v.SpecialThink = function() end -- Tanks or something sometimes make errors so disable thinking.
 					v.DecentVehicle = self
 				end
-			elseif v.IsSimfphyscar and v:IsInitialized() then -- If it's a Simfphys Vehicle.
-				if not IsValid(v:GetDriver()) then -- Fortunately, Simfphys Vehicles can use GetDriver()
+			elseif v.IsSimfphyscar then -- If it's a Simfphys Vehicle.
+				if v:IsInitialized() and not (IsValid(v:GetDriver()) or v.VehicleLocked) then -- Fortunately, Simfphys Vehicles can use GetDriver()
 					self.v = v
+					self.HeadLightsID = numpad.OnUp(self, KEY_F, "k_lgts", v, false)
+					self.FogLightsID = numpad.OnDown(self, KEY_V, "k_flgts", v, true)
+					self.ELSID = numpad.OnUp(self, KEY_H, "k_hrn", v, false)
+					self.HornID = numpad.OnDown(self, KEY_H, "k_hrn", v, true)
 					v.DecentVehicle = self
 					v.RemoteDriver = self
 				end
 			elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then -- Normal vehicles should use these functions. (SCAR and Simfphys cannot.)
-				if isfunction(v.GetWheelCount) and v:GetWheelCount() and not IsValid(v:GetDriver()) then
+				if isfunction(v.GetWheelCount) and v:GetWheelCount()
+				and isfunction(v.IsEngineEnabled) and v:IsEngineEnabled()
+				and not IsValid(v:GetDriver()) and not (VC and v:VC_isLocked()) then
 					self.v = v
 					v:EnableEngine(true)
 					v:StartEngine(true)
-					-- v:SetSaveValue("m_hNPCDriver", self)
-					-- v:SetSaveValue("m_hPlayer", Entity(1))
-					-- Entity(1):SetSaveValue("m_hVehicle", v)
 					v.DecentVehicle = self
+					
 					local oldname = v:GetName()
 					v:SetName "decentvehicle"
 					self.NPCDriver = ents.Create "npc_vehicledriver"
@@ -525,37 +486,40 @@ function ENT:Initialize()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
 	
+	self.WaypointList = {}
+	self.OnCollideCallback = self.v:AddCallback("PhysicsCollide", OnCollide)
 	self:SetParent(self.v)
 	self:GetVehicleParams()
 	self:SetNoDraw(true)
 	self:SetMoveType(MOVETYPE_NONE)
 	self:PhysicsInit(SOLID_VPHYSICS)
-	self.WaypointList = {}
 	self.v:DeleteOnRemove(self)
 	hook.Run("PlayerEnteredVehicle", self, self.v)
-	
-	-- A* pathfinding test
-	-- timer.Simple(1, function()
-		-- if not (IsValid(self) and IsValid(self.v)) then return end
-		-- self.WaypointList = dvd.GetRouteVector(self.v:GetPos(), Entity(1):GetEyeTrace().HitPos)
-		-- self.Waypoint, self.PrevWaypoint, self.NextWaypoint = nil
-	-- end)
 end
 
 function ENT:OnRemove()
 	if not (IsValid(self.v) and self.v:IsVehicle()) then return end
 	self.v:DontDeleteOnRemove(self)
 	self.v.DecentVehicle = nil
+	self.v:RemoveCallback("PhysicsCollide", self.OnCollideCallback)
+	self:SetHandbrake(false)
+	self:SetSteering(0)
+	self:SetThrottle(0)
+	self:SetRunningLights(false)
+	self:SetFogLights(false)
+	self:SetLights(false, false)
+	self:SetLights(false, true)
+	self:SetHazardLights(false)
+	self:SetTurnLight(false, false)
+	self:SetTurnLight(false, true)
+	self:SetELS(false)
+	self:SetELSSound(false)
+	self:SetHorn(false)
+	
 	if self.v.IsScar then -- If the vehicle is SCAR.
 		self.v.AIController = nil
 		self.v.SpecialThink, self.OldSpecialThink = self.OldSpecialThink or self.v.SpecialThink
-		self.v.GetDriver, self.v.OldGetDriver = self.v.OldGetDriver or self.v.GetDriver
-		if not self.v:HasDriver() then -- If there's no driver, stop the engine.
-			self.v:TurnOffCar()
-			self.v:HandBrakeOn()
-			self.v:GoNeutral()
-			self.v:NotTurning()
-		end
+		self.v:TurnOffCar()
 	elseif self.v.IsSimfphyscar then -- The vehicle is Simfphys Vehicle.
 		self.v.RemoteDriver = nil
 		self.v:SetActive(false)
@@ -565,26 +529,19 @@ function ENT:OnRemove()
 		self.v.PressedKeys.A = false
 		self.v.PressedKeys.S = false
 		self.v.PressedKeys.D = false
-		self.v.PressedKeys.Shift = false
 		self.v.PressedKeys.Space = false
 		
-		self.v.Light_R = false
-		self.v.Light_L = false
-		net.Start "simfphys_turnsignal"
-		net.WriteEntity(self.v)
-		net.WriteInt(0, 32)
-		net.Broadcast()
-	elseif isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) and 
-		isfunction(self.v.SetThrottle) and isfunction(self.v.SetSteering) then
-		self.v:StartEngine(false) -- Reset states.
+		numpad.Remove(self.HeadLightsID)
+		numpad.Remove(self.FogLightsID)
+		numpad.Remove(self.ELSID)
+		numpad.Remove(self.HornID)
+	elseif isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) then
+		self.v:StartEngine(false)
 		self.v:SetHandbrake(true)
-		self.v:SetThrottle(0)
-		self.v:SetSteering(0, 0)
-	end
-	
-	if IsValid(self.NPCDriver) then
-		self.NPCDriver:Fire "Stop"
-		SafeRemoveEntity(self.NPCDriver)
+		if IsValid(self.NPCDriver) then
+			self.NPCDriver:Fire "Stop"
+			SafeRemoveEntity(self.NPCDriver)
+		end
 	end
 	
 	local e = EffectData()
