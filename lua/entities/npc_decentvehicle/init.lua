@@ -18,7 +18,8 @@ ENT.ThrottleInt = 0 -- Throttle integration
 ENT.ThrottleOld = 0 -- Throttle difference = (diff - self.ThrottleOld) / FrameTime()
 ENT.Prependicular = 0 -- If the next waypoint needs to turn quickly, this is close to 1.
 ENT.WaitUntilNext = CurTime()
-ENT.RefuelThreshold = .25
+ENT.RefuelThreshold = .25 -- If the fuel is less than this fraction, the vehicle finds a fuel station.
+ENT.MaxSpeedCoefficient = 1 -- Multiplying this on the maximum speed of the vehicle.
 
 local KphToHUps = 1000 * 3.2808399 * 16 / 3600
 local sPID = Vector(4, 0, 0) -- PID parameters of steering
@@ -164,6 +165,7 @@ function ENT:GetCurrentMaxSpeed()
 		maxspeed = maxspeed * Lerp(frac, 1, 1 - self.Prependicular)
 	end
 	
+	maxspeed = maxspeed * math.Clamp(self.MaxSpeedCoefficient, 0, 1)
 	return math.Clamp(maxspeed, 1, self.MaxSpeed)
 end
 
@@ -180,6 +182,7 @@ end
 function ENT:ShouldStop()
 	if not self.Waypoint then return true end
 	if CurTime() < self.WaitUntilNext then return true end
+	if self.StopByTrace then return true end
 	if not self.PrevWaypoint then return end
 	if not self.PrevWaypoint.TrafficLight then return end
 	if self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then return true end
@@ -238,16 +241,6 @@ function ENT:StopDriving()
 		self.NPCDriver:SetSaveValue("m_vecDesiredPosition", vector_origin)
 		self.NPCDriver:SetSaveValue("m_vecDesiredPosition", vector_origin)
 	end
-	
-	if self.Waypoint then return end
-	local w = dvd.GetNearestWaypoint(self.v:GetPos())
-	if not w then return end
-	
-	local nw = dvd.Waypoints[w.Neighbors[math.random(#w.Neighbors)] or -1]
-	if not nw then return end
-	
-	self.Waypoint = table.remove(self.WaypointList) or w
-	self.NextWaypoint = table.remove(self.WaypointList) or self.Waypoint == w and nw or nil
 end
 
 -- Drive the vehicle toward ENT.Waypoint.Target.
@@ -299,7 +292,7 @@ function ENT:DriveToWaypoint()
 		steering = -steering
 	end
 	
-	if velocitydot * goback * throttle < 0 then
+	if not (self.v.IsScar or self.v.IsSimfphyscar) and velocitydot * goback * throttle < 0 then
 		throttle = 0 -- The solution of the brake issue.
 	end
 	
@@ -363,39 +356,78 @@ function ENT:StormFox()
 	end
 end
 
+local TraceDeltaPos = vector_up * 10
+local TraceMinLength = 300
 function ENT:DoTrace()
-	local forward = self:GetVehicleForward()
+	local up = self:GetVehicleUp()
 	local vehiclepos = self.v:WorldSpaceCenter()
 	local velocity = self.v:GetVelocity()
-	local velocitydot = velocity:Dot(forward)
-	local currentspeed = math.abs(velocitydot)
-	local goback = velocitydot < 0 and -1 or 1
-	local filter = {self, self.v}
-	local delta = vector_up * 10
-	if self.v.IsSimfphyscar then
-		filter = self.v.VehicleData.filter
-		table.insert(filter, self)
-		table.insert(filter, self.v)
+	local tracedir = Vector(velocity)
+	if velocity:LengthSqr() > TraceMinLength^2 then
+		tracedir:Normalize()
+	else
+		tracedir = (self.Waypoint.Target - vehiclepos):GetNormalized()
 	end
 	
-	local tracepos = vehiclepos + delta + forward * (currentspeed + 1300) * goback
+	local velocitydot = velocity:Dot(tracedir)
+	local currentspeed = self.StopByTrace and self.TraceLength or math.max(TraceMinLength, math.abs(velocitydot))
+	local goback = currentspeed > TraceMinLength + 10 and velocity:Dot(self:GetVehicleForward()) < 0 and -1 or 1
+	local filter = self:GetTraceFilter()
+	
+	self.MaxSpeedCoefficient = 1 -- Reset
+	self.StopByTrace = false
+	self.TraceLength = currentspeed
 	self.Trace = util.TraceHull {
-		start = vehiclepos + delta,
-		endpos = tracepos,
+		start = vehiclepos + TraceDeltaPos,
+		endpos = vehiclepos + TraceDeltaPos + tracedir * currentspeed * goback,
 		maxs = Vector(30, 30, 30),
 		mins = Vector(-30, -30, -30),
 		filter = filter,
 	}
 	
-	if IsValid(self.Trace.Entity) then
-		hook.Run("Decent Vehicle: OnEntityHit", self, self.Trace.Entity)
+	debugoverlay.Cross(self.Trace.HitPos, 30, .25, Color(255, 0, 0), true)
+	debugoverlay.Line(vehiclepos + TraceDeltaPos, self.Trace.HitPos, .1, self.v:GetColor())
+	debugoverlay.SweptBox(vehiclepos + TraceDeltaPos, self.Trace.HitPos,
+	Vector(-30, -30, -30), Vector(30, 30, 30), angle_zero, .05, Color(0, 255, 0))
+	
+	local ent = self.Trace.Entity
+	if not IsValid(ent) then return end
+	
+	self.StopByTrace = vehiclepos:DistToSqr(self.Trace.HitPos) < 64e5
+	self.MaxSpeedCoefficient = self.StopByTrace and 0 or 1
+	if self.StopByTrace and ent.DecentVehicle and not ent.DecentVehicle:ShouldStop() then
+		self.StopByTrace = false -- The detected vehicle is not stopping
+		self.MaxSpeedCoefficient = .5 -- Then the vehicle goes slower instead of stopping
 	end
 	
-	local pos = self.Trace.HitPos
-	if IsValid(self.Trace.Entity) then pos = self.Trace.Entity:GetPos() end
-	debugoverlay.Cross(pos, 30, .25, Color(255, 0, 0), true)
-	debugoverlay.Line(vehiclepos, pos, .1, self.v:GetColor())
-	debugoverlay.SweptBox(vehiclepos + delta, tracepos, Vector(-30, -30, -30), Vector(30, 30, 30), angle_zero, .05, Color(0, 255, 0))
+	hook.Run("Decent Vehicle: OnHitEntity", self, ent)
+end
+
+function ENT:FindFirstWaypoint()
+	if self.Waypoint then return end
+	if #self.WaypointList > 0 then
+		self.Waypoint = table.remove(self.WaypointList)
+		self.NextWaypoint = table.remove(self.WaypointList)
+		return
+	end
+	
+	self.Waypoint = dvd.GetNearestWaypoint(self.v:GetPos())
+	if not self.Waypoint then return end
+	
+	self.NextWaypoint = dvd.Waypoints[self.Waypoint.Neighbors[math.random(#self.Waypoint.Neighbors)] or -1]
+end
+
+function ENT:SetupNextWaypoint()
+	self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
+	self.PrevWaypoint, self.Waypoint = self.Waypoint, self.NextWaypoint
+	if self.Waypoint then
+		self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos())
+	end
+	
+	self.Prependicular = 1
+	if self.Waypoint and self.NextWaypoint and self.PrevWaypoint then
+		self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
+	end
 end
 
 function ENT:Think()
@@ -403,21 +435,13 @@ function ENT:Think()
 	if not self:IsValidVehicle() then SafeRemoveEntity(self) return end
 	if self:ShouldStop() then
 		self:StopDriving()
-	elseif self:DriveToWaypoint() then
-		-- When it arrives at the current waypoint.
+		self:FindFirstWaypoint()
+	elseif self:DriveToWaypoint() then -- When it arrives at the current waypoint.
 		hook.Run("Decent Vehicle: OnReachedWaypoint", self)
 		if self.Waypoint.FuelStation then self:Refuel() end
 		if self:ShouldRefuel() then self:FindRoute "FuelStation" end
-		self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
-		self.PrevWaypoint, self.Waypoint = self.Waypoint, self.NextWaypoint
-		if self.Waypoint then
-			self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos())
-		end
 		
-		self.Prependicular = 1
-		if self.Waypoint and self.NextWaypoint and self.PrevWaypoint then
-			self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
-		end
+		self:SetupNextWaypoint()
 	end
 	
 	self:DoTrace()
@@ -428,7 +452,13 @@ function ENT:Initialize()
 	-- Pick up a vehicle in the given sphere.
 	local distance = DetectionRange:GetFloat()
 	for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
-		if v:IsVehicle() and not v.DecentVehicle then
+		if v:IsVehicle() then
+			if v.DecentVehicle then
+				SafeRemoveEntity(v.DecentVehicle)
+				SafeRemoveEntity(self)
+				return
+			end
+			
 			if v.IsScar then -- If it's a SCAR.
 				if not (v:HasDriver() or v:IsLocked()) then -- If driver's seat is empty.
 					self.v = v

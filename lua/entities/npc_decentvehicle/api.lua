@@ -29,6 +29,21 @@ function ENT:GetVehicleUp()
 	end
 end
 
+function ENT:GetTraceFilter()
+	local filter = {self, self.v}
+	if self.v.IsScar then
+		table.Add(filter, self.v.Seats)
+		table.Add(filter, self.v.Wheels)
+		table.Add(filter, self.v.StabilizerProp)
+	elseif self.v.IsSimfphyscar then
+		table.Add(filter, self.v.VehicleData.filter)
+	else
+		table.Add(filter, self.v:GetChildren())
+	end
+	
+	return filter
+end
+
 function ENT:GetRunningLights()
 	if self.v.IsScar then
 		return self.v:GetNWBool "HeadlightsOn"
