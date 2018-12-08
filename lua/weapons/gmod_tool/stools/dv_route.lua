@@ -35,7 +35,7 @@ if CLIENT then
 	language.Add("tool.dv_route.wait.help", "After Decent Vehicles reached the waypoint, they wait for this seconds.")
 end
 
-local KilometerPerHourToHammerUnitsPerSecond = 1000 * 3.2808399 * 16 / 3600
+local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local dvd = DecentVehicleDestination
 function TOOL:LeftClick(trace)
 	if CLIENT then return end
@@ -63,7 +63,7 @@ function TOOL:LeftClick(trace)
 		newpoint.FuelStation = fuel
 		newpoint.UseTurnLights = shouldblink
 		newpoint.WaitUntilNext = wait
-		newpoint.SpeedLimit = speed * KilometerPerHourToHammerUnitsPerSecond
+		newpoint.SpeedLimit = speed * KmphToHUps
 		if dvd.Waypoints[oldpointID] then
 			dvd.AddNeighbor(oldpointID, self.WaypointID)
 			if bidirectional then
@@ -122,7 +122,7 @@ function TOOL:RightClick(trace)
 	waypoint.FuelStation = fuel
 	waypoint.UseTurnLights = shouldblink
 	waypoint.WaitUntilNext = wait
-	waypoint.SpeedLimit = speed * KilometerPerHourToHammerUnitsPerSecond
+	waypoint.SpeedLimit = speed * KmphToHUps
 	
 	self:SetStage(0)
 	return true
@@ -148,4 +148,28 @@ function TOOL.BuildCPanel(CPanel)
 	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 100, 0)
 	CPanel:Button("#tool.dv_route.save", "dv_route_save")
 	CPanel:InvalidateLayout()
+end
+
+if SERVER then return end
+function TOOL:DrawHUD()
+	local pos = LocalPlayer():GetEyeTrace().HitPos
+	local waypoint, waypointID = dvd.GetNearestWaypoint(pos, dvd.WaypointSize)
+	if not waypoint then return end
+	net.Start "Decent Vehicle: Send waypoint info"
+	net.WriteUInt(waypointID, 24)
+	net.SendToServer()
+	
+	if not waypoint.SpeedLimit then return end
+	local textpos = pos:ToScreen()
+	for _, text in ipairs {
+		"ID: " .. tostring(waypointID),
+		"Speed limit [km/h]: " .. tostring(math.Round(waypoint.SpeedLimit / KmphToHUps, 2)),
+		"Wait until next [sec]: " .. tostring(math.Round(waypoint.WaitUntilNext, 2)),
+		"Use turn lights: " .. (waypoint.UseTurnLights and "Yes" or "No"),
+		"Is fuel station: " .. (waypoint.FuelStation and "Yes" or "No"),
+	} do
+		textpos.y = textpos.y + select(2, draw.SimpleTextOutlined(
+		text, "CloseCaption_Normal", textpos.x, textpos.y, color_white,
+		TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP, 2, color_black))
+	end
 end

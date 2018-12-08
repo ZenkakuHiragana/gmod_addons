@@ -13,6 +13,7 @@ util.AddNetworkString "Decent Vehicle: Add a neighbor"
 util.AddNetworkString "Decent Vehicle: Remove a neighbor"
 util.AddNetworkString "Decent Vehicle: Traffic light"
 util.AddNetworkString "Decent Vehicle: Retrive waypoints"
+util.AddNetworkString "Decent Vehicle: Send waypoint info"
 hook.Add("PostCleanupMap", "Decent Vehicle: Clean up waypoints", function()
 	dvd.Waypoints = {}
 	for id, undolist in pairs(undo.GetTable()) do
@@ -93,6 +94,19 @@ net.Receive("Decent Vehicle: Retrive waypoints", function(_, ply)
 	for i, n in ipairs(waypoint.Neighbors) do
 		net.WriteUInt(n, 24)
 	end
+	net.Send(ply)
+end)
+
+net.Receive("Decent Vehicle: Send waypoint info", function(_, ply)
+	local id = net.ReadUInt(24)
+	local waypoint = dvd.Waypoints[id]
+	if not waypoint then return end
+	net.Start "Decent Vehicle: Send waypoint info"
+	net.WriteUInt(id, 24)
+	net.WriteFloat(waypoint.SpeedLimit)
+	net.WriteFloat(waypoint.WaitUntilNext)
+	net.WriteBool(waypoint.UseTurnLights)
+	net.WriteBool(waypoint.FuelStation)
 	net.Send(ply)
 end)
 

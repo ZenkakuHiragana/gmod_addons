@@ -30,9 +30,20 @@ local tPID = Vector(1, 0, 0) -- PID parameters of throttle
 local dvd = DecentVehicleDestination
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
-local TurnonLights = CreateConVar("decentvehicle_turnonlights", 1,
-{FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED},
-"Decent Vehicle: Whether or not Decent Vehicle enables lights.")
+local TurnonLights = CreateConVar("decentvehicle_turnonlights", 3,
+{FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}, 
+[[Decent Vehicle: The level of using lights.
+0: Disabled
+1: Only use running lights
+2: Use running lights and headlights
+3: Use all lights]])
+
+local LIGHTLEVEL = {
+	NONE = 0,
+	RUNNING = 1,
+	HEADLIGHTS = 2,
+	ALL = 3,
+}
 
 local EmergencyDuration = 5
 function ENT:CarCollide(data)
@@ -362,12 +373,13 @@ local function GetFogInfo()
 end
 
 function ENT:DoLights()
-	self:SetTurnLight(self.Waypoint and self.Waypoint.UseTurnLights or false, self.UseLeftTurnLight)
-	self:SetHazardLights(CurTime() < self.Emergency)
-	if not TurnonLights:GetBool() then
-		self:SetRunningLights(false)
+	local lightlevel = TurnonLights:GetInt()
+	if lightlevel < LIGHTLEVEL.ALL then
 		self:SetFogLights(false)
+		if lightlevel == LIGHTLEVEL.HEADLIGHTS then return end
 		self:SetLights(false, false)
+		if lightlevel == LIGHTLEVEL.RUNNING then return end
+		self:SetRunningLights(false)
 		return
 	end
 	
@@ -376,6 +388,8 @@ function ENT:DoLights()
 	self:SetRunningLights(self:GetEngineStarted())
 	self:SetLights(GetNight() or fog, fog)
 	self:SetFogLights(fog)
+	self:SetTurnLight(self.Waypoint and self.Waypoint.UseTurnLights or false, self.UseLeftTurnLight)
+	self:SetHazardLights(CurTime() < self.Emergency)
 end
 
 local TraceDeltaPos = vector_up * 10

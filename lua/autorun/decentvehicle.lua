@@ -11,7 +11,7 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		{Time = CurTime() + 40, Light = 3}, -- Light pattern #2
 	},
 	Waypoints = {},
-	WaypointSize = 20,
+	WaypointSize = 32,
 }
 
 -- Gets direction vector from v1 to v2.
