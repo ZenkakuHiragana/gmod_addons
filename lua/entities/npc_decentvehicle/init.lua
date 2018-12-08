@@ -469,9 +469,10 @@ function ENT:Think()
 	elseif self:DriveToWaypoint() then -- When it arrives at the current waypoint.
 		hook.Run("Decent Vehicle: OnReachedWaypoint", self)
 		if self.Waypoint.FuelStation then self:Refuel() end
-		if self:ShouldRefuel() then print "refuel" self:FindRoute "FuelStation" end
 		
 		self:SetupNextWaypoint()
+	elseif self:ShouldRefuel() then
+		self:FindRoute "FuelStation"
 	end
 	
 	self:DoTrace()
