@@ -20,31 +20,29 @@ ENT.Prependicular = 0 -- If the next waypoint needs to turn quickly, this is clo
 ENT.WaitUntilNext = CurTime()
 ENT.RefuelThreshold = .25 -- If the fuel is less than this fraction, the vehicle finds a fuel station.
 ENT.MaxSpeedCoefficient = 1 -- Multiplying this on the maximum speed of the vehicle.
+ENT.UseLeftTurnLight = false -- Which turn light the vehicle should turn on.
+ENT.Emergency = CurTime()
 
-local KphToHUps = 1000 * 3.2808399 * 16 / 3600
+local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
+local KmphToHUpsSqr = KmphToHUps^2
 local sPID = Vector(4, 0, 0) -- PID parameters of steering
 local tPID = Vector(1, 0, 0) -- PID parameters of throttle
 local dvd = DecentVehicleDestination
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
-local TurnonLights = CreateConVar("decentvehicle_turnonlights", 0,
-FCVAR_ARCHIVE, "Decent Vehicle: Whether or not Decent Vehicle enables lights if it is night.")
+local TurnonLights = CreateConVar("decentvehicle_turnonlights", 1,
+{FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED},
+"Decent Vehicle: Whether or not Decent Vehicle enables lights.")
 
--- Get angle between vector A and B.
-local function GetDeg(A, B)
-	return A:GetNormalized():Dot(B:GetNormalized())
-end
-
--- Get angle between vector AB and BC.
-local function GetDeg3(A, B, C)
-	return dvd.GetAng(B - A, C - B)
-end
-
-local function OnCollide(vehicle, data)
-	local self = vehicle.DecentVehicle
+local EmergencyDuration = 5
+function ENT:CarCollide(data)
+	self = self.v and self or self.DecentVehicle
 	if not self then return end
-	self.Emergency = data.Speed > 200 and not data.HitEntity:IsPlayer()
-	hook.Run("Decent Vehicle: OnCollide", self, vehicle, data)
+	if data.Speed > 200 and not data.HitEntity:IsPlayer() then
+		self.Emergency = CurTime() + EmergencyDuration
+	end
+	
+	hook.Run("Decent Vehicle: OnCollide", self, data)
 end
 
 function ENT:EstimateAccel()
@@ -163,6 +161,10 @@ function ENT:GetCurrentMaxSpeed()
 		
 		-- If the waypoint has a sharp corner, slow down
 		maxspeed = maxspeed * Lerp(frac, 1, 1 - self.Prependicular)
+		
+		if self.Waypoint.TrafficLight and self.Waypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then
+			maxspeed = maxspeed * (1 - frac)
+		end
 	end
 	
 	maxspeed = maxspeed * math.Clamp(self.MaxSpeedCoefficient, 0, 1)
@@ -182,6 +184,7 @@ end
 function ENT:ShouldStop()
 	if not self.Waypoint then return true end
 	if CurTime() < self.WaitUntilNext then return true end
+	if CurTime() < self.Emergency then return true end
 	if self.StopByTrace then return true end
 	if not self.PrevWaypoint then return end
 	if not self.PrevWaypoint.TrafficLight then return end
@@ -284,7 +287,7 @@ function ENT:DriveToWaypoint()
 	local approach = velocity:Dot(todestination) / velocity:Length()
 	-- Handbrake when intending to go backward and actually moving forward or vise-versa
 	goback = math.abs(goback) > .1 and goback < 0 and -1 or 1
-	handbrake = goback * velocitydot < 0 or math.abs(approach) < .5 and currentspeed > math.max(100, maxspeed * .2)
+	handbrake = currentspeed > 10 and goback * velocitydot < 0 or currentspeed > math.max(100, maxspeed * .2) and math.abs(approach) < .5
 	
 	if goback < 0 then
 		steering = steering > 0 and -1 or 1
@@ -318,55 +321,78 @@ function ENT:DriveToWaypoint()
 	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), math.max(0, velocitydot) * .5)
 end
 
-function ENT:StormFox()
-	if not StormFox then return end
-	self.v.Wipers = StormFox.IsRaining()
-	
-	if TurnonLights:GetBool() then
-		if StormFox.IsNight() then
-			if self.Lights == nil or not self.Lights then
-				if self.v:GetClass() == "prop_vehicle_jeep" then
-					if VC then
-						self.v:VC_setLowBeams(true)
-						self.Lights = true
-					end
-				elseif self.v:GetClass() == "gmod_sent_vehicle_fphysics_base" then
-					self.v:SetLightsEnabled(true)
-				end
-			end
-		else
-			if self.Lights then
-				if self.v:GetClass() == "gmod_sent_vehicle_fphysics_base" then
-					self.v:SetLightsEnabled(true)
-				elseif self.v:GetClass() == "prop_vehicle_jeep" and VC then
-					self.v:VC_setLowBeams(false)
-					self.Lights = false
-				end
-			end
-		end
-	else
-		if self.Lights then
-			if self.v.IsSimfphyscar then
-				self.v:SetLightsEnabled(true)
-			elseif not self.v.IsScar and VC then
-				self.v:VC_setLowBeams(false)
-				self.Lights = false
-			end
+local NightSkyTextureList = {
+	sky_borealis01 = true,
+	sky_day01_09 = true,
+	sky_day02_09 = true,
+}
+
+local function GetNight()
+	if StormFox then return StormFox.IsNight() end
+	local skyname = GetConVar "sv_skyname" :GetString()
+	return NightSkyTextureList[skyname]
+	or tobool(skyname:lower():find "night")
+end
+
+local function GetFogInfo()
+	local FogEditor = ents.FindByClass "edit_fog"
+	for i, f in ipairs(FogEditor) do
+		if istable(FogEditor) or FogEditor:EntIndex() < f:EntIndex() then
+			FogEditor = f
 		end
 	end
+	
+	if IsValid(FogEditor) then return true, FogEditor:GetFogEnd() end
+	if not StormFox then
+		local FogController = ents.FindByClass "env_fog_controller"
+		for i, f in ipairs(FogController) do
+			if istable(FogController) or FogController:EntIndex() < f:EntIndex() then
+				FogController = f
+			end
+		end
+		
+		if not IsValid(FogController) then return false, 0 end
+		local keyvalues = FogController:GetKeyValues()
+		return keyvalues.fogenable > 0, keyvalues.fogend
+	end
+	
+	local enabled = GetConVar "sf_enablefog"
+	return enabled and enabled:GetBool()
+	and StormFox.GetWeather() == "Fog", StormFox.GetData "Fogend"
+end
+
+function ENT:DoLights()
+	self:SetTurnLight(self.Waypoint and self.Waypoint.UseTurnLights or false, self.UseLeftTurnLight)
+	self:SetHazardLights(CurTime() < self.Emergency)
+	if not TurnonLights:GetBool() then
+		self:SetRunningLights(false)
+		self:SetFogLights(false)
+		self:SetLights(false, false)
+		return
+	end
+	
+	local fogenabled, fogend = GetFogInfo()
+	local fog = fogenabled and fogend < 5000
+	self:SetRunningLights(self:GetEngineStarted())
+	self:SetLights(GetNight() or fog, fog)
+	self:SetFogLights(fog)
 end
 
 local TraceDeltaPos = vector_up * 10
 local TraceMinLength = 300
+local TraceThreshold = 20
+local TraceStopKmph = 230^2 * KmphToHUpsSqr
 function ENT:DoTrace()
 	local up = self:GetVehicleUp()
 	local vehiclepos = self.v:WorldSpaceCenter()
 	local velocity = self.v:GetVelocity()
 	local tracedir = Vector(velocity)
-	if velocity:LengthSqr() > TraceMinLength^2 then
+	if not self.Waypoint or velocity:LengthSqr() > TraceMinLength^2 then
 		tracedir:Normalize()
 	else
-		tracedir = (self.Waypoint.Target - vehiclepos):GetNormalized()
+		tracedir = self.Waypoint.Target - vehiclepos
+		tracedir = tracedir - up * up:Dot(tracedir)
+		tracedir:Normalize()
 	end
 	
 	local velocitydot = velocity:Dot(tracedir)
@@ -376,6 +402,7 @@ function ENT:DoTrace()
 	
 	self.MaxSpeedCoefficient = 1 -- Reset
 	self.StopByTrace = false
+	
 	self.TraceLength = currentspeed
 	self.Trace = util.TraceHull {
 		start = vehiclepos + TraceDeltaPos,
@@ -389,16 +416,14 @@ function ENT:DoTrace()
 	debugoverlay.Line(vehiclepos + TraceDeltaPos, self.Trace.HitPos, .1, self.v:GetColor())
 	debugoverlay.SweptBox(vehiclepos + TraceDeltaPos, self.Trace.HitPos,
 	Vector(-30, -30, -30), Vector(30, 30, 30), angle_zero, .05, Color(0, 255, 0))
+	debugoverlay.SweptBox(vehiclepos + TraceDeltaPos, vehiclepos + TraceDeltaPos + tracedir * currentspeed * goback,
+	Vector(-30, -30, -30), Vector(30, 30, 30), angle_zero, .05, Color(0, 255, 0))
 	
 	local ent = self.Trace.Entity
 	if not IsValid(ent) then return end
 	
-	self.StopByTrace = vehiclepos:DistToSqr(self.Trace.HitPos) < 64e5
+	self.StopByTrace = vehiclepos:DistToSqr(self.Trace.HitPos) < TraceStopKmph
 	self.MaxSpeedCoefficient = self.StopByTrace and 0 or 1
-	if self.StopByTrace and ent.DecentVehicle and not ent.DecentVehicle:ShouldStop() then
-		self.StopByTrace = false -- The detected vehicle is not stopping
-		self.MaxSpeedCoefficient = .5 -- Then the vehicle goes slower instead of stopping
-	end
 	
 	hook.Run("Decent Vehicle: OnHitEntity", self, ent)
 end
@@ -419,13 +444,18 @@ end
 
 function ENT:SetupNextWaypoint()
 	self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
-	self.PrevWaypoint, self.Waypoint = self.Waypoint, self.NextWaypoint
-	if self.Waypoint then
-		self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos())
+	if self.NextWaypoint and self.NextWaypoint.UseTurnLights then
+		local prevpos = self.v:WorldSpaceCenter()
+		if self.PrevWaypoint then prevpos = self.PrevWaypoint.Target end
+		self.UseLeftTurnLight = (self.Waypoint.Target - prevpos):Cross(
+		self.NextWaypoint.Target - self.Waypoint.Target):Dot(self:GetVehicleUp()) > 0
 	end
 	
+	self.PrevWaypoint, self.Waypoint = self.Waypoint, self.NextWaypoint
+	if not self.Waypoint then return end
+	self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos())
 	self.Prependicular = 1
-	if self.Waypoint and self.NextWaypoint and self.PrevWaypoint then
+	if self.NextWaypoint and self.PrevWaypoint then
 		self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
 	end
 end
@@ -439,12 +469,13 @@ function ENT:Think()
 	elseif self:DriveToWaypoint() then -- When it arrives at the current waypoint.
 		hook.Run("Decent Vehicle: OnReachedWaypoint", self)
 		if self.Waypoint.FuelStation then self:Refuel() end
-		if self:ShouldRefuel() then self:FindRoute "FuelStation" end
+		if self:ShouldRefuel() then print "refuel" self:FindRoute "FuelStation" end
 		
 		self:SetupNextWaypoint()
 	end
 	
 	self:DoTrace()
+	self:DoLights()
 	return true
 end
 
@@ -461,51 +492,51 @@ function ENT:Initialize()
 			
 			if v.IsScar then -- If it's a SCAR.
 				if not (v:HasDriver() or v:IsLocked()) then -- If driver's seat is empty.
-					self.v = v
+					self.v, v.DecentVehicle = v, self
 					self.OldSpecialThink = v.SpecialThink
 					v.AIController = self
 					v.SpecialThink = function() end -- Tanks or something sometimes make errors so disable thinking.
-					v.DecentVehicle = self
 				end
 			elseif v.IsSimfphyscar then -- If it's a Simfphys Vehicle.
 				if v:IsInitialized() and not (IsValid(v:GetDriver()) or v.VehicleLocked) then -- Fortunately, Simfphys Vehicles can use GetDriver()
-					self.v = v
+					self.v, v.DecentVehicle = v, self
 					self.HeadLightsID = numpad.OnUp(self, KEY_F, "k_lgts", v, false)
 					self.FogLightsID = numpad.OnDown(self, KEY_V, "k_flgts", v, true)
 					self.ELSID = numpad.OnUp(self, KEY_H, "k_hrn", v, false)
 					self.HornID = numpad.OnDown(self, KEY_H, "k_hrn", v, true)
-					v.DecentVehicle = self
 					v.RemoteDriver = self
-				end
-			elseif isfunction(v.EnableEngine) and isfunction(v.StartEngine) then -- Normal vehicles should use these functions. (SCAR and Simfphys cannot.)
-				if isfunction(v.GetWheelCount) and v:GetWheelCount()
-				and isfunction(v.IsEngineEnabled) and v:IsEngineEnabled()
-				and not IsValid(v:GetDriver()) and not (VC and v:VC_isLocked()) then
-					self.v = v
-					v:EnableEngine(true)
-					v:StartEngine(true)
-					v.DecentVehicle = self
 					
-					local oldname = v:GetName()
-					v:SetName "decentvehicle"
-					self.NPCDriver = ents.Create "npc_vehicledriver"
-					self.NPCDriver:Spawn()
-					self.NPCDriver:SetKeyValue("Vehicle", "decentvehicle")
-					self.NPCDriver:Activate()
-					self.NPCDriver:Fire "StartForward"
-					self.NPCDriver:Fire("SetDriversMaxSpeed", "100")
-					self.NPCDriver:Fire("SetDriversMinSpeed", "0")
-					self.NPCDriver.InVehicle = self.InVehicle
-					function self.NPCDriver.KeyDown(_, key)
-						return key == IN_FORWARD and self.Throttle > 0
-						or key == IN_BACK and self.Throttle < 0
-						or key == IN_MOVELEFT and self.Steering < 0
-						or key == IN_MOVERIGHT and self.Steering > 0
-						or key == IN_JUMP and self.HandBrake
-						or false
+					self.OldPhysicsCollide = self.v.PhysicsCollide
+					function self.v.PhysicsCollide(...)
+						self.CarCollide(...)
+						return self.OldPhysicsCollide(...)
 					end
-					v:SetName(oldname or "")
 				end
+			elseif isfunction(v.GetWheelCount) and v:GetWheelCount() -- Not a chair
+			and isfunction(v.IsEngineEnabled) and v:IsEngineEnabled() -- Engine is not locked
+			and not IsValid(v:GetDriver()) and not (VC and v:VC_isLocked()) then
+				self.v, v.DecentVehicle = v, self
+				self.OnCollideCallback = self.v:AddCallback("PhysicsCollide", self.CarCollide)
+				
+				local oldname = v:GetName()
+				v:SetName "decentvehicle"
+				self.NPCDriver = ents.Create "npc_vehicledriver"
+				self.NPCDriver:Spawn()
+				self.NPCDriver:SetKeyValue("Vehicle", "decentvehicle")
+				self.NPCDriver:Activate()
+				self.NPCDriver:Fire "StartForward"
+				self.NPCDriver:Fire("SetDriversMaxSpeed", "100")
+				self.NPCDriver:Fire("SetDriversMinSpeed", "0")
+				self.NPCDriver.InVehicle = self.InVehicle
+				function self.NPCDriver.KeyDown(_, key)
+					return key == IN_FORWARD and self.Throttle > 0
+					or key == IN_BACK and self.Throttle < 0
+					or key == IN_MOVELEFT and self.Steering < 0
+					or key == IN_MOVERIGHT and self.Steering > 0
+					or key == IN_JUMP and self.HandBrake
+					or false
+				end
+				v:SetName(oldname or "")
 			end
 		end
 	end
@@ -515,23 +546,20 @@ function ENT:Initialize()
 	local e = EffectData()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
-	
 	self.WaypointList = {}
-	self.OnCollideCallback = self.v:AddCallback("PhysicsCollide", OnCollide)
 	self:SetParent(self.v)
 	self:GetVehicleParams()
 	self:SetNoDraw(true)
 	self:SetMoveType(MOVETYPE_NONE)
 	self:PhysicsInit(SOLID_VPHYSICS)
+	self:SetEngineStarted(true)
 	self.v:DeleteOnRemove(self)
-	hook.Run("PlayerEnteredVehicle", self, self.v)
 end
 
 function ENT:OnRemove()
 	if not (IsValid(self.v) and self.v:IsVehicle()) then return end
 	self.v:DontDeleteOnRemove(self)
 	self.v.DecentVehicle = nil
-	self.v:RemoveCallback("PhysicsCollide", self.OnCollideCallback)
 	self:SetHandbrake(false)
 	self:SetSteering(0)
 	self:SetThrottle(0)
@@ -545,16 +573,14 @@ function ENT:OnRemove()
 	self:SetELS(false)
 	self:SetELSSound(false)
 	self:SetHorn(false)
+	self:SetEngineStarted(false)
 	
 	if self.v.IsScar then -- If the vehicle is SCAR.
 		self.v.AIController = nil
-		self.v.SpecialThink, self.OldSpecialThink = self.OldSpecialThink or self.v.SpecialThink
-		self.v:TurnOffCar()
+		self.v.SpecialThink, self.OldSpecialThink = self.OldSpecialThink
 	elseif self.v.IsSimfphyscar then -- The vehicle is Simfphys Vehicle.
+		self.v.PhysicsCollide, self.OldPhysicsCollide = self.OldPhysicsCollide
 		self.v.RemoteDriver = nil
-		self.v:SetActive(false)
-		self.v:StopEngine()
-		
 		self.v.PressedKeys.W = false
 		self.v.PressedKeys.A = false
 		self.v.PressedKeys.S = false
@@ -565,9 +591,8 @@ function ENT:OnRemove()
 		numpad.Remove(self.FogLightsID)
 		numpad.Remove(self.ELSID)
 		numpad.Remove(self.HornID)
-	elseif isfunction(self.v.StartEngine) and isfunction(self.v.SetHandbrake) then
-		self.v:StartEngine(false)
-		self.v:SetHandbrake(true)
+	else
+		self.v:RemoveCallback("PhysicsCollide", self.OnCollideCallback)
 		if IsValid(self.NPCDriver) then
 			self.NPCDriver:Fire "Stop"
 			SafeRemoveEntity(self.NPCDriver)
@@ -577,6 +602,4 @@ function ENT:OnRemove()
 	local e = EffectData()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
-	
-	hook.Run("PlayerLeaveVehicle", self, self.v)
 end

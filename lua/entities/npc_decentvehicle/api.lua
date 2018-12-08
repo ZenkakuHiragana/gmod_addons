@@ -48,7 +48,7 @@ function ENT:GetRunningLights()
 	if self.v.IsScar then
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
-		return self.v:GetFogLightsEnabled()
+		return self.SimfphysRunningLights
 	elseif VC then
 		return self.v:VC_getStates().RunningLights
 	end
@@ -58,20 +58,20 @@ function ENT:GetFogLights()
 	if self.v.IsScar then
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
-		return self.v:GetFogLightsEnabled()
+		return self.SimfphysFogLights
 	elseif VC then
 		return self.v:VC_getStates().FogLights
 	end
 end
 
-function ENT:GetLights(high)
+function ENT:GetLights(highbeams)
 	if self.v.IsScar then
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
-		return Either(high, self.v:GetLampsEnabled(), self.v:GetLightsEnabled())
+		return Either(highbeams, self.v:GetLampsEnabled(), self.v:GetLightsEnabled())
 	elseif VC then
 		local states = self.v:VC_getStates()
-		return Either(high, states.HighBeams, states.LowBeams)
+		return Either(highbeams, states.HighBeams, states.LowBeams)
 	end
 end
 
@@ -124,10 +124,21 @@ function ENT:GetHorn()
 	end
 end
 
+function ENT:GetEngineStarted()
+	if self.v.IsScar then
+		return self.v.IsOn
+	elseif self.v.IsSimfphyscar then
+		return self.v:EngineActive()
+	else
+		return self.v:IsEngineStarted()
+	end
+end
+
 function ENT:SetRunningLights(on)
 	if on == self:GetRunningLights() then return end
 	if self.v.IsScar then
 	elseif self.v.IsSimfphyscar then
+		self.SimfphysRunningLights = on
 		self.v:SetFogLightsEnabled(not on)
 		numpad.Activate(self, KEY_V, false)
 		self.keystate = nil
@@ -140,6 +151,7 @@ function ENT:SetFogLights(on)
 	if on == self:GetFogLights() then return end
 	if self.v.IsScar then
 	elseif self.v.IsSimfphyscar then
+		self.SimfphysFogLights = on
 		self.v:SetFogLightsEnabled(not on)
 		numpad.Activate(self, KEY_V, false)
 		self.keystate = nil
@@ -211,7 +223,9 @@ function ENT:SetTurnLight(on, left)
 	elseif VC then
 		if left then
 			self.v:VC_setTurnLightLeft(on)
+			self.v:VC_setTurnLightRight(not on)
 		else
+			self.v:VC_setTurnLightLeft(not on)
 			self.v:VC_setTurnLightRight(on)
 		end
 	end
@@ -298,6 +312,26 @@ function ENT:SetHorn(on)
 	end
 end
 
+function ENT:SetEngineStarted(on)
+	if on == self:GetEngineStarted() then return end
+	if self.v.IsScar then
+		if on then
+			self.v:TurnOnCar()
+		else
+			self.v:TurnOffCar()
+		end
+	elseif self.v.IsSimfphyscar then
+		self.v:SetActive(on)
+		if on then
+			self.v:StartEngine()
+		else
+			self.v:StopEngine()
+		end
+	else
+		self.v:StartEngine(on)
+	end
+end
+
 function ENT:SetHandbrake(brake)
 	self.HandBrake = brake
 	if self.v.IsScar then
@@ -347,55 +381,7 @@ function ENT:SetSteering(steering)
 		self.v:PlayerSteerVehicle(self, -math.min(steering, 0), math.max(steering, 0))
 		self.v.PressedKeys.A = steering < -.01 and steering < s and s < 0
 		self.v.PressedKeys.D = steering > .01 and 0 < s and s < steering
-		
-		if self.Waypoint then
-			if self.Waypoint.UseTurnLights then
-				if s >= .5 and not self.v.Light_R then
-					net.Start "simfphys_turnsignal"
-					net.WriteEntity(self.v)
-					net.WriteInt(3, 32)
-					net.Broadcast()
-					self.v.Light_R = true
-					return
-				elseif s <= -.5 and not self.v.Light_L then
-					net.Start "simfphys_turnsignal"
-					net.WriteEntity(self.v)
-					net.WriteInt(2, 32)
-					net.Broadcast()
-					self.v.Light_L = true
-					return
-				end
-			end
-			
-			net.Start "simfphys_turnsignal"
-			net.WriteEntity(self.v)
-			net.WriteInt(0, 32)
-			net.Broadcast()
-			self.v.Light_R = nil
-			self.v.Light_L = nil
-		end
 	elseif isfunction(self.v.SetSteering) then
 		self.v:SetSteering(steering, 0)
-		
-		if VC and self.Waypoint then
-			local states = self.v:VC_getStates()
-			if self.Waypoint.UseTurnLights then
-				if steering >= .2 and not states.TurnLightRightOn then
-					self.v:VC_setTurnLightRight(true)
-					return
-				elseif steering <= -.2 and not states.TurnLightLeftOn then
-					self.v:VC_setTurnLightLeft(true)
-					return
-				end
-			end
-			
-			if states.TurnLightRightOn then
-				self.v:VC_setTurnLightRight(false)
-			end
-			
-			if states.TurnLightLeftOn then
-				self.v:VC_setTurnLightLeft(false)
-			end
-		end
 	end
 end
