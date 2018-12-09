@@ -6,8 +6,43 @@ include "autorun/decentvehicle.lua"
 -- Waypoints are held in normal table.
 -- They're found by brute-force search.
 local dvd = DecentVehicleDestination
+local Exceptions = {Target = true, Neighbors = true, TrafficLight = true}
 local function GetWaypointFromID(id)
 	return assert(dvd.Waypoints[id], "Decent Vehicle: Waypoint is not found!")
+end
+
+local function OverwriteWaypoints(source)
+	if source == dvd then return end
+	table.Empty(dvd.Waypoints)
+	table.Empty(dvd.TrafficLights)
+	for i, w in ipairs(source.Waypoints) do
+		local new = dvd.AddWaypoint(w.Target)
+		for key, value in pairs(w) do
+			if Exceptions[key] then continue end
+			new[key] = value
+		end
+	end
+	
+	for i, w in ipairs(source.Waypoints) do
+		for _, n in ipairs(w.Neighbors) do
+			dvd.AddNeighbor(i, n)
+		end
+	end
+	
+	for i, t in ipairs(source.TrafficLights) do
+		dvd.TrafficLights[i] = t
+	end
+end
+
+local function WriteWaypoint(id)
+	local waypoint = GetWaypointFromID(id)
+	net.WriteUInt(id, 24)
+	net.WriteVector(waypoint.Target)
+	net.WriteEntity(waypoint.TrafficLight or NULL)
+	net.WriteUInt(#waypoint.Neighbors, 14)
+	for i, n in ipairs(waypoint.Neighbors) do
+		net.WriteUInt(n, 24)
+	end
 end
 
 util.AddNetworkString "Decent Vehicle: Add a waypoint"
@@ -42,30 +77,6 @@ hook.Add("Tick", "Decent Vehicle: Control traffic lights", function()
 	end
 end)
 
-local Exceptions = {Target = true, Neighbors = true, TrafficLight = true}
-local function OverwriteWaypoints(source)
-	if source == dvd then return end
-	table.Empty(dvd.Waypoints)
-	table.Empty(dvd.TrafficLights)
-	for i, w in ipairs(source.Waypoints) do
-		local new = dvd.AddWaypoint(w.Target)
-		for key, value in pairs(w) do
-			if Exceptions[key] then continue end
-			new[key] = value
-		end
-	end
-	
-	for i, w in ipairs(source.Waypoints) do
-		for _, n in ipairs(w.Neighbors) do
-			dvd.AddNeighbor(i, n)
-		end
-	end
-	
-	for i, t in ipairs(source.TrafficLights) do
-		dvd.TrafficLights[i] = t
-	end
-end
-
 saverestore.AddSaveHook("Decent Vehicle", function(save)
 	saverestore.WriteTable(dvd, save)
 	for _, t in ipairs(ents.GetAll()) do
@@ -98,6 +109,10 @@ duplicator.RegisterEntityModifier("Decent Vehicle: Save traffic light link", fun
 		if not w or w.TrafficLight == ent then continue end
 		dvd.AddTrafficLight(id, ent)
 	end
+	
+	net.Start "Decent Vehicle: Retrive waypoints"
+	WriteWaypoint(1)
+	net.Broadcast()
 end)
 
 net.Receive("Decent Vehicle: Retrive waypoints", function(_, ply)
@@ -109,14 +124,7 @@ net.Receive("Decent Vehicle: Retrive waypoints", function(_, ply)
 		return
 	end
 	
-	local waypoint = GetWaypointFromID(id)
-	net.WriteUInt(id, 24)
-	net.WriteVector(waypoint.Target)
-	net.WriteEntity(waypoint.TrafficLight or NULL)
-	net.WriteUInt(#waypoint.Neighbors, 14)
-	for i, n in ipairs(waypoint.Neighbors) do
-		net.WriteUInt(n, 24)
-	end
+	WriteWaypoint(id)
 	net.Send(ply)
 end)
 

@@ -50,7 +50,7 @@ net.Receive("Decent Vehicle: Traffic light", function()
 end)
 
 hook.Add("PostCleanupMap", "Decent Vehicle: Clean up waypoints", function()
-	dvd.Waypoints = {}
+	table.Empty(dvd.Waypoints)
 end)
 
 hook.Add("InitPostEntity", "Decent Vehicle: Load waypoints", function()
