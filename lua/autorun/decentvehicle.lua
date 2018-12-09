@@ -45,3 +45,23 @@ end
 function dvd.GetAng3(A, B, C)
 	return dvd.GetAng(B - A, C - B)
 end
+
+-- Retrives the nearest waypoint to the given position.
+-- Arguments:
+--   Vector pos			| The position to find.
+--   number radius		| Optional.  The maximum radius.
+-- Returnings:
+--   table waypoint		| The found waypoint.  Can be nil.
+--   number waypointID	| The ID of found waypoint.
+function dvd.GetNearestWaypoint(pos, radius)
+	if not isvector(pos) then return end
+	local mindist, waypoint, waypointID = (radius or math.huge)^2
+	for i, w in ipairs(dvd.Waypoints) do
+		local distance = w.Target:DistToSqr(pos)
+		if distance < mindist then
+			mindist, waypoint, waypointID = distance, w, i
+		end
+	end
+	
+	return waypoint, waypointID
+end

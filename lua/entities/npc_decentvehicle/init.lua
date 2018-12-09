@@ -23,6 +23,9 @@ ENT.MaxSpeedCoefficient = 1 -- Multiplying this on the maximum speed of the vehi
 ENT.UseLeftTurnLight = false -- Which turn light the vehicle should turn on.
 ENT.Emergency = CurTime()
 
+-- Extra variables for traces.
+ENT.TimeToGoaway = 0
+
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local KmphToHUpsSqr = KmphToHUps^2
 local sPID = Vector(4, 0, 0) -- PID parameters of steering
@@ -439,7 +442,7 @@ function ENT:DoTrace()
 	self.StopByTrace = vehiclepos:DistToSqr(self.Trace.HitPos) < TraceStopKmph
 	self.MaxSpeedCoefficient = self.StopByTrace and 0 or 1
 	
-	hook.Run("Decent Vehicle: OnHitEntity", self, ent)
+	hook.Run("Decent Vehicle: Trace", self, ent)
 end
 
 function ENT:FindFirstWaypoint()

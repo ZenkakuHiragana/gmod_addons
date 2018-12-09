@@ -27,6 +27,8 @@ function ENT:Initialize()
 	self:Fire "DisableCollision"
 	self:SetNWInt("DVTL_LightColor", 1)
 	self:SetPattern(1)
+	
+	self.Waypoints = {}
 end
 
 function ENT:SpawnFunction(ply, tr, ClassName)

@@ -7,6 +7,7 @@ ENT.Spawnable = true
 ENT.AdminOnly = false
 ENT.RenderGroup = RENDERGROUP_TRANSLUCENT
 ENT.Editable = true
+ENT.IsDVTrafficLight = true
 
 function ENT:SetupDataTables()
 	self:NetworkVar("Int", 0, "Pattern", {

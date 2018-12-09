@@ -39,7 +39,7 @@ local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local dvd = DecentVehicleDestination
 function TOOL:LeftClick(trace)
 	if CLIENT then return end
-	if IsValid(trace.Entity) and trace.Entity:GetClass() == "dv_traffic_light" then
+	if IsValid(trace.Entity) and trace.Entity.IsDVTrafficLight then
 		self.TrafficLight = trace.Entity
 		self.WaypointID = -1
 		self:SetStage(1)
@@ -82,7 +82,10 @@ function TOOL:LeftClick(trace)
 		self:SetStage(1)
 		return true
 	elseif self.WaypointID ~= waypointID then
-		dvd.AddTrafficLight(waypointID, self.TrafficLight)
+		if self.TrafficLight then
+			dvd.AddTrafficLight(waypointID, self.TrafficLight)
+		end
+		
 		if self.WaypointID > -1 then
 			if table.HasValue(dvd.Waypoints[self.WaypointID].Neighbors, waypointID) then
 				dvd.RemoveNeighbor(self.WaypointID, waypointID)
@@ -106,6 +109,7 @@ function TOOL:LeftClick(trace)
 	end
 	
 	self:SetStage(0)
+	dvd.RefreshDupe()
 	return true
 end
 
@@ -146,7 +150,6 @@ function TOOL.BuildCPanel(CPanel)
 	CPanel:CheckBox("#tool.dv_route.fuel", "dv_route_fuel"):SetToolTip "#tool.dv_route.fuel.help"
 	CPanel:NumSlider("#tool.dv_route.wait", "dv_route_wait", 0, 100, 2):SetToolTip "#tool.dv_route.wait.help"
 	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 100, 0)
-	CPanel:Button("#tool.dv_route.save", "dv_route_save")
 	CPanel:InvalidateLayout()
 end
 
