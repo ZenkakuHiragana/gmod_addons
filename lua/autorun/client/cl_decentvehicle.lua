@@ -86,6 +86,7 @@ net.Receive("Decent Vehicle: Send waypoint info", function()
 	local id = net.ReadUInt(24)
 	local waypoint = dvd.Waypoints[id]
 	if not waypoint then return end
+	waypoint.Group = net.ReadUInt(16)
 	waypoint.SpeedLimit = net.ReadFloat()
 	waypoint.WaitUntilNext = net.ReadFloat()
 	waypoint.UseTurnLights = net.ReadBool()

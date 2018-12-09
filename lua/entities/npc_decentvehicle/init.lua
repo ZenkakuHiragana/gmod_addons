@@ -24,8 +24,11 @@ ENT.UseLeftTurnLight = false -- Which turn light the vehicle should turn on.
 ENT.Emergency = CurTime()
 
 -- Extra variables for traces.
-ENT.TimeToGoaway = 0
+ENT.InsideRoute = 0
+ENT.StopByTrace = CurTime()
+ENT.NextReleaseBrake = CurTime()
 
+local vector_one = Vector(1, 1, 1)
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local KmphToHUpsSqr = KmphToHUps^2
 local sPID = Vector(4, 0, 0) -- PID parameters of steering
@@ -47,8 +50,54 @@ local LIGHTLEVEL = {
 	HEADLIGHTS = 2,
 	ALL = 3,
 }
+local NightSkyTextureList = {
+	sky_borealis01 = true,
+	sky_day01_09 = true,
+	sky_day02_09 = true,
+}
 
+local TraceMax = 64
+local TraceMinLength = 300
+local TraceMinLengthSqr = TraceMinLength^2
+local TraceThreshold = 10
+local TraceHeightGap = 20
+local GobackTime = 6
+local GobackDuration = 2
 local EmergencyDuration = 5
+local function GetNight()
+	if StormFox then return StormFox.IsNight() end
+	local skyname = GetConVar "sv_skyname" :GetString()
+	return NightSkyTextureList[skyname]
+	or tobool(skyname:lower():find "night")
+end
+
+local function GetFogInfo()
+	local FogEditor = ents.FindByClass "edit_fog"
+	for i, f in ipairs(FogEditor) do
+		if istable(FogEditor) or FogEditor:EntIndex() < f:EntIndex() then
+			FogEditor = f
+		end
+	end
+	
+	if IsValid(FogEditor) then return true, FogEditor:GetFogEnd() end
+	if not StormFox then
+		local FogController = ents.FindByClass "env_fog_controller"
+		for i, f in ipairs(FogController) do
+			if istable(FogController) or FogController:EntIndex() < f:EntIndex() then
+				FogController = f
+			end
+		end
+		
+		if not IsValid(FogController) then return false, 0 end
+		local keyvalues = FogController:GetKeyValues()
+		return keyvalues.fogenable > 0, keyvalues.fogend
+	end
+	
+	local enabled = GetConVar "sf_enablefog"
+	return enabled and enabled:GetBool()
+	and StormFox.GetWeather() == "Fog", StormFox.GetData "Fogend"
+end
+
 function ENT:CarCollide(data)
 	self = self.v and self or self.DecentVehicle
 	if not self then return end
@@ -181,6 +230,7 @@ function ENT:GetCurrentMaxSpeed()
 		end
 	end
 	
+	maxspeed = maxspeed * Either(self.TraceWaypoint.Hit, 1, (self.InsideRoute + 1.1) / 2)
 	maxspeed = maxspeed * math.Clamp(self.MaxSpeedCoefficient, 0, 1)
 	return math.Clamp(maxspeed, 1, self.MaxSpeed)
 end
@@ -195,14 +245,19 @@ function ENT:IsValidVehicle()
 	return true
 end
 
+function ENT:AtTrafficLight()
+	if self.FormLine then return true end
+	if not self.PrevWaypoint then return end
+	if not self.PrevWaypoint.TrafficLight then return end
+	if self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then return true end
+end
+
 function ENT:ShouldStop()
 	if not self.Waypoint then return true end
 	if CurTime() < self.WaitUntilNext then return true end
 	if CurTime() < self.Emergency then return true end
-	if self.StopByTrace then return true end
-	if not self.PrevWaypoint then return end
-	if not self.PrevWaypoint.TrafficLight then return end
-	if self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then return true end
+	if CurTime() > self.StopByTrace and CurTime() < self.StopByTrace + GobackTime then return true end
+	if self:AtTrafficLight() then return true end
 end
 
 function ENT:ShouldRefuel()
@@ -233,7 +288,7 @@ function ENT:FindFuelStation()
 		destinations[id] = true
 	end
 	
-	local route = dvd.GetRoute(select(2, dvd.GetNearestWaypoint(self.Waypoint.Target)), destinations)
+	local route = dvd.GetRoute(select(2, dvd.GetNearestWaypoint(self.Waypoint.Target)), destinations, self.Group)
 	if not route then return end
 	
 	self.WaypointList = route
@@ -309,8 +364,18 @@ function ENT:DriveToWaypoint()
 		steering = -steering
 	end
 	
-	if not (self.v.IsScar or self.v.IsSimfphyscar) and velocitydot * goback * throttle < 0 then
-		throttle = 0 -- The solution of the brake issue.
+	local GobackByTrace = CurTime() - self.StopByTrace - GobackTime
+	if not self.FormLine and 0 < GobackByTrace and GobackByTrace < GobackDuration then
+		goback = -1
+		handbrake = false
+	else
+		if GobackByTrace > GobackDuration then
+			self.StopByTrace = CurTime() + .1 -- Reset going back timer
+		end
+	
+		if not (self.v.IsScar or self.v.IsSimfphyscar) and velocitydot * goback * throttle < 0 then
+			throttle = 0 -- The solution of the brake issue.
+		end
 	end
 	
 	if IsValid(self.NPCDriver) then
@@ -324,55 +389,9 @@ function ENT:DriveToWaypoint()
 	self:SetSteering(steering)
 	
 	debugoverlay.Sphere(self.Waypoint.Target, 50, .1, Color(0, 255, 0))
-	-- if self.PrevWaypoint then
-		-- debugoverlay.SweptBox(self.PrevWaypoint.Target, self.Waypoint.Target, -Vector(10, 10, 10), Vector(10, 10, 10), angle_zero, .1, Color(255, 255, 0))
-	-- end
-	-- if self.NextWaypoint then
-		-- debugoverlay.SweptBox(self.NextWaypoint.Target, self.Waypoint.Target, -Vector(10, 10, 10), Vector(10, 10, 10), angle_zero, .1, Color(0, 255, 0))
-	-- end
 	
 	hook.Run("Decent Vehicle: Drive", self)
 	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), math.max(0, velocitydot) * .5)
-end
-
-local NightSkyTextureList = {
-	sky_borealis01 = true,
-	sky_day01_09 = true,
-	sky_day02_09 = true,
-}
-
-local function GetNight()
-	if StormFox then return StormFox.IsNight() end
-	local skyname = GetConVar "sv_skyname" :GetString()
-	return NightSkyTextureList[skyname]
-	or tobool(skyname:lower():find "night")
-end
-
-local function GetFogInfo()
-	local FogEditor = ents.FindByClass "edit_fog"
-	for i, f in ipairs(FogEditor) do
-		if istable(FogEditor) or FogEditor:EntIndex() < f:EntIndex() then
-			FogEditor = f
-		end
-	end
-	
-	if IsValid(FogEditor) then return true, FogEditor:GetFogEnd() end
-	if not StormFox then
-		local FogController = ents.FindByClass "env_fog_controller"
-		for i, f in ipairs(FogController) do
-			if istable(FogController) or FogController:EntIndex() < f:EntIndex() then
-				FogController = f
-			end
-		end
-		
-		if not IsValid(FogController) then return false, 0 end
-		local keyvalues = FogController:GetKeyValues()
-		return keyvalues.fogenable > 0, keyvalues.fogend
-	end
-	
-	local enabled = GetConVar "sf_enablefog"
-	return enabled and enabled:GetBool()
-	and StormFox.GetWeather() == "Fog", StormFox.GetData "Fogend"
 end
 
 function ENT:DoLights()
@@ -395,52 +414,74 @@ function ENT:DoLights()
 	self:SetHazardLights(CurTime() < self.Emergency)
 end
 
-local TraceDeltaPos = vector_up * 10
-local TraceMinLength = 300
-local TraceThreshold = 20
-local TraceStopKmph = 230^2 * KmphToHUpsSqr
 function ENT:DoTrace()
+	local prevwaypoint = self.PrevWaypoint
+	local nextwaypoint = self.NextWaypoint
+	local filter = self:GetTraceFilter()
+	local forward = self:GetVehicleForward()
 	local up = self:GetVehicleUp()
 	local vehiclepos = self.v:WorldSpaceCenter()
 	local velocity = self.v:GetVelocity()
 	local tracedir = Vector(velocity)
-	if not self.Waypoint or velocity:LengthSqr() > TraceMinLength^2 then
+	if not self.Waypoint or velocity:LengthSqr() > TraceMinLengthSqr then
 		tracedir:Normalize()
 	else
-		tracedir = self.Waypoint.Target - vehiclepos
-		tracedir = tracedir - up * up:Dot(tracedir)
-		tracedir:Normalize()
+		tracedir = forward
 	end
 	
 	local velocitydot = velocity:Dot(tracedir)
-	local currentspeed = self.StopByTrace and self.TraceLength or math.max(TraceMinLength, math.abs(velocitydot))
-	local goback = currentspeed > TraceMinLength + 10 and velocity:Dot(self:GetVehicleForward()) < 0 and -1 or 1
-	local filter = self:GetTraceFilter()
+	local currentspeed = math.abs(velocitydot)
+	self.TraceLength = CurTime() > self.StopByTrace and self.TraceLength or math.max(TraceMinLength, currentspeed)
 	
-	self.MaxSpeedCoefficient = 1 -- Reset
-	self.StopByTrace = false
+	local kmph = currentspeed / KmphToHUps
+	local goback = self.TraceLength > TraceMinLength + TraceThreshold and velocity:Dot(forward) < 0 and -1 or 1
+	local TraceGround = util.QuickTrace(vehiclepos, -vector_up * 32768, filter)
+	local groundpos = TraceGround.HitPos
+	local height = (vehiclepos.z - groundpos.z) / math.sqrt(2)
+	local maxs = vector_one * math.min(TraceMax, height)
+	local mins = -maxs
+	local start = groundpos + vector_up * (height + TraceHeightGap)
 	
-	self.TraceLength = currentspeed
-	self.Trace = util.TraceHull {
-		start = vehiclepos + TraceDeltaPos,
-		endpos = vehiclepos + TraceDeltaPos + tracedir * currentspeed * goback,
-		maxs = Vector(30, 30, 30),
-		mins = Vector(-30, -30, -30),
+	local tr = {
+		start = start,
+		endpos = start + tracedir * self.TraceLength * goback,
+		maxs = maxs, mins = mins,
 		filter = filter,
 	}
-	
-	debugoverlay.Cross(self.Trace.HitPos, 30, .25, Color(255, 0, 0), true)
-	debugoverlay.Line(vehiclepos + TraceDeltaPos, self.Trace.HitPos, .1, self.v:GetColor())
-	debugoverlay.SweptBox(vehiclepos + TraceDeltaPos, self.Trace.HitPos,
-	Vector(-30, -30, -30), Vector(30, 30, 30), angle_zero, .05, Color(0, 255, 0))
-	debugoverlay.SweptBox(vehiclepos + TraceDeltaPos, vehiclepos + TraceDeltaPos + tracedir * currentspeed * goback,
-	Vector(-30, -30, -30), Vector(30, 30, 30), angle_zero, .05, Color(0, 255, 0))
+	self.Trace = util.TraceHull(tr)
+	debugoverlay.SweptBox(tr.start, tr.endpos,
+	tr.mins, tr.maxs, angle_zero, .05, Color(0, 255, 0))
 	
 	local ent = self.Trace.Entity
-	if not IsValid(ent) then return end
+	local waypointpos = nextwaypoint and nextwaypoint.Target or self.Waypoint and self.Waypoint.Target
+	if waypointpos then
+		local trwaypoint = {
+			start = start,
+			endpos = waypointpos + vector_up * (height + TraceHeightGap),
+			maxs = maxs, mins = mins,
+			filter = filter,
+		}
+		self.TraceWaypoint = util.TraceHull(trwaypoint)
+		debugoverlay.SweptBox(trwaypoint.start, trwaypoint.endpos,
+		trwaypoint.mins, trwaypoint.maxs, angle_zero, .05, Color(0, 255, 255))
+	end
 	
-	self.StopByTrace = vehiclepos:DistToSqr(self.Trace.HitPos) < TraceStopKmph
-	self.MaxSpeedCoefficient = self.StopByTrace and 0 or 1
+	if prevwaypoint and nextwaypoint then
+		local direction = dvd.GetDir(prevwaypoint.Target, self.Waypoint.Target)
+		self.InsideRoute = direction:Cross(dvd.GetDir(prevwaypoint.Target, nextwaypoint.Target)):Dot(direction:Cross(dvd.GetDir(prevwaypoint.Target, vehiclepos)))
+	end
+	
+	if not IsValid(ent) then
+		if CurTime() < self.StopByTrace or CurTime() < self.StopByTrace + GobackTime then
+			self.StopByTrace = CurTime() + .1
+		end
+		self.FormLine = false
+	else
+		local dv = ent.DecentVehicle
+		self.FormLine = dv and dv:AtTrafficLight()
+	end
+	
+	debugoverlay.SweptBox(tr.start, self.Trace.HitPos, tr.mins, tr.maxs, angle_zero, .05)
 	
 	hook.Run("Decent Vehicle: Trace", self, ent)
 end
@@ -453,10 +494,10 @@ function ENT:FindFirstWaypoint()
 		return
 	end
 	
-	self.Waypoint = dvd.GetNearestWaypoint(self.v:GetPos())
+	self.Waypoint = dvd.GetNearestWaypoint(self.v:GetPos(), self.Group)
 	if not self.Waypoint then return end
 	
-	self.NextWaypoint = dvd.Waypoints[self.Waypoint.Neighbors[math.random(#self.Waypoint.Neighbors)] or -1]
+	self.NextWaypoint = dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos(), self.Group)
 end
 
 function ENT:SetupNextWaypoint()
@@ -470,7 +511,7 @@ function ENT:SetupNextWaypoint()
 	
 	self.PrevWaypoint, self.Waypoint = self.Waypoint, self.NextWaypoint
 	if not self.Waypoint then return end
-	self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos())
+	self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos(), self.Group)
 	self.Prependicular = 1
 	if self.NextWaypoint and self.PrevWaypoint then
 		self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)

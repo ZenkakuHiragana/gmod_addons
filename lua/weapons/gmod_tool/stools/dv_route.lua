@@ -1,7 +1,8 @@
 
 TOOL.Category = "GreatZenkakuMan's tools"
-TOOL.Name = "Decent Vehicle route maker"
+TOOL.Name = "Decent Vehicle Waypoint Tool"
 TOOL.Information = {
+	{name = "info", stage = 0},
 	{name = "left", stage = 0},
 	{name = "left_1", stage = 1},
 	{name = "right"},
@@ -10,6 +11,7 @@ TOOL.Information = {
 TOOL.WaypointID = -1
 TOOL.ClientConVar["bidirectional"] = 0
 TOOL.ClientConVar["fuel"] = 0
+TOOL.ClientConVar["group"] = 0
 TOOL.ClientConVar["shouldblink"] = 0
 TOOL.ClientConVar["showpoints"] = 1
 TOOL.ClientConVar["speed"] = 40
@@ -18,17 +20,21 @@ TOOL.ClientConVar["wait"] = 0
 if CLIENT then
 	language.Add("tool.dv_route.name", "Decent Vehicle route maker")
 	language.Add("tool.dv_route.desc", "Create your own routes for vehicles!")
-	language.Add("tool.dv_route.left", "Create new waypoint or select a waypoint/traffic light to link.")
+	language.Add("tool.dv_route.0", "Select a waypoint or a traffic light to link.  Select a vehicle driven by a Decent Vehicle to assign its waypoint group.")
+	language.Add("tool.dv_route.left", "Left click to create a new waypoint.")
 	language.Add("tool.dv_route.left_1", "Select another waypoint you want to link to.  Select the same waypoint to remove it.")
 	language.Add("tool.dv_route.right", "Update waypoint.")
 	
 	language.Add("tool.dv_route.bidirectional", "Bi-directional link")
-	language.Add("tool.dv_route.bidirectional.help", "If you create a new waypoint, connect bi-directional link automatically.")
+	language.Add("tool.dv_route.bidirectional.help", "Connect bi-directional link automatically.")
 	language.Add("tool.dv_route.fuel", "Fuel station")
 	language.Add("tool.dv_route.fuel.help", "Decent Vehicles will go here to refuel its car.")
-	language.Add("tool.dv_route.save", "Save waypoints")
+	language.Add("tool.dv_route.group", "Waypoint group")
+	language.Add("tool.dv_route.group.help", 
+	[[You can force Decent Vehicles to run along specified group of waypoints.
+	0 means all vehicles can go there.]])
 	language.Add("tool.dv_route.shouldblink", "Use turn signals")
-	language.Add("tool.dv_route.shouldblink.help", "If checked, Decent Vehicles will use turn signals when they go to the waypoint.")
+	language.Add("tool.dv_route.shouldblink.help", "Decent Vehicles will use turn signals when they go to the waypoint.")
 	language.Add("tool.dv_route.showpoints", "Draw waypoints")
 	language.Add("tool.dv_route.speed", "Max speed [km/h]")
 	language.Add("tool.dv_route.wait", "Wait time [seconds]")
@@ -38,21 +44,27 @@ end
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local dvd = DecentVehicleDestination
 function TOOL:LeftClick(trace)
-	if CLIENT then return end
-	if IsValid(trace.Entity) and trace.Entity.IsDVTrafficLight then
-		self.TrafficLight = trace.Entity
-		self.WaypointID = -1
-		self:SetStage(1)
-		return true
-	end
-	
+	if CLIENT then return true end
 	local bidirectional = self:GetClientNumber "bidirectional" > 0
 	local fuel = self:GetClientNumber "fuel" > 0
+	local group = self:GetClientNumber "group"
 	local shouldblink = self:GetClientNumber "shouldblink" > 0
 	local speed = self:GetClientNumber "speed"
 	local wait = self:GetClientNumber "wait"
 	local pos = trace.HitPos
 	local waypoint, waypointID = dvd.GetNearestWaypoint(pos, dvd.WaypointSize)
+	if IsValid(trace.Entity) then
+		if trace.Entity.IsDVTrafficLight then
+			self.TrafficLight = trace.Entity
+			self.WaypointID = -1
+			self:SetStage(1)
+			return true
+		elseif trace.Entity.DecentVehicle then
+			trace.Entity.DecentVehicle.Group = group
+			return true
+		end
+	end
+	
 	if not waypoint then
 		local oldpointID = self.WaypointID
 		local newpoint = dvd.AddWaypoint(pos)
@@ -64,6 +76,7 @@ function TOOL:LeftClick(trace)
 		newpoint.UseTurnLights = shouldblink
 		newpoint.WaitUntilNext = wait
 		newpoint.SpeedLimit = speed * KmphToHUps
+		newpoint.Group = group
 		if dvd.Waypoints[oldpointID] then
 			dvd.AddNeighbor(oldpointID, self.WaypointID)
 			if bidirectional then
@@ -114,19 +127,21 @@ function TOOL:LeftClick(trace)
 end
 
 function TOOL:RightClick(trace)
-	if CLIENT then return end
 	local fuel = self:GetClientNumber "fuel" > 0
+	local group = self:GetClientNumber "group"
 	local shouldblink = self:GetClientNumber "shouldblink" > 0
-	local wait = self:GetClientNumber "wait"
 	local speed = self:GetClientNumber "speed"
+	local wait = self:GetClientNumber "wait"
 	local pos = trace.HitPos
 	local waypoint = dvd.GetNearestWaypoint(pos, dvd.WaypointSize)
 	if not waypoint then return end
+	if CLIENT then return true end
 	
 	waypoint.FuelStation = fuel
 	waypoint.UseTurnLights = shouldblink
 	waypoint.WaitUntilNext = wait
 	waypoint.SpeedLimit = speed * KmphToHUps
+	waypoint.Group = group
 	
 	self:SetStage(0)
 	return true
@@ -148,6 +163,7 @@ function TOOL.BuildCPanel(CPanel)
 	CPanel:CheckBox("#tool.dv_route.shouldblink", "dv_route_shouldblink"):SetToolTip "#tool.dv_route.shouldblink.help"
 	CPanel:CheckBox("#tool.dv_route.bidirectional", "dv_route_bidirectional"):SetToolTip "#tool.dv_route.bidirectional.help"
 	CPanel:CheckBox("#tool.dv_route.fuel", "dv_route_fuel"):SetToolTip "#tool.dv_route.fuel.help"
+	CPanel:NumSlider("#tool.dv_route.group", "dv_route_group", 0, 20, 0):SetToolTip "#tool.dv_route.group.help"
 	CPanel:NumSlider("#tool.dv_route.wait", "dv_route_wait", 0, 100, 2):SetToolTip "#tool.dv_route.wait.help"
 	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 100, 0)
 	CPanel:InvalidateLayout()
@@ -155,6 +171,7 @@ end
 
 if SERVER then return end
 function TOOL:DrawHUD()
+	if self:GetClientNumber "showpoints" == 0 then return end
 	local pos = LocalPlayer():GetEyeTrace().HitPos
 	local waypoint, waypointID = dvd.GetNearestWaypoint(pos, dvd.WaypointSize)
 	if not waypoint then return end
@@ -166,6 +183,7 @@ function TOOL:DrawHUD()
 	local textpos = pos:ToScreen()
 	for _, text in ipairs {
 		"ID: " .. tostring(waypointID),
+		"Group: " .. tostring(waypoint.Group),
 		"Speed limit [km/h]: " .. tostring(math.Round(waypoint.SpeedLimit / KmphToHUps, 2)),
 		"Wait until next [sec]: " .. tostring(math.Round(waypoint.WaitUntilNext, 2)),
 		"Use turn lights: " .. (waypoint.UseTurnLights and "Yes" or "No"),

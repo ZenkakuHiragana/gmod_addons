@@ -14,7 +14,6 @@ end
 local function OverwriteWaypoints(source)
 	if source == dvd then return end
 	table.Empty(dvd.Waypoints)
-	table.Empty(dvd.TrafficLights)
 	for i, w in ipairs(source.Waypoints) do
 		local new = dvd.AddWaypoint(w.Target)
 		for key, value in pairs(w) do
@@ -27,10 +26,6 @@ local function OverwriteWaypoints(source)
 		for _, n in ipairs(w.Neighbors) do
 			dvd.AddNeighbor(i, n)
 		end
-	end
-	
-	for i, t in ipairs(source.TrafficLights) do
-		dvd.TrafficLights[i] = t
 	end
 end
 
@@ -94,6 +89,8 @@ saverestore.AddRestoreHook("Decent Vehicle", function(restore)
 			if not w or w.TrafficLight == t then continue end
 			dvd.AddTrafficLight(id, t)
 		end
+		
+		t:SetPattern(t.Waypoints.Pattern or 1)
 	end
 end)
 
@@ -134,6 +131,7 @@ net.Receive("Decent Vehicle: Send waypoint info", function(_, ply)
 	if not waypoint then return end
 	net.Start "Decent Vehicle: Send waypoint info"
 	net.WriteUInt(id, 24)
+	net.WriteUInt(waypoint.Group, 16)
 	net.WriteFloat(waypoint.SpeedLimit)
 	net.WriteFloat(waypoint.WaitUntilNext)
 	net.WriteBool(waypoint.UseTurnLights)
@@ -244,6 +242,15 @@ function dvd.RemoveNeighbor(from, to)
 	dvd.RefreshDupe()
 end
 
+-- Checks if the given waypoint is available for the specified group.
+-- Arguments:
+--   number id		| The waypoint ID.
+--   number group	| Waypoint group to check.
+function dvd.WaypointAvailable(id, group)
+	local waypoint = GetWaypointFromID(id)
+	return waypoint.Group == 0 or waypoint.Group == group
+end
+
 -- Adds a link between a waypoint and a traffic light entity.
 -- Arguments:
 --   number id		| The waypoint ID.
@@ -261,7 +268,6 @@ function dvd.AddTrafficLight(id, traffic)
 			traffic = nil
 		end
 		
-		t.Waypoints.Pattern = t:GetPattern()
 		duplicator.StoreEntityModifier(t, "Decent Vehicle: Save traffic light link", t.Waypoints)
 	end
 	
@@ -278,15 +284,17 @@ end
 -- Argument:
 --   table waypoint	| The given waypoint.
 --   Vector pos		| If specified, removes waypoints that makes U-turn from suggestions.
+--   number group	| Optional, specify a waypoint group here.
 -- Returning:
 --   table waypoint | The connected waypoint.
-function dvd.GetRandomNeighbor(waypoint, pos)
+function dvd.GetRandomNeighbor(waypoint, pos, group)
 	if not waypoint.Neighbors then return end
 	
 	local suggestion = {}
 	for i, n in ipairs(waypoint.Neighbors) do
 		local w = GetWaypointFromID(n)
 		if not w then continue end
+		if not dvd.WaypointAvailable(n, group) then continue end
 		if not pos or (waypoint.Target - pos):Dot(w.Target - waypoint.Target) > 0 then
 			table.insert(suggestion, w)
 		end
@@ -301,10 +309,12 @@ end
 -- Arguments:
 --   number start	| The beginning waypoint ID.
 --   table endpos	| A table of destination waypoint IDs. {[ID] = true}
+--   number group	| Optional, specify a waypoint group here.
 -- Returning:
 --   table route	| List of waypoints.  start is the last, endpos is the first.
 function dvd.GetRoute(start, endpos)
 	if not (isnumber(start) and istable(endpos)) then return end
+	group = group or 0
 	
 	local nodes, opens = {}, {}
 	local function CreateNode(id)
@@ -397,6 +407,7 @@ function dvd.GetRoute(start, endpos)
 		nodes[current].closed = true
 		for i, n in ipairs(GetWaypointFromID(nodes[current].id).Neighbors) do
 			if nodes[n] and nodes[n].closed ~= nil then continue end
+			if not dvd.WaypointAvailable(n, group) then continue end
 			AddToOpenList(nodes[n] or CreateNode(n), nodes[current])
 		end
 	end
@@ -407,9 +418,10 @@ end
 -- Arguments:
 --   Vector start	| The beginning position.
 --   table endpos	| A table of Vectors that represent destinations.  Can also be a Vector.
+--   number group	| Optional, specify a waypoint group here.
 -- Returning:
 --   table route	| The same as returning value of dvd.GetRoute()
-function dvd.GetRouteVector(start, endpos)
+function dvd.GetRouteVector(start, endpos, group)
 	if isvector(endpos) then endpos = {endpos} end
 	if not (isvector(start) and istable(endpos)) then return end
 	local endpostable = {}
@@ -419,5 +431,5 @@ function dvd.GetRouteVector(start, endpos)
 		endpostable[id] = true
 	end
 	
-	return dvd.GetRoute(select(2, dvd.GetNearestWaypoint(start)), endpostable)
+	return dvd.GetRoute(select(2, dvd.GetNearestWaypoint(start)), endpostable, group)
 end
