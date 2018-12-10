@@ -109,6 +109,7 @@ function ENT:CarCollide(data)
 end
 
 function ENT:EstimateAccel()
+	local accel = 0
 	if self.v.IsScar then
 		local phys = self.v:GetPhysicsObject()
 		local velVec = phys:GetVelocity()
@@ -129,9 +130,9 @@ function ENT:EstimateAccel()
 			end
 		end
 		
-		return math.max(force * self.v.WheelTorqTraction, 1)
+		accel = math.max(force * self.v.WheelTorqTraction, 1)
 	elseif self.v.IsSimfphyscar then
-		return self.v:GetMaxTorque() * 2 - math.Clamp(self.v.ForwardSpeed, -self.v.Brake, self.v.Brake)
+		accel = self.v:GetMaxTorque() * 2 - math.Clamp(self.v.ForwardSpeed, -self.v.Brake, self.v.Brake)
 	else
 		local forward = self.v:GetForward()
 		local gearratio = self.GearRatio[self.v:GetOperatingParams().gear + 1]
@@ -150,9 +151,11 @@ function ENT:EstimateAccel()
 			rotdamping = rotdamping + a.wheels_rotdamping * wheelangvelocity
 		end
 		
-		return 552 * (self.HorsePower * self.AxleRatio * gearratio - rotdamping * math.sqrt(2))
+		accel = 552 * (self.HorsePower * self.AxleRatio * gearratio - rotdamping * math.sqrt(2))
 		* self.WheelCoefficient / self.Mass - damping * math.sqrt(2) + physenv.GetGravity():Dot(forward)
 	end
+	
+	return hook.Run("Decent Vehicle: EstimateAccel", self, accel) or accel
 end
 
 function ENT:GetVehicleParams()
@@ -232,7 +235,8 @@ function ENT:GetCurrentMaxSpeed()
 	
 	maxspeed = maxspeed * Either(self.TraceWaypoint.Hit, 1, (self.InsideRoute + 1.1) / 2)
 	maxspeed = maxspeed * math.Clamp(self.MaxSpeedCoefficient, 0, 1)
-	return math.Clamp(maxspeed, 1, self.MaxSpeed)
+	return hook.Run("Decent Vehicle: GetCurrentMaxSpeed", self, maxspeed)
+	or math.Clamp(maxspeed, 1, self.MaxSpeed)
 end
 
 function ENT:IsValidVehicle()
@@ -316,7 +320,7 @@ function ENT:StopDriving()
 end
 
 -- Drive the vehicle toward ENT.Waypoint.Target.
--- Returning:
+-- Returns:
 --   bool arrived	| Has the vehicle arrived at the current destination.
 function ENT:DriveToWaypoint()
 	if not self.Waypoint then return end

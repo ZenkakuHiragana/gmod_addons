@@ -18,7 +18,7 @@ DecentVehicleDestination = DecentVehicleDestination or {
 -- Arguments:
 --   Vector v1	| The beginning point.
 --   Vector v2	| The ending point.
--- Returning:
+-- Returns:
 --   Vector dir	| Normalized vector of v2 - v1.
 local dvd = DecentVehicleDestination
 function dvd.GetDir(v1, v2)
@@ -29,7 +29,7 @@ end
 -- Arguments:
 --   Vector A	| The first vector.
 --   Vector B	| The second vector.
--- Returning:
+-- Returns:
 --   number ang	| The angle of two vectors.  The actual angle is math.acos(ang).
 function dvd.GetAng(A, B)
 	return A:GetNormalized():Dot(B:GetNormalized())
@@ -40,7 +40,7 @@ end
 --   Vector A	| The beginning point.
 --   Vector B	| The middle point.
 --   Vector C	| The ending point.
--- Returning:
+-- Returns:
 --   number ang	| The same as dvd.GetAng()
 function dvd.GetAng3(A, B, C)
 	return dvd.GetAng(B - A, C - B)
@@ -50,7 +50,7 @@ end
 -- Arguments:
 --   Vector pos			| The position to find.
 --   number radius		| Optional.  The maximum radius.
--- Returnings:
+-- Returns:
 --   table waypoint		| The found waypoint.  Can be nil.
 --   number waypointID	| The ID of found waypoint.
 function dvd.GetNearestWaypoint(pos, radius)

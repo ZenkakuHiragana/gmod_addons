@@ -148,7 +148,7 @@ end
 -- The new ID is always #dvd.Waypoints.
 -- Argument:
 --   Vector pos		| The position of new waypoint.
--- Returning:
+-- Returns:
 --   table waypoint	| Created waypoint.
 function dvd.AddWaypoint(pos)
 	local waypoint = {Target = pos, Neighbors = {}}
@@ -198,7 +198,7 @@ function dvd.UndoWaypoint(undoinfo)
 end
 
 -- Gets all fuel station points in the map.
--- Returnings:
+-- Returns:
 --   table fuelstations	| A sequential table contains all fuel stations.
 --   table fuelIDs		| A sequential table contains all IDs of fuel station.
 function dvd.GetFuelStations()
@@ -285,7 +285,7 @@ end
 --   table waypoint	| The given waypoint.
 --   Vector pos		| If specified, removes waypoints that makes U-turn from suggestions.
 --   number group	| Optional, specify a waypoint group here.
--- Returning:
+-- Returns:
 --   table waypoint | The connected waypoint.
 function dvd.GetRandomNeighbor(waypoint, pos, group)
 	if not waypoint.Neighbors then return end
@@ -310,7 +310,7 @@ end
 --   number start	| The beginning waypoint ID.
 --   table endpos	| A table of destination waypoint IDs. {[ID] = true}
 --   number group	| Optional, specify a waypoint group here.
--- Returning:
+-- Returns:
 --   table route	| List of waypoints.  start is the last, endpos is the first.
 function dvd.GetRoute(start, endpos)
 	if not (isnumber(start) and istable(endpos)) then return end
@@ -419,7 +419,7 @@ end
 --   Vector start	| The beginning position.
 --   table endpos	| A table of Vectors that represent destinations.  Can also be a Vector.
 --   number group	| Optional, specify a waypoint group here.
--- Returning:
+-- Returns:
 --   table route	| The same as returning value of dvd.GetRoute()
 function dvd.GetRouteVector(start, endpos, group)
 	if isvector(endpos) then endpos = {endpos} end
