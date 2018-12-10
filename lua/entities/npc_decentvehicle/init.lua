@@ -1,3 +1,8 @@
+
+-- Copyright © 2018-2030 Decent Vehicle
+-- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/m33_333/)
+-- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
+
 AddCSLuaFile "cl_init.lua"
 AddCSLuaFile "shared.lua"
 AddCSLuaFile "playermeta.lua"
@@ -28,22 +33,21 @@ ENT.InsideRoute = 0
 ENT.StopByTrace = CurTime()
 ENT.NextReleaseBrake = CurTime()
 
+local dvd = DecentVehicleDestination
 local vector_one = Vector(1, 1, 1)
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local KmphToHUpsSqr = KmphToHUps^2
 local sPID = Vector(4, 0, 0) -- PID parameters of steering
 local tPID = Vector(1, 0, 0) -- PID parameters of throttle
-local dvd = DecentVehicleDestination
-local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
-FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
-local TurnonLights = CreateConVar("decentvehicle_turnonlights", 3,
-{FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}, 
-[[Decent Vehicle: The level of using lights.
-0: Disabled
-1: Only use running lights
-2: Use running lights and headlights
-3: Use all lights]])
-
+local TraceMax = 64
+local TraceMinLength = 300
+local TraceMinLengthSqr = TraceMinLength^2
+local TraceThreshold = 10
+local TraceHeightGap = 20
+local GobackTime = 6
+local GobackDuration = 2
+local EmergencyDuration = 5
+local VCModFixedAroundNPCDriver = false -- This is a stupid solution.
 local LIGHTLEVEL = {
 	NONE = 0,
 	RUNNING = 1,
@@ -56,14 +60,16 @@ local NightSkyTextureList = {
 	sky_day02_09 = true,
 }
 
-local TraceMax = 64
-local TraceMinLength = 300
-local TraceMinLengthSqr = TraceMinLength^2
-local TraceThreshold = 10
-local TraceHeightGap = 20
-local GobackTime = 6
-local GobackDuration = 2
-local EmergencyDuration = 5
+local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
+FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
+local TurnonLights = CreateConVar("decentvehicle_turnonlights", 3,
+{FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}, 
+[[Decent Vehicle: The level of using lights.
+0: Disabled
+1: Only use running lights
+2: Use running lights and headlights
+3: Use all lights]])
+
 local function GetNight()
 	if StormFox then return StormFox.IsNight() end
 	local skyname = GetConVar "sv_skyname" :GetString()
@@ -226,7 +232,7 @@ function ENT:GetCurrentMaxSpeed()
 		end
 		
 		-- If the waypoint has a sharp corner, slow down
-		maxspeed = maxspeed * Lerp(frac, 1, 1 - self.Prependicular)
+		maxspeed = maxspeed * Lerp(frac, 1, 1 - self.Prependicular * .9)
 		
 		if self.Waypoint.TrafficLight and self.Waypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then
 			maxspeed = maxspeed * (1 - frac)
@@ -395,7 +401,7 @@ function ENT:DriveToWaypoint()
 	debugoverlay.Sphere(self.Waypoint.Target, 50, .1, Color(0, 255, 0))
 	
 	hook.Run("Decent Vehicle: Drive", self)
-	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), math.max(0, velocitydot) * .5)
+	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), math.max(0, velocitydot) * self.Prependicular)
 end
 
 function ENT:DoLights()
@@ -475,10 +481,11 @@ function ENT:DoTrace()
 		self.InsideRoute = direction:Cross(dvd.GetDir(prevwaypoint.Target, nextwaypoint.Target)):Dot(direction:Cross(dvd.GetDir(prevwaypoint.Target, vehiclepos)))
 	end
 	
-	if not IsValid(ent) then
+	if not IsValid(ent) or self.Trace.HitWorld and self.Trace.HitNormal:Dot(vector_up) > .7 then
 		if CurTime() < self.StopByTrace or CurTime() < self.StopByTrace + GobackTime then
 			self.StopByTrace = CurTime() + .1
 		end
+		
 		self.FormLine = false
 	else
 		local dv = ent.DecentVehicle
@@ -498,10 +505,14 @@ function ENT:FindFirstWaypoint()
 		return
 	end
 	
-	self.Waypoint = dvd.GetNearestWaypoint(self.v:GetPos(), self.Group)
+	local pos = self.v:GetPos()
+	self.Waypoint = dvd.GetNearestWaypoint(pos, self.Group)
 	if not self.Waypoint then return end
 	
-	self.NextWaypoint = dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos(), self.Group)
+	self.NextWaypoint = dvd.GetRandomNeighbor(self.Waypoint, pos, self.Group)
+	if not self.NextWaypoint and self.Waypoint.Target:Distance(pos) < self.v:BoundingRadius() then
+		self.Waypoint = nil
+	end
 end
 
 function ENT:SetupNextWaypoint()
@@ -516,7 +527,7 @@ function ENT:SetupNextWaypoint()
 	self.PrevWaypoint, self.Waypoint = self.Waypoint, self.NextWaypoint
 	if not self.Waypoint then return end
 	self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos(), self.Group)
-	self.Prependicular = 1
+	self.Prependicular = 0
 	if self.NextWaypoint and self.PrevWaypoint then
 		self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
 	end
@@ -581,25 +592,27 @@ function ENT:Initialize()
 				self.v, v.DecentVehicle = v, self
 				self.OnCollideCallback = self.v:AddCallback("PhysicsCollide", self.CarCollide)
 				
-				local oldname = v:GetName()
-				v:SetName "decentvehicle"
-				self.NPCDriver = ents.Create "npc_vehicledriver"
-				self.NPCDriver:Spawn()
-				self.NPCDriver:SetKeyValue("Vehicle", "decentvehicle")
-				self.NPCDriver:Activate()
-				self.NPCDriver:Fire "StartForward"
-				self.NPCDriver:Fire("SetDriversMaxSpeed", "100")
-				self.NPCDriver:Fire("SetDriversMinSpeed", "0")
-				self.NPCDriver.InVehicle = self.InVehicle
-				function self.NPCDriver.KeyDown(_, key)
-					return key == IN_FORWARD and self.Throttle > 0
-					or key == IN_BACK and self.Throttle < 0
-					or key == IN_MOVELEFT and self.Steering < 0
-					or key == IN_MOVERIGHT and self.Steering > 0
-					or key == IN_JUMP and self.HandBrake
-					or false
+				if not VC or VCModFixedAroundNPCDriver then
+					local oldname = v:GetName()
+					v:SetName "decentvehicle"
+					self.NPCDriver = ents.Create "npc_vehicledriver"
+					self.NPCDriver:Spawn()
+					self.NPCDriver:SetKeyValue("Vehicle", "decentvehicle")
+					self.NPCDriver:Activate()
+					self.NPCDriver:Fire "StartForward"
+					self.NPCDriver:Fire("SetDriversMaxSpeed", "100")
+					self.NPCDriver:Fire("SetDriversMinSpeed", "0")
+					self.NPCDriver.InVehicle = self.InVehicle
+					function self.NPCDriver.KeyDown(_, key)
+						return key == IN_FORWARD and self.Throttle > 0
+						or key == IN_BACK and self.Throttle < 0
+						or key == IN_MOVELEFT and self.Steering < 0
+						or key == IN_MOVERIGHT and self.Steering > 0
+						or key == IN_JUMP and self.HandBrake
+						or false
+					end
+					v:SetName(oldname or "")
 				end
-				v:SetName(oldname or "")
 			end
 		end
 	end

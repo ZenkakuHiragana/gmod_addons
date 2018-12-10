@@ -1,4 +1,8 @@
 
+-- Copyright © 2018-2030 Decent Vehicle
+-- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/m33_333/)
+-- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
+
 -- This script stands for a framework of Decent Vehicle's waypoints.
 
 include "autorun/decentvehicle.lua"
@@ -296,7 +300,8 @@ function dvd.GetRandomNeighbor(waypoint, pos, group)
 		local w = GetWaypointFromID(n)
 		if not w then continue end
 		if not dvd.WaypointAvailable(n, group) then continue end
-		if not pos or (waypoint.Target - pos):Dot(w.Target - waypoint.Target) > 0 then
+		if not pos or waypoint.Target:DistToSqr(pos) < 1e4
+		or (waypoint.Target - pos):Dot(w.Target - waypoint.Target) > 0 then
 			table.insert(suggestion, w)
 		end
 	end
