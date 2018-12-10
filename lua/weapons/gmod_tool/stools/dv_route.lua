@@ -17,6 +17,8 @@ TOOL.ClientConVar["showpoints"] = 1
 TOOL.ClientConVar["speed"] = 40
 TOOL.ClientConVar["wait"] = 0
 
+TOOL.ClientConVar["showupdates"] = 1
+
 if CLIENT then
 	language.Add("tool.dv_route.name", "Decent Vehicle route maker")
 	language.Add("tool.dv_route.desc", "Create your own routes for vehicles!")
@@ -36,6 +38,8 @@ if CLIENT then
 	language.Add("tool.dv_route.shouldblink", "Use turn signals")
 	language.Add("tool.dv_route.shouldblink.help", "Decent Vehicles will use turn signals when they go to the waypoint.")
 	language.Add("tool.dv_route.showpoints", "Draw waypoints")
+	language.Add("tool.dv_route.showupdates", "Notify the latest updates")
+	language.Add("tool.dv_route.showupdates.help", "Some notifications are shown when this addon is updated.")
 	language.Add("tool.dv_route.speed", "Max speed [km/h]")
 	language.Add("tool.dv_route.wait", "Wait time [seconds]")
 	language.Add("tool.dv_route.wait.help", "After Decent Vehicles reached the waypoint, they wait for this seconds.")
@@ -159,6 +163,7 @@ function TOOL.BuildCPanel(CPanel)
 	
 	CPanel:AddItem(ControlPresets)
 	CPanel:Help "Create routes for Decent Vehicles."
+	CPanel:CheckBox("#tool.dv_route.showupdates", "dv_route_showupdates"):SetToolTip "#tool.dv_route.showupdates.help"
 	CPanel:CheckBox("#tool.dv_route.showpoints", "dv_route_showpoints")
 	CPanel:CheckBox("#tool.dv_route.shouldblink", "dv_route_shouldblink"):SetToolTip "#tool.dv_route.shouldblink.help"
 	CPanel:CheckBox("#tool.dv_route.bidirectional", "dv_route_bidirectional"):SetToolTip "#tool.dv_route.bidirectional.help"
@@ -166,6 +171,21 @@ function TOOL.BuildCPanel(CPanel)
 	CPanel:NumSlider("#tool.dv_route.group", "dv_route_group", 0, 20, 0):SetToolTip "#tool.dv_route.group.help"
 	CPanel:NumSlider("#tool.dv_route.wait", "dv_route_wait", 0, 100, 2):SetToolTip "#tool.dv_route.wait.help"
 	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 100, 0)
+	
+	if LocalPlayer():IsAdmin() then
+		CPanel:Help ""
+		CPanel:Help ""
+		CPanel:ControlHelp "Server settings"
+		CPanel:NumSlider("Detection range", "decentvehicle_detectionrange", 1, 64, 0)
+		
+		local combobox, label = CPanel:ComboBox("Light level", "decentvehicle_turnonlights")
+		combobox:SetSortItems(false)
+		combobox:AddChoice("No light", 0)
+		combobox:AddChoice("Only running lights", 1)
+		combobox:AddChoice("Running lights and headlights", 2)
+		combobox:AddChoice("Full lights", 3)
+	end
+	
 	CPanel:InvalidateLayout()
 end
 
