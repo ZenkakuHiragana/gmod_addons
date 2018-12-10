@@ -9,13 +9,11 @@ local function NotifyUpdate(d)
 	if not d then return end
 	local showupdates = GetConVar "dv_route_showupdates"
 	if not (showupdates and showupdates:GetBool()) then return end
-	d.description = [[Version 1.0.0
-]] .. d.description
+	
 	local versioncheck = "decentvehicle_version.txt"
 	local checkedversion = file.Read(versioncheck) or 0
 	local header = d.description:match "Version[^%c]+" or ""
 	local version = string.Explode(".", header:sub(8):Trim())
-	PrintTable(version)
 	if version[1] and tonumber(version[1]) > dvd.Version[1]
 	or version[2] and tonumber(version[2]) > dvd.Version[2]
 	or version[3] and tonumber(version[3]) > dvd.Version[3] then
@@ -91,7 +89,7 @@ hook.Add("InitPostEntity", "Decent Vehicle: Load waypoints", function()
 	net.WriteUInt(1, 24)
 	net.SendToServer()
 	
-	steamworks.FileInfo("1582693384", NotifyUpdate)
+	steamworks.FileInfo("1587455087", NotifyUpdate)
 end)
 
 net.Receive("Decent Vehicle: Retrive waypoints", function()

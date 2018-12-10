@@ -221,13 +221,8 @@ function ENT:SetTurnLight(on, left)
 		self.TurnLightRight = on and not left
 		self.HazardLights = false
 	elseif VC then
-		if left then
-			self.v:VC_setTurnLightLeft(on)
-			self.v:VC_setTurnLightRight(not on)
-		else
-			self.v:VC_setTurnLightLeft(not on)
-			self.v:VC_setTurnLightRight(on)
-		end
+		self.v:VC_setTurnLightLeft(on and left)
+		self.v:VC_setTurnLightRight(on and not left)
 	end
 end
 

@@ -2,6 +2,7 @@
 -- This script stands for a framework of Decent Vehicle's waypoints.
 
 include "autorun/decentvehicle.lua"
+resource.AddWorkshop "1587455087"
 
 -- Waypoints are held in normal table.
 -- They're found by brute-force search.
