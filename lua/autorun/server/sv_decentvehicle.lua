@@ -80,7 +80,7 @@ end)
 concommand.Add("dv_route_save", function(ply)
 	local path = "decentvehicle/"
 	if not file.Exists(path, "DATA") then file.CreateDir(path) end
-	path = path .. game.GetMap() .. ".txt"
+	path = path .. game.GetMap() .. ".png"
 	
 	local save = {TrafficLights = {}}
 	for i, w in ipairs(dvd.Waypoints) do
@@ -105,7 +105,7 @@ concommand.Add("dv_route_save", function(ply)
 end)
 
 concommand.Add("dv_route_load", function(ply)
-	local path = "data/decentvehicle/" .. game.GetMap() .. ".txt"
+	local path = "data/decentvehicle/" .. game.GetMap() .. ".png"
 	if not file.Exists(path, "GAME") then return end
 	local load = util.JSONToTable(util.Decompress(file.Read(path, true) or ""))
 	
