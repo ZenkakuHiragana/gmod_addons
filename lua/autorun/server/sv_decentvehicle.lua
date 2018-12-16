@@ -77,6 +77,71 @@ hook.Add("Tick", "Decent Vehicle: Control traffic lights", function()
 	end
 end)
 
+concommand.Add("dv_route_save", function(ply)
+	local path = "decentvehicle/"
+	if not file.Exists(path, "DATA") then file.CreateDir(path) end
+	path = path .. game.GetMap() .. ".txt"
+	
+	local save = {TrafficLights = {}}
+	for i, w in ipairs(dvd.Waypoints) do
+		save[i] = table.Copy(w)
+		w.TrafficLight = nil
+	end
+	
+	for i, t in ipairs(ents.GetAll()) do
+		if not t.IsDVTrafficLight then continue end
+		if not istable(t.Waypoints) then continue end
+		table.insert(save.TrafficLights, {
+			Waypoints = t.Waypoints,
+			Pattern = t:GetPattern(),
+			Pos = t:GetPos(),
+			Ang = t:GetAngles(),
+			ClassName = t:GetClass(),
+		})
+	end
+	
+	file.Write(path, util.Compress(util.TableToJSON(save)))
+	ply:SendLua "notification.AddLegacy(\"Decent Vehicle: Waypoints saved!\", NOTIFY_GENERIC, 5)"
+end)
+
+concommand.Add("dv_route_load", function(ply)
+	local path = "data/decentvehicle/" .. game.GetMap() .. ".txt"
+	if not file.Exists(path, "GAME") then return end
+	local load = util.JSONToTable(util.Decompress(file.Read(path, true) or ""))
+	
+	table.Empty(dvd.Waypoints)
+	for i, t in ipairs(ents.GetAll()) then
+		if t.IsDVTrafficLight then t:Remove() end
+	end
+	
+	for i, w in ipairs(load) do
+		dvd.Waypoints[i] = w
+		if w.TrafficLight then
+			local trafficlight = ents.Create "dv_traffic_light"
+			trafficlight:SetPos(w.TrafficLight.Pos)
+			trafficlight:SetAngles(w.TrafficLight.Ang)
+			trafficlight:Spawn()
+			local ph = trafficlight:GetPhysicsObject()
+			if IsValid(ph) then ph:Sleep() end
+			w.TrafficLight = trafficlight
+		end
+	end
+	
+	for i, t in ipairs(load.TrafficLights) do
+		local traffic = ents.Create(t.ClassName)
+		if not IsValid(traffic) then continue end
+		traffic:SetPos(t.Pos)
+		traffic:SetAngles(t.Ang)
+		traffic:Spawn()
+		traffic:SetPattern(t.Pattern)
+		traffic.Waypoints = t.Waypoints
+		for i, id in ipairs(t.Waypoints) do
+			if not dvd.Waypoints[id] then continue end
+			dvd.Waypoints[id].TrafficLight = traffic
+		end
+	end
+end)
+
 saverestore.AddSaveHook("Decent Vehicle", function(save)
 	saverestore.WriteTable(dvd, save)
 	for _, t in ipairs(ents.GetAll()) do

@@ -29,6 +29,7 @@ if CLIENT then
 	language.Add("tool.dv_route.0", "Select a waypoint or a traffic light to link.  Select a vehicle driven by a Decent Vehicle to assign its waypoint group.")
 	language.Add("tool.dv_route.left", "Left click to create a new waypoint.")
 	language.Add("tool.dv_route.left_1", "Select another waypoint you want to link to.  Select the same waypoint to remove it.")
+	language.Add("tool.dv_route.load", "Restore waypoints")
 	language.Add("tool.dv_route.right", "Update waypoint.")
 	
 	language.Add("tool.dv_route.bidirectional", "Bi-directional link")
@@ -39,6 +40,7 @@ if CLIENT then
 	language.Add("tool.dv_route.group.help", 
 	[[You can force Decent Vehicles to run along specified group of waypoints.
 	0 means all vehicles can go there.]])
+	language.Add("tool.dv_route.save", "Save waypoints")
 	language.Add("tool.dv_route.shouldblink", "Use turn signals")
 	language.Add("tool.dv_route.shouldblink.help", "Decent Vehicles will use turn signals when they go to the waypoint.")
 	language.Add("tool.dv_route.showpoints", "Draw waypoints")
@@ -188,6 +190,10 @@ function TOOL.BuildCPanel(CPanel)
 		combobox:AddChoice("Only running lights", 1)
 		combobox:AddChoice("Running lights and headlights", 2)
 		combobox:AddChoice("Full lights", 3)
+		
+		CPanel:Button("#tool.dv_route.save", "dv_route_save")
+		CPanel:Help ""
+		CPanel:Button("#tool.dv_route.load", "dv_route_load")
 	end
 	
 	CPanel:InvalidateLayout()
