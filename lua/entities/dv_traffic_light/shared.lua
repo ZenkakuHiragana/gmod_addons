@@ -24,11 +24,4 @@ function ENT:SetupDataTables()
 			max = #DecentVehicleDestination.TrafficLights,
 		},
 	})
-	
-	if CLIENT then return end
-	self:NetworkVarNotify("Pattern", function(self, name, old, new)
-		if not self.Waypoints then return end
-		self.Waypoints.Pattern = new
-		duplicator.StoreEntityModifier(self, "Decent Vehicle: Save traffic light link", self.Waypoints)
-	end)
 end	

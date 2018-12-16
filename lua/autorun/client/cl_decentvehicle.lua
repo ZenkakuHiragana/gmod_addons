@@ -130,6 +130,10 @@ net.Receive("Decent Vehicle: Send waypoint info", function()
 	waypoint.FuelStation = net.ReadBool()
 end)
 
+net.Receive("Decent Vehicle: Clear waypoints", function()
+	table.Empty(dvd.Waypoints)
+end)
+
 local Height = vector_up * dvd.WaypointSize / 4
 local WaypointMaterial = Material "sprites/sent_ball"
 local LinkMaterial = Material "cable/blue_elec"

@@ -94,7 +94,7 @@ function TOOL:LeftClick(trace)
 			end
 		end
 		
-		undo.Create "Waypoint"
+		undo.Create "Decent Vehicle Waypoint"
 		undo.SetCustomUndoText "Undone Decent Vehicle's waypoint."
 		undo.AddFunction(dvd.UndoWaypoint)
 		undo.SetPlayer(self:GetOwner())

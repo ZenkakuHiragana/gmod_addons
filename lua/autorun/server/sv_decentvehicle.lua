@@ -11,27 +11,9 @@ resource.AddWorkshop "1587455087"
 -- Waypoints are held in normal table.
 -- They're found by brute-force search.
 local dvd = DecentVehicleDestination
-local Exceptions = {Target = true, Neighbors = true, TrafficLight = true}
+local Exceptions = {Target = true, TrafficLight = true}
 local function GetWaypointFromID(id)
 	return assert(dvd.Waypoints[id], "Decent Vehicle: Waypoint is not found!")
-end
-
-local function OverwriteWaypoints(source)
-	if source == dvd then return end
-	table.Empty(dvd.Waypoints)
-	for i, w in ipairs(source.Waypoints) do
-		local new = dvd.AddWaypoint(w.Target)
-		for key, value in pairs(w) do
-			if Exceptions[key] then continue end
-			new[key] = value
-		end
-	end
-	
-	for i, w in ipairs(source.Waypoints) do
-		for _, n in ipairs(w.Neighbors) do
-			dvd.AddNeighbor(i, n)
-		end
-	end
 end
 
 local function WriteWaypoint(id)
@@ -45,6 +27,65 @@ local function WriteWaypoint(id)
 	end
 end
 
+local function GetSaveTable()
+	local save = {TrafficLights = {}}
+	for i, w in ipairs(dvd.Waypoints) do
+		save[i] = table.Copy(w)
+		save[i].TrafficLight = nil
+	end
+	
+	for i, t in ipairs(ents.GetAll()) do
+		if not t.IsDVTrafficLight then continue end
+		if not istable(t.Waypoints) then continue end
+		table.insert(save.TrafficLights, {
+			Waypoints = t.Waypoints,
+			Pattern = t:GetPattern(),
+			Pos = t:GetPos(),
+			Ang = t:GetAngles(),
+			ClassName = t:GetClass(),
+		})
+	end
+	
+	return save
+end
+
+local function OverwriteWaypoints(source)
+	if source == dvd then return end
+	table.Empty(dvd.Waypoints)
+	net.Start "Decent Vehicle: Clear waypoints"
+	net.Broadcast()
+	
+	for i, t in ipairs(ents.GetAll()) do
+		if t.IsDVTrafficLight then t:Remove() end
+	end
+	
+	for i, w in ipairs(source) do
+		local new = dvd.AddWaypoint(w.Target)
+		for key, value in pairs(w) do
+			if Exceptions[key] then continue end
+			new[key] = value
+		end
+	end
+	
+	for i, t in ipairs(source.TrafficLights) do
+		local traffic = ents.Create(t.ClassName)
+		if not IsValid(traffic) then continue end
+		traffic:SetPos(t.Pos)
+		traffic:SetAngles(t.Ang)
+		traffic:Spawn()
+		traffic:SetPattern(t.Pattern)
+		traffic.Waypoints = t.Waypoints
+		for i, id in ipairs(t.Waypoints) do
+			if not dvd.Waypoints[id] then continue end
+			dvd.Waypoints[id].TrafficLight = traffic
+		end
+	end
+	
+	net.Start "Decent Vehicle: Retrive waypoints"
+	WriteWaypoint(1)
+	net.Broadcast()
+end
+
 util.AddNetworkString "Decent Vehicle: Add a waypoint"
 util.AddNetworkString "Decent Vehicle: Remove a waypoint"
 util.AddNetworkString "Decent Vehicle: Add a neighbor"
@@ -52,13 +93,12 @@ util.AddNetworkString "Decent Vehicle: Remove a neighbor"
 util.AddNetworkString "Decent Vehicle: Traffic light"
 util.AddNetworkString "Decent Vehicle: Retrive waypoints"
 util.AddNetworkString "Decent Vehicle: Send waypoint info"
+util.AddNetworkString "Decent Vehicle: Clear waypoints"
 hook.Add("PostCleanupMap", "Decent Vehicle: Clean up waypoints", function()
 	dvd.Waypoints = {}
 	for id, undolist in pairs(undo.GetTable()) do
 		for i, undotable in pairs(undolist) do
-			if not undotable.Functions then continue end
-			if not undotable.Functions[1] then continue end
-			if undotable.Functions[1][1] ~= dvd.UndoWaypoint then continue end
+			if undotable.Name ~= "Decent Vehicle Waypoint" then continue end
 			undolist[i] = nil
 		end
 	end
@@ -82,104 +122,33 @@ concommand.Add("dv_route_save", function(ply)
 	if not file.Exists(path, "DATA") then file.CreateDir(path) end
 	path = path .. game.GetMap() .. ".png"
 	
-	local save = {TrafficLights = {}}
-	for i, w in ipairs(dvd.Waypoints) do
-		save[i] = table.Copy(w)
-		w.TrafficLight = nil
-	end
-	
-	for i, t in ipairs(ents.GetAll()) do
-		if not t.IsDVTrafficLight then continue end
-		if not istable(t.Waypoints) then continue end
-		table.insert(save.TrafficLights, {
-			Waypoints = t.Waypoints,
-			Pattern = t:GetPattern(),
-			Pos = t:GetPos(),
-			Ang = t:GetAngles(),
-			ClassName = t:GetClass(),
-		})
-	end
-	
-	file.Write(path, util.Compress(util.TableToJSON(save)))
+	file.Write(path, util.Compress(util.TableToJSON(GetSaveTable())))
 	ply:SendLua "notification.AddLegacy(\"Decent Vehicle: Waypoints saved!\", NOTIFY_GENERIC, 5)"
 end)
 
 concommand.Add("dv_route_load", function(ply)
 	local path = "data/decentvehicle/" .. game.GetMap() .. ".png"
 	if not file.Exists(path, "GAME") then return end
-	local load = util.JSONToTable(util.Decompress(file.Read(path, true) or ""))
-	
-	table.Empty(dvd.Waypoints)
-	for i, t in ipairs(ents.GetAll()) then
-		if t.IsDVTrafficLight then t:Remove() end
-	end
-	
-	for i, w in ipairs(load) do
-		dvd.Waypoints[i] = w
-		if w.TrafficLight then
-			local trafficlight = ents.Create "dv_traffic_light"
-			trafficlight:SetPos(w.TrafficLight.Pos)
-			trafficlight:SetAngles(w.TrafficLight.Ang)
-			trafficlight:Spawn()
-			local ph = trafficlight:GetPhysicsObject()
-			if IsValid(ph) then ph:Sleep() end
-			w.TrafficLight = trafficlight
-		end
-	end
-	
-	for i, t in ipairs(load.TrafficLights) do
-		local traffic = ents.Create(t.ClassName)
-		if not IsValid(traffic) then continue end
-		traffic:SetPos(t.Pos)
-		traffic:SetAngles(t.Ang)
-		traffic:Spawn()
-		traffic:SetPattern(t.Pattern)
-		traffic.Waypoints = t.Waypoints
-		for i, id in ipairs(t.Waypoints) do
-			if not dvd.Waypoints[id] then continue end
-			dvd.Waypoints[id].TrafficLight = traffic
-		end
-	end
+	OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(path, true) or "")))
 end)
 
 saverestore.AddSaveHook("Decent Vehicle", function(save)
-	saverestore.WriteTable(dvd, save)
-	for _, t in ipairs(ents.GetAll()) do
-		if not t.IsDVTrafficLight then continue end
-		t.Waypoints.Pattern = t:GetPattern()
-	end
+	saverestore.WriteTable(GetSaveTable(), save)
 end)
 
 saverestore.AddRestoreHook("Decent Vehicle", function(restore)
 	OverwriteWaypoints(saverestore.ReadTable(restore))
-	for _, t in ipairs(ents.GetAll()) do
-		if not t.IsDVTrafficLight then continue end
-		for _, id in ipairs(t.Waypoints) do
-			local w = dvd.Waypoints[id]
-			if not w or w.TrafficLight == t then continue end
-			dvd.AddTrafficLight(id, t)
+	for id, undolist in pairs(undo.GetTable()) do
+		for i, undotable in pairs(undolist) do
+			if undotable.Name ~= "Decent Vehicle Waypoint" then continue end
+			undolist[i].Functions[1] = {dvd.UndoWaypoint, {}}
 		end
-		
-		t:SetPattern(t.Waypoints.Pattern or 1)
 	end
 end)
 
 duplicator.RegisterEntityModifier("Decent Vehicle: Save waypoints", function(ply, ent, data)
 	OverwriteWaypoints(data)
 	dvd.SaveEntity = ent
-end)
-
-duplicator.RegisterEntityModifier("Decent Vehicle: Save traffic light link", function(ply, ent, data)
-	ent:SetPattern(data.Pattern or 1)
-	for i, id in ipairs(data) do
-		local w = dvd.Waypoints[id]
-		if not w or w.TrafficLight == ent then continue end
-		dvd.AddTrafficLight(id, ent)
-	end
-	
-	net.Start "Decent Vehicle: Retrive waypoints"
-	WriteWaypoint(1)
-	net.Broadcast()
 end)
 
 net.Receive("Decent Vehicle: Retrive waypoints", function(_, ply)
@@ -211,7 +180,7 @@ end)
 
 -- Refresh the backup of DecentVehicleDestination for GMOD save and load.
 function dvd.RefreshDupe()
-	duplicator.StoreEntityModifier(dvd.SaveEntity, "Decent Vehicle: Save waypoints", dvd)
+	duplicator.StoreEntityModifier(dvd.SaveEntity, "Decent Vehicle: Save waypoints", GetSaveTable())
 end
 
 -- Creates a new waypoint at given position.
@@ -337,8 +306,6 @@ function dvd.AddTrafficLight(id, traffic)
 			table.RemoveByValue(t.Waypoints, id)
 			traffic = nil
 		end
-		
-		duplicator.StoreEntityModifier(t, "Decent Vehicle: Save traffic light link", t.Waypoints)
 	end
 	
 	waypoint.TrafficLight = traffic
