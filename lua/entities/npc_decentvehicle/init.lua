@@ -1,6 +1,6 @@
 
 -- Copyright © 2018-2030 Decent Vehicle
--- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/m33_333/)
+-- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
 AddCSLuaFile "cl_init.lua"
@@ -35,10 +35,10 @@ ENT.NextReleaseBrake = CurTime()
 
 local dvd = DecentVehicleDestination
 local vector_one = Vector(1, 1, 1)
-local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
-local KmphToHUpsSqr = KmphToHUps^2
 local sPID = Vector(4, 0, 0) -- PID parameters of steering
 local tPID = Vector(1, 0, 0) -- PID parameters of throttle
+local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
+local KmphToHUpsSqr = KmphToHUps^2
 local TraceMax = 64
 local TraceMinLength = 300
 local TraceMinLengthSqr = TraceMinLength^2
@@ -211,6 +211,38 @@ function ENT:GetVehicleParams()
 	print("Max Steering Angle: ", self.MaxSteeringAngle)
 end
 
+function ENT:GetVehicleIdentifier()
+	if self.v.IsScar then
+		return self.v:GetClass()
+	elseif self.v.IsSimfphyscar then
+		return "Simfphys_" .. self.v:GetModel()
+	else
+		return "Source_" .. self.v:GetModel()
+	end
+end
+
+function ENT:AttachModel()
+	local seat = self.v
+ 	if self.v.IsScar then
+ 		seat = self.v.Seats[1]
+ 	elseif self.v.IsSimfphyscar then
+		seat = self.v.DriverSeat
+ 	end
+	
+	local a = seat:LookupAttachment "vehicle_driver_eyes"
+	local att = seat:GetAttachment(assert(a, "Decent Vehicle: attachment vehicle_feet_passenger0 is not found!"))
+	local delta = dvd.SeatPos[self:GetVehicleIdentifier()] or Vector(-8, 0, -32) -- Vector(forward, right, up)
+	local seatang = seat:WorldToLocalAngles(att.Ang)
+	local seatpos = seat:WorldToLocal(att.Pos
+	+ att.Ang:Forward() * delta.x + att.Ang:Right() * delta.y + att.Ang:Up() * delta.z)
+	self:SetModel(istable(self.Model) and self.Model[math.random(#self.Model)] or self.Model or dvd.DefaultDriverModel)
+	self:SetSequence "drive_jeep"
+	self:SetParent(seat)
+	self:SetSeat(seat)
+	self:SetSeatPos(seatpos)
+	self:SetSeatAng(seatang)
+ end
+
 function ENT:IsDestroyed()
 	if self.v.IsScar then
 		return self.v:IsDestroyed()
@@ -341,8 +373,8 @@ end
 --   bool arrived	| Has the vehicle arrived at the current destination.
 function ENT:DriveToWaypoint()
 	if not self.Waypoint then return end
-	local sPID = dvd.PID.Steering[self.v:GetClass()] or sPID
-	local tPID = dvd.PID.Throttle[self.v:GetClass()] or tPID
+	local sPID = dvd.PID.Steering[self:GetVehicleIdentifier()] or sPID
+	local tPID = dvd.PID.Throttle[self:GetVehicleIdentifier()] or tPID
 	local throttle = 1 -- The output throttle
 	local steering = 0 -- The output steering
 	local handbrake = false -- The output handbrake
@@ -547,6 +579,9 @@ end
 
 function ENT:Think()
 	self:NextThink(CurTime())
+	self:SetPos(self:GetSeat():LocalToWorld(self:GetSeatPos()))
+	self:SetAngles(self:GetSeat():LocalToWorldAngles(self:GetSeatAng()))
+	
 	if not self:IsValidVehicle() then SafeRemoveEntity(self) return end
 	if self:ShouldStop() then
 		self:StopDriving()
@@ -635,11 +670,9 @@ function ENT:Initialize()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
 	self.WaypointList = {}
-	self:SetParent(self.v)
+	self:AttachModel()
 	self:GetVehicleParams()
-	self:SetNoDraw(true)
-	self:SetMoveType(MOVETYPE_NONE)
-	self:PhysicsInit(SOLID_VPHYSICS)
+	self:PhysicsInitShadow()
 	self:SetEngineStarted(true)
 	self.v:DeleteOnRemove(self)
 end

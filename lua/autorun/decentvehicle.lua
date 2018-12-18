@@ -1,13 +1,17 @@
 
 -- Copyright © 2018-2030 Decent Vehicle
--- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/m33_333/)
+-- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
 AddCSLuaFile()
 DecentVehicleDestination = DecentVehicleDestination or {
+	DefaultDriverModel = "models/player/gman_high.mdl",
 	PID = {
 		Throttle = {},
 		Steering = {},
+	},
+	SeatPos = {
+		["Source_models/vehicle.mdl"] = Vector(-8, 0, -24),
 	},
 	TLDuration = {33, 4, 40 + 3}, -- Sign duration of each light color, Green, Yellow, Red.
 	TrafficLights = {
