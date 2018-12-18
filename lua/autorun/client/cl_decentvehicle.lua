@@ -143,6 +143,7 @@ function(bDrawingDepth, bDrawingSkybox)
 	local showpoints = GetConVar "dv_route_showpoints"
 	if bDrawingSkybox or not (showpoints and showpoints:GetBool()) then return end
 	for _, w in ipairs(dvd.Waypoints) do
+		if EyeAngles():Forward():Dot(w.Target - EyePos()) < 0 then continue end -- Visiblity check
 		render.SetMaterial(WaypointMaterial)
 		render.DrawSprite(w.Target + Height, dvd.WaypointSize, dvd.WaypointSize, color_white)
 		render.SetMaterial(LinkMaterial)

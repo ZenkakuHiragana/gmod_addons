@@ -3,6 +3,7 @@
 -- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
+local dvd = DecentVehicleDestination
 function ENT:GetVehicleForward()
 	if self.v.IsScar then
 		return self.v:GetForward()
@@ -383,4 +384,7 @@ function ENT:SetSteering(steering)
 	elseif isfunction(self.v.SetSteering) then
 		self.v:SetSteering(steering, 0)
 	end
+	
+	local pose = self:GetPoseParameter "vehicle_steer" or 0
+	self:SetPoseParameter("vehicle_steer", pose + (steering - pose) / 10)
 end

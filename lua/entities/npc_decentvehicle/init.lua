@@ -10,6 +10,8 @@ include "shared.lua"
 include "playermeta.lua"
 include "api.lua"
 
+ENT.sPID = Vector(4, 0, 0) -- PID parameters for steering
+ENT.tPID = Vector(1, 0, 0) -- PID parameters for throttle
 ENT.Throttle = 0
 ENT.Steering = 0
 ENT.HandBrake = false
@@ -35,18 +37,15 @@ ENT.NextReleaseBrake = CurTime()
 
 local dvd = DecentVehicleDestination
 local vector_one = Vector(1, 1, 1)
-local sPID = Vector(4, 0, 0) -- PID parameters of steering
-local tPID = Vector(1, 0, 0) -- PID parameters of throttle
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local KmphToHUpsSqr = KmphToHUps^2
 local TraceMax = 64
 local TraceMinLength = 300
 local TraceMinLengthSqr = TraceMinLength^2
 local TraceThreshold = 10
-local TraceHeightGap = 20
-local GobackTime = 10
-local GobackDuration = 3
-local EmergencyDuration = 5
+local TraceHeightGap = 20 -- The distance between ground and the bottom of the trace
+local GobackTime = 10 -- The time to start to go backward by the trace.
+local GobackDuration = 3 -- The duration of going backward by the trace.
 local VCModFixedAroundNPCDriver = false -- This is a stupid solution.
 local LIGHTLEVEL = {
 	NONE = 0,
@@ -60,10 +59,15 @@ local NightSkyTextureList = {
 	sky_day02_09 = true,
 }
 
+local CVarFlags = {FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}
+local TimeToStopEmergency = CreateConVar("decentvehicle_timetostopemergency", 5,
+CVarFlags, "Decent Vehicle: Time to turn off hazard lights in seconds.")
+local ShouldGoToRefuel = CreateConVar("decentvehicle_gotorefuel", 1,
+CVarFlags, "Decent Vehicle: 1: Go to a fuel station to refuel.  0: Refuel automatically.")
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
-FCVAR_ARCHIVE, "Decent Vehicle: A vehicle within this distance will drive automatically.")
+CVarFlags, "Decent Vehicle: A vehicle within this distance will drive automatically.")
 local TurnonLights = CreateConVar("decentvehicle_turnonlights", 3,
-{FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}, 
+CVarFlags, 
 [[Decent Vehicle: The level of using lights.
 0: Disabled
 1: Only use running lights
@@ -108,7 +112,7 @@ function ENT:CarCollide(data)
 	self = self.v and self or self.DecentVehicle
 	if not self then return end
 	if data.Speed > 200 and not data.HitEntity:IsPlayer() then
-		self.Emergency = CurTime() + EmergencyDuration
+		self.Emergency = CurTime() + (self.EmergencyDuration or TimeToStopEmergency:GetFloat())
 	end
 	
 	hook.Run("Decent Vehicle: OnCollide", self, data)
@@ -235,7 +239,8 @@ function ENT:AttachModel()
 	local seatang = seat:WorldToLocalAngles(att.Ang)
 	local seatpos = seat:WorldToLocal(att.Pos
 	+ att.Ang:Forward() * delta.x + att.Ang:Right() * delta.y + att.Ang:Up() * delta.z)
-	self:SetModel(istable(self.Model) and self.Model[math.random(#self.Model)] or self.Model or dvd.DefaultDriverModel)
+	self:SetModel(istable(self.Model) and self.Model[math.random(#self.Model)]
+	or self.Model or dvd.DefaultDriverModel[math.random(#dvd.DefaultDriverModel)])
 	self:SetSequence "drive_jeep"
 	self:SetParent(seat)
 	self:SetSeat(seat)
@@ -281,6 +286,7 @@ function ENT:IsValidVehicle()
 	if not IsValid(self.v) then return end -- The tied vehicle goes NULL.
 	if not self.v:IsVehicle() then return end -- Somehow it become non-vehicle entity.
 	if not self.v.DecentVehicle then return end -- Somehow it's a normal vehicle.
+	if not IsValid(self:GetSeat()) then return end -- It couldn't find the driver seat.
 	if self ~= self.v.DecentVehicle then return end -- It has a different driver.
 	if self.v:WaterLevel() > 1 then return end -- It falls into water.
 	if self:IsDestroyed() then return end -- It is destroyed.
@@ -294,12 +300,19 @@ function ENT:AtTrafficLight()
 	if self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then return true end
 end
 
-function ENT:ShouldGoback()
+function ENT:ShouldStopGoingback()
 	if self.FormLine then return end
+	if IsValid(self.TraceBack.Entity) or self.TraceBack.HitWorld
+	and self.TraceBack.HitNormal:Dot(vector_up) < .7 then
+		self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
+		return true
+	end
+	
 	local ent = self.Trace.Entity
 	if not (IsValid(ent) and ent.DecentVehicle) then return end
 	
 	ent = ent.DecentVehicle
+	if ent:GetELS() then return true end
 	if CurTime() > ent.WaitUntilNext then return end
 	if CurTime() > ent.Emergency then return end
 	return true
@@ -373,8 +386,8 @@ end
 --   bool arrived	| Has the vehicle arrived at the current destination.
 function ENT:DriveToWaypoint()
 	if not self.Waypoint then return end
-	local sPID = dvd.PID.Steering[self:GetVehicleIdentifier()] or sPID
-	local tPID = dvd.PID.Throttle[self:GetVehicleIdentifier()] or tPID
+	local sPID = dvd.PID.Steering[self:GetVehicleIdentifier()] or self.sPID
+	local tPID = dvd.PID.Throttle[self:GetVehicleIdentifier()] or self.tPID
 	local throttle = 1 -- The output throttle
 	local steering = 0 -- The output steering
 	local handbrake = false -- The output handbrake
@@ -418,9 +431,10 @@ function ENT:DriveToWaypoint()
 	end
 	
 	local GobackByTrace = CurTime() - self.StopByTrace - GobackTime
-	if not self:ShouldGoback() and 0 < GobackByTrace and GobackByTrace < GobackDuration then
+	if not self:ShouldStopGoingback() and 0 < GobackByTrace and GobackByTrace < GobackDuration then
 		goback = -1
 		handbrake = false
+		steering = -steering
 	else
 		if GobackByTrace > GobackDuration then
 			self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
@@ -468,6 +482,7 @@ function ENT:DoLights()
 end
 
 function ENT:DoTrace()
+	if not self.Waypoint then return end
 	local prevwaypoint = self.PrevWaypoint
 	local nextwaypoint = self.NextWaypoint
 	local filter = self:GetTraceFilter()
@@ -476,7 +491,7 @@ function ENT:DoTrace()
 	local vehiclepos = self.v:WorldSpaceCenter()
 	local velocity = self.v:GetVelocity()
 	local tracedir = Vector(velocity)
-	if not self.Waypoint or velocity:LengthSqr() > TraceMinLengthSqr then
+	if velocity:LengthSqr() > TraceMinLengthSqr then
 		tracedir:Normalize()
 	else
 		tracedir = forward
@@ -485,9 +500,7 @@ function ENT:DoTrace()
 	local velocitydot = velocity:Dot(tracedir)
 	local currentspeed = math.abs(velocitydot)
 	self.TraceLength = CurTime() > self.StopByTrace and self.TraceLength or math.max(TraceMinLength, currentspeed)
-	
 	local kmph = currentspeed / KmphToHUps
-	local goback = self.TraceLength > TraceMinLength + TraceThreshold and velocity:Dot(forward) < 0 and -1 or 1
 	local TraceGround = util.QuickTrace(vehiclepos, -vector_up * 32768, filter)
 	local groundpos = TraceGround.HitPos
 	local height = (vehiclepos.z - groundpos.z) / math.sqrt(2)
@@ -497,13 +510,23 @@ function ENT:DoTrace()
 	
 	local tr = {
 		start = start,
-		endpos = start + tracedir * self.TraceLength * goback,
+		endpos = start + tracedir * self.TraceLength,
 		maxs = maxs, mins = mins,
 		filter = filter,
 	}
 	self.Trace = util.TraceHull(tr)
 	debugoverlay.SweptBox(tr.start, tr.endpos,
 	tr.mins, tr.maxs, angle_zero, .05, Color(0, 255, 0))
+	
+	local trback = {
+		start = start,
+		endpos = start - tracedir * self.TraceLength / 2,
+		maxs = maxs, mins = mins,
+		filter = filter,
+	}
+	self.TraceBack = util.TraceHull(trback)
+	debugoverlay.SweptBox(trback.start, trback.endpos,
+	trback.mins, trback.maxs, angle_zero, .05, Color(255, 255, 0))
 	
 	local ent = self.Trace.Entity
 	local waypointpos = nextwaypoint and nextwaypoint.Target or self.Waypoint and self.Waypoint.Target
@@ -526,7 +549,7 @@ function ENT:DoTrace()
 	end
 	
 	if not IsValid(ent) or self.Trace.HitWorld and self.Trace.HitNormal:Dot(vector_up) > .7 then
-		if CurTime() < self.StopByTrace or CurTime() < self.StopByTrace + GobackTime then
+		if CurTime() < self.StopByTrace + GobackTime then
 			self.StopByTrace = CurTime() + .1
 		end
 		
@@ -534,6 +557,10 @@ function ENT:DoTrace()
 	else
 		local dv = ent.DecentVehicle
 		self.FormLine = dv and dv:AtTrafficLight()
+		
+		if dv and dv.Trace.Entity == self.v and dv:EntIndex() < self:EntIndex() then
+			self.StopByTrace = CurTime() + .1
+		end
 	end
 	
 	debugoverlay.SweptBox(tr.start, self.Trace.HitPos, tr.mins, tr.maxs, angle_zero, .05)
@@ -578,10 +605,6 @@ function ENT:SetupNextWaypoint()
 end
 
 function ENT:Think()
-	self:NextThink(CurTime())
-	self:SetPos(self:GetSeat():LocalToWorld(self:GetSeatPos()))
-	self:SetAngles(self:GetSeat():LocalToWorldAngles(self:GetSeatAng()))
-	
 	if not self:IsValidVehicle() then SafeRemoveEntity(self) return end
 	if self:ShouldStop() then
 		self:StopDriving()
@@ -592,11 +615,18 @@ function ENT:Think()
 		
 		self:SetupNextWaypoint()
 	elseif self:ShouldRefuel() then
-		self:FindRoute "FuelStation"
+		if ShouldGoToRefuel:GetBool() then
+			self:FindRoute "FuelStation"
+		else
+			self:Refuel()
+		end
 	end
 	
 	self:DoTrace()
 	self:DoLights()
+	self:NextThink(CurTime())
+	self:SetPos(self:GetSeat():LocalToWorld(self:GetSeatPos()))
+	self:SetAngles(self:GetSeat():LocalToWorldAngles(self:GetSeatAng()))
 	return true
 end
 
@@ -665,7 +695,7 @@ function ENT:Initialize()
 	end
 	
 	if not IsValid(self.v) then SafeRemoveEntity(self) return end
-	
+	print(self.v:GetModel())
 	local e = EffectData()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
@@ -724,3 +754,8 @@ function ENT:OnRemove()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
 end
+
+if not VC then return end -- WORKAROUND!!!
+hook.Add("CanPlayerEnterVehicle", "Decent Vehicle: VCMod is not compatible with npc_vehicledriver", function(ply, vehicle, role)
+	if vehicle.DecentVehicle and role == 1 then return false end
+end)

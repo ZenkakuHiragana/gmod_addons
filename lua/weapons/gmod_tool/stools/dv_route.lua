@@ -99,7 +99,7 @@ function TOOL:LeftClick(trace)
 		undo.AddFunction(dvd.UndoWaypoint)
 		undo.SetPlayer(self:GetOwner())
 		undo.Finish()
-	elseif self:GetStage() == 0 then
+	elseif self:GetStage() == 0 or not dvd.Waypoints[self.WaypointID] then
 		self.WaypointID = waypointID
 		self.TrafficLight = nil
 		self:SetStage(1)

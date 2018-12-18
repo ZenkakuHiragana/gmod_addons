@@ -5,13 +5,49 @@
 
 AddCSLuaFile()
 DecentVehicleDestination = DecentVehicleDestination or {
-	DefaultDriverModel = "models/player/gman_high.mdl",
+	DefaultDriverModel = {
+		"models/player/group01/female_01.mdl",
+		"models/player/group01/female_02.mdl",
+		"models/player/group01/female_03.mdl",
+		"models/player/group01/female_04.mdl",
+		"models/player/group01/female_05.mdl",
+		"models/player/group01/female_06.mdl",
+		"models/player/group01/male_01.mdl",
+		"models/player/group01/male_02.mdl",
+		"models/player/group01/male_03.mdl",
+		"models/player/group01/male_04.mdl",
+		"models/player/group01/male_05.mdl",
+		"models/player/group01/male_06.mdl",
+		"models/player/group01/male_07.mdl",
+		"models/player/group01/male_08.mdl",
+		"models/player/group01/male_09.mdl",
+		"models/player/group02/male_02.mdl",
+		"models/player/group02/male_04.mdl",
+		"models/player/group02/male_06.mdl",
+		"models/player/group02/male_08.mdl",
+		"models/player/group03/female_01.mdl",
+		"models/player/group03/female_02.mdl",
+		"models/player/group03/female_03.mdl",
+		"models/player/group03/female_04.mdl",
+		"models/player/group03/female_05.mdl",
+		"models/player/group03/female_06.mdl",
+		"models/player/group03/male_01.mdl",
+		"models/player/group03/male_02.mdl",
+		"models/player/group03/male_03.mdl",
+		"models/player/group03/male_04.mdl",
+		"models/player/group03/male_05.mdl",
+		"models/player/group03/male_06.mdl",
+		"models/player/group03/male_07.mdl",
+		"models/player/group03/male_08.mdl",
+		"models/player/group03/male_09.mdl",
+	},
 	PID = {
 		Throttle = {},
 		Steering = {},
 	},
 	SeatPos = {
 		["Source_models/vehicle.mdl"] = Vector(-8, 0, -24),
+		["Simfphys_models/blu/gtav/dukes/dukes.mdl"] = Vector(2, 0, -28),
 	},
 	TLDuration = {33, 4, 40 + 3}, -- Sign duration of each light color, Green, Yellow, Red.
 	TrafficLights = {
@@ -22,6 +58,8 @@ DecentVehicleDestination = DecentVehicleDestination or {
 	Waypoints = {},
 	WaypointSize = 32,
 }
+
+
 
 -- Gets direction vector from v1 to v2.
 -- Arguments:

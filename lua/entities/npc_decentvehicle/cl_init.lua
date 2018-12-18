@@ -6,10 +6,11 @@
 include "shared.lua"
 include "playermeta.lua"
 
+local dvd = DecentVehicleDestination
 function ENT:Initialize()
 	self:SetModel(istable(self.Model) and
 	self.Model[math.random(#self.Model)] or
-	self.Model or DecentVehicleDestination.DefaultDriverModel)
+	self.Model or dvd.DefaultDriverModel[math.random(#dvd.DefaultDriverModel)])
 	self:SetSequence "drive_jeep"
 end
 
