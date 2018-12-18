@@ -140,7 +140,8 @@ local LinkMaterial = Material "cable/blue_elec"
 local TrafficMaterial = Material "cable/redlaser"
 hook.Add("PostDrawTranslucentRenderables", "Decent Vehicle: Draw waypoints",
 function(bDrawingDepth, bDrawingSkybox)
-	if bDrawingSkybox or not GetConVar "dv_route_showpoints":GetBool() then return end
+	local showpoints = GetConVar "dv_route_showpoints"
+	if bDrawingSkybox or not (showpoints and showpoints:GetBool()) then return end
 	for _, w in ipairs(dvd.Waypoints) do
 		render.SetMaterial(WaypointMaterial)
 		render.DrawSprite(w.Target + Height, dvd.WaypointSize, dvd.WaypointSize, color_white)
