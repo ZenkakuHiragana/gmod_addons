@@ -44,8 +44,8 @@ local TraceMinLength = 300
 local TraceMinLengthSqr = TraceMinLength^2
 local TraceThreshold = 10
 local TraceHeightGap = 20
-local GobackTime = 6
-local GobackDuration = 2
+local GobackTime = 10
+local GobackDuration = 3
 local EmergencyDuration = 5
 local VCModFixedAroundNPCDriver = false -- This is a stupid solution.
 local LIGHTLEVEL = {
@@ -262,6 +262,17 @@ function ENT:AtTrafficLight()
 	if self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then return true end
 end
 
+function ENT:ShouldGoback()
+	if self.FormLine then return end
+	local ent = self.Trace.Entity
+	if not (IsValid(ent) and ent.DecentVehicle) then return end
+	
+	ent = ent.DecentVehicle
+	if CurTime() > ent.WaitUntilNext then return end
+	if CurTime() > ent.Emergency then return end
+	return true
+end
+
 function ENT:ShouldStop()
 	if not self.Waypoint then return true end
 	if CurTime() < self.WaitUntilNext then return true end
@@ -375,12 +386,12 @@ function ENT:DriveToWaypoint()
 	end
 	
 	local GobackByTrace = CurTime() - self.StopByTrace - GobackTime
-	if not self.FormLine and 0 < GobackByTrace and GobackByTrace < GobackDuration then
+	if not self:ShouldGoback() and 0 < GobackByTrace and GobackByTrace < GobackDuration then
 		goback = -1
 		handbrake = false
 	else
 		if GobackByTrace > GobackDuration then
-			self.StopByTrace = CurTime() + .1 -- Reset going back timer
+			self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
 		end
 	
 		if not (self.v.IsScar or self.v.IsSimfphyscar) and velocitydot * goback * throttle < 0 then
@@ -478,7 +489,8 @@ function ENT:DoTrace()
 	
 	if prevwaypoint and nextwaypoint then
 		local direction = dvd.GetDir(prevwaypoint.Target, self.Waypoint.Target)
-		self.InsideRoute = direction:Cross(dvd.GetDir(prevwaypoint.Target, nextwaypoint.Target)):Dot(direction:Cross(dvd.GetDir(prevwaypoint.Target, vehiclepos)))
+		self.InsideRoute = direction:Cross(dvd.GetDir(prevwaypoint.Target, nextwaypoint.Target))
+		:Dot(direction:Cross(dvd.GetDir(prevwaypoint.Target, vehiclepos)))
 	end
 	
 	if not IsValid(ent) or self.Trace.HitWorld and self.Trace.HitNormal:Dot(vector_up) > .7 then
