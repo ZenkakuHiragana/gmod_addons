@@ -47,7 +47,7 @@ DecentVehicleDestination = DecentVehicleDestination or {
 	},
 	SeatPos = {
 		["Source_models/vehicle.mdl"] = Vector(-8, 0, -24),
-		["Simfphys_models/blu/gtav/dukes/dukes.mdl"] = Vector(2, 0, -28),
+		["Simfphys_"] = Vector(2, 0, -28),
 	},
 	TLDuration = {33, 4, 40 + 3}, -- Sign duration of each light color, Green, Yellow, Red.
 	TrafficLights = {
@@ -58,8 +58,6 @@ DecentVehicleDestination = DecentVehicleDestination or {
 	Waypoints = {},
 	WaypointSize = 32,
 }
-
-
 
 -- Gets direction vector from v1 to v2.
 -- Arguments:

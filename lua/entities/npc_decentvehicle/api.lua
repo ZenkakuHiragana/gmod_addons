@@ -51,7 +51,7 @@ end
 function ENT:GetTraceFilter()
 	local filter = {self, self.v}
 	if self.v.IsScar then
-		table.Add(filter, self.v.Seats)
+		table.Add(filter, self.v.Seats or {})
 		table.Add(filter, self.v.Wheels)
 		table.Add(filter, self.v.StabilizerProp)
 	elseif self.v.IsSimfphyscar then
@@ -143,6 +143,16 @@ function ENT:GetHorn()
 	end
 end
 
+function ENT:GetLocked()
+	if self.v.IsScar then
+		return self.v:IsLocked()
+	elseif self.v.IsSimfphyscar then
+		return 
+	elseif VC then
+		return self.v:VC_isLocked()
+	end
+end
+
 function ENT:GetEngineStarted()
 	if self.v.IsScar then
 		return self.v.IsOn
@@ -186,10 +196,11 @@ end
 local function SCAREmulateKey(self, key, state, func, ...)
 	local dummy = player.GetByID(1)
 	local dummyinput = dummy.ScarSpecialKeyInput
+	local controller = self.v.AIController
 	self.v.AIController = dummy
 	dummy.ScarSpecialKeyInput = {[key] = state}
 	if isfunction(func) then func(self.v, ...) end
-	self.v.AIController = self
+	self.v.AIController = controller
 	dummy.ScarSpecialKeyInput = dummyinput
 end
 
@@ -334,14 +345,35 @@ function ENT:SetHorn(on)
 	end
 end
 
+function ENT:SetLocked(locked)
+	if locked == self:GetLocked() then return end
+	if self.v.IsScar then
+		if locked then
+			self.v:Lock()
+		else
+			self.v:UnLock()
+		end
+	elseif self.v.IsSimfphyscar then
+		if locked then
+			self.v:Lock()
+		else
+			self.v:UnLock()
+		end
+	elseif VC then
+		if locked then
+			self.v:VC_lock()
+		else
+			self.v:VC_unLock()
+		end
+	end
+end
+
 function ENT:SetEngineStarted(on)
 	if on == self:GetEngineStarted() then return end
-	if self.v.IsScar then
-		if on then
-			self.v:TurnOnCar()
-		else
-			self.v:TurnOffCar()
-		end
+	if self.v.IsScar then -- SCAR automatically starts the engine.
+		self:SetLocked(not on)
+		self.v.AIController = on and self or nil
+		if not on then self.v:TurnOffCar() end
 	elseif self.v.IsSimfphyscar then
 		self.v:SetActive(on)
 		if on then

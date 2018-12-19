@@ -164,3 +164,5 @@ function(bDrawingDepth, bDrawingSkybox)
 		end
 	end
 end)
+
+hook.Run "Decent Vehicle: PostInitialize"

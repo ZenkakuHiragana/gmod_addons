@@ -471,3 +471,5 @@ function dvd.GetRouteVector(start, endpos, group)
 	
 	return dvd.GetRoute(select(2, dvd.GetNearestWaypoint(start)), endpostable, group)
 end
+
+hook.Run "Decent Vehicle: PostInitialize"

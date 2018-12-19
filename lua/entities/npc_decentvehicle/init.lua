@@ -208,27 +208,41 @@ function ENT:GetVehicleParams()
 	print("Max Steering Angle: ", self.MaxSteeringAngle)
 end
 
-function ENT:GetVehicleIdentifier()
+function ENT:GetVehiclePrefix()
 	if self.v.IsScar then
-		return self.v:GetClass()
+		return "SCAR_"
 	elseif self.v.IsSimfphyscar then
-		return "Simfphys_" .. self.v:GetModel()
+		return "Simfphys_"
 	else
-		return "Source_" .. self.v:GetModel()
+		return "Source_"
 	end
+end
+
+function ENT:GetVehicleIdentifier()
+	local id = ""
+	if self.v.IsScar then
+		id = self.v:GetClass()
+	elseif self.v.IsSimfphyscar then
+		id = self.v:GetModel()
+	else
+		id = self.v:GetModel()
+	end
+	
+	return self:GetVehiclePrefix() .. id
 end
 
 function ENT:AttachModel()
 	local seat = self.v
  	if self.v.IsScar then
- 		seat = self.v.Seats[1]
+ 		seat = self.v.Seats and self.v.Seats[1]
  	elseif self.v.IsSimfphyscar then
 		seat = self.v.DriverSeat
  	end
 	
+	if not IsValid(self) then return end
 	local a = seat:LookupAttachment "vehicle_driver_eyes"
 	local att = seat:GetAttachment(assert(a, "Decent Vehicle: attachment vehicle_feet_passenger0 is not found!"))
-	local delta = dvd.SeatPos[self:GetVehicleIdentifier()] or Vector(-8, 0, -32) -- Vector(forward, right, up)
+	local delta = dvd.SeatPos[self:GetVehicleIdentifier()]or dvd.SeatPos[self:GetVehiclePrefix()] or Vector(-8, 0, -32)
 	local seatang = seat:WorldToLocalAngles(att.Ang)
 	local seatpos = seat:WorldToLocal(att.Pos
 	+ att.Ang:Forward() * delta.x + att.Ang:Right() * delta.y + att.Ang:Up() * delta.z)
@@ -269,7 +283,7 @@ function ENT:GetCurrentMaxSpeed()
 		end
 	end
 	
-	maxspeed = maxspeed * Either(self.TraceWaypoint.Hit, 1, (self.InsideRoute + 1.1) / 2)
+	maxspeed = maxspeed * Either(self.TraceWaypoint and self.TraceWaypoint.Hit, 1, (self.InsideRoute + 1.1) / 2)
 	maxspeed = maxspeed * math.Clamp(self.MaxSpeedCoefficient, 0, 1)
 	return hook.Run("Decent Vehicle: GetCurrentMaxSpeed", self, maxspeed)
 	or math.Clamp(maxspeed, 1, self.MaxSpeed)
@@ -541,7 +555,7 @@ function ENT:DoTrace()
 		local dv = ent.DecentVehicle
 		self.FormLine = dv and dv:AtTrafficLight()
 		
-		if dv and dv.Trace.Entity == self.v and dv:EntIndex() < self:EntIndex() then
+		if dv and dv.Trace and dv.Trace.Entity == self.v and dv:EntIndex() < self:EntIndex() then
 			self.StopByTrace = CurTime() + .1
 		end
 	end
@@ -556,12 +570,13 @@ function ENT:DoGiveWay()
 		if not ent:IsVehicle() then continue end
 		if not ent.DecentVehicle then continue end
         if not ent.DecentVehicle:GetELS() then continue end
+		if ent.DecentVehicle == self then continue end
 		
-		if self:GetVehicleRight():Dot(ent:WorldSpaceCenter()
-		- self.v:WorldSpaceCenter()) > 0 == DriverSide:GetBool() then
+		if ent.DecentVehicle:GetVehicleRight():Dot(self.v:WorldSpaceCenter()
+		- ent:WorldSpaceCenter()) > 0 == DriveSide:GetBool() then
 			self:SetSteering(.3)
 			self:SetThrottle(0)
-			-- timer.Create(2, function()
+			-- timer.Create("Decent Vehicle: Give way" .. self:EntIndex(), 2, 1, function()
 			--	if not IsValid(self) then return end
 			--	self:Stop()
 			-- end)
@@ -699,7 +714,7 @@ function ENT:Initialize()
 	end
 	
 	if not IsValid(self.v) then SafeRemoveEntity(self) return end
-	print(self.v:GetModel())
+	
 	local e = EffectData()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
@@ -729,6 +744,7 @@ function ENT:OnRemove()
 	self:SetELSSound(false)
 	self:SetHorn(false)
 	self:SetEngineStarted(false)
+	self:SetLocked(false)
 	
 	if self.v.IsScar then -- If the vehicle is SCAR.
 		self.v.AIController = nil
