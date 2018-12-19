@@ -74,6 +74,13 @@ CVarFlags,
 2: Use running lights and headlights
 3: Use all lights]])
 
+local DetectELS = CreateConVar("decentvehicle_elsrange", 300,
+CVarFlags, "Decent Vehicle: Detection range of finding cars with ELS to give way.")
+local DriveSide = CreateConVar("decentvehicle_driveside", 0,
+CVarFlags, [[Decent Vehicle: Determines which side of road Decent Vehicles think.
+0: Right (Europe, America, etc.)
+1: Left (UK, Australia, etc.)]])
+
 local function GetNight()
 	if StormFox then return StormFox.IsNight() end
 	local skyname = GetConVar "sv_skyname" :GetString()
@@ -462,16 +469,6 @@ function ENT:DriveToWaypoint()
 end
 
 function ENT:DoLights()
-	local lightlevel = TurnonLights:GetInt()
-	if lightlevel < LIGHTLEVEL.ALL then
-		self:SetFogLights(false)
-		if lightlevel == LIGHTLEVEL.HEADLIGHTS then return end
-		self:SetLights(false, false)
-		if lightlevel == LIGHTLEVEL.RUNNING then return end
-		self:SetRunningLights(false)
-		return
-	end
-	
 	local fogenabled, fogend = GetFogInfo()
 	local fog = fogenabled and fogend < 5000
 	self:SetRunningLights(self:GetEngineStarted())
@@ -479,6 +476,15 @@ function ENT:DoLights()
 	self:SetFogLights(fog)
 	self:SetTurnLight(self.Waypoint and self.Waypoint.UseTurnLights or false, self.UseLeftTurnLight)
 	self:SetHazardLights(CurTime() < self.Emergency)
+	
+	local lightlevel = TurnonLights:GetInt()
+	if lightlevel < LIGHTLEVEL.ALL then
+		self:SetFogLights(false)
+		if lightlevel == LIGHTLEVEL.HEADLIGHTS then return end
+		self:SetLights(false, false)
+		if lightlevel == LIGHTLEVEL.RUNNING then return end
+		self:SetRunningLights(false)
+	end
 end
 
 function ENT:DoTrace()
@@ -568,6 +574,26 @@ function ENT:DoTrace()
 	hook.Run("Decent Vehicle: Trace", self, ent)
 end
 
+function ENT:DoGiveWay()
+    for k, ent in pairs(ents.FindInSphere(self:GetPos(), DetectELS:GetInt())) do
+		if not ent:IsVehicle() then continue end
+		if not ent.DecentVehicle then continue end
+        if not ent.DecentVehicle:GetELS() then continue end
+		
+		if self:GetVehicleRight():Dot(ent:WorldSpaceCenter()
+		- self.v:WorldSpaceCenter()) > 0 == DriverSide:GetBool() then
+			self:SetSteering(.3)
+			self:SetThrottle(0)
+			-- timer.Create(2, function()
+			--	if not IsValid(self) then return end
+			--	self:Stop()
+			-- end)
+		else
+			self:SetHandbrake(true)
+		end
+    end
+end
+
 function ENT:FindFirstWaypoint()
 	if self.Waypoint then return end
 	if #self.WaypointList > 0 then
@@ -622,6 +648,7 @@ function ENT:Think()
 		end
 	end
 	
+	self:DoGiveWay()
 	self:DoTrace()
 	self:DoLights()
 	self:NextThink(CurTime())

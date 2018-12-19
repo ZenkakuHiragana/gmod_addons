@@ -182,7 +182,9 @@ function TOOL.BuildCPanel(CPanel)
 		CPanel:Help ""
 		CPanel:Help ""
 		CPanel:ControlHelp "Server settings"
+		CPanel:CheckBox("Is right side of the road", "decentvehicle_driveside")
 		CPanel:NumSlider("Detection range", "decentvehicle_detectionrange", 1, 64, 0)
+		CPanel:NumSlider("ELS detection range", "decentvehicle_elsrange", 0, 1000, 0)
 		
 		local combobox, label = CPanel:ComboBox("Light level", "decentvehicle_turnonlights")
 		combobox:SetSortItems(false)

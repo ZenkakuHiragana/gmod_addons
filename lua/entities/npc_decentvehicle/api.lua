@@ -125,7 +125,7 @@ function ENT:GetHorn()
 	elseif self.v.IsSimfphyscar then
 		return self.v.HornKeyIsDown
 	elseif VC then
-		
+		return self.v:VC_getStates().HornOn
 	end
 end
 
@@ -175,7 +175,7 @@ local function SCAREmulateKey(self, key, state, func, ...)
 	dummy.ScarSpecialKeyInput = dummyinput
 end
 
-function ENT:SetLights(on, high)
+function ENT:SetLights(on, highbeams)
 	if self.v.IsScar then
 		if on == self:GetLights() then return end
 		self.v.IncreaseFrontLightCol = not on
@@ -188,8 +188,8 @@ function ENT:SetLights(on, high)
 			numpad.Deactivate(self, KEY_F, false)
 		end
 		
-		if on and high ~= self:GetLights(true) then
-			self.v.LampsActivated = not high
+		if on and highbeams ~= self:GetLights(true) then
+			self.v.LampsActivated = not highbeams
 			self.v.KeyPressedTime = CurTime()
 			self.v.NextLightCheck = CurTime()
 			if LightsActivated then
@@ -204,8 +204,8 @@ function ENT:SetLights(on, high)
 		
 		self.keystate = nil
 	elseif VC then
-		if on == self:GetLights(high) then return end
-		if high then
+		if on == self:GetLights(highbeams) then return end
+		if highbeams then
 			self.v:VC_setHighBeams(on)
 		else
 			self.v:VC_setLowBeams(on)
@@ -308,7 +308,9 @@ function ENT:SetHorn(on)
 			self.v.HornKeyIsDown = false
 		end
 	elseif VC then
-		
+		local states = self.v:VC_getStates()
+		states.HornOn = true
+		self.v:VC_setStates(states)
 	end
 end
 
