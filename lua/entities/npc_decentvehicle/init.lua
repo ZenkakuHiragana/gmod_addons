@@ -47,12 +47,6 @@ local TraceHeightGap = 20 -- The distance between ground and the bottom of the t
 local GobackTime = 10 -- The time to start to go backward by the trace.
 local GobackDuration = 0.7 -- The duration of going backward by the trace.
 local VCModFixedAroundNPCDriver = false -- This is a stupid solution.
-local LIGHTLEVEL = {
-	NONE = 0,
-	RUNNING = 1,
-	HEADLIGHTS = 2,
-	ALL = 3,
-}
 local NightSkyTextureList = {
 	sky_borealis01 = true,
 	sky_day01_09 = true,
@@ -66,14 +60,6 @@ local ShouldGoToRefuel = CreateConVar("decentvehicle_gotorefuel", 1,
 CVarFlags, "Decent Vehicle: 1: Go to a fuel station to refuel.  0: Refuel automatically.")
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
 CVarFlags, "Decent Vehicle: A vehicle within this distance will drive automatically.")
-local TurnonLights = CreateConVar("decentvehicle_turnonlights", 3,
-CVarFlags, 
-[[Decent Vehicle: The level of using lights.
-0: Disabled
-1: Only use running lights
-2: Use running lights and headlights
-3: Use all lights]])
-
 local DetectELS = CreateConVar("decentvehicle_elsrange", 300,
 CVarFlags, "Decent Vehicle: Detection range of finding cars with ELS to give way.")
 local DriveSide = CreateConVar("decentvehicle_driveside", 0,
@@ -476,15 +462,6 @@ function ENT:DoLights()
 	self:SetFogLights(fog)
 	self:SetTurnLight(self.Waypoint and self.Waypoint.UseTurnLights or false, self.UseLeftTurnLight)
 	self:SetHazardLights(CurTime() < self.Emergency)
-	
-	local lightlevel = TurnonLights:GetInt()
-	if lightlevel < LIGHTLEVEL.ALL then
-		self:SetFogLights(false)
-		if lightlevel == LIGHTLEVEL.HEADLIGHTS then return end
-		self:SetLights(false, false)
-		if lightlevel == LIGHTLEVEL.RUNNING then return end
-		self:SetRunningLights(false)
-	end
 end
 
 function ENT:DoTrace()

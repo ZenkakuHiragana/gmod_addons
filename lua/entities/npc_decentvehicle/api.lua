@@ -4,6 +4,20 @@
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
 local dvd = DecentVehicleDestination
+local TurnonLights = CreateConVar("decentvehicle_turnonlights", 3,
+CVarFlags, 
+[[Decent Vehicle: The level of using lights.
+0: Disabled
+1: Only use running lights
+2: Use running lights and headlights
+3: Use all lights]])
+local LIGHTLEVEL = {
+	NONE = 0,
+	RUNNING = 1,
+	HEADLIGHTS = 2,
+	ALL = 3,
+}
+
 function ENT:GetVehicleForward()
 	if self.v.IsScar then
 		return self.v:GetForward()
@@ -140,6 +154,8 @@ function ENT:GetEngineStarted()
 end
 
 function ENT:SetRunningLights(on)
+	local lightlevel = TurnonLights:GetInt()
+	on = on and lightlevel ~= LIGHTLEVEL.NONE
 	if on == self:GetRunningLights() then return end
 	if self.v.IsScar then
 	elseif self.v.IsSimfphyscar then
@@ -153,6 +169,8 @@ function ENT:SetRunningLights(on)
 end
 
 function ENT:SetFogLights(on)
+	local lightlevel = TurnonLights:GetInt()
+	on = on and lightlevel == LIGHTLEVEL.ALL
 	if on == self:GetFogLights() then return end
 	if self.v.IsScar then
 	elseif self.v.IsSimfphyscar then
@@ -176,6 +194,8 @@ local function SCAREmulateKey(self, key, state, func, ...)
 end
 
 function ENT:SetLights(on, highbeams)
+	local lightlevel = TurnonLights:GetInt()
+	on = on and lightlevel >= LIGHTLEVEL.HEADLIGHTS
 	if self.v.IsScar then
 		if on == self:GetLights() then return end
 		self.v.IncreaseFrontLightCol = not on
