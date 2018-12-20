@@ -40,7 +40,7 @@ local vector_one = Vector(1, 1, 1)
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local KmphToHUpsSqr = KmphToHUps^2
 local TraceMax = 64
-local TraceMinLength = 300
+local TraceMinLength = 200
 local TraceMinLengthSqr = TraceMinLength^2
 local TraceThreshold = 10
 local TraceHeightGap = 20 -- The distance between ground and the bottom of the trace
@@ -239,7 +239,7 @@ function ENT:AttachModel()
 		seat = self.v.DriverSeat
  	end
 	
-	if not IsValid(self) then return end
+	if not IsValid(seat) then return end
 	local a = seat:LookupAttachment "vehicle_driver_eyes"
 	local att = seat:GetAttachment(assert(a, "Decent Vehicle: attachment vehicle_feet_passenger0 is not found!"))
 	local delta = dvd.SeatPos[self:GetVehicleIdentifier()]or dvd.SeatPos[self:GetVehiclePrefix()] or Vector(-8, 0, -32)
@@ -304,6 +304,7 @@ function ENT:AtTrafficLight()
 	if self.FormLine then return true end
 	if not self.PrevWaypoint then return end
 	if not self.PrevWaypoint.TrafficLight then return end
+	if self:GetVehicleForward():Dot(self.PrevWaypoint.Target - self.v:WorldSpaceCenter()) < 0 then return end
 	if self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then return true end
 end
 
@@ -567,19 +568,23 @@ end
 
 function ENT:DoGiveWay()
     for k, ent in pairs(ents.FindInSphere(self:GetPos(), DetectELS:GetInt())) do
-		if not ent:IsVehicle() then continue end
-		if not ent.DecentVehicle then continue end
-        if not ent.DecentVehicle:GetELS() then continue end
-		if ent.DecentVehicle == self then continue end
-		
-		if ent.DecentVehicle:GetVehicleRight():Dot(self.v:WorldSpaceCenter()
-		- ent:WorldSpaceCenter()) > 0 == DriveSide:GetBool() then
-			self:SetSteering(.3)
+		if ent == self.v then continue end
+		local side = self:GetVehicleRight():Dot(ent:GetPos() - self.v:WorldSpaceCenter())
+		local els = ent.IsScar and ent.SirenIsOn
+		or ent.IsSimfphyscar and ent:GetEMSEnabled()
+		or VC and (ent:VC_getELSLightsOn() or ent:VC_getELSSoundOn() or ent:VC_getStates().ELS_ManualOn)
+
+		if not els then continue end
+		if DriveSide:GetBool() then continue end
+		if side < 0 then
+			self:SetSteering(.5)
 			self:SetThrottle(0)
-			-- timer.Create("Decent Vehicle: Give way" .. self:EntIndex(), 2, 1, function()
-			--	if not IsValid(self) then return end
-			--	self:Stop()
-			-- end)
+			 timer.Simple(.5, function()
+				if not IsValid(self) then return end
+				if not IsValid(ent) then return end
+				if not els then return end
+				self:SetHandbrake(true)
+			 end)
 		else
 			self:SetHandbrake(true)
 		end
@@ -651,65 +656,72 @@ end
 
 function ENT:Initialize()
 	-- Pick up a vehicle in the given sphere.
-	local distance = DetectionRange:GetFloat()
-	for k, v in pairs(ents.FindInSphere(self:GetPos(), distance)) do
-		if v:IsVehicle() then
-			if v.DecentVehicle then
-				SafeRemoveEntity(v.DecentVehicle)
-				SafeRemoveEntity(self)
-				return
+	local mindistance, vehicle = math.huge
+	for k, v in pairs(ents.FindInSphere(self:GetPos(), DetectionRange:GetFloat())) do
+		if not v:IsVehicle() then continue end
+		local d = self:GetPos():DistToSqr(v:GetPos())
+		if d > mindistance then continue end
+		mindistance, vehicle = d, v
+	end
+	
+	if not IsValid(vehicle) then SafeRemoveEntity(self) return end
+	
+	self.v = vehicle
+	local locked = self:GetLocked()
+	self.v = nil
+	
+	if locked then SafeRemoveEntity(self) return end
+	if vehicle.DecentVehicle then
+		SafeRemoveEntity(self)
+		SafeRemoveEntity(vehicle.DecentVehicle)
+		vehicle.DecentVehicle = nil
+		return
+	end
+	
+	if vehicle.IsScar and not vehicle:HasDriver() then
+		self.v, vehicle.DecentVehicle = vehicle, self
+		self.OldSpecialThink = self.v.SpecialThink
+		self.v.AIController = self
+		self.v.SpecialThink = function() end -- Tanks or something sometimes make errors so disable thinking.
+	elseif vehicle.IsSimfphyscar and vehicle:IsInitialized() and not IsValid(vehicle:GetDriver()) then
+		self.v, vehicle.DecentVehicle = vehicle, self
+		self.HeadLightsID = numpad.OnUp(self, KEY_F, "k_lgts", self.v, false)
+		self.FogLightsID = numpad.OnDown(self, KEY_V, "k_flgts", self.v, true)
+		self.ELSID = numpad.OnUp(self, KEY_H, "k_hrn", self.v, false)
+		self.HornID = numpad.OnDown(self, KEY_H, "k_hrn", self.v, true)
+		self.v.RemoteDriver = self
+		
+		self.OldPhysicsCollide = self.v.PhysicsCollide
+		function self.v.PhysicsCollide(...)
+			self.CarCollide(...)
+			return self.OldPhysicsCollide(...)
+		end
+	elseif isfunction(vehicle.GetWheelCount) and vehicle:GetWheelCount() -- Not a chair
+	and isfunction(vehicle.IsEngineEnabled) and vehicle:IsEngineEnabled() -- Engine is not locked
+	and not IsValid(vehicle:GetDriver()) then
+		self.v, vehicle.DecentVehicle = vehicle, self
+		self.OnCollideCallback = self.v:AddCallback("PhysicsCollide", self.CarCollide)
+		
+		if not VC or VCModFixedAroundNPCDriver then
+			local oldname = self.v:GetName()
+			self.v:SetName "decentvehicle"
+			self.NPCDriver = ents.Create "npc_vehicledriver"
+			self.NPCDriver:Spawn()
+			self.NPCDriver:SetKeyValue("Vehicle", "decentvehicle")
+			self.NPCDriver:Activate()
+			self.NPCDriver:Fire "StartForward"
+			self.NPCDriver:Fire("SetDriversMaxSpeed", "100")
+			self.NPCDriver:Fire("SetDriversMinSpeed", "0")
+			self.NPCDriver.InVehicle = self.InVehicle
+			function self.NPCDriver.KeyDown(_, key)
+				return key == IN_FORWARD and self.Throttle > 0
+				or key == IN_BACK and self.Throttle < 0
+				or key == IN_MOVELEFT and self.Steering < 0
+				or key == IN_MOVERIGHT and self.Steering > 0
+				or key == IN_JUMP and self.HandBrake
+				or false
 			end
-			
-			if v.IsScar then -- If it's a SCAR.
-				if not (v:HasDriver() or v:IsLocked()) then -- If driver's seat is empty.
-					self.v, v.DecentVehicle = v, self
-					self.OldSpecialThink = v.SpecialThink
-					v.AIController = self
-					v.SpecialThink = function() end -- Tanks or something sometimes make errors so disable thinking.
-				end
-			elseif v.IsSimfphyscar then -- If it's a Simfphys Vehicle.
-				if v:IsInitialized() and not (IsValid(v:GetDriver()) or v.VehicleLocked) then -- Fortunately, Simfphys Vehicles can use GetDriver()
-					self.v, v.DecentVehicle = v, self
-					self.HeadLightsID = numpad.OnUp(self, KEY_F, "k_lgts", v, false)
-					self.FogLightsID = numpad.OnDown(self, KEY_V, "k_flgts", v, true)
-					self.ELSID = numpad.OnUp(self, KEY_H, "k_hrn", v, false)
-					self.HornID = numpad.OnDown(self, KEY_H, "k_hrn", v, true)
-					v.RemoteDriver = self
-					
-					self.OldPhysicsCollide = self.v.PhysicsCollide
-					function self.v.PhysicsCollide(...)
-						self.CarCollide(...)
-						return self.OldPhysicsCollide(...)
-					end
-				end
-			elseif isfunction(v.GetWheelCount) and v:GetWheelCount() -- Not a chair
-			and isfunction(v.IsEngineEnabled) and v:IsEngineEnabled() -- Engine is not locked
-			and not IsValid(v:GetDriver()) and not (VC and v:VC_isLocked()) then
-				self.v, v.DecentVehicle = v, self
-				self.OnCollideCallback = self.v:AddCallback("PhysicsCollide", self.CarCollide)
-				
-				if not VC or VCModFixedAroundNPCDriver then
-					local oldname = v:GetName()
-					v:SetName "decentvehicle"
-					self.NPCDriver = ents.Create "npc_vehicledriver"
-					self.NPCDriver:Spawn()
-					self.NPCDriver:SetKeyValue("Vehicle", "decentvehicle")
-					self.NPCDriver:Activate()
-					self.NPCDriver:Fire "StartForward"
-					self.NPCDriver:Fire("SetDriversMaxSpeed", "100")
-					self.NPCDriver:Fire("SetDriversMinSpeed", "0")
-					self.NPCDriver.InVehicle = self.InVehicle
-					function self.NPCDriver.KeyDown(_, key)
-						return key == IN_FORWARD and self.Throttle > 0
-						or key == IN_BACK and self.Throttle < 0
-						or key == IN_MOVELEFT and self.Steering < 0
-						or key == IN_MOVERIGHT and self.Steering > 0
-						or key == IN_JUMP and self.HandBrake
-						or false
-					end
-					v:SetName(oldname or "")
-				end
-			end
+			self.v:SetName(oldname or "")
 		end
 	end
 	
@@ -722,12 +734,14 @@ function ENT:Initialize()
 	self:AttachModel()
 	self:GetVehicleParams()
 	self:PhysicsInitShadow()
+	self:DrawShadow(false)
 	self:SetEngineStarted(true)
 	self.v:DeleteOnRemove(self)
+	self:SetELS(true)
 end
 
 function ENT:OnRemove()
-	if not (IsValid(self.v) and self.v:IsVehicle()) then return end
+	if not IsValid(self.v) then return end
 	self.v:DontDeleteOnRemove(self)
 	self.v.DecentVehicle = nil
 	self:SetHandbrake(false)

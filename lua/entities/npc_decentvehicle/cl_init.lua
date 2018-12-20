@@ -12,6 +12,7 @@ function ENT:Initialize()
 	self.Model[math.random(#self.Model)] or
 	self.Model or dvd.DefaultDriverModel[math.random(#dvd.DefaultDriverModel)])
 	self:SetSequence "drive_jeep"
+	self:DrawShadow(false)
 end
 
 function ENT:Draw()

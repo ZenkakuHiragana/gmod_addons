@@ -99,7 +99,7 @@ function TOOL:LeftClick(trace)
 		undo.AddFunction(dvd.UndoWaypoint)
 		undo.SetPlayer(self:GetOwner())
 		undo.Finish()
-	elseif self:GetStage() == 0 or not dvd.Waypoints[self.WaypointID] then
+	elseif self:GetStage() == 0 or not (dvd.Waypoints[self.WaypointID] or IsValid(self.TrafficLight)) then
 		self.WaypointID = waypointID
 		self.TrafficLight = nil
 		self:SetStage(1)
@@ -132,7 +132,6 @@ function TOOL:LeftClick(trace)
 	end
 	
 	self:SetStage(0)
-	dvd.RefreshDupe()
 	return true
 end
 
@@ -182,7 +181,8 @@ function TOOL.BuildCPanel(CPanel)
 		CPanel:Help ""
 		CPanel:Help ""
 		CPanel:ControlHelp "Server settings"
-		CPanel:CheckBox("Is right side of the road", "decentvehicle_driveside")
+		CPanel:CheckBox("Is left side of the road", "decentvehicle_driveside")
+		CPanel:CheckBox("Should go finding a fuel station", "decentvehicle_gotorefuel")
 		CPanel:NumSlider("Detection range", "decentvehicle_detectionrange", 1, 64, 0)
 		CPanel:NumSlider("ELS detection range", "decentvehicle_elsrange", 0, 1000, 0)
 		
@@ -194,7 +194,6 @@ function TOOL.BuildCPanel(CPanel)
 		combobox:AddChoice("Full lights", 3)
 		
 		CPanel:Button("#tool.dv_route.save", "dv_route_save")
-		CPanel:Help ""
 		CPanel:Button("#tool.dv_route.load", "dv_route_load")
 	end
 	

@@ -84,6 +84,44 @@ net.Receive("Decent Vehicle: Traffic light", function()
 	dvd.Waypoints[id].TrafficLight = Either(IsValid(traffic), traffic, nil)
 end)
 
+local SaveText = "You are about to SAVE the waypoints."
+local LoadText = "You are about to LOAD the waypoints."
+net.Receive("Decent Vehicle: Save and restore", function()
+	local save = net.ReadBool()
+	local Confirm = vgui.Create "DFrame"
+	local Text = Label(save and SaveText or LoadText, Confirm)
+	local Cancel = vgui.Create "DButton"
+	local OK = vgui.Create "DButton"
+	Confirm:Add(Cancel)
+	Confirm:Add(OK)
+	Confirm:SetSize(ScrW() / 5, ScrH() / 5)
+	Confirm:SetTitle "Decent Vehicle"
+	Confirm:SetBackgroundBlur(true)
+	Confirm:ShowCloseButton(false)
+	Confirm:Center()
+	Cancel:SetText "Cancel"
+	Cancel:SetSize(Confirm:GetWide() * 5 / 16, 22)
+	Cancel:SetPos(Confirm:GetWide() * 7 / 8 - Cancel:GetWide(), Confirm:GetTall() - 22 - Cancel:GetTall())
+	OK:SetText "OK"
+	OK:SetSize(Confirm:GetWide() * 5 / 16, 22)
+	OK:SetPos(Confirm:GetWide() / 8, Confirm:GetTall() - 22 - OK:GetTall())
+	Text:SizeToContents()
+	Text:Center()
+	Confirm:MakePopup()
+	
+	function Cancel:DoClick() Confirm:Close() end
+	function OK:DoClick()
+		net.Start "Decent Vehicle: Save and restore"
+		net.WriteBool(save)
+		net.SendToServer()
+		if save then
+			notification.AddLegacy("Decent Vehicle: Waypoints are saved!", NOTIFY_GENERIC, 5)
+		end
+		
+		Confirm:Close()
+	end
+end)
+
 hook.Add("PostCleanupMap", "Decent Vehicle: Clean up waypoints", function()
 	table.Empty(dvd.Waypoints)
 end)
@@ -143,13 +181,17 @@ function(bDrawingDepth, bDrawingSkybox)
 	local showpoints = GetConVar "dv_route_showpoints"
 	if bDrawingSkybox or not (showpoints and showpoints:GetBool()) then return end
 	for _, w in ipairs(dvd.Waypoints) do
-		if EyeAngles():Forward():Dot(w.Target - EyePos()) < 0 then continue end -- Visiblity check
-		render.SetMaterial(WaypointMaterial)
-		render.DrawSprite(w.Target + Height, dvd.WaypointSize, dvd.WaypointSize, color_white)
+		local visible = EyeAngles():Forward():Dot(w.Target - EyePos()) > 0
+		if visible then
+			render.SetMaterial(WaypointMaterial)
+			render.DrawSprite(w.Target + Height, dvd.WaypointSize, dvd.WaypointSize, color_white)
+		end
+		
 		render.SetMaterial(LinkMaterial)
-		for _, n in ipairs(w.Neighbors) do
-			if dvd.Waypoints[n] then
-				local pos = dvd.Waypoints[n].Target
+		for _, link in ipairs(w.Neighbors) do
+			local n = dvd.Waypoints[link]
+			if n and (visible or EyeAngles():Forward():Dot(n.Target - EyePos()) > 0) then
+				local pos = n.Target
 				local tex = w.Target:Distance(pos) / 100
 				local texbase = 1 - CurTime() % 1
 				render.DrawBeam(w.Target + Height, pos + Height, 20, texbase, texbase + tex, color_white)
@@ -158,9 +200,11 @@ function(bDrawingDepth, bDrawingSkybox)
 		
 		if IsValid(w.TrafficLight) then
 			local pos = w.TrafficLight:GetPos()
-			local tex = w.Target:Distance(pos) / 100
-			render.SetMaterial(TrafficMaterial)
-			render.DrawBeam(w.Target + Height, pos, 20, 0, tex, color_white)
+			if visible or EyeAngles():Forward():Dot(pos - EyePos()) > 0 then
+				local tex = w.Target:Distance(pos) / 100
+				render.SetMaterial(TrafficMaterial)
+				render.DrawBeam(w.Target + Height, pos, 20, 0, tex, color_white)
+			end
 		end
 	end
 end)
