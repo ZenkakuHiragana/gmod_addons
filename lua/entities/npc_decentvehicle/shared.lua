@@ -28,3 +28,11 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Vector", 0, "SeatPos")
 	self:NetworkVar("Angle", 0, "SeatAng")
 end
+
+function ENT:SetDriverPosition()
+	if not IsValid(self:GetSeat()) then return end
+	local pos = self:GetSeat():LocalToWorld(self:GetSeatPos())
+	self:SetPos(pos)
+	self:SetNetworkOrigin(pos)
+	self:SetAngles(self:GetSeat():LocalToWorldAngles(self:GetSeatAng()))
+end

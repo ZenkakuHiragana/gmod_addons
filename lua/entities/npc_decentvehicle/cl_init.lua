@@ -6,6 +6,7 @@
 include "shared.lua"
 include "playermeta.lua"
 
+ENT.Think = ENT.SetDriverPosition
 local dvd = DecentVehicleDestination
 function ENT:Initialize()
 	self:SetModel(istable(self.Model) and

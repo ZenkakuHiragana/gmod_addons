@@ -283,7 +283,6 @@ function ENT:GetCurrentMaxSpeed()
 		end
 	end
 	
-	maxspeed = maxspeed * Either(self.TraceWaypoint and self.TraceWaypoint.Hit, 1, (self.InsideRoute + 1.1) / 2)
 	maxspeed = maxspeed * math.Clamp(self.MaxSpeedCoefficient, 0, 1)
 	return hook.Run("Decent Vehicle: GetCurrentMaxSpeed", self, maxspeed)
 	or math.Clamp(maxspeed, 1, self.MaxSpeed)
@@ -527,7 +526,8 @@ function ENT:DoTrace()
 	trback.mins, trback.maxs, angle_zero, .05, Color(255, 255, 0))
 	
 	local ent = self.Trace.Entity
-	local waypointpos = nextwaypoint and nextwaypoint.Target or self.Waypoint and self.Waypoint.Target
+	local hitworld = self.Trace.HitWorld and self.Trace.HitNormal:Dot(vector_up) > .7
+	local waypointpos = self.Waypoint and self.Waypoint.Target
 	if waypointpos then
 		local trwaypoint = {
 			start = start,
@@ -536,6 +536,11 @@ function ENT:DoTrace()
 			filter = filter,
 		}
 		self.TraceWaypoint = util.TraceHull(trwaypoint)
+		hitworld = hitworld or self.TraceWaypoint.HitWorld and self.TraceWaypoint.HitNormal:Dot(vector_up) > .7
+		if not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
+			ent = self.TraceWaypoint.Entity
+		end
+		
 		debugoverlay.SweptBox(trwaypoint.start, trwaypoint.endpos,
 		trwaypoint.mins, trwaypoint.maxs, angle_zero, .05, Color(0, 255, 255))
 	end
@@ -546,7 +551,7 @@ function ENT:DoTrace()
 		:Dot(direction:Cross(dvd.GetDir(prevwaypoint.Target, vehiclepos)))
 	end
 	
-	if not IsValid(ent) or self.Trace.HitWorld and self.Trace.HitNormal:Dot(vector_up) > .7 then
+	if not IsValid(ent) or hitworld then
 		if CurTime() < self.StopByTrace + GobackTime then
 			self.StopByTrace = CurTime() + .1
 		end
@@ -649,8 +654,7 @@ function ENT:Think()
 	self:DoTrace()
 	self:DoLights()
 	self:NextThink(CurTime())
-	self:SetPos(self:GetSeat():LocalToWorld(self:GetSeatPos()))
-	self:SetAngles(self:GetSeat():LocalToWorldAngles(self:GetSeatAng()))
+	self:SetDriverPosition()
 	return true
 end
 
