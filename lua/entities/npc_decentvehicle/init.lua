@@ -201,11 +201,6 @@ function ENT:GetVehicleParams()
 		self.GearRatio = engine.gearRatio
 		self.AxleRatio = engine.axleRatio
 	end
-	
-	print("Brake Power: ", self.BrakePower)
-	print("Max Speed: ", self.MaxSpeed)
-	print("Max Reverse Speed: ", self.MaxRevSpeed)
-	print("Max Steering Angle: ", self.MaxSteeringAngle)
 end
 
 function ENT:GetVehiclePrefix()
@@ -242,17 +237,26 @@ function ENT:AttachModel()
 	if not IsValid(seat) then return end
 	local a = seat:LookupAttachment "vehicle_driver_eyes"
 	local att = seat:GetAttachment(assert(a, "Decent Vehicle: attachment vehicle_feet_passenger0 is not found!"))
-	local delta = dvd.SeatPos[self:GetVehicleIdentifier()]or dvd.SeatPos[self:GetVehiclePrefix()] or Vector(-8, 0, -32)
+	local delta = dvd.SeatPos[self:GetVehicleIdentifier()] or dvd.SeatPos[self:GetVehiclePrefix()] or Vector(-8, 0, -32)
+	local anim = dvd.DriverAnimation[self:GetVehicleIdentifier()] or dvd.DriverAnimation[self:GetVehiclePrefix()] or "drive_jeep"
 	local seatang = seat:WorldToLocalAngles(att.Ang)
 	local seatpos = seat:WorldToLocal(att.Pos
 	+ att.Ang:Forward() * delta.x + att.Ang:Right() * delta.y + att.Ang:Up() * delta.z)
 	self:SetModel(istable(self.Model) and self.Model[math.random(#self.Model)]
 	or self.Model or dvd.DefaultDriverModel[math.random(#dvd.DefaultDriverModel)])
-	self:SetSequence "drive_jeep"
 	self:SetParent(seat)
-	self:SetSeat(seat)
-	self:SetSeatPos(seatpos)
-	self:SetSeatAng(seatang)
+	self:SetNWEntity("Seat", seat)
+	self:SetNWVector("Pos", seatpos)
+	self:SetNWAngle("Ang", seatang)
+	self:SetNWInt("Sequence", self:LookupSequence(anim))
+	timer.Simple(FrameTime(), function() -- Entity:Sequence() will not work properly if it is
+		if not IsValid(self) then return end -- called directly after calling Entity:SetModel().
+		self:SetSequence(anim)
+	end)
+	
+	for i = 1, self:GetFlexNum() do
+		self:SetFlexWeight(i, self:GetFlexBounds(i))
+	end
  end
 
 function ENT:IsDestroyed()
@@ -292,7 +296,7 @@ function ENT:IsValidVehicle()
 	if not IsValid(self.v) then return end -- The tied vehicle goes NULL.
 	if not self.v:IsVehicle() then return end -- Somehow it become non-vehicle entity.
 	if not self.v.DecentVehicle then return end -- Somehow it's a normal vehicle.
-	if not IsValid(self:GetSeat()) then return end -- It couldn't find the driver seat.
+	if not IsValid(self:GetNWEntity "Seat") then return end -- It couldn't find the driver seat.
 	if self ~= self.v.DecentVehicle then return end -- It has a different driver.
 	if self.v:WaterLevel() > 1 then return end -- It falls into water.
 	if self:IsDestroyed() then return end -- It is destroyed.
@@ -741,7 +745,6 @@ function ENT:Initialize()
 	self:DrawShadow(false)
 	self:SetEngineStarted(true)
 	self.v:DeleteOnRemove(self)
-	self:SetELS(true)
 end
 
 function ENT:OnRemove()

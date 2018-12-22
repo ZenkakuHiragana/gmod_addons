@@ -170,12 +170,12 @@ function TOOL.BuildCPanel(CPanel)
 	CPanel:Help "Create routes for Decent Vehicles."
 	CPanel:CheckBox("#tool.dv_route.showupdates", "dv_route_showupdates"):SetToolTip "#tool.dv_route.showupdates.help"
 	CPanel:CheckBox("#tool.dv_route.showpoints", "dv_route_showpoints")
-	CPanel:CheckBox("#tool.dv_route.shouldblink", "dv_route_shouldblink"):SetToolTip "#tool.dv_route.shouldblink.help"
 	CPanel:CheckBox("#tool.dv_route.bidirectional", "dv_route_bidirectional"):SetToolTip "#tool.dv_route.bidirectional.help"
+	CPanel:CheckBox("#tool.dv_route.shouldblink", "dv_route_shouldblink"):SetToolTip "#tool.dv_route.shouldblink.help"
 	CPanel:CheckBox("#tool.dv_route.fuel", "dv_route_fuel"):SetToolTip "#tool.dv_route.fuel.help"
 	CPanel:NumSlider("#tool.dv_route.group", "dv_route_group", 0, 20, 0):SetToolTip "#tool.dv_route.group.help"
 	CPanel:NumSlider("#tool.dv_route.wait", "dv_route_wait", 0, 100, 2):SetToolTip "#tool.dv_route.wait.help"
-	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 100, 0)
+	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 500, 0)
 	
 	if LocalPlayer():IsAdmin() then
 		CPanel:Help ""

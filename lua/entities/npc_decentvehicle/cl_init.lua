@@ -6,20 +6,19 @@
 include "shared.lua"
 include "playermeta.lua"
 
-ENT.Think = ENT.SetDriverPosition
 local dvd = DecentVehicleDestination
-function ENT:Initialize()
-	self:SetModel(istable(self.Model) and
-	self.Model[math.random(#self.Model)] or
-	self.Model or dvd.DefaultDriverModel[math.random(#dvd.DefaultDriverModel)])
-	self:SetSequence "drive_jeep"
-	self:DrawShadow(false)
+function ENT:Think()
+	self:SetDriverPosition()
+	self:SetSequence(self:GetNWInt "Sequence")
 end
 
 function ENT:Draw()
-	if not IsValid(self:GetSeat()) then return end
-	self:SetPos(self:GetSeat():LocalToWorld(self:GetSeatPos()))
-	self:SetAngles(self:GetSeat():LocalToWorldAngles(self:GetSeatAng()))
-	self:SetupBones()
+	local seat = self:GetNWEntity "Seat"
+	if IsValid(seat) then
+		self:SetPos(seat:LocalToWorld(self:GetNWVector "Pos"))
+		self:SetAngles(seat:LocalToWorldAngles(self:GetNWAngle "Ang"))
+		self:SetupBones()
+	end
+	
 	self:DrawModel()
 end

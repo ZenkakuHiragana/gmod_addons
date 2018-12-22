@@ -5,6 +5,13 @@
 
 AddCSLuaFile()
 DecentVehicleDestination = DecentVehicleDestination or {
+	DriverAnimation = {
+		["Source_models/airboat.mdl"] = "drive_airboat",
+		["Source_models/sligwolf/motorbike/motorbike.mdl"] = "drive_airboat",
+		["Source_models/sligwolf/tank/sw_tank_leo.mdl"] = "sit_rollercoaster",
+		["SCAR_sent_sakarias_car_yamahayfz450"] = "drive_airboat",
+		["Simfphys_models/monowheel.mdl"] = "drive_airboat",
+	},
 	DefaultDriverModel = {
 		"models/player/group01/female_01.mdl",
 		"models/player/group01/female_02.mdl",
@@ -46,7 +53,9 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		Steering = {},
 	},
 	SeatPos = {
+		["Source_models/airboat.mdl"] = Vector(0, 0, -29),
 		["Source_models/vehicle.mdl"] = Vector(-8, 0, -24),
+		["Source_models/sligwolf/motorbike/motorbike.mdl"] = Vector(2, 0, -30),
 		["Simfphys_"] = Vector(2, 0, -28),
 	},
 	TLDuration = {33, 4, 40 + 3}, -- Sign duration of each light color, Green, Yellow, Red.
