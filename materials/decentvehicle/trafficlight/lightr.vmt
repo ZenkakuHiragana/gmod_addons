@@ -6,7 +6,7 @@
 "VertexLitGeneric"
 {
 	"$basetexture" "decentvehicle/trafficlight/light"
-	"$bumpmap" "decentvehicle/trafficlight/kraska_dk"
+	"$bumpmap" "decentvehicle/trafficlight/normal"
 	"$nodecal" "1"
 	"$phong" "1"
 	"$phongexponent" "27"

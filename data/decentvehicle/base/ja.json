@@ -12,12 +12,17 @@
 		"WaypointNotFound": "Decent Vehicle: ウェイポイントが見つかりません!"
 	},
 	"OldVersionNotify": "Decent Vehicle: 古いバージョンを使用しているようです。 アップデートを確認してください!",
+	"OnLoad": "ウェイポイントの読み込みを行います。",
+	"OnSave": "ウェイポイントの保存を行います。",
 	"SavedWaypoints": "Decent Vehicle: ウェイポイントが保存されました!",
+	"SaveLoad_Cancel": "キャンセル",
+	"SaveLoad_OK": "OK",
 	"Tools": {
 		"Bidirectional": "双方向に接続",
 		"BidirectionalHelp": "自動的に双方向に接続します。",
 		"Category": "GreatZenkakuMan's tools",
 		"Description": "乗り物のために道を作ろう!",
+		"DescriptionInMenu": "Decent Vehicleのためのルートを構築する。",
 		"DetectionRange": "スポーン時の車両検出範囲",
 		"DetectionRangeELS": "緊急車両の検出範囲",
 		"DrawWaypoints": "ウェイポイントを描画する",
@@ -50,13 +55,13 @@
 			"ID": "ID: ",
 			"SpeedLimit": "最大速度 [km/h]: ",
 			"UseTurnLights": "ウィンカーを使う: ",
-			"WaitUntilNext": "待ち時間 [sec]: "
+			"WaitUntilNext": "待ち時間 [秒]: "
 		},
 		"ShowUpdates": "アップデートを通知する",
 		"ShowUpdatesHelp": "チェックすると、アップデートされたときに通知が出るようになる。",
 		"UseTurnLights": "ウィンカーを使う",
 		"UseTurnLightsHelp": "これが有効化されたウェイポイントへ向かうとき、ウィンカーを使うようになる。",
-		"WaitTime": "待ち時間 [seconds]",
+		"WaitTime": "待ち時間 [秒]",
 		"WaitTimeHelp": "ウェイポイントの到着後に指定した時間だけ待つようになる。",
 		"WaypointGroup": "グループ番号",
 		"WaypointGroupHelp": "一部のDecent Vehicleに対して向かうべき道を制限できる。\n0にすると誰でも通れるウェイポイントになる。"

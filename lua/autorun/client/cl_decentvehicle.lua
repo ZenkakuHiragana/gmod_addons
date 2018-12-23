@@ -83,8 +83,8 @@ net.Receive("Decent Vehicle: Traffic light", function()
 	dvd.Waypoints[id].TrafficLight = Either(IsValid(traffic), traffic, nil)
 end)
 
-local SaveText = "You are about to SAVE the waypoints."
-local LoadText = "You are about to LOAD the waypoints."
+local SaveText = dvd.Texts.OnSave
+local LoadText = dvd.Texts.OnLoad
 net.Receive("Decent Vehicle: Save and restore", function()
 	local save = net.ReadBool()
 	local Confirm = vgui.Create "DFrame"
@@ -98,10 +98,10 @@ net.Receive("Decent Vehicle: Save and restore", function()
 	Confirm:SetBackgroundBlur(true)
 	Confirm:ShowCloseButton(false)
 	Confirm:Center()
-	Cancel:SetText "Cancel"
+	Cancel:SetText(dvd.Texts.SaveLoad_Cancel)
 	Cancel:SetSize(Confirm:GetWide() * 5 / 16, 22)
 	Cancel:SetPos(Confirm:GetWide() * 7 / 8 - Cancel:GetWide(), Confirm:GetTall() - 22 - Cancel:GetTall())
-	OK:SetText "OK"
+	OK:SetText(dvd.Texts.SaveLoad_OK)
 	OK:SetSize(Confirm:GetWide() * 5 / 16, 22)
 	OK:SetPos(Confirm:GetWide() / 8, Confirm:GetTall() - 22 - OK:GetTall())
 	Text:SizeToContents()

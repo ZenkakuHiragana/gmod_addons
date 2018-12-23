@@ -12,12 +12,17 @@
 		"WaypointNotFound": "Decent Vehicle: Waypoint is not found!"
 	},
 	"OldVersionNotify": "Decent Vehicle: This is an old version.  Check for updates!",
+	"OnLoad": "You are about to LOAD the waypoints.",
+	"OnSave": "You are about to SAVE the waypoints.",
 	"SavedWaypoints": "Decent Vehicle: Waypoints are saved!",
+	"SaveLoad_Cancel": "Cancel",
+	"SaveLoad_OK": "OK",
 	"Tools": {
 		"Bidirectional": "Bi-directional link",
 		"BidirectionalHelp": "Connect bi-directional link automatically.",
 		"Category": "GreatZenkakuMan's tools",
 		"Description": "Create your own routes for vehicles!",
+		"DescriptionInMenu": "Create routes for Decent Vehicles.",
 		"DetectionRange": "Detection range for spawning",
 		"DetectionRangeELS": "Detection range for finding cars with ELS",
 		"DrawWaypoints": "Draw waypoints",
@@ -50,7 +55,7 @@
 			"ID": "ID: ",
 			"SpeedLimit": "Speed limit [km/h]: ",
 			"UseTurnLights": "Use turn lights: ",
-			"WaitUntilNext": "Wait until next [sec]: "
+			"WaitUntilNext": "Wait until next [seconds]: "
 		},
 		"ShowUpdates": "Notify the latest updates",
 		"ShowUpdatesHelp": "If checked, some notifications are shown when this addon is updated.",

@@ -166,7 +166,7 @@ function TOOL.BuildCPanel(CPanel)
 	end
 	
 	CPanel:AddItem(ControlPresets)
-	CPanel:Help "Create routes for Decent Vehicles."
+	CPanel:Help(texts.DescriptionInMenu)
 	CPanel:CheckBox("#tool.dv_route.showupdates", "dv_route_showupdates"):SetToolTip "#tool.dv_route.showupdates.help"
 	CPanel:CheckBox("#tool.dv_route.showpoints", "dv_route_showpoints")
 	CPanel:CheckBox("#tool.dv_route.bidirectional", "dv_route_bidirectional"):SetToolTip "#tool.dv_route.bidirectional.help"

@@ -586,7 +586,7 @@ function ENT:DoTrace()
 end
 
 function ENT:DoGiveWay()
-    for k, ent in pairs(ents.FindInSphere(self:GetPos(), DetectionRangeELS:GetInt())) do
+	for k, ent in pairs(ents.FindInSphere(self:GetPos(), DetectionRangeELS:GetInt())) do
 		if not ent:IsVehicle() then continue end
 		if ent == self.v then continue end
 		local side = self:GetVehicleRight():Dot(ent:GetPos() - self.v:WorldSpaceCenter())
@@ -599,16 +599,16 @@ function ENT:DoGiveWay()
 		if side < 0 then
 			self:SetSteering(.5)
 			self:SetThrottle(0)
-			 timer.Simple(.5, function()
+			timer.Simple(.5, function()
 				if not IsValid(self) then return end
 				if not IsValid(ent) then return end
 				if not els then return end
 				self:SetHandbrake(true)
-			 end)
+			end)
 		else
 			self:SetHandbrake(true)
 		end
-    end
+	end
 end
 
 function ENT:FindFirstWaypoint()
