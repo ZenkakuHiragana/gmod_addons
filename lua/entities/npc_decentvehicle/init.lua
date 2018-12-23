@@ -757,13 +757,16 @@ function ENT:Initialize()
 	local e = EffectData()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
-	self.WaypointList = {}
 	self:AttachModel()
 	self:GetVehicleParams()
 	self:PhysicsInitShadow()
 	self:DrawShadow(false)
 	self:SetEngineStarted(true)
 	self.v:DeleteOnRemove(self)
+	self.WaypointList = {}
+	self.Trace = {}
+	self.TraceBack = {}
+	self.TraceWaypoint = {}
 end
 
 function ENT:OnRemove()
