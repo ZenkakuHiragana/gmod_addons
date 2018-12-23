@@ -550,9 +550,14 @@ function ENT:DoTrace()
 			filter = filter,
 		}
 		self.TraceWaypoint = util.TraceHull(trwaypoint)
-		hitworld = hitworld or self.TraceWaypoint.HitWorld and self.TraceWaypoint.HitNormal:Dot(TraceGround.HitNormal) > .7
-		if not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
-			ent = self.TraceWaypoint.Entity
+		
+		if math.Round(self.Trace.HitPos:DistToSqr(tr.start)
+		/ self.TraceWaypoint.HitPos:DistToSqr(tr.start)) == 1 then
+			hitworld = hitworld or self.TraceWaypoint.HitWorld
+			and self.TraceWaypoint.HitNormal:Dot(TraceGround.HitNormal) > .7
+			if not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
+				ent = self.TraceWaypoint.Entity
+			end
 		end
 		
 		debugoverlay.SweptBox(trwaypoint.start, trwaypoint.endpos,
