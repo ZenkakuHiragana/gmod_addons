@@ -587,6 +587,7 @@ end
 
 function ENT:DoGiveWay()
     for k, ent in pairs(ents.FindInSphere(self:GetPos(), DetectionRangeELS:GetInt())) do
+		if not ent:IsVehicle() then continue end
 		if ent == self.v then continue end
 		local side = self:GetVehicleRight():Dot(ent:GetPos() - self.v:WorldSpaceCenter())
 		local els = ent.IsScar and ent.SirenIsOn
