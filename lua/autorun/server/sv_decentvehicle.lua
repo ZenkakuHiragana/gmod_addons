@@ -327,23 +327,19 @@ end
 
 -- Gets a waypoint connected from the given randomly.
 -- Argument:
---   table waypoint	| The given waypoint.
---   Vector pos		| If specified, removes waypoints that makes U-turn from suggestions.
---   number group	| Optional, specify a waypoint group here.
+--   table waypoint		| The given waypoint.
+--   function filter	| If specified, removes waypoints which make it return false.
 -- Returns:
 --   table waypoint | The connected waypoint.
-function dvd.GetRandomNeighbor(waypoint, pos, group)
+function dvd.GetRandomNeighbor(waypoint, filter)
 	if not waypoint.Neighbors then return end
 	
 	local suggestion = {}
 	for i, n in ipairs(waypoint.Neighbors) do
 		local w = GetWaypointFromID(n)
 		if not w then continue end
-		if not dvd.WaypointAvailable(n, group) then continue end
-		if not pos or waypoint.Target:DistToSqr(pos) < 1e4
-		or (waypoint.Target - pos):Dot(w.Target - waypoint.Target) > 0 then
-			table.insert(suggestion, w)
-		end
+		if not (isfunction(filter) and filter(waypoint, n)) then continue end
+		table.insert(suggestion, w)
 	end
 	
 	return suggestion[math.random(#suggestion)]

@@ -43,7 +43,7 @@ local TraceMax = 64
 local TraceMinLength = 200
 local TraceMinLengthSqr = TraceMinLength^2
 local TraceThreshold = 10
-local TraceHeightGap = 20 -- The distance between ground and the bottom of the trace
+local TraceHeightGap = math.sqrt(3) -- The multiplier between ground and the bottom of the trace
 local GobackTime = 10 -- The time to start to go backward by the trace.
 local GobackDuration = 0.7 -- The duration of going backward by the trace.
 local VCModFixedAroundNPCDriver = false -- This is a stupid solution.
@@ -66,6 +66,15 @@ local DriveSide = CreateConVar("decentvehicle_driveside", 0,
 CVarFlags, [[Decent Vehicle: Determines which side of road Decent Vehicles think.
 0: Right (Europe, America, etc.)
 1: Left (UK, Australia, etc.)]])
+
+-- A filter function of selecting a next waypoint.
+local function FilterUTurnAndGroup(self, waypoint, n)
+	if not dvd.WaypointAvailable(n, self.Group) then return false end
+	local pos = self.v:GetPos()
+	local w = dvd.Waypoints[n]
+	if waypoint.Target:DistToSqr(pos) < 1e4 then return true end
+	return (waypoint.Target - pos):Dot(w.Target - waypoint.Target) > 0
+end
 
 local function GetNight()
 	if StormFox then return StormFox.IsNight() end
@@ -245,6 +254,7 @@ function ENT:AttachModel()
 	self:SetModel(istable(self.Model) and self.Model[math.random(#self.Model)]
 	or self.Model or dvd.DefaultDriverModel[math.random(#dvd.DefaultDriverModel)])
 	self:SetParent(seat)
+	self:SetNWEntity("Vehicle", self.v)
 	self:SetNWEntity("Seat", seat)
 	self:SetNWVector("Pos", seatpos)
 	self:SetNWAngle("Ang", seatang)
@@ -507,7 +517,7 @@ function ENT:DoTrace()
 	local height = (vehiclepos.z - groundpos.z) / math.sqrt(2)
 	local maxs = vector_one * math.min(TraceMax, height)
 	local mins = -maxs
-	local start = groundpos + vector_up * (height + TraceHeightGap)
+	local start = groundpos + TraceGround.HitNormal * height * TraceHeightGap
 	
 	local tr = {
 		start = start,
@@ -530,17 +540,17 @@ function ENT:DoTrace()
 	trback.mins, trback.maxs, angle_zero, .05, Color(255, 255, 0))
 	
 	local ent = self.Trace.Entity
-	local hitworld = self.Trace.HitWorld and self.Trace.HitNormal:Dot(vector_up) > .7
+	local hitworld = self.Trace.HitWorld and self.Trace.HitNormal:Dot(TraceGround.HitNormal) > .7
 	local waypointpos = self.Waypoint and self.Waypoint.Target
 	if waypointpos then
 		local trwaypoint = {
 			start = start,
-			endpos = waypointpos + vector_up * (height + TraceHeightGap),
+			endpos = waypointpos + TraceGround.HitNormal * height * TraceHeightGap,
 			maxs = maxs, mins = mins,
 			filter = filter,
 		}
 		self.TraceWaypoint = util.TraceHull(trwaypoint)
-		hitworld = hitworld or self.TraceWaypoint.HitWorld and self.TraceWaypoint.HitNormal:Dot(vector_up) > .7
+		hitworld = hitworld or self.TraceWaypoint.HitWorld and self.TraceWaypoint.HitNormal:Dot(TraceGround.HitNormal) > .7
 		if not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
 			ent = self.TraceWaypoint.Entity
 		end
@@ -609,10 +619,16 @@ function ENT:FindFirstWaypoint()
 	end
 	
 	local pos = self.v:GetPos()
-	self.Waypoint = dvd.GetNearestWaypoint(pos, self.Group)
+	self.Waypoint = dvd.GetNearestWaypoint(pos,
+	function(testID, currentID, mindistance)
+		local w = dvd.Waypoints[testID]
+		return dvd.WaypointAvailable(testID, self.Group)
+		and dvd.GetDir(pos, w.Target):Dot(self:GetVehicleForward()) > 0
+	end)
+	
 	if not self.Waypoint then return end
 	
-	self.NextWaypoint = dvd.GetRandomNeighbor(self.Waypoint, pos, self.Group)
+	self.NextWaypoint = dvd.GetRandomNeighbor(self.Waypoint, function(...) return FilterUTurnAndGroup(self, ...) end)
 	if not self.NextWaypoint and self.Waypoint.Target:Distance(pos) < self.v:BoundingRadius() then
 		self.Waypoint = nil
 	end
@@ -629,7 +645,9 @@ function ENT:SetupNextWaypoint()
 	
 	self.PrevWaypoint, self.Waypoint = self.Waypoint, self.NextWaypoint
 	if not self.Waypoint then return end
-	self.NextWaypoint = table.remove(self.WaypointList) or dvd.GetRandomNeighbor(self.Waypoint, self.v:GetPos(), self.Group)
+	self.NextWaypoint = table.remove(self.WaypointList) or
+	dvd.GetRandomNeighbor(self.Waypoint, function(...) return FilterUTurnAndGroup(self, ...) end)
+	
 	self.Prependicular = 0
 	if self.NextWaypoint and self.PrevWaypoint then
 		self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
@@ -688,9 +706,10 @@ function ENT:Initialize()
 	
 	if vehicle.IsScar and not vehicle:HasDriver() then
 		self.v, vehicle.DecentVehicle = vehicle, self
-		self.OldSpecialThink = self.v.SpecialThink
 		self.v.AIController = self
-		self.v.SpecialThink = function() end -- Tanks or something sometimes make errors so disable thinking.
+		
+		-- Tanks or something sometimes make errors so disable thinking.
+		self.OldSpecialThink, self.v.SpecialThink = self.v.SpecialThink
 	elseif vehicle.IsSimfphyscar and vehicle:IsInitialized() and not IsValid(vehicle:GetDriver()) then
 		self.v, vehicle.DecentVehicle = vehicle, self
 		self.HeadLightsID = numpad.OnUp(self, KEY_F, "k_lgts", self.v, false)

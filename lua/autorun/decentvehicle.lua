@@ -103,17 +103,19 @@ end
 -- Retrives the nearest waypoint to the given position.
 -- Arguments:
 --   Vector pos			| The position to find.
---   number radius		| Optional.  The maximum radius.
+--   number filter		| Optional.  The maximum radius.  Can also be a function.
 -- Returns:
 --   table waypoint		| The found waypoint.  Can be nil.
 --   number waypointID	| The ID of found waypoint.
-function dvd.GetNearestWaypoint(pos, radius)
+function dvd.GetNearestWaypoint(pos, filter)
 	if not isvector(pos) then return end
-	local mindist, waypoint, waypointID = (radius or math.huge)^2
+	local r = not isfunction(filter) and filter or math.huge
+	local mindistance, waypoint, waypointID = r^2
 	for i, w in ipairs(dvd.Waypoints) do
 		local distance = w.Target:DistToSqr(pos)
-		if distance < mindist then
-			mindist, waypoint, waypointID = distance, w, i
+		if distance < mindistance and (not isfunction(filter)
+		or filter(i, waypointID, mindistance)) then
+			mindistance, waypoint, waypointID = distance, w, i
 		end
 	end
 	

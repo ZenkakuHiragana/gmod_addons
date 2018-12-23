@@ -3,7 +3,9 @@
 -- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
-function ENT:PlayerEnteredSCar() end --For SCAR base
+function ENT:PlayerEnteredSCar() end -- For SCAR base
+function ENT:OnTakeDamage() end -- For SCAR base
+function ENT:RemoveCarConnection() end -- For SCAR base
 function ENT:InVehicle() return true end
 function ENT:GetVehicle() return self.v end
 function ENT:GetViewEntity() return NULL end

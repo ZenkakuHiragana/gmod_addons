@@ -18,36 +18,6 @@ local LIGHTLEVEL = {
 	ALL = 3,
 }
 
-function ENT:GetVehicleForward()
-	if self.v.IsScar then
-		return self.v:GetForward()
-	elseif self.v.IsSimfphyscar then
-		return self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Forward()
-	else
-		return self.v:GetForward()
-	end
-end
-
-function ENT:GetVehicleRight()
-	if self.v.IsScar then
-		return self.v:GetRight()
-	elseif self.v.IsSimfphyscar then
-		return self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Right()
-	else
-		return self.v:GetRight()
-	end
-end
-
-function ENT:GetVehicleUp()
-	if self.v.IsScar then
-		return self.v:GetUp()
-	elseif self.v.IsSimfphyscar then
-		return self.v:LocalToWorldAngles(self.v.VehicleData.LocalAngForward):Up()
-	else
-		return self.v:GetUp()
-	end
-end
-
 function ENT:GetTraceFilter()
 	local filter = {self, self.v}
 	if self.v.IsScar then

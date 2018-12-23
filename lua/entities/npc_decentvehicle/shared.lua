@@ -31,3 +31,41 @@ function ENT:SetDriverPosition()
 	self:SetNetworkOrigin(pos)
 	self:SetAngles(seat:LocalToWorldAngles(self:GetNWAngle "Ang"))
 end
+
+function ENT:GetVehicleForward()
+	local vehicle = self:GetNWEntity "Vehicle"
+	if not IsValid(vehicle) then return end
+	if vehicle.IsScar then
+		return vehicle:GetForward()
+	elseif vehicle.IsSimfphyscar then
+		return vehicle:LocalToWorldAngles(vehicle.VehicleData.LocalAngForward):Forward()
+	else
+		return vehicle:GetForward()
+	end
+end
+
+function ENT:GetVehicleRight()
+	local vehicle = self:GetNWEntity "Vehicle"
+	if not IsValid(vehicle) then return end
+	if vehicle.IsScar then
+		return vehicle:GetRight()
+	elseif vehicle.IsSimfphyscar then
+		return vehicle:LocalToWorldAngles(vehicle.VehicleData.LocalAngForward):Right()
+	else
+		return vehicle:GetRight()
+	end
+end
+
+function ENT:GetVehicleUp()
+	local vehicle = self:GetNWEntity "Vehicle"
+	if not IsValid(vehicle) then return end
+	if vehicle.IsScar then
+		return vehicle:GetUp()
+	elseif vehicle.IsSimfphyscar then
+		return vehicle:LocalToWorldAngles(vehicle.VehicleData.LocalAngForward):Up()
+	else
+		return vehicle:GetUp()
+	end
+end
+
+ENT.GetAimVector = ENT.GetVehicleForward -- For SCAR base
