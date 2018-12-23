@@ -4,24 +4,26 @@
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
 -- This script stands for a framework of Decent Vehicle's waypoints.
+-- The waypoints are held in a sequential table.
+-- They're found by brute-force search.
 
 include "autorun/decentvehicle.lua"
 
 local dvd = DecentVehicleDestination
-local OldVersionNotify = "Decent Vehicle: This is an old version.  Check for updates!"
 local function NotifyUpdate(d)
 	if not d then return end
 	local showupdates = GetConVar "dv_route_showupdates"
 	if not (showupdates and showupdates:GetBool()) then return end
 	
-	local versioncheck = "decentvehicle_version.txt"
+	if not file.Exists("decentvehicle", "DATA") then file.CreateDir "decentvehicle" end
+	local versioncheck = "decentvehicle/version.txt"
 	local checkedversion = file.Read(versioncheck) or 0
 	local header = d.description:match "Version[^%c]+" or ""
 	local version = string.Explode(".", header:sub(8):Trim())
 	if version[1] and tonumber(version[1]) > dvd.Version[1]
 	or version[2] and tonumber(version[2]) > dvd.Version[2]
 	or version[3] and tonumber(version[3]) > dvd.Version[3] then
-		notification.AddLegacy(OldVersionNotify, NOTIFY_ERROR, 15)
+		notification.AddLegacy(dvd.Texts.OldVersionNotify, NOTIFY_ERROR, 15)
 	elseif tonumber(checkedversion) < d.updated then
 		notification.AddLegacy("Decent Vehicle " .. header, NOTIFY_GENERIC, 18)
 		
@@ -38,9 +40,6 @@ local function NotifyUpdate(d)
 		file.Write(versioncheck, tostring(d.updated))
 	end
 end
-
--- The waypoints are held in normal table.
--- They're found by brute-force search.
 
 net.Receive("Decent Vehicle: Add a waypoint", function()
 	local pos = net.ReadVector()
@@ -115,7 +114,7 @@ net.Receive("Decent Vehicle: Save and restore", function()
 		net.WriteBool(save)
 		net.SendToServer()
 		if save then
-			notification.AddLegacy("Decent Vehicle: Waypoints are saved!", NOTIFY_GENERIC, 5)
+			notification.AddLegacy(dvd.Texts.SavedWaypoints, NOTIFY_GENERIC, 5)
 		end
 		
 		Confirm:Close()

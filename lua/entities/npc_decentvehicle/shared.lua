@@ -7,21 +7,21 @@ AddCSLuaFile()
 AddCSLuaFile "playermeta.lua"
 include "playermeta.lua"
 
+local dvd = DecentVehicleDestination
+ENT.Base = "base_entity"
+ENT.Type = "anim"
+ENT.PrintName = dvd.Texts.npc_decentvehicle
+ENT.Author = "GreatZenkakuMan"
+ENT.Contact = ""
+ENT.Purpose = ""
+ENT.Instructions = ""
+ENT.Spawnable = false
+
 list.Set("NPC", "npc_decentvehicle", {
-	Name = "Decent Vehicle",
+	Name = ENT.PrintName,
 	Class = "npc_decentvehicle",
 	Category = "GreatZenkakuMan's NPCs"
 })
-
-ENT.Base = "base_entity"
-ENT.Type = "anim"
-
-ENT.PrintName = "Decent Vehicle"
-ENT.Author = "GreatZenkakuMan"
-ENT.Contact = ""
-ENT.Purpose = "Decent Vehicle."
-ENT.Instructions = ""
-ENT.Spawnable = false
 
 function ENT:SetDriverPosition()
 	local seat = self:GetNWEntity "Seat"

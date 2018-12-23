@@ -3,8 +3,12 @@
 -- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
-TOOL.Category = "GreatZenkakuMan's tools"
-TOOL.Name = "Decent Vehicle Waypoint Tool"
+local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
+local dvd = DecentVehicleDestination
+local texts = dvd.Texts.Tools
+
+TOOL.Category = texts.Category
+TOOL.Name = texts.Name
 TOOL.Information = {
 	{name = "info", stage = 0},
 	{name = "left", stage = 0},
@@ -20,39 +24,34 @@ TOOL.ClientConVar["shouldblink"] = 0
 TOOL.ClientConVar["showpoints"] = 1
 TOOL.ClientConVar["speed"] = 40
 TOOL.ClientConVar["wait"] = 0
-
 TOOL.ClientConVar["showupdates"] = 1
 
 if CLIENT then
-	language.Add("tool.dv_route.name", "Decent Vehicle route maker")
-	language.Add("tool.dv_route.desc", "Create your own routes for vehicles!")
-	language.Add("tool.dv_route.0", "Select a waypoint or a traffic light to link.  Select a vehicle driven by a Decent Vehicle to assign its waypoint group.")
-	language.Add("tool.dv_route.left", "Left click to create a new waypoint.")
-	language.Add("tool.dv_route.left_1", "Select another waypoint you want to link to.  Select the same waypoint to remove it.")
-	language.Add("tool.dv_route.load", "Restore waypoints")
-	language.Add("tool.dv_route.right", "Update waypoint.")
+	language.Add("tool.dv_route.name", texts.PrintName)
+	language.Add("tool.dv_route.desc", texts.Description)
+	language.Add("tool.dv_route.0", texts.Instructions)
+	language.Add("tool.dv_route.left", texts.Left[1])
+	language.Add("tool.dv_route.left_1", texts.Left[2])
+	language.Add("tool.dv_route.load", texts.Restore)
+	language.Add("tool.dv_route.right", texts.Right[1])
 	
-	language.Add("tool.dv_route.bidirectional", "Bi-directional link")
-	language.Add("tool.dv_route.bidirectional.help", "Connect bi-directional link automatically.")
-	language.Add("tool.dv_route.fuel", "Fuel station")
-	language.Add("tool.dv_route.fuel.help", "Decent Vehicles will go here to refuel its car.")
-	language.Add("tool.dv_route.group", "Waypoint group")
-	language.Add("tool.dv_route.group.help", 
-	[[You can force Decent Vehicles to run along specified group of waypoints.
-	0 means all vehicles can go there.]])
-	language.Add("tool.dv_route.save", "Save waypoints")
-	language.Add("tool.dv_route.shouldblink", "Use turn signals")
-	language.Add("tool.dv_route.shouldblink.help", "Decent Vehicles will use turn signals when they go to the waypoint.")
-	language.Add("tool.dv_route.showpoints", "Draw waypoints")
-	language.Add("tool.dv_route.showupdates", "Notify the latest updates")
-	language.Add("tool.dv_route.showupdates.help", "Some notifications are shown when this addon is updated.")
-	language.Add("tool.dv_route.speed", "Max speed [km/h]")
-	language.Add("tool.dv_route.wait", "Wait time [seconds]")
-	language.Add("tool.dv_route.wait.help", "After Decent Vehicles reached the waypoint, they wait for this seconds.")
+	language.Add("tool.dv_route.bidirectional", texts.Bidirectional)
+	language.Add("tool.dv_route.bidirectional.help", texts.BidirectionalHelp)
+	language.Add("tool.dv_route.fuel", texts.FuelStation)
+	language.Add("tool.dv_route.fuel.help", texts.FuelStationHelp)
+	language.Add("tool.dv_route.group", texts.WaypointGroup)
+	language.Add("tool.dv_route.group.help", texts.WaypointGroupHelp)
+	language.Add("tool.dv_route.save", texts.Save)
+	language.Add("tool.dv_route.shouldblink", texts.UseTurnLights)
+	language.Add("tool.dv_route.shouldblink.help", texts.UseTurnLightsHelp)
+	language.Add("tool.dv_route.showpoints", texts.DrawWaypoints)
+	language.Add("tool.dv_route.showupdates", texts.ShowUpdates)
+	language.Add("tool.dv_route.showupdates.help", texts.ShowUpdatesHelp)
+	language.Add("tool.dv_route.speed", texts.MaxSpeed)
+	language.Add("tool.dv_route.wait", texts.WaitTime)
+	language.Add("tool.dv_route.wait.help", texts.WaitTimeHelp)
 end
 
-local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
-local dvd = DecentVehicleDestination
 function TOOL:LeftClick(trace)
 	if CLIENT then return true end
 	local bidirectional = self:GetClientNumber "bidirectional" > 0
@@ -95,7 +94,7 @@ function TOOL:LeftClick(trace)
 		end
 		
 		undo.Create "Decent Vehicle Waypoint"
-		undo.SetCustomUndoText "Undone Decent Vehicle's waypoint."
+		undo.SetCustomUndoText(dvd.Texts.UndoText)
 		undo.AddFunction(dvd.UndoWaypoint)
 		undo.SetPlayer(self:GetOwner())
 		undo.Finish()
@@ -179,19 +178,18 @@ function TOOL.BuildCPanel(CPanel)
 	
 	if LocalPlayer():IsAdmin() then
 		CPanel:Help ""
-		CPanel:Help ""
-		CPanel:ControlHelp "Server settings"
-		CPanel:CheckBox("Is left side of the road", "decentvehicle_driveside")
-		CPanel:CheckBox("Should go finding a fuel station", "decentvehicle_gotorefuel")
-		CPanel:NumSlider("Detection range", "decentvehicle_detectionrange", 1, 64, 0)
-		CPanel:NumSlider("ELS detection range", "decentvehicle_elsrange", 0, 1000, 0)
+		CPanel:ControlHelp(texts.ServerSettings)
+		CPanel:CheckBox(texts.DriveSide, "decentvehicle_driveside")
+		CPanel:CheckBox(texts.ShouldGoToRefuel, "decentvehicle_gotorefuel")
+		CPanel:NumSlider(texts.DetectionRange, "decentvehicle_detectionrange", 1, 64, 0)
+		CPanel:NumSlider(texts.DetectionRangeELS, "decentvehicle_elsrange", 0, 1000, 0)
 		
-		local combobox, label = CPanel:ComboBox("Light level", "decentvehicle_turnonlights")
+		local combobox, label = CPanel:ComboBox(texts.LightLevel.Title, "decentvehicle_turnonlights")
 		combobox:SetSortItems(false)
-		combobox:AddChoice("No light", 0)
-		combobox:AddChoice("Only running lights", 1)
-		combobox:AddChoice("Running lights and headlights", 2)
-		combobox:AddChoice("Full lights", 3)
+		combobox:AddChoice(texts.LightLevel.None, 0)
+		combobox:AddChoice(texts.LightLevel.Running, 1)
+		combobox:AddChoice(texts.LightLevel.Headlights, 2)
+		combobox:AddChoice(texts.LightLevel.All, 3)
 		
 		CPanel:Button("#tool.dv_route.save", "dv_route_save")
 		CPanel:Button("#tool.dv_route.load", "dv_route_load")
@@ -213,12 +211,12 @@ function TOOL:DrawHUD()
 	if not waypoint.SpeedLimit then return end
 	local textpos = pos:ToScreen()
 	for _, text in ipairs {
-		"ID: " .. tostring(waypointID),
-		"Group: " .. tostring(waypoint.Group),
-		"Speed limit [km/h]: " .. tostring(math.Round(waypoint.SpeedLimit / KmphToHUps, 2)),
-		"Wait until next [sec]: " .. tostring(math.Round(waypoint.WaitUntilNext, 2)),
-		"Use turn lights: " .. (waypoint.UseTurnLights and "Yes" or "No"),
-		"Is fuel station: " .. (waypoint.FuelStation and "Yes" or "No"),
+		texts.ShowInfo.ID .. tostring(waypointID),
+		texts.ShowInfo.Group .. tostring(waypoint.Group),
+		texts.ShowInfo.SpeedLimit .. tostring(math.Round(waypoint.SpeedLimit / KmphToHUps, 2)),
+		texts.ShowInfo.WaitUntilNext .. tostring(math.Round(waypoint.WaitUntilNext, 2)),
+		texts.ShowInfo.UseTurnLights .. (waypoint.UseTurnLights and "Yes" or "No"),
+		texts.ShowInfo.FuelStation .. (waypoint.FuelStation and "Yes" or "No"),
 	} do
 		textpos.y = textpos.y + select(2, draw.SimpleTextOutlined(
 		text, "CloseCaption_Normal", textpos.x, textpos.y, color_white,

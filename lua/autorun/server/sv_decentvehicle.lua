@@ -13,7 +13,7 @@ resource.AddWorkshop "1587455087"
 local dvd = DecentVehicleDestination
 local Exceptions = {Target = true, TrafficLight = true}
 local function GetWaypointFromID(id)
-	return assert(dvd.Waypoints[id], "Decent Vehicle: Waypoint is not found!")
+	return assert(dvd.Waypoints[id], dvd.Texts.Errors.WaypointNotFound)
 end
 
 local function ClearUndoList()

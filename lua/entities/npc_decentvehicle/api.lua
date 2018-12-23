@@ -4,13 +4,7 @@
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
 local dvd = DecentVehicleDestination
-local TurnonLights = CreateConVar("decentvehicle_turnonlights", 3,
-CVarFlags, 
-[[Decent Vehicle: The level of using lights.
-0: Disabled
-1: Only use running lights
-2: Use running lights and headlights
-3: Use all lights]])
+local TurnonLights = CreateConVar("decentvehicle_turnonlights", 3, CVarFlags, dvd.Texts.CVars.TurnonLights)
 local LIGHTLEVEL = {
 	NONE = 0,
 	RUNNING = 1,

@@ -55,17 +55,15 @@ local NightSkyTextureList = {
 
 local CVarFlags = {FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}
 local TimeToStopEmergency = CreateConVar("decentvehicle_timetostopemergency", 5,
-CVarFlags, "Decent Vehicle: Time to turn off hazard lights in seconds.")
+CVarFlags, dvd.Texts.CVars.TimeToStopEmergency)
 local ShouldGoToRefuel = CreateConVar("decentvehicle_gotorefuel", 1,
-CVarFlags, "Decent Vehicle: 1: Go to a fuel station to refuel.  0: Refuel automatically.")
+CVarFlags, dvd.Texts.CVars.ShouldGoToRefuel)
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30,
-CVarFlags, "Decent Vehicle: A vehicle within this distance will drive automatically.")
-local DetectELS = CreateConVar("decentvehicle_elsrange", 300,
-CVarFlags, "Decent Vehicle: Detection range of finding cars with ELS to give way.")
+CVarFlags, dvd.Texts.CVars.DetectionRange)
+local DetectionRangeELS = CreateConVar("decentvehicle_elsrange", 300,
+CVarFlags, dvd.Texts.CVars.DetectionRangeELS)
 local DriveSide = CreateConVar("decentvehicle_driveside", 0,
-CVarFlags, [[Decent Vehicle: Determines which side of road Decent Vehicles think.
-0: Right (Europe, America, etc.)
-1: Left (UK, Australia, etc.)]])
+CVarFlags, dvd.Texts.CVars.DriveSide)
 
 -- A filter function of selecting a next waypoint.
 local function FilterUTurnAndGroup(self, waypoint, n)
@@ -175,12 +173,10 @@ function ENT:GetVehicleParams()
 		self.BrakePower = self.v.BreakForce / 1000
 		self.MaxSpeed = self.v.MaxSpeed
 		self.MaxRevSpeed = self.v.ReverseMaxSpeed
-		self.MaxSteeringAngle = self.v.SteerForce
 	elseif self.v.IsSimfphyscar then
 		self.BrakePower = self.v:GetBrakePower()
 		self.MaxSpeed = self.v.Mass * self.v.Efficiency * self.v.PeakTorque / self.v.MaxGrip
 		self.MaxRevSpeed = self.MaxSpeed * math.abs(math.min(unpack(self.v.Gears)) / math.max(unpack(self.v.Gears)))
-		self.MaxSteeringAngle = self.v.VehicleData.steerangle
 	elseif isfunction(self.v.GetVehicleParams) then
 		local params = self.v:GetVehicleParams()
 		local axles = params.axles
@@ -204,7 +200,6 @@ function ENT:GetVehicleParams()
 		self.WheelCoefficient = 1 / math.sqrt(self.WheelRadius * self.WheelRatio)
 		self.MaxSpeed = engine.maxSpeed or 100
 		self.MaxRevSpeed = engine.maxRevSpeed or 100
-		self.MaxSteeringAngle = steering.degreesSlow or 45
 		self.HorsePower = engine.horsepower
 		self.GearCount = engine.gearCount
 		self.GearRatio = engine.gearRatio
@@ -245,7 +240,7 @@ function ENT:AttachModel()
 	
 	if not IsValid(seat) then return end
 	local a = seat:LookupAttachment "vehicle_driver_eyes"
-	local att = seat:GetAttachment(assert(a, "Decent Vehicle: attachment vehicle_feet_passenger0 is not found!"))
+	local att = seat:GetAttachment(assert(a, dvd.Texts.Errors.AttachmentNotFound))
 	local delta = dvd.SeatPos[self:GetVehicleIdentifier()] or dvd.SeatPos[self:GetVehiclePrefix()] or Vector(-8, 0, -32)
 	local anim = dvd.DriverAnimation[self:GetVehicleIdentifier()] or dvd.DriverAnimation[self:GetVehiclePrefix()] or "drive_jeep"
 	local seatang = seat:WorldToLocalAngles(att.Ang)
@@ -591,7 +586,7 @@ function ENT:DoTrace()
 end
 
 function ENT:DoGiveWay()
-    for k, ent in pairs(ents.FindInSphere(self:GetPos(), DetectELS:GetInt())) do
+    for k, ent in pairs(ents.FindInSphere(self:GetPos(), DetectionRangeELS:GetInt())) do
 		if ent == self.v then continue end
 		local side = self:GetVehicleRight():Dot(ent:GetPos() - self.v:WorldSpaceCenter())
 		local els = ent.IsScar and ent.SirenIsOn
