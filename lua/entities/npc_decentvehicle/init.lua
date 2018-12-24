@@ -456,7 +456,9 @@ function ENT:DriveToWaypoint()
 			self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
 		end
 	
-		if not (self.v.IsScar or self.v.IsSimfphyscar) and velocitydot * goback * throttle < 0 then
+		if not (self.v.IsScar or self.v.IsSimfphyscar)
+		and velocitydot * goback * throttle < 0
+		and physenv.GetGravity():Dot(forward) < .1 then
 			throttle = 0 -- The solution of the brake issue.
 		end
 	end
