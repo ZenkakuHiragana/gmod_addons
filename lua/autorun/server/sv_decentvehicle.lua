@@ -44,6 +44,9 @@ end
 
 local function OverwriteWaypoints(source)
 	if source == dvd then return end
+	local side = GetConVar "decentvehicle_driveside"
+	if side then side:SetInt(source.DriveSide) end
+	dvd.DriveSide = source.DriveSide
 	table.Empty(dvd.Waypoints)
 	net.Start "Decent Vehicle: Clear waypoints"
 	net.Broadcast()
@@ -195,6 +198,7 @@ function dvd.GetSaveTable()
 		})
 	end
 	
+	save.DriveSide = dvd.DriveSide
 	return save
 end
 

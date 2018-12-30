@@ -32,8 +32,8 @@ function ENT:SetDriverPosition()
 	self:SetAngles(seat:LocalToWorldAngles(self:GetNWAngle "Ang"))
 end
 
-function ENT:GetVehicleForward()
-	local vehicle = self:GetNWEntity "Vehicle"
+function ENT:GetVehicleForward(v)
+	local vehicle = v or self:GetNWEntity "Vehicle"
 	if not IsValid(vehicle) then return end
 	if vehicle.IsScar then
 		return vehicle:GetForward()
@@ -44,8 +44,8 @@ function ENT:GetVehicleForward()
 	end
 end
 
-function ENT:GetVehicleRight()
-	local vehicle = self:GetNWEntity "Vehicle"
+function ENT:GetVehicleRight(v)
+	local vehicle = v or self:GetNWEntity "Vehicle"
 	if not IsValid(vehicle) then return end
 	if vehicle.IsScar then
 		return vehicle:GetRight()
@@ -56,8 +56,8 @@ function ENT:GetVehicleRight()
 	end
 end
 
-function ENT:GetVehicleUp()
-	local vehicle = self:GetNWEntity "Vehicle"
+function ENT:GetVehicleUp(v)
+	local vehicle = v or self:GetNWEntity "Vehicle"
 	if not IsValid(vehicle) then return end
 	if vehicle.IsScar then
 		return vehicle:GetUp()

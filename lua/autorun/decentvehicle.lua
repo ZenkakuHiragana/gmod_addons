@@ -12,6 +12,9 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		["SCAR_sent_sakarias_car_yamahayfz450"] = "drive_airboat",
 		["Simfphys_models/monowheel.mdl"] = "drive_airboat",
 	},
+	DriveSide = 1,
+	DRIVESIDE_LEFT = 1,
+	DRIVESIDE_RIGHT = 0,
 	DefaultDriverModel = {
 		"models/player/group01/female_01.mdl",
 		"models/player/group01/female_02.mdl",
