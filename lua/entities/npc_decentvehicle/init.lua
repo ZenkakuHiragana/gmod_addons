@@ -10,7 +10,7 @@ include "shared.lua"
 include "playermeta.lua"
 include "api.lua"
 
-ENT.sPID = Vector(4, 0, 0) -- PID parameters for steering
+ENT.sPID = Vector(2, 0, 0) -- PID parameters for steering
 ENT.tPID = Vector(1, 0, 0) -- PID parameters for throttle
 ENT.Throttle = 0
 ENT.Steering = 0
@@ -19,6 +19,7 @@ ENT.Waypoint = nil
 ENT.NextWaypoint = nil
 ENT.PrevWaypoint = nil
 ENT.WaypointList = {} -- For navigation
+ENT.WaypointOffset = 0 -- For giving way
 ENT.SteeringInt = 0 -- Steering integration
 ENT.SteeringOld = 0 -- Steering difference = (diff - self.SteeringOld) / FrameTime()
 ENT.ThrottleInt = 0 -- Throttle integration
@@ -177,6 +178,17 @@ function ENT:GetVehicleParams()
 		self.BrakePower = self.v:GetBrakePower()
 		self.MaxSpeed = self.v.Mass * self.v.Efficiency * self.v.PeakTorque / self.v.MaxGrip
 		self.MaxRevSpeed = self.MaxSpeed * math.abs(math.min(unpack(self.v.Gears)) / math.max(unpack(self.v.Gears)))
+		local positive_offset, num_positive, negative_offset, num_negative = 0, 0, 0, 0
+		for _, w in ipairs(self.v.Wheels) do
+			local pos = self.v:WorldToLocal(w:GetPos()).y
+			if pos > 0 then
+				positive_offset, num_positive = positive_offset + pos, num_positive + 1
+			else
+				negative_offset, num_negative = negative_offset + pos, num_negative + 1
+			end
+		end
+		
+		self.WheelBase = positive_offset / math.max(num_positive, 1) - negative_offset / math.max(num_negative, 1)
 	elseif isfunction(self.v.GetVehicleParams) then
 		local params = self.v:GetVehicleParams()
 		local axles = params.axles
@@ -196,14 +208,28 @@ function ENT:GetVehicleParams()
 			minr, maxr = math.min(minr, axle.wheels_radius), math.max(maxr, axle.wheels_radius)
 		end
 		
+		self.WheelBase = #axles > 1 and axles[1].offset:Distance(axles[2].offset) or 1
 		self.WheelRatio = minr / maxr
 		self.WheelCoefficient = 1 / math.sqrt(self.WheelRadius * self.WheelRatio)
-		self.MaxSpeed = engine.maxSpeed or 100
-		self.MaxRevSpeed = engine.maxRevSpeed or 100
+		self.BoostSpeed = engine.boostMaxSpeed
+		self.MaxSpeed = engine.maxSpeed
+		self.MaxRevSpeed = engine.maxRevSpeed
 		self.HorsePower = engine.horsepower
 		self.GearCount = engine.gearCount
 		self.GearRatio = engine.gearRatio
 		self.AxleRatio = engine.axleRatio
+		
+		self.SteeringParams = steering
+		self.SteeringExponent = steering.steeringExponent
+		self.SteeringSpeedFast = steering.speedFast
+		self.SteeringSpeedSlow = steering.speedSlow
+		self.SteeringAngleBoost = steering.degreesBoost
+		self.SteeringAngleFast = steering.degreesFast
+		self.SteeringAngleSlow = steering.degreesSlow
+		self.SteeringRateFast = steering.steeringRateFast
+		self.SteeringRateSlow = steering.steeringRateSlow
+		self.SteeringRestRateFast = steering.steeringRestRateFast
+		self.SteeringRestRateSlow = steering.steeringRestRateSlow
 	end
 end
 
@@ -276,25 +302,24 @@ end
 
 function ENT:GetCurrentMaxSpeed()
 	local destlength = self.Waypoint.Target:Distance(self.v:WorldSpaceCenter())
-	local maxspeed = self.Waypoint.SpeedLimit
+	local maxspeed = math.Clamp(self.Waypoint.SpeedLimit, 1, self.MaxSpeed)
 	if self.PrevWaypoint then
 		local total = self.Waypoint.Target:Distance(self.PrevWaypoint.Target)
 		local frac = (1 - destlength / total)^2
 		if self.NextWaypoint then -- The speed limit is affected by connected waypoints
-			maxspeed = Lerp(frac, maxspeed, self.NextWaypoint.SpeedLimit)
+			maxspeed = Lerp(frac, maxspeed, math.Clamp(self.NextWaypoint.SpeedLimit, 1, self.MaxSpeed))
 		end
 		
 		-- If the waypoint has a sharp corner, slow down
 		maxspeed = maxspeed * Lerp(frac, 1, 1 - self.Prependicular * .9)
-		
 		if self.Waypoint.TrafficLight and self.Waypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then
 			maxspeed = maxspeed * (1 - frac)
 		end
 	end
 	
+	maxspeed = maxspeed * math.max(1 - self.v:GetPhysicsObject():GetAngleVelocity():Dot(self:GetVehicleUp()) / 60, 0)
 	maxspeed = maxspeed * math.Clamp(self.MaxSpeedCoefficient, 0, 1)
-	return hook.Run("Decent Vehicle: GetCurrentMaxSpeed", self, maxspeed)
-	or math.Clamp(maxspeed, 1, self.MaxSpeed)
+	return hook.Run("Decent Vehicle: GetCurrentMaxSpeed", self, maxspeed) or maxspeed
 end
 
 function ENT:IsValidVehicle()
@@ -312,7 +337,8 @@ function ENT:AtTrafficLight()
 	if self.FormLine then return true end
 	if not self.PrevWaypoint then return end
 	if not self.PrevWaypoint.TrafficLight then return end
-	if self:GetVehicleForward():Dot(self.PrevWaypoint.Target - self.v:WorldSpaceCenter()) < 0 then return end
+	if self:GetVehicleForward():Dot(self.PrevWaypoint.Target - self.v:WorldSpaceCenter()) < 0
+	and self.PrevWaypoint.Target:Distance(self.v:WorldSpaceCenter()) > self.v:BoundingRadius() then return end
 	if self.PrevWaypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then return true end
 end
 
@@ -407,24 +433,50 @@ function ENT:DriveToWaypoint()
 	local throttle = 1 -- The output throttle
 	local steering = 0 -- The output steering
 	local handbrake = false -- The output handbrake
-	local targetpos = self.Waypoint.Target
-	local forward = self:GetVehicleForward()
 	local vehiclepos = self.v:WorldSpaceCenter()
+	local waypointpos = self.Waypoint.Target
+	local startpos = self.PrevWaypoint and self.PrevWaypoint.Target
+	local bound = self.v:BoundingRadius()
+	local forward = self:GetVehicleForward()
+	local up = self:GetVehicleUp()
 	local velocity = self.v:GetVelocity()
 	local velocitydot = velocity:Dot(forward)
 	local currentspeed = math.abs(velocitydot)
-	local dest = targetpos - vehiclepos
-	local destlength = dest:Length()
-	local todestination = dest:GetNormalized()
 	local maxspeed = self:GetCurrentMaxSpeed()
 	local relspeed = currentspeed / maxspeed
-	local cross = todestination:Cross(forward)
+	local targetpos = waypointpos
+	self.WaypointOffset = -bound
+	if startpos then
+		local way_length = startpos:Distance(waypointpos)
+		local start_to_vehicle = vehiclepos - startpos
+		if not start_to_vehicle:IsEqualTol(vector_origin, 1) and way_length > 0 then
+		local way_direction = dvd.GetDir(startpos, waypointpos)
+			local distance = way_direction:Cross(start_to_vehicle):Dot(up)
+			local offset = self.WaypointOffset * up:Cross(way_direction)
+			local length = way_direction:Dot(start_to_vehicle)
+			local speed_dependent = distance + way_length
+			local frac = (bound + length + speed_dependent * relspeed) / way_length
+			local p1, p2 = startpos + offset, waypointpos + offset
+			if frac > 1 and self.NextWaypoint then
+				local nextpos = self.NextWaypoint.Target
+				local max = bound / waypointpos:Distance(nextpos)
+				frac, p1, p2 = math.min(frac - 1, max), p2, nextpos + offset
+			end
+			
+			targetpos = Lerp(frac, p1, p2)
+		end
+	end
+	debugoverlay.Cross(targetpos, 30, .1, Color(0, 255, 0), true)
 	
-	local steering_angle = math.asin(cross:Dot(self:GetVehicleUp())) / math.pi * 2
+	local dest = targetpos - vehiclepos
+	local todestination = dest:GetNormalized()
+	local cross = todestination:Cross(forward)
+	local steering_angle = math.deg(math.asin(math.Clamp(cross:Dot(up), -1, 1))) / self:GetMaxSteeringAngle()
 	local steering_differece = (steering_angle - self.SteeringOld) / FrameTime()
 	self.SteeringInt = self.SteeringInt + steering_angle * FrameTime()
 	self.SteeringOld = steering_angle
 	steering = sPID.x * steering_angle + sPID.y * self.SteeringInt + sPID.z * steering_differece
+	if steering ~= steering then steering = 0 end
 	
 	local estimateaccel = math.abs(self:EstimateAccel())
 	local speed_difference = maxspeed - currentspeed
@@ -432,13 +484,15 @@ function ENT:DriveToWaypoint()
 	self.ThrottleInt = self.ThrottleInt + speed_difference * FrameTime()
 	self.ThrottleOld = speed_difference
 	throttle = tPID.x * speed_difference + tPID.y * self.ThrottleInt + tPID.z * throttle_difference
+	if throttle ~= throttle then throttle = 0 end
 	
 	-- Prevents from going backward
 	local goback = forward:Dot(todestination)
 	local approach = velocity:Dot(todestination) / velocity:Length()
 	-- Handbrake when intending to go backward and actually moving forward or vise-versa
-	goback = math.abs(goback) > .1 and goback < 0 and -1 or 1
-	handbrake = currentspeed > 10 and goback * velocitydot < 0 or currentspeed > math.max(100, maxspeed * .2) and math.abs(approach) < .5
+	goback = Either(velocitydot > 0, goback < -.5, goback < .5) and -1 or 1
+	handbrake = currentspeed > 10 and goback * velocitydot < 0
+	or currentspeed > math.max(100, maxspeed * .2) and math.abs(approach) < .5
 	
 	if goback < 0 then
 		steering = steering > 0 and -1 or 1
@@ -458,14 +512,15 @@ function ENT:DriveToWaypoint()
 	
 		if not (self.v.IsScar or self.v.IsSimfphyscar)
 		and velocitydot * goback * throttle < 0
-		and physenv.GetGravity():Dot(forward) < .1 then
+		and physenv.GetGravity():Dot(forward) < .1 -- Exception #1: DV is going down
+		and relspeed < 1.5 then -- Exception #2: DV is going too fast
 			throttle = 0 -- The solution of the brake issue.
 		end
 	end
 	
 	if IsValid(self.NPCDriver) then
 		local desiredvelocity = todestination * maxspeed
-		self.NPCDriver:SetSaveValue("m_vecDesiredPosition", self.Waypoint.Target)
+		self.NPCDriver:SetSaveValue("m_vecDesiredPosition", targetpos)
 		self.NPCDriver:SetSaveValue("m_vecDesiredVelocity", desiredvelocity)
 	end
 	
@@ -473,10 +528,10 @@ function ENT:DriveToWaypoint()
 	self:SetThrottle(math.Clamp(throttle / estimateaccel, -1, 1) * goback)
 	self:SetSteering(steering)
 	
-	debugoverlay.Sphere(self.Waypoint.Target, 50, .1, Color(0, 255, 0))
-	
 	hook.Run("Decent Vehicle: Drive", self)
-	return targetpos:Distance(vehiclepos) < math.max(self.v:BoundingRadius(), math.max(0, velocitydot) * self.Prependicular)
+	local rest_length = dvd.GetDir(startpos or vehiclepos, waypointpos):Dot(waypointpos - vehiclepos)
+	local threshold = math.max(bound, math.max(0, velocitydot) * self.Prependicular)
+	return rest_length < threshold
 end
 
 function ENT:DoLights()
@@ -509,13 +564,11 @@ function ENT:DoTrace()
 	local currentspeed = math.abs(velocitydot)
 	self.TraceLength = CurTime() > self.StopByTrace and self.TraceLength or math.max(TraceMinLength, currentspeed)
 	local kmph = currentspeed / KmphToHUps
-	local TraceGround = util.QuickTrace(vehiclepos, -vector_up * 32768, filter)
-	local groundpos = TraceGround.HitPos
+	local groundpos = util.QuickTrace(vehiclepos, -vector_up * 32768, filter).HitPos
 	local height = (vehiclepos.z - groundpos.z) / math.sqrt(2)
 	local maxs = vector_one * math.min(TraceMax, height)
 	local mins = -maxs
-	local start = groundpos + TraceGround.HitNormal * height * TraceHeightGap
-	
+	local start = groundpos + up * height * TraceHeightGap
 	local tr = {
 		start = start,
 		endpos = start + tracedir * self.TraceLength,
@@ -537,12 +590,12 @@ function ENT:DoTrace()
 	trback.mins, trback.maxs, angle_zero, .05, Color(255, 255, 0))
 	
 	local ent = self.Trace.Entity
-	local hitworld = self.Trace.HitWorld and self.Trace.HitNormal:Dot(TraceGround.HitNormal) > .7
+	local hitworld = self.Trace.HitWorld and self.Trace.HitNormal:Dot(up) > .7
 	local waypointpos = self.Waypoint and self.Waypoint.Target
-	if waypointpos then
+	if waypointpos and dvd.GetAng(waypointpos - start, tracedir) > .7 then
 		local trwaypoint = {
 			start = start,
-			endpos = waypointpos + TraceGround.HitNormal * height * TraceHeightGap,
+			endpos = waypointpos + up * height * TraceHeightGap,
 			maxs = maxs, mins = mins,
 			filter = filter,
 		}
@@ -551,7 +604,7 @@ function ENT:DoTrace()
 		if math.Round(self.Trace.HitPos:DistToSqr(tr.start)
 		/ self.TraceWaypoint.HitPos:DistToSqr(tr.start)) == 1 then
 			hitworld = hitworld or self.TraceWaypoint.HitWorld
-			and self.TraceWaypoint.HitNormal:Dot(TraceGround.HitNormal) > .7
+			and self.TraceWaypoint.HitNormal:Dot(up) > .7
 			if not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
 				ent = self.TraceWaypoint.Entity
 			end

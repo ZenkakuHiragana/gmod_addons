@@ -20,7 +20,7 @@ ENT.Spawnable = false
 list.Set("NPC", "npc_decentvehicle", {
 	Name = ENT.PrintName,
 	Class = "npc_decentvehicle",
-	Category = "GreatZenkakuMan's NPCs"
+	Category = "GreatZenkakuMan's NPCs",
 })
 
 function ENT:SetDriverPosition()

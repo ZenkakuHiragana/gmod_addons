@@ -12,6 +12,25 @@ local LIGHTLEVEL = {
 	ALL = 3,
 }
 
+function ENT:GetMaxSteeringAngle()
+	if self.v.IsScar then
+		return self.v.MaxSteerForce * 5 -- Obviously this is not actually steering angle
+	elseif self.v.IsSimfphyscar then
+		return self.v.VehicleData.steerangle
+	else
+		local mph = self.v:GetSpeed()
+		if mph < self.SteeringSpeedFast then
+			return Lerp((mph - self.SteeringSpeedSlow)
+			/ (self.SteeringSpeedFast - self.SteeringSpeedSlow),
+			self.SteeringAngleSlow, self.SteeringAngleFast)
+		else
+			return Lerp((mph - self.SteeringSpeedFast)
+			/ (self.BoostSpeed - self.SteeringSpeedFast),
+			self.SteeringAngleFast, self.SteeringAngleBoost)
+		end
+	end
+end
+
 function ENT:GetTraceFilter()
 	local filter = {self, self.v}
 	if self.v.IsScar then

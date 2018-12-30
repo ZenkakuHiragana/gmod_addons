@@ -66,5 +66,5 @@
 		"WaypointGroup": "Waypoint group",
 		"WaypointGroupHelp": "You can force Decent Vehicles to run along specified group of waypoints.\n0 means all vehicles can go there."
 	},
-	"UndoText": "Undone Decent Vehicle's waypoint."
+	"UndoText": "Undone Decent Vehicle's waypoint"
 }

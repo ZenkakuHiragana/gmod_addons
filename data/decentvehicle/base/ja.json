@@ -66,5 +66,5 @@
 		"WaypointGroup": "グループ番号",
 		"WaypointGroupHelp": "一部のDecent Vehicleに対して向かうべき道を制限できる。\n0にすると誰でも通れるウェイポイントになる。"
 	},
-	"UndoText": "Decent Vehicleのウェイポイントを元に戻した。"
+	"UndoText": "Decent Vehicleのウェイポイントを元に戻した"
 }
