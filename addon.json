@@ -1,12 +1,11 @@
 {
-	"title"		:	"Decent Vehicle",
+	"title"		:	"[DV] Decent Vehicle - Basic AI",
 	"type"		:	"npc",
 	"tags"		:	"roleplay",
 	"ignore"	:
 	[
 		"*.psd",
 		"*.vcproj",
-		"*.svn*",
-		"*.png"
+		"*.svn*"
 	]
 }
