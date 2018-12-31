@@ -686,8 +686,7 @@ function ENT:DoGiveWay()
 		local els = ent.IsScar and ent.SirenIsOn
 		or ent.IsSimfphyscar and ent:GetEMSEnabled()
 		or VC and self.v:GetClass() == "prop_vehicle_jeep"
-		and (ent:VC_getELSLightsOn() or ent:VC_getELSSoundOn()
-		or ent:VC_getStates().ELS_ManualOn)
+		and (ent:VC_getELSSoundOn() or ent:VC_getStates().ELS_ManualOn)
 		
 		if not els then continue end
 		local left = IsObstacle(self.TraceLeft)

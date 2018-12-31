@@ -133,7 +133,7 @@ function ENT:GetLocked()
 		return 
 	else
 		if VC then return self.v:VC_isLocked() end
-		return self.v:GetKeyValues().VehicleLocked
+		return tonumber(self.v:GetKeyValues().VehicleLocked) ~= 0
 	end
 end
 

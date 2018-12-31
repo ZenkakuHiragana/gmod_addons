@@ -126,29 +126,30 @@ function dvd.GetNearestWaypoint(pos, filter)
 end
 
 local lang = GetConVar "gmod_language":GetString()
-local function ReadTexts(convar, old, new)
-	dvd.Texts = {}
+-- local function ReadTexts(convar, old, new)
+	-- dvd.Texts = {}
 	
-	local directories = select(2, file.Find("data/decentvehicle/*", "GAME"))
-	for _, dir in ipairs(directories) do
-		local text = file.Read("data/decentvehicle/" .. dir .. "/" .. new .. ".json", true)
-		if text then
-			text = util.JSONToTable(text)
-			for k, v in pairs(text) do
-				dvd.Texts[k] = v
-			end
-		end
+	-- local directories = select(2, file.Find("data/decentvehicle/*", "GAME"))
+	-- for _, dir in ipairs(directories) do
+		-- local text = file.Read("data/decentvehicle/" .. dir .. "/" .. new .. ".json", true)
+		-- if text then
+			-- text = util.JSONToTable(text)
+			-- for k, v in pairs(text) do
+				-- dvd.Texts[k] = v
+			-- end
+		-- end
 		
-		text = file.Read("data/decentvehicle/" .. dir .. "/en.json", true)
-		if text then
-			text = util.JSONToTable(text)
-			for k, v in pairs(text) do
-				if dvd.Texts[k] then continue end
-				dvd.Texts[k] = v
-			end
-		end
-	end
-end
+		-- text = file.Read("data/decentvehicle/" .. dir .. "/en.json", true)
+		-- if text then
+			-- text = util.JSONToTable(text)
+			-- for k, v in pairs(text) do
+				-- if dvd.Texts[k] then continue end
+				-- dvd.Texts[k] = v
+			-- end
+		-- end
+	-- end
+-- end
 
-ReadTexts("gmod_language", lang, lang)
-cvars.AddChangeCallback("gmod_language", ReadTexts, "Decent Vehicle: OnLanguageChanged")
+-- ReadTexts("gmod_language", lang, lang)
+-- cvars.AddChangeCallback("gmod_language", ReadTexts, "Decent Vehicle: OnLanguageChanged")
+include "decentvehicle/base/en.lua"

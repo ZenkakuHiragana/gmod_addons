@@ -28,7 +28,8 @@ local function NotifyUpdate(d)
 		notification.AddLegacy("Decent Vehicle " .. header, NOTIFY_GENERIC, 18)
 		
 		local i = 0
-		for update in d.description:gmatch "%[%*%][^%c]+" do
+		local description = d.description:sub(1, d.description:find "quote=Decent Vehicle" - 2)
+		for update in description:gmatch "%[%*%][^%c]+" do
 			timer.Simple(3 * i, function()
 				if not showupdates:GetBool() then return end
 				notification.AddLegacy(update:sub(4), NOTIFY_UNDO, 6)
