@@ -3,6 +3,7 @@
         "DetectionRange": "Decent Vehicle: Транспорт найденый в этом радиусе будет автоматически управляться.",
         "DetectionRangeELS": "Decent Vehicle: Радиус определенния транспорта с ELS, чтобы уступить им дорогу",
         "DriveSide": "Decent Vehicle: Решает какое движение.\n0: Правостороннее (Европа, Америка итд.)\n1: Левостороннее (Британия, Австралия итд.)",
+		"LockVehicle": "Decent Vehicle: Whether or not Decent Vehicle allows other players to get in.",
         "ShouldGoToRefuel": "Decent Vehicle: 1: Ехать на АЗС чтобы заправитьсч.  0: заправляться автоматичкски.",
         "TimeToStopEmergency": "Decent Vehicle: Время в секундах чтобы выключить аварийные сигналы.",
         "TurnonLights": "Decent Vehicle: Уровень использования фаи.\n0: Выключены\n1: Только ходовые\n2: Ходовые и фары\n3: Использовать все."
@@ -41,6 +42,8 @@
             "Running": "Только ходовые",
             "Title": "Уровень освещения"
         },
+		"LockVehicle": "Lock vehicle",
+		"LockVehicleHelp": "If checked, Decent Vehicle prevents other players from getting in.",
         "MaxSpeed": "Максисальная скорость [км/ч]",
         "Name": "Decent Vehicle Waypoint Tool",
         "PrintName": "Decent Vehicle Waypoint Tool",

@@ -181,6 +181,7 @@ function TOOL.BuildCPanel(CPanel)
 		CPanel:ControlHelp(texts.ServerSettings)
 		CPanel:CheckBox(texts.DriveSide, "decentvehicle_driveside")
 		CPanel:CheckBox(texts.ShouldGoToRefuel, "decentvehicle_gotorefuel")
+		CPanel:CheckBox(texts.LockVehicle, "decentvehicle_lock"):SetToolTip(texts.LockVehicleHelp)
 		CPanel:NumSlider(texts.DetectionRange, "decentvehicle_detectionrange", 1, 64, 0)
 		CPanel:NumSlider(texts.DetectionRangeELS, "decentvehicle_elsrange", 0, 1000, 0)
 		

@@ -3,6 +3,7 @@
 		"DetectionRange": "Decent Vehicle: A vehicle within this distance will drive automatically.",
 		"DetectionRangeELS": "Decent Vehicle: Detection range of finding cars with ELS to give way.",
 		"DriveSide": "Decent Vehicle: Determines which side of road Decent Vehicles think.\n0: Right (Europe, America, etc.)\n1: Left (UK, Australia, etc.)",
+		"LockVehicle": "Decent Vehicle: Whether or not Decent Vehicle prevents players from getting in.",
 		"ShouldGoToRefuel": "Decent Vehicle: 1: Go to a fuel station to refuel.  0: Refuel automatically.",
 		"TimeToStopEmergency": "Decent Vehicle: Time to turn off hazard lights in seconds.",
 		"TurnonLights": "Decent Vehicle: The level of using lights.\n0: Disabled\n1: Only use running lights\n2: Use running lights and headlights\n3: Use all lights"
@@ -41,6 +42,8 @@
 			"Running": "Only running lights",
 			"Title": "Light level"
 		},
+		"LockVehicle": "Lock vehicle",
+		"LockVehicleHelp": "If checked, Decent Vehicle prevents other players from getting in.",
 		"MaxSpeed": "Max speed [km/h]",
 		"Name": "Decent Vehicle Waypoint Tool",
 		"PrintName": "Decent Vehicle Waypoint Tool",
