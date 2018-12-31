@@ -131,8 +131,9 @@ function ENT:GetLocked()
 		return self.v:IsLocked()
 	elseif self.v.IsSimfphyscar then
 		return 
-	elseif VC then
-		return self.v:VC_isLocked()
+	else
+		if VC then return self.v:VC_isLocked() end
+		return self.v:GetKeyValues().VehicleLocked
 	end
 end
 
@@ -342,11 +343,20 @@ function ENT:SetLocked(locked)
 		else
 			self.v:UnLock()
 		end
-	elseif VC then
-		if locked then
-			self.v:VC_lock()
+	else
+		for _, seat in pairs(self.v:GetChildren()) do -- For Sligwolf's vehicles
+			if not (seat:IsVehicle() and seat.__SW_Vars) then continue end
+			seat:Fire(locked and "Lock" or "Unlock")
+		end
+		
+		if VC then
+			if locked then
+				self.v:VC_lock()
+			else
+				self.v:VC_unLock()
+			end
 		else
-			self.v:VC_unLock()
+			self.v:Fire(locked and "Lock" or "Unlock")
 		end
 	end
 end
