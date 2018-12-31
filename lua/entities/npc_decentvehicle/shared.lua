@@ -3,10 +3,6 @@
 -- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
-AddCSLuaFile()
-AddCSLuaFile "playermeta.lua"
-include "playermeta.lua"
-
 local dvd = DecentVehicleDestination
 ENT.Base = "base_entity"
 ENT.Type = "anim"

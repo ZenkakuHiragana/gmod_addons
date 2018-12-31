@@ -3,6 +3,7 @@
 -- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
+AddCSLuaFile()
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local dvd = DecentVehicleDestination
 local texts = dvd.Texts.Tools

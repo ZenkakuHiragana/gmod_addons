@@ -3,8 +3,6 @@
 -- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
-AddCSLuaFile()
-
 ENT.Type = "anim"
 ENT.PrintName = "Traffic Light"
 ENT.Category = "Decent Vehicle"
