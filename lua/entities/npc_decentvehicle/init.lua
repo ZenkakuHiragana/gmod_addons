@@ -33,6 +33,14 @@ ENT.Emergency = CurTime()
 ENT.StopByTrace = CurTime()
 ENT.IsGivingWay = CurTime() -- Giving way if CurTime() < ENT.IsGivingWay
 
+ENT.Preference = { -- Some preferences for Decent Vehicle here
+	GiveWay = true, -- Whether or not Decent Vehicle gives way for vehicles with ELS
+	StopAtTL = true, -- Whether or not Decent Vehicle stops at traffic lights with red sign
+	DoTrace = true, -- Whether or not Decent Vehicle does some traces
+	LockVehicle = false, -- Whether or not Decent Vehicle allows other players to get in
+	LockVehicleDependsOnCVar = true, -- Whether or not LockVehicle depends on CVar
+}
+
 local dvd = DecentVehicleDestination
 local vector_one = Vector(1, 1, 1)
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
@@ -58,6 +66,7 @@ local ShouldGoToRefuel = CreateConVar("decentvehicle_gotorefuel", 1, CVarFlags, 
 local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30, CVarFlags, dvd.Texts.CVars.DetectionRange)
 local DetectionRangeELS = CreateConVar("decentvehicle_elsrange", 300, CVarFlags, dvd.Texts.CVars.DetectionRangeELS)
 local DriveSide = CreateConVar("decentvehicle_driveside", 0, CVarFlags, dvd.Texts.CVars.DriveSide)
+local LockVehicle = CreateConVar("decentvehicle_lock", 0, CVarFlags, dvd.Texts.CVars.LockVehicle)
 cvars.AddChangeCallback("decentvehicle_driveside", function(cvar, old, new)
 	local side = tonumber(new)
 	if not (side == dvd.DRIVESIDE_LEFT or side == dvd.DRIVESIDE_RIGHT) then return end
@@ -369,7 +378,7 @@ function ENT:ShouldStop()
 	if CurTime() < self.WaitUntilNext then return true end
 	if CurTime() < self.Emergency then return true end
 	if CurTime() > self.StopByTrace and CurTime() < self.StopByTrace + GobackTime then return true end
-	if self:AtTrafficLight() then return true end
+	if self.Preference.StopAtTL and self:AtTrafficLight() then return true end
 end
 
 function ENT:ShouldRefuel()
@@ -517,7 +526,6 @@ function ENT:DriveToWaypoint()
 		if not (self.v.IsScar or self.v.IsSimfphyscar)
 		and velocitydot * goback * throttle < 0
 		and physenv.GetGravity():Dot(forward) < .1 -- Exception #1: DV is going down
-		and relspeed < 2 then -- Exception #2: DV is going too fast
 			throttle = 0 -- The solution of the brake issue.
 		end
 	end
@@ -549,6 +557,7 @@ function ENT:DoLights()
 end
 
 function ENT:DoTrace()
+	if not self.Preference.DoTrace then return end
 	if not self.Waypoint then return end
 	local prevwaypoint = self.PrevWaypoint
 	local nextwaypoint = self.NextWaypoint
@@ -667,6 +676,7 @@ function ENT:DoTrace()
 end
 
 function ENT:DoGiveWay()
+	if not self.Preference.GiveWay then return end
 	if CurTime() < self.IsGivingWay then return end
 	for k, ent in pairs(ents.FindInSphere(self:GetPos(), DetectionRangeELS:GetInt())) do
 		if not ent:IsVehicle() then continue end
@@ -675,7 +685,9 @@ function ENT:DoGiveWay()
 		ent:WorldSpaceCenter(), self.v:WorldSpaceCenter())) < -.7 then continue end
 		local els = ent.IsScar and ent.SirenIsOn
 		or ent.IsSimfphyscar and ent:GetEMSEnabled()
-		or VC and (ent:VC_getELSLightsOn() or ent:VC_getELSSoundOn() or ent:VC_getStates().ELS_ManualOn)
+		or VC and self.v:GetClass() == "prop_vehicle_jeep"
+		and (ent:VC_getELSLightsOn() or ent:VC_getELSSoundOn()
+		or ent:VC_getStates().ELS_ManualOn)
 		
 		if not els then continue end
 		local left = IsObstacle(self.TraceLeft)
@@ -855,6 +867,15 @@ function ENT:Initialize()
 	self.Trace = {}
 	self.TraceBack = {}
 	self.TraceWaypoint = {}
+	
+	if self.Preference.LockVehicleDependsOnCVar then
+		self.Preference = table.Copy(self.Preference)
+		self.Preference.LockVehicle = LockVehicle:GetBool()
+	end
+	
+	if self.Preference.LockVehicle then
+		self:SetLocked(true)
+	end
 end
 
 function ENT:OnRemove()
@@ -908,5 +929,5 @@ end
 
 if not VC then return end -- WORKAROUND!!!
 hook.Add("CanPlayerEnterVehicle", "Decent Vehicle: VCMod is not compatible with npc_vehicledriver", function(ply, vehicle, role)
-	if vehicle.DecentVehicle and role == 1 then return false end
+	if vehicle.DecentVehicle then return false end
 end)
