@@ -1,4 +1,9 @@
-DecentVehicleDestination.Texts = {
+
+-- Copyright © 2018-2030 Decent Vehicle
+-- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
+-- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
+
+return {
 	CVars = {
 		DetectionRange = "Decent Vehicle = A vehicle within this distance will drive automatically.",
 		DetectionRangeELS = "Decent Vehicle = Detection range of finding cars with ELS to give way.",
@@ -75,5 +80,3 @@ DecentVehicleDestination.Texts = {
 	},
 	UndoText = "Undone Decent Vehicle's waypoint",
 }
-
-DecentVehicleDestination.Texts.npc_decentvehicle = "Decent Vehicle"

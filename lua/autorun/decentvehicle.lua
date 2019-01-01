@@ -66,7 +66,7 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		{Time = CurTime() + 33, Light = 1}, -- Light pattern #1
 		{Time = CurTime() + 40, Light = 3}, -- Light pattern #2
 	},
-	Version = {1, 0, 0},
+	Version = {1, 0, 1}, -- Major version, Minor version, Revision
 	Waypoints = {},
 	WaypointSize = 32,
 }
@@ -126,30 +126,39 @@ function dvd.GetNearestWaypoint(pos, filter)
 end
 
 local lang = GetConVar "gmod_language":GetString()
--- local function ReadTexts(convar, old, new)
-	-- dvd.Texts = {}
+local function ReadTexts(convar, old, new)
+	dvd.Texts = {}
 	
-	-- local directories = select(2, file.Find("data/decentvehicle/*", "GAME"))
-	-- for _, dir in ipairs(directories) do
-		-- local text = file.Read("data/decentvehicle/" .. dir .. "/" .. new .. ".json", true)
-		-- if text then
-			-- text = util.JSONToTable(text)
-			-- for k, v in pairs(text) do
-				-- dvd.Texts[k] = v
-			-- end
-		-- end
+	local directories = select(2, file.Find("decentvehicle/*", "LUA"))
+	for _, dir in ipairs(directories) do
+		if SERVER then -- We need to run AddCSLuaFile() for all languages.
+			local path = "decentvehicle/" .. dir .. "/"
+			local files = file.Find(path .. "*.lua", "LUA")
+			for _, f in ipairs(files) do
+				AddCSLuaFile(path .. f)
+			end
+		end
 		
-		-- text = file.Read("data/decentvehicle/" .. dir .. "/en.json", true)
-		-- if text then
-			-- text = util.JSONToTable(text)
-			-- for k, v in pairs(text) do
-				-- if dvd.Texts[k] then continue end
-				-- dvd.Texts[k] = v
-			-- end
-		-- end
-	-- end
--- end
+		local path = "decentvehicle/" .. dir .. "/" .. new .. ".lua"
+		local exists = file.Exists(path, "LUA")
+		if exists then
+			local text = include(path)
+			for k, v in pairs(text or {}) do
+				dvd.Texts[k] = v
+			end
+		end
+		
+		path = "decentvehicle/" .. dir .. "/en.lua"
+		exists = file.Exists(path, "LUA")
+		if exists then
+			local text = include(path)
+			for k, v in pairs(text or {}) do
+				if dvd.Texts[k] then continue end
+				dvd.Texts[k] = v
+			end
+		end
+	end
+end
 
--- ReadTexts("gmod_language", lang, lang)
--- cvars.AddChangeCallback("gmod_language", ReadTexts, "Decent Vehicle: OnLanguageChanged")
-include "decentvehicle/base/en.lua"
+ReadTexts("gmod_language", lang, lang)
+cvars.AddChangeCallback("gmod_language", ReadTexts, "Decent Vehicle: OnLanguageChanged")
