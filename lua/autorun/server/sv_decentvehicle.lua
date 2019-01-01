@@ -358,7 +358,7 @@ end
 --   number group	| Optional, specify a waypoint group here.
 -- Returns:
 --   table route	| List of waypoints.  start is the last, endpos is the first.
-function dvd.GetRoute(start, endpos)
+function dvd.GetRoute(start, endpos, group)
 	if not (isnumber(start) and istable(endpos)) then return end
 	group = group or 0
 	
