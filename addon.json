@@ -1,7 +1,7 @@
 {
 	"title"		:	"[DV] Decent Vehicle - Basic AI",
 	"type"		:	"npc",
-	"tags"		:	"roleplay",
+	"tags"		:	["roleplay"],
 	"ignore"	:
 	[
 		"*.psd",
