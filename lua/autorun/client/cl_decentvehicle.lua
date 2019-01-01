@@ -187,7 +187,8 @@ function(bDrawingDepth, bDrawingSkybox)
 	local distsqr = drawdistance and drawdistance:GetFloat()^2 or 1000^2
 	if not always:GetBool() then
 		if weapon:GetClass() ~= "gmod_tool" then return end
-		if not LocalPlayer():GetTool().IsDecentVehicleTool then return end
+		local TOOL = LocalPlayer():GetTool()
+		if not (TOOL and TOOL.IsDecentVehicleTool) then return end
 	end
 	
 	if bDrawingSkybox or not (showpoints and showpoints:GetBool()) then return end
