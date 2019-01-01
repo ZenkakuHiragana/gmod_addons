@@ -284,10 +284,6 @@ function ENT:GetVehicleIdentifier()
 end
 
 function ENT:AttachModel()
-	for i = 1, self:GetFlexNum() do
-		self:SetFlexWeight(i, self:GetFlexBounds(i))
-	end
-	
 	local seat = self.v
  	if self.v.IsScar then
  		seat = self.v.Seats and self.v.Seats[1]
@@ -316,6 +312,10 @@ function ENT:AttachModel()
 		self:SetNWVector("Pos", seatpos)
 		self:SetNWAngle("Ang", seatang)
 		self:SetSequence(anim)
+		
+		for i = 1, self:GetFlexNum() do
+			self:SetFlexWeight(i, self:GetFlexBounds(i))
+		end
 	end)
  end
 
