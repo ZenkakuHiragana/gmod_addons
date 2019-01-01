@@ -10,6 +10,22 @@ include "shared.lua"
 include "playermeta.lua"
 include "api.lua"
 
+-- https://steamcommunity.com/sharedfiles/filedetails/?id=531849338
+-- ^ THIS overrides ents.FindInSphere() and breaks the original behavior.
+-- Because of this, I have to do some workaround.
+local CorrectFindInSphere = ents.FindInSphere
+local HasFixedOnLocalizedPhysics = false
+for _, a in ipairs(engine.GetAddons()) do
+	if tonumber(a.wsid) == 531849338 then
+		CorrectFindInSphere = ents.RealFindInSphere or CorrectFindInSphere
+		if not ents.RealFindInSphere then -- Just to make sure
+			timer.Simple(1, function()
+				CorrectFindInSphere = ents.RealFindInSphere or CorrectFindInSphere
+			end)
+		end
+	end
+end
+
 ENT.sPID = Vector(2, 0, 0) -- PID parameters for steering
 ENT.tPID = Vector(1, 0, 0) -- PID parameters for throttle
 ENT.Throttle = 0
@@ -620,6 +636,16 @@ function ENT:DoTrace()
 	debugoverlay.SweptBox(trleft.start, trleft.endpos, trleft.mins, trleft.maxs, angle_zero, .05, Color(255, 255, 0))
 	debugoverlay.SweptBox(trright.start, trright.endpos, trright.mins, trright.maxs, angle_zero, .05, Color(255, 255, 0))
 	
+	if self.TraceLeft.StartSolid then
+		trleft.start, trleft.endpos = start, start - offset
+		self.TraceLeft = util.TraceHull(trleft)
+	end
+	
+	if self.TraceRight.StartSolid then
+		trright.start, trright.endpos = start, start + offset
+		self.TraceRight = util.TraceHull(trright)
+	end
+	
 	local ent = self.Trace.Entity
 	local waypointpos = self.Waypoint and self.Waypoint.Target
 	local trwaypoint_isvalid = false
@@ -678,7 +704,7 @@ end
 function ENT:DoGiveWay()
 	if not self.Preference.GiveWay then return end
 	if CurTime() < self.IsGivingWay then return end
-	for k, ent in pairs(ents.FindInSphere(self:GetPos(), DetectionRangeELS:GetInt())) do
+	for k, ent in pairs(CorrectFindInSphere(self:GetPos(), DetectionRangeELS:GetInt())) do
 		if not ent:IsVehicle() then continue end
 		if ent == self.v then continue end
 		if self:GetVehicleForward(ent):Dot(dvd.GetDir(
@@ -782,20 +808,19 @@ end
 function ENT:Initialize()
 	-- Pick up a vehicle in the given sphere.
 	local mindistance, vehicle = math.huge
-	for k, v in pairs(ents.FindInSphere(self:GetPos(), DetectionRange:GetFloat())) do
+	for k, v in pairs(CorrectFindInSphere(self:GetPos(), DetectionRange:GetFloat())) do
 		if not v:IsVehicle() then continue end
+		if IsValid(v:GetParent()) and v:GetParent():IsVehicle() then return end
 		local d = self:GetPos():DistToSqr(v:GetPos())
 		if d > mindistance then continue end
 		mindistance, vehicle = d, v
 	end
 	
-	if not IsValid(vehicle) then SafeRemoveEntity(self) return end
+	if not IsValid(vehicle) or self:GetLocked(vehicle) then
+		SafeRemoveEntity(self)
+		return
+	end
 	
-	self.v = vehicle
-	local locked = self:GetLocked()
-	self.v = nil
-	
-	if locked then SafeRemoveEntity(self) return end
 	if vehicle.DecentVehicle then
 		SafeRemoveEntity(self)
 		SafeRemoveEntity(vehicle.DecentVehicle)

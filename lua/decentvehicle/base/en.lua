@@ -28,6 +28,7 @@ return {
 	SaveLoad_Cancel = "Cancel",
 	SaveLoad_OK = "OK",
 	Tools = {
+		AlwaysDrawWaypoints = "Always draw waypoints",
 		Bidirectional = "Bi-directional link",
 		BidirectionalHelp = "Connect bi-directional link automatically.",
 		Category = "GreatZenkakuMan's tools",
@@ -35,6 +36,8 @@ return {
 		DescriptionInMenu = "Create routes for Decent Vehicles.",
 		DetectionRange = "Detection range for spawning",
 		DetectionRangeELS = "Detection range for finding cars with ELS",
+		DrawDistance = "Draw distance",
+		DrawDistanceHelp = "The maximum distance to draw waypoints.",
 		DrawWaypoints = "Draw waypoints",
 		DriveSide = "Is left side of the road",
 		FuelStation = "Fuel station",

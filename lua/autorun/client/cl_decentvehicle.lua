@@ -178,9 +178,21 @@ local LinkMaterial = Material "cable/blue_elec"
 local TrafficMaterial = Material "cable/redlaser"
 hook.Add("PostDrawTranslucentRenderables", "Decent Vehicle: Draw waypoints",
 function(bDrawingDepth, bDrawingSkybox)
+	local weapon = LocalPlayer():GetActiveWeapon()
+	if not IsValid(weapon) then return end
+	
+	local always = GetConVar "dv_route_showalways"
 	local showpoints = GetConVar "dv_route_showpoints"
+	local drawdistance = GetConVar "dv_route_drawdistance"
+	local distsqr = drawdistance and drawdistance:GetFloat()^2 or 1000^2
+	if not always:GetBool() then
+		if weapon:GetClass() ~= "gmod_tool" then return end
+		if not LocalPlayer():GetTool().IsDecentVehicleTool then return end
+	end
+	
 	if bDrawingSkybox or not (showpoints and showpoints:GetBool()) then return end
 	for _, w in ipairs(dvd.Waypoints) do
+		if w.Target:DistToSqr(EyePos()) > distsqr then continue end
 		local visible = EyeAngles():Forward():Dot(w.Target - EyePos()) > 0
 		if visible then
 			render.SetMaterial(WaypointMaterial)

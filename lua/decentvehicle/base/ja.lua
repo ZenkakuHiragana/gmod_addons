@@ -8,7 +8,7 @@ return {
 		DetectionRange = "Decent Vehicle: スポーン時に車両を検索する範囲。",
 		DetectionRangeELS = "Decent Vehicle: 運転中、非常灯付きの車を検知する範囲。",
 		DriveSide = "Decent Vehicle: 左側通行か右側通行か。\n0: 右側通行 (ヨーロッパやアメリカなど)\n1: 左側通行 (イギリスやオーストラリアなど)",
-		LockVehicle = "Decent Vehicle: 1にすると、Decent Vehicleの操縦する車両に乗れないようになる。",
+		LockVehicle = "Decent Vehicle: 1にすると、Decent Vehicleの操縦する車両にプレイヤーが乗れないようになる。",
 		ShouldGoToRefuel = "Decent Vehicle: 1: ガソリンスタンドに向かって給油する  0: 自動的に給油されるようにする",
 		TimeToStopEmergency = "Decent Vehicle: 衝突時、ハザードランプを消すまでの時間。",
 		TurnonLights = [[Decent Vehicle: 使用するライトのレベル。
@@ -28,6 +28,7 @@ return {
 	SaveLoad_Cancel = "キャンセル",
 	SaveLoad_OK = "OK",
 	Tools = {
+		AlwaysDrawWaypoints = "常にウェイポイントを表示する",
 		Bidirectional = "双方向に接続",
 		BidirectionalHelp = "自動的に双方向に接続します。",
 		Category = "GreatZenkakuMan's tools",
@@ -35,6 +36,8 @@ return {
 		DescriptionInMenu = "Decent Vehicleのためのルートを構築する。",
 		DetectionRange = "スポーン時の車両検出範囲",
 		DetectionRangeELS = "緊急車両の検出範囲",
+		DrawDistance = "描画距離",
+		DrawDistanceHelp = "ウェイポイントを描画する最大の距離。",
 		DrawWaypoints = "ウェイポイントを描画する",
 		DriveSide = "左側通行",
 		FuelStation = "ガソリンスタンド",

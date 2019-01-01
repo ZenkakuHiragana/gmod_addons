@@ -96,54 +96,66 @@ function ENT:GetHazardLights()
 	end
 end
 
-function ENT:GetELS()
-	if self.v.IsScar then
-		return self.v.SirenIsOn
-	elseif self.v.IsSimfphyscar then
-		return self.v:GetEMSEnabled()
+function ENT:GetELS(v)
+	local vehicle = v or self.v
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
+	if vehicle.IsScar then
+		return vehicle.SirenIsOn
+	elseif vehicle.IsSimfphyscar then
+		return vehicle:GetEMSEnabled()
 	elseif VC then
-		return self.v:VC_getELSLightsOn()
+		return vehicle:VC_getELSLightsOn()
 	end
 end
 
-function ENT:GetELSSound()
-	if self.v.IsScar then
-		return self.v.SirenSound and self.v.SirenSound:IsPlaying()
-	elseif self.v.IsSimfphyscar then
-		return self.v.ems and self.v.ems:IsPlaying()
+function ENT:GetELSSound(v)
+	local vehicle = v or self.v
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
+	if vehicle.IsScar then
+		return vehicle.SirenSound
+		and isfunction(vehicle.SirenSound.IsPlaying) 
+		and vehicle.SirenSound:IsPlaying()
+	elseif vehicle.IsSimfphyscar then
+		return vehicle.ems and vehicle.ems:IsPlaying()
 	elseif VC then
-		self.v:VC_getELSSoundOn()
+		vehicle:VC_getELSSoundOn()
 	end
 end
 
-function ENT:GetHorn()
-	if self.v.IsScar then
-		return self.v.Horn:IsPlaying()
-	elseif self.v.IsSimfphyscar then
-		return self.v.HornKeyIsDown
+function ENT:GetHorn(v)
+	local vehicle = v or self.v
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
+	if vehicle.IsScar then
+		return vehicle.Horn:IsPlaying()
+	elseif vehicle.IsSimfphyscar then
+		return vehicle.HornKeyIsDown
 	elseif VC then
-		return self.v:VC_getStates().HornOn
+		return vehicle:VC_getStates().HornOn
 	end
 end
 
-function ENT:GetLocked()
-	if self.v.IsScar then
-		return self.v:IsLocked()
-	elseif self.v.IsSimfphyscar then
-		return 
+function ENT:GetLocked(v)
+	local vehicle = v or self.v
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
+	if vehicle.IsScar then
+		return vehicle:IsLocked()
+	elseif vehicle.IsSimfphyscar then
+		return vehicle.VehicleLocked
 	else
-		if VC then return self.v:VC_isLocked() end
-		return tonumber(self.v:GetKeyValues().VehicleLocked) ~= 0
+		if VC then return vehicle:VC_isLocked() end
+		return tonumber(vehicle:GetKeyValues().VehicleLocked) ~= 0
 	end
 end
 
-function ENT:GetEngineStarted()
-	if self.v.IsScar then
-		return self.v.IsOn
-	elseif self.v.IsSimfphyscar then
-		return self.v:EngineActive()
+function ENT:GetEngineStarted(v)
+	local vehicle = v or self.v
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
+	if vehicle.IsScar then
+		return vehicle.IsOn
+	elseif vehicle.IsSimfphyscar then
+		return vehicle:EngineActive()
 	else
-		return self.v:IsEngineStarted()
+		return vehicle:IsEngineStarted()
 	end
 end
 

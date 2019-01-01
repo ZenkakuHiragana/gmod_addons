@@ -8,6 +8,7 @@ local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local dvd = DecentVehicleDestination
 local texts = dvd.Texts.Tools
 
+TOOL.IsDecentVehicleTool = true
 TOOL.Category = texts.Category
 TOOL.Name = texts.Name
 TOOL.Information = {
@@ -19,13 +20,15 @@ TOOL.Information = {
 
 TOOL.WaypointID = -1
 TOOL.ClientConVar["bidirectional"] = 0
+TOOL.ClientConVar["drawdistance"] = 6000
 TOOL.ClientConVar["fuel"] = 0
 TOOL.ClientConVar["group"] = 0
 TOOL.ClientConVar["shouldblink"] = 0
+TOOL.ClientConVar["showalways"] = 0
 TOOL.ClientConVar["showpoints"] = 1
+TOOL.ClientConVar["showupdates"] = 1
 TOOL.ClientConVar["speed"] = 40
 TOOL.ClientConVar["wait"] = 0
-TOOL.ClientConVar["showupdates"] = 1
 
 if CLIENT then
 	language.Add("tool.dv_route.name", texts.PrintName)
@@ -38,6 +41,8 @@ if CLIENT then
 	
 	language.Add("tool.dv_route.bidirectional", texts.Bidirectional)
 	language.Add("tool.dv_route.bidirectional.help", texts.BidirectionalHelp)
+	language.Add("tool.dv_route.drawdistance", texts.DrawDistance)
+	language.Add("tool.dv_route.drawdistance.help", texts.DrawDistanceHelp)
 	language.Add("tool.dv_route.fuel", texts.FuelStation)
 	language.Add("tool.dv_route.fuel.help", texts.FuelStationHelp)
 	language.Add("tool.dv_route.group", texts.WaypointGroup)
@@ -45,6 +50,7 @@ if CLIENT then
 	language.Add("tool.dv_route.save", texts.Save)
 	language.Add("tool.dv_route.shouldblink", texts.UseTurnLights)
 	language.Add("tool.dv_route.shouldblink.help", texts.UseTurnLightsHelp)
+	language.Add("tool.dv_route.showalways", texts.AlwaysDrawWaypoints)
 	language.Add("tool.dv_route.showpoints", texts.DrawWaypoints)
 	language.Add("tool.dv_route.showupdates", texts.ShowUpdates)
 	language.Add("tool.dv_route.showupdates.help", texts.ShowUpdatesHelp)
@@ -170,9 +176,11 @@ function TOOL.BuildCPanel(CPanel)
 	CPanel:Help(texts.DescriptionInMenu)
 	CPanel:CheckBox("#tool.dv_route.showupdates", "dv_route_showupdates"):SetToolTip "#tool.dv_route.showupdates.help"
 	CPanel:CheckBox("#tool.dv_route.showpoints", "dv_route_showpoints")
+	CPanel:CheckBox("#tool.dv_route.showalways", "dv_route_showalways")
 	CPanel:CheckBox("#tool.dv_route.bidirectional", "dv_route_bidirectional"):SetToolTip "#tool.dv_route.bidirectional.help"
 	CPanel:CheckBox("#tool.dv_route.shouldblink", "dv_route_shouldblink"):SetToolTip "#tool.dv_route.shouldblink.help"
 	CPanel:CheckBox("#tool.dv_route.fuel", "dv_route_fuel"):SetToolTip "#tool.dv_route.fuel.help"
+	CPanel:NumSlider("#tool.dv_route.drawdistance", "dv_route_drawdistance", 2000, 10000, 0):SetToolTip "#tool.dv_route.drawdistance.help"
 	CPanel:NumSlider("#tool.dv_route.group", "dv_route_group", 0, 20, 0):SetToolTip "#tool.dv_route.group.help"
 	CPanel:NumSlider("#tool.dv_route.wait", "dv_route_wait", 0, 100, 2):SetToolTip "#tool.dv_route.wait.help"
 	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 500, 0)

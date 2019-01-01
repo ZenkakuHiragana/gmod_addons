@@ -30,11 +30,11 @@ end
 
 function ENT:GetVehicleForward(v)
 	local vehicle = v or self:GetNWEntity "Vehicle"
-	if not IsValid(vehicle) then return end
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
 	if vehicle.IsScar then
 		return vehicle:GetForward()
 	elseif vehicle.IsSimfphyscar then
-		return vehicle:LocalToWorldAngles(vehicle.VehicleData.LocalAngForward):Forward()
+		return vehicle:LocalToWorldAngles(vehicle.VehicleData.LocalAngForward or angle_zero):Forward()
 	else
 		return vehicle:GetForward()
 	end
@@ -42,11 +42,11 @@ end
 
 function ENT:GetVehicleRight(v)
 	local vehicle = v or self:GetNWEntity "Vehicle"
-	if not IsValid(vehicle) then return end
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
 	if vehicle.IsScar then
 		return vehicle:GetRight()
 	elseif vehicle.IsSimfphyscar then
-		return vehicle:LocalToWorldAngles(vehicle.VehicleData.LocalAngForward):Right()
+		return vehicle:LocalToWorldAngles(vehicle.VehicleData.LocalAngForward or angle_zero):Right()
 	else
 		return vehicle:GetRight()
 	end
@@ -54,11 +54,11 @@ end
 
 function ENT:GetVehicleUp(v)
 	local vehicle = v or self:GetNWEntity "Vehicle"
-	if not IsValid(vehicle) then return end
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
 	if vehicle.IsScar then
 		return vehicle:GetUp()
 	elseif vehicle.IsSimfphyscar then
-		return vehicle:LocalToWorldAngles(vehicle.VehicleData.LocalAngForward):Up()
+		return vehicle:LocalToWorldAngles(vehicle.VehicleData.LocalAngForward or angle_zero):Up()
 	else
 		return vehicle:GetUp()
 	end
