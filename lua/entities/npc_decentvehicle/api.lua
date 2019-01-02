@@ -112,13 +112,11 @@ function ENT:GetELSSound(v)
 	local vehicle = v or self.v
 	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
 	if vehicle.IsScar then
-		return vehicle.SirenSound
-		and isfunction(vehicle.SirenSound.IsPlaying) 
-		and vehicle.SirenSound:IsPlaying()
+		return vehicle.SirenIsOn
 	elseif vehicle.IsSimfphyscar then
 		return vehicle.ems and vehicle.ems:IsPlaying()
 	elseif VC then
-		vehicle:VC_getELSSoundOn()
+		return vehicle:VC_getELSSoundOn() or vehicle:VC_getStates().ELS_ManualOn
 	end
 end
 

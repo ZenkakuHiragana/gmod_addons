@@ -15,6 +15,7 @@ include "api.lua"
 -- Because of this, I have to do some workaround.
 local CorrectFindInSphere = ents.FindInSphere
 local HasFixedOnLocalizedPhysics = false
+local VCModFixedAroundNPCDriver = false -- This is a stupid solution.
 for _, a in ipairs(engine.GetAddons()) do
 	if tonumber(a.wsid) == 531849338 then
 		CorrectFindInSphere = ents.RealFindInSphere or CorrectFindInSphere
@@ -26,7 +27,7 @@ for _, a in ipairs(engine.GetAddons()) do
 	end
 end
 
-ENT.sPID = Vector(2, 0, 0) -- PID parameters for steering
+ENT.sPID = Vector(1, 0, 0) -- PID parameters for steering
 ENT.tPID = Vector(1, 0, 0) -- PID parameters for throttle
 ENT.Throttle = 0
 ENT.Steering = 0
@@ -46,8 +47,9 @@ ENT.RefuelThreshold = .25 -- If the fuel is less than this fraction, the vehicle
 ENT.MaxSpeedCoefficient = 1 -- Multiplying this on the maximum speed of the vehicle.
 ENT.UseLeftTurnLight = false -- Which turn light the vehicle should turn on.
 ENT.Emergency = CurTime()
-ENT.StopByTrace = CurTime()
 ENT.IsGivingWay = CurTime() -- Giving way if CurTime() < ENT.IsGivingWay
+ENT.NextTrace = CurTime()
+ENT.StopByTrace = CurTime()
 
 ENT.Preference = { -- Some preferences for Decent Vehicle here
 	GiveWay = true, -- Whether or not Decent Vehicle gives way for vehicles with ELS
@@ -55,12 +57,14 @@ ENT.Preference = { -- Some preferences for Decent Vehicle here
 	DoTrace = true, -- Whether or not Decent Vehicle does some traces
 	LockVehicle = false, -- Whether or not Decent Vehicle allows other players to get in
 	LockVehicleDependsOnCVar = true, -- Whether or not LockVehicle depends on CVar
+	TraceInterval = 1 / 20, -- The interval between doing a trace and next time.
 }
 
 local dvd = DecentVehicleDestination
 local vector_one = Vector(1, 1, 1)
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local KmphToHUpsSqr = KmphToHUps^2
+local TraceInterval = 1 / 20 -- DV will trace 20 times per second
 local TraceMax = 64
 local TraceMinLength = 200
 local TraceMinLengthSqr = TraceMinLength^2
@@ -69,7 +73,6 @@ local TraceHeightGap = math.sqrt(3) -- The multiplier between ground and the bot
 local GiveWayTime = 5 -- Time to reset the offset for giving way
 local GobackTime = 10 -- The time to start to go backward by the trace.
 local GobackDuration = 0.7 -- The duration of going backward by the trace.
-local VCModFixedAroundNPCDriver = false -- This is a stupid solution.
 local NightSkyTextureList = {
 	sky_borealis01 = true,
 	sky_day01_09 = true,
@@ -119,11 +122,11 @@ local function GetFogInfo()
 	
 	if IsValid(FogEditor) then return true, FogEditor:GetFogEnd() end
 	if not StormFox then
-		local FogController = ents.FindByClass "env_fog_controller"
-		for i, f in ipairs(FogController) do
-			if istable(FogController) or FogController:EntIndex() < f:EntIndex() then
-				FogController = f
-			end
+		local FogTable = ents.FindByClass "env_fog_controller"
+		local FogController
+		for i = 1, #FogTable do
+			if FogController and FogController:EntIndex() > FogTable[i]:EntIndex() then continue end
+			FogController = f
 		end
 		
 		if not IsValid(FogController) then return false, 0 end
@@ -482,14 +485,13 @@ function ENT:DriveToWaypoint()
 			local offset = self.WaypointOffset * vector_up:Cross(way_direction)
 			start_to_vehicle = start_to_vehicle - offset
 			local distance = way_direction:Cross(start_to_vehicle):Dot(up)
-			local length = way_direction:Dot(start_to_vehicle)
-			local speed_dependent = -distance
-			local frac = (bound + length + speed_dependent * relspeed * 2) / way_length
+			local length = way_direction:Dot(start_to_vehicle) + bound
+			local speed_dependant = bound - distance
+			local frac = math.max(length, length - speed_dependant * relspeed) / way_length
 			local p1, p2 = startpos + offset, waypointpos + offset
 			if frac > 1 and self.NextWaypoint then
 				local nextpos = self.NextWaypoint.Target
-				local max = bound / waypointpos:Distance(nextpos)
-				frac, p1, p2 = math.min(frac - 1, max), p2, nextpos + offset
+				frac, p1, p2 = math.max(frac - 1, 0), p2, nextpos + offset
 			end
 			
 			targetpos = Lerp(frac, p1, p2)
@@ -517,11 +519,11 @@ function ENT:DriveToWaypoint()
 	
 	-- Prevents from going backward
 	local goback = forward:Dot(todestination)
-	local approach = velocity:Dot(todestination) / velocity:Length()
+	local approaching = velocity:Dot(todestination) / velocity:Length()
 	-- Handbrake when intending to go backward and actually moving forward or vise-versa
 	goback = Either(velocitydot > 0, goback < -.5, goback < .5) and -1 or 1
 	handbrake = currentspeed > 10 and goback * velocitydot < 0
-	or currentspeed > math.max(100, maxspeed * .2) and math.abs(approach) < .5
+	or currentspeed > math.max(100, maxspeed * .2) and math.abs(approaching) < .5
 	
 	if goback < 0 then
 		steering = steering > 0 and -1 or 1
@@ -538,10 +540,10 @@ function ENT:DriveToWaypoint()
 		if GobackByTrace > GobackDuration then
 			self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
 		end
-	
+		
 		if not (self.v.IsScar or self.v.IsSimfphyscar)
 		and velocitydot * goback * throttle < 0
-		and physenv.GetGravity():Dot(forward) < .1 then -- Exception #1: DV is going down
+		and dvd.GetAng(physenv.GetGravity(), forward) < .1 then -- Exception #1: DV is going down
 			throttle = 0 -- The solution of the brake issue.
 		end
 	end
@@ -575,8 +577,7 @@ end
 function ENT:DoTrace()
 	if not self.Preference.DoTrace then return end
 	if not self.Waypoint then return end
-	local prevwaypoint = self.PrevWaypoint
-	local nextwaypoint = self.NextWaypoint
+	if CurTime() < self.NextTrace then return end
 	local filter = self:GetTraceFilter()
 	local forward = self:GetVehicleForward()
 	local right = self:GetVehicleRight()
@@ -592,7 +593,8 @@ function ENT:DoTrace()
 	
 	local velocitydot = velocity:Dot(tracedir)
 	local currentspeed = math.abs(velocitydot)
-	self.TraceLength = CurTime() > self.StopByTrace and self.TraceLength or math.max(TraceMinLength, currentspeed)
+	local trlength = math.max(TraceMinLength, currentspeed)
+	self.TraceLength = Lerp((CurTime() - self.StopByTrace) / GobackTime, trlength, self.TraceLength or trlength)
 	local kmph = currentspeed / KmphToHUps
 	local groundpos = util.QuickTrace(vehiclepos, -vector_up * 32768, filter).HitPos
 	local height = (vehiclepos.z - groundpos.z) / math.sqrt(2)
@@ -600,8 +602,15 @@ function ENT:DoTrace()
 	/ Lerp(math.abs(math.sin(math.rad(self.v:GetAngles().yaw * 2))), 1, math.sqrt(2))
 	local maxs = vector_one * bound
 	local mins = -maxs
-	local start = groundpos + up * height * TraceHeightGap
-	local offset = right * bound * 3
+	local heightoffset = up * height * TraceHeightGap
+	local start = groundpos + heightoffset
+	local prevpos = self.PrevWaypoint and self.PrevWaypoint.Target or groundpos
+	local waypointpos = self.Waypoint.Target + heightoffset
+	local waypointdir = dvd.GetDir(start, waypointpos)
+	local pathdir = dvd.GetDir(prevpos, self.Waypoint.Target)
+	local sideoffset = pathdir:Cross(up) * bound * 3
+	local startonpath = prevpos + pathdir * pathdir:Dot(start - prevpos) + heightoffset
+	local trwaypoint_isvalid = dvd.GetAng(waypointpos - start, tracedir) > .7
 	local tr = {
 		start = start,
 		endpos = start + tracedir * self.TraceLength,
@@ -614,61 +623,58 @@ function ENT:DoTrace()
 		maxs = maxs, mins = mins,
 		filter = filter,
 	}
+	local trwaypoint = {
+		start = start,
+		endpos = waypointpos,
+		maxs = maxs, mins = mins,
+		filter = filter,
+	}
 	local trleft = {
-		start = start - offset,
-		endpos = start - offset + tracedir * self.TraceLength,
+		start = startonpath - sideoffset,
+		endpos = startonpath - sideoffset + waypointdir * self.TraceLength,
 		maxs = maxs, mins = mins,
 		filter = filter,
 	}
 	local trright = {
-		start = start + offset,
-		endpos = start + offset + tracedir * self.TraceLength,
+		start = startonpath + sideoffset,
+		endpos = startonpath + sideoffset + waypointdir * self.TraceLength,
 		maxs = maxs, mins = mins,
 		filter = filter,
 	}
 	
 	self.Trace = util.TraceHull(tr)
 	self.TraceBack = util.TraceHull(trback)
+	self.TraceWaypoint = util.TraceHull(trwaypoint)
 	self.TraceLeft = util.TraceHull(trleft)
 	self.TraceRight = util.TraceHull(trright)
+	self.NextTrace = self.Preference.TraceInterval or TraceInterval
+	bound = self.v:BoundingRadius() / 2
+	trwaypoint_isvalid = trwaypoint_isvalid and self.Trace.HitPos:Distance(tr.start) > self.TraceWaypoint.HitPos:Distance(tr.start)
 	debugoverlay.SweptBox(tr.start, tr.endpos, tr.mins, tr.maxs, angle_zero, .05, Color(0, 255, 0))
 	debugoverlay.SweptBox(trback.start, trback.endpos, trback.mins, trback.maxs, angle_zero, .05, Color(255, 255, 0))
+	debugoverlay.SweptBox(trwaypoint.start, trwaypoint.endpos, trwaypoint.mins, trwaypoint.maxs, angle_zero, .05, Color(0, 255, 255))
 	debugoverlay.SweptBox(trleft.start, trleft.endpos, trleft.mins, trleft.maxs, angle_zero, .05, Color(255, 255, 0))
 	debugoverlay.SweptBox(trright.start, trright.endpos, trright.mins, trright.maxs, angle_zero, .05, Color(255, 255, 0))
+	debugoverlay.SweptBox(tr.start, self.Trace.HitPos, tr.mins, tr.maxs, angle_zero, .05)
 	
 	if self.TraceLeft.StartSolid then
-		trleft.start, trleft.endpos = start, start - offset
+		trleft.start, trleft.endpos = startonpath, start - sideoffset
 		self.TraceLeft = util.TraceHull(trleft)
 	end
 	
 	if self.TraceRight.StartSolid then
-		trright.start, trright.endpos = start, start + offset
+		trright.start, trright.endpos = startonpath, start + sideoffset
 		self.TraceRight = util.TraceHull(trright)
 	end
 	
 	local ent = self.Trace.Entity
-	local waypointpos = self.Waypoint and self.Waypoint.Target
-	local trwaypoint_isvalid = false
-	if waypointpos and dvd.GetAng(waypointpos - start, tracedir) > .7 then
-		local trwaypoint = {
-			start = start,
-			endpos = waypointpos + up * height * TraceHeightGap,
-			maxs = maxs, mins = mins,
-			filter = filter,
-		}
-		self.TraceWaypoint = util.TraceHull(trwaypoint)
-		trwaypoint_isvalid = math.Round(self.Trace.HitPos:DistToSqr(tr.start) / self.TraceWaypoint.HitPos:DistToSqr(tr.start)) == 1
-		
-		if trwaypoint_isvalid and not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
-			ent = self.TraceWaypoint.Entity
-		end
-		
-		debugoverlay.SweptBox(trwaypoint.start, trwaypoint.endpos, trwaypoint.mins, trwaypoint.maxs, angle_zero, .05, Color(0, 255, 255))
-	end
-	
 	local left = IsObstacle(self.TraceLeft)
 	local right = IsObstacle(self.TraceRight)
-	local waypoint = self.TraceWaypoint and IsObstacle(self.TraceWaypoint) and trwaypoint_isvalid
+	local waypoint = trwaypoint_isvalid and IsObstacle(self.TraceWaypoint)
+	if trwaypoint_isvalid and not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
+		ent = self.TraceWaypoint.Entity
+	end
+	
 	if not (IsObstacle(self.Trace) or waypoint) then
 		if CurTime() < self.StopByTrace + GobackTime then
 			self.StopByTrace = CurTime() + .1
@@ -677,26 +683,28 @@ function ENT:DoTrace()
 		self.FormLine = false
 	elseif IsValid(ent) then
 		local dv = ent.DecentVehicle
+		local dvTrace = dv and dv.Trace and dv.Trace.Entity
+		local dvTraceW = dv and dv.TraceWaypoint and dv.TraceWaypoint.Entity
 		self.FormLine = dv and dv:AtTrafficLight()
 		
-		if dv and dv:EntIndex() < self:EntIndex()
-		and (dv.Trace and dv.Trace.Entity == self.v
-		or dv.TraceWaypoint and dv.TraceWaypoint.Entity == self.v) then
-			self.StopByTrace = CurTime() + .1
+		if dv and dv:EntIndex() < self:EntIndex() then
+			if dvTrace == self.v or dvTraceW == self.v
+			or (self:GetELSSound() and (left or right)
+			and self.TraceLength * self.Trace.Fraction / bound > 1) then
+				self.StopByTrace = CurTime() + .1
+			end
 		end
 	end
 	
 	if CurTime() > self.IsGivingWay then
 		if left and not right then
-			self.WaypointOffset = -bound * 2
+			self.WaypointOffset = -bound
 		elseif right and not left then
-			self.WaypointOffset = bound * 2
+			self.WaypointOffset = bound
 		else
 			self.WaypointOffset = 0
 		end
 	end
-	
-	debugoverlay.SweptBox(tr.start, self.Trace.HitPos, tr.mins, tr.maxs, angle_zero, .05)
 	
 	hook.Run("Decent Vehicle: Trace", self, ent)
 end
@@ -707,31 +715,24 @@ function ENT:DoGiveWay()
 	for k, ent in pairs(CorrectFindInSphere(self:GetPos(), DetectionRangeELS:GetInt())) do
 		if not ent:IsVehicle() then continue end
 		if ent == self.v then continue end
-		if self:GetVehicleForward(ent):Dot(dvd.GetDir(
-		ent:WorldSpaceCenter(), self.v:WorldSpaceCenter())) < -.7 then continue end
-		local els = ent.IsScar and ent.SirenIsOn
-		or ent.IsSimfphyscar and ent:GetEMSEnabled()
-		or VC and self.v:GetClass() == "prop_vehicle_jeep"
-		and (ent:VC_getELSSoundOn() or ent:VC_getStates().ELS_ManualOn)
+		if self:GetVehicleForward(ent):Dot(dvd.GetDir(ent:WorldSpaceCenter(), self.v:WorldSpaceCenter())) < -.7 then continue end
+		if not self:GetELSSound(ent) then continue end
 		
-		if not els then continue end
 		local left = IsObstacle(self.TraceLeft)
 		local right = IsObstacle(self.TraceRight)
 		if (dvd.DriveSide == dvd.DRIVESIDE_LEFT or right) and not left then
 			self.IsGivingWay = CurTime() + GiveWayTime
-			self.WaypointOffset = self:BoundingRadius() * 3
+			self.WaypointOffset = self.v:BoundingRadius() / 3
 			self.MaxSpeedCoefficient = .5
 		elseif (dvd.DriveSide == dvd.DRIVESIDE_RIGHT or left) and not right then
 			self.IsGivingWay = CurTime() + GiveWayTime
-			self.WaypointOffset = -self:BoundingRadius() * 3
+			self.WaypointOffset = -self.v:BoundingRadius() / 3
 			self.MaxSpeedCoefficient = .5
 		end
 		
 		return
 	end
 	
-	self.IsGivingWay = CurTime()
-	self.WaypointOffset = 0
 	self.MaxSpeedCoefficient = 1
 end
 
@@ -810,7 +811,7 @@ function ENT:Initialize()
 	local mindistance, vehicle = math.huge
 	for k, v in pairs(CorrectFindInSphere(self:GetPos(), DetectionRange:GetFloat())) do
 		if not v:IsVehicle() then continue end
-		if IsValid(v:GetParent()) and v:GetParent():IsVehicle() then return end
+		if IsValid(v:GetParent()) and v:GetParent():IsVehicle() then continue end
 		local d = self:GetPos():DistToSqr(v:GetPos())
 		if d > mindistance then continue end
 		mindistance, vehicle = d, v

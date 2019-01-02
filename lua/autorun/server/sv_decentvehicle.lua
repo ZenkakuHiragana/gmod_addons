@@ -80,6 +80,8 @@ local function OverwriteWaypoints(source)
 		if IsValid(p) then p:Sleep() end
 	end
 	
+	hook.Run("Decent Vehicle: OnLoadWaypoints", source)
+	
 	ClearUndoList()
 	if #dvd.Waypoints == 0 then return end
 	net.Start "Decent Vehicle: Retrive waypoints"
@@ -166,13 +168,19 @@ net.Receive("Decent Vehicle: Save and restore", function(_, ply)
 	if not ply:IsAdmin() then return end
 	local save = net.ReadBool()
 	local dir = "decentvehicle/"
-	local path = dir .. game.GetMap() .. ".png"
-	local fullpath = "data/" .. path
+	local path = dir .. game.GetMap()
+	local pngpath = "data/" .. path .. ".png"
+	local txtpath = "data/" .. path .. ".txt"
+	local scriptpath = "scripts/vehicles/" .. path .. ".txt"
 	if save then
 		if not file.Exists(dir, "DATA") then file.CreateDir(dir) end
-		file.Write(path, util.Compress(util.TableToJSON(dvd.GetSaveTable())))
-	elseif file.Exists(fullpath, "GAME") then
-		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(fullpath, true) or "")))
+		file.Write(path .. ".txt", util.Compress(util.TableToJSON(dvd.GetSaveTable())))
+	elseif file.Exists(txtpath, "GAME") then
+		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(txtpath, "GAME") or "")))
+	elseif file.Exists(scriptpath, "GAME") then
+		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(scriptpath, "GAME") or "")))
+	elseif file.Exists(pngpath, "GAME") then -- Backward compatibility
+		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(pngpath, "GAME") or "")))
 	end
 end)
 
@@ -199,6 +207,7 @@ function dvd.GetSaveTable()
 	end
 	
 	save.DriveSide = dvd.DriveSide
+	hook.Run("Decent Vehicle: OnSaveWaypoints", save)
 	return save
 end
 
