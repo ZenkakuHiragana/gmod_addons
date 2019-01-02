@@ -173,6 +173,11 @@ function TOOL.BuildCPanel(CPanel)
 	end
 	
 	CPanel:AddItem(ControlPresets)
+	if dvd.Texts.Version then
+		local label = CPanel:Help(dvd.Texts.Version)
+		label:SetTextColor(CPanel:GetSkin().Colours.Tree.Hover)
+	end
+	
 	CPanel:Help(texts.DescriptionInMenu)
 	CPanel:CheckBox("#tool.dv_route.showupdates", "dv_route_showupdates"):SetToolTip "#tool.dv_route.showupdates.help"
 	CPanel:CheckBox("#tool.dv_route.showpoints", "dv_route_showpoints")
@@ -187,7 +192,8 @@ function TOOL.BuildCPanel(CPanel)
 	
 	if LocalPlayer():IsAdmin() then
 		CPanel:Help ""
-		CPanel:ControlHelp(texts.ServerSettings)
+		local label = CPanel:Help(texts.ServerSettings)
+		label:SetTextColor(CPanel:GetSkin().Colours.Tree.Hover)
 		CPanel:CheckBox(texts.DriveSide, "decentvehicle_driveside")
 		CPanel:CheckBox(texts.ShouldGoToRefuel, "decentvehicle_gotorefuel")
 		CPanel:CheckBox(texts.LockVehicle, "decentvehicle_lock"):SetToolTip(texts.LockVehicleHelp)

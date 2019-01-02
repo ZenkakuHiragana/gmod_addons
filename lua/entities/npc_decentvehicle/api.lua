@@ -14,7 +14,7 @@ local LIGHTLEVEL = {
 
 function ENT:GetMaxSteeringAngle()
 	if self.v.IsScar then
-		return self.v.MaxSteerForce * 6 -- Obviously this is not actually steering angle
+		return self.v.MaxSteerForce * 3 -- Obviously this is not actually steering angle
 	elseif self.v.IsSimfphyscar then
 		return self.v.VehicleData.steerangle
 	else
@@ -51,8 +51,9 @@ function ENT:GetRunningLights()
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
 		return self.SimfphysRunningLights
-	elseif VC then
-		return self.v:VC_getStates().RunningLights
+	elseif isfunction(self.v.VC_getStates) then
+		local states = self.v:VC_getStates()
+		return istable(states) and states.RunningLights
 	end
 end
 
@@ -61,8 +62,9 @@ function ENT:GetFogLights()
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
 		return self.SimfphysFogLights
-	elseif VC then
-		return self.v:VC_getStates().FogLights
+	elseif isfunction(self.v.VC_getStates) then
+		local states = self.v:VC_getStates()
+		return istable(states) and states.FogLights
 	end
 end
 
@@ -71,9 +73,9 @@ function ENT:GetLights(highbeams)
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
 		return Either(highbeams, self.v:GetLampsEnabled(), self.v:GetLightsEnabled())
-	elseif VC then
+	elseif isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
-		return Either(highbeams, states.HighBeams, states.LowBeams)
+		return istable(states) and Either(highbeams, states.HighBeams, states.LowBeams)
 	end
 end
 
@@ -81,9 +83,9 @@ function ENT:GetTurnLight(left)
 	if self.v.IsScar then -- Does SCAR have turn lights?
 	elseif self.v.IsSimfphyscar then
 		return Either(left, self.TurnLightLeft, self.TurnLightRight)
-	elseif VC then
+	elseif isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
-		return Either(left, states.TurnLightLeft, states.TurnLightRight)
+		return istable(states) and Either(left, states.TurnLightLeft, states.TurnLightRight)
 	end
 end
 
@@ -91,8 +93,9 @@ function ENT:GetHazardLights()
 	if self.v.IsScar then
 	elseif self.v.IsSimfphyscar then
 		return self.HazardLights
-	elseif VC then
-		return self.v:VC_getStates().HazardLights
+	elseif isfunction(self.v.VC_getStates) then
+		local states = self.v:VC_getStates()
+		return istable(states) and states.HazardLights
 	end
 end
 
@@ -103,7 +106,7 @@ function ENT:GetELS(v)
 		return vehicle.SirenIsOn
 	elseif vehicle.IsSimfphyscar then
 		return vehicle:GetEMSEnabled()
-	elseif VC then
+	elseif isfunction(vehicle.VC_getELSLightsOn) then
 		return vehicle:VC_getELSLightsOn()
 	end
 end
@@ -118,7 +121,7 @@ function ENT:GetELSSound(v)
 	elseif isfunction(vehicle.VC_getELSSoundOn)
 	and isfunction(vehicle.VC_getStates) then
 		local states = vehicle:VC_getStates()
-		return vehicle:VC_getELSSoundOn() or states and states.ELS_ManualOn
+		return vehicle:VC_getELSSoundOn() or istable(states) and states.ELS_ManualOn
 	end
 end
 
@@ -170,7 +173,7 @@ function ENT:SetRunningLights(on)
 		self.v:SetFogLightsEnabled(not on)
 		numpad.Activate(self, KEY_V, false)
 		self.keystate = nil
-	elseif VC then
+	elseif isfunction(self.v.VC_setRunningLights) then
 		self.v:VC_setRunningLights(on)
 	end
 end
@@ -185,7 +188,7 @@ function ENT:SetFogLights(on)
 		self.v:SetFogLightsEnabled(not on)
 		numpad.Activate(self, KEY_V, false)
 		self.keystate = nil
-	elseif VC then
+	elseif isfunction(self.v.VC_setFogLights) then
 		self.v:VC_setFogLights(on)
 	end
 end
@@ -231,7 +234,8 @@ function ENT:SetLights(on, highbeams)
 		end
 		
 		self.keystate = nil
-	elseif VC then
+	elseif isfunction(self.v.VC_setHighBeams)
+	and isfunction(self.v.VC_setLowBeams) then
 		if on == self:GetLights(highbeams) then return end
 		if highbeams then
 			self.v:VC_setHighBeams(on)
@@ -253,7 +257,8 @@ function ENT:SetTurnLight(on, left)
 		self.TurnLightLeft = on and left
 		self.TurnLightRight = on and not left
 		self.HazardLights = false
-	elseif VC then
+	elseif isfunction(self.v.VC_setTurnLightLeft)
+	and isfunction(self.v.VC_setTurnLightRight) then
 		self.v:VC_setTurnLightLeft(on and left)
 		self.v:VC_setTurnLightRight(on and not left)
 	end
@@ -270,7 +275,7 @@ function ENT:SetHazardLights(on)
 		self.TurnLightLeft = false
 		self.TurnLightRight = false
 		self.HazardLights = true
-	elseif VC then
+	elseif isfunction(self.v.VC_setHazardLights) then
 		self.v:VC_setHazardLights(on)
 	end
 end
@@ -293,7 +298,8 @@ function ENT:SetELS(on)
 		self.v.emson = not on
 		self.v.KeyPressedTime = CurTime() - dt
 		numpad.Deactivate(self, KEY_H, false)
-	elseif VC then
+	elseif isfunction(self.v.VC_setELSLights)
+	and isfunction(self.v.VC_setELSSound) then
 		self.v:VC_setELSLights(on)
 		self.v:VC_setELSSound(on)
 	end
@@ -316,7 +322,7 @@ function ENT:SetELSSound(on)
 				self.v.ems:Stop()
 			end
 		end
-	elseif VC then
+	elseif isfunction(self.v.VC_setELSSound) then
 		self.v:VC_setELSSound(on)
 	end
 end
@@ -335,8 +341,10 @@ function ENT:SetHorn(on)
 		else
 			self.v.HornKeyIsDown = false
 		end
-	elseif VC then
+	elseif isfunction(self.v.VC_getStates)
+	and isfunction(self.v.VC_setStates) then
 		local states = self.v:VC_getStates()
+		if not istable(states) then return end
 		states.HornOn = true
 		self.v:VC_setStates(states)
 	end
@@ -362,7 +370,8 @@ function ENT:SetLocked(locked)
 			seat:Fire(locked and "Lock" or "Unlock")
 		end
 		
-		if VC then
+		if isfunction(self.v.VC_lock)
+		and isfunction(self.v.VC_unLock) then
 			if locked then
 				self.v:VC_lock()
 			else
@@ -387,7 +396,7 @@ function ENT:SetEngineStarted(on)
 		else
 			self.v:StopEngine()
 		end
-	else
+	elseif isfunction(self.v.StartEngine) then
 		self.v:StartEngine(on)
 	end
 end

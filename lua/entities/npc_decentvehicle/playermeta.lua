@@ -39,11 +39,10 @@ function ENT:KeyDown(key)
 	or false
 end
 
-if DecentVehicleDestination.HasChangedVehicleMeta then return end
-DecentVehicleDestination.HasChangedVehicleMeta = true
-
+local dvd = DecentVehicleDestination
 local vehiclemeta = FindMetaTable "Vehicle"
 local GetDriver = vehiclemeta.GetDriver
+if not dvd or dvd.HasChangedVehicleMeta then return end
 function vehiclemeta:GetDriver(...)
 	if self.DecentVehicle and self.__IsSW_Motorbike then
 		return self.DecentVehicle
@@ -51,3 +50,5 @@ function vehiclemeta:GetDriver(...)
 	
 	return GetDriver(self, ...)
 end
+
+dvd.HasChangedVehicleMeta = true

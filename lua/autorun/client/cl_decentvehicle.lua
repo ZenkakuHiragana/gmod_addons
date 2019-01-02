@@ -12,13 +12,15 @@ include "autorun/decentvehicle.lua"
 local dvd = DecentVehicleDestination
 local function NotifyUpdate(d)
 	if not d then return end
+	local header = d.description:match "Version[^%c]+" or ""
+	dvd.Texts.Version = "Decent Vehicle: " .. header
+	
 	local showupdates = GetConVar "dv_route_showupdates"
 	if not (showupdates and showupdates:GetBool()) then return end
 	
 	if not file.Exists("decentvehicle", "DATA") then file.CreateDir "decentvehicle" end
 	local versioncheck = "decentvehicle/version.txt"
 	local checkedversion = file.Read(versioncheck) or 0
-	local header = d.description:match "Version[^%c]+" or ""
 	local version = string.Explode(".", header:sub(8):Trim())
 	if version[1] and tonumber(version[1]) > dvd.Version[1]
 	or version[2] and tonumber(version[2]) > dvd.Version[2]

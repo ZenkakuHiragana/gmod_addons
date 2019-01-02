@@ -27,7 +27,7 @@ for _, a in ipairs(engine.GetAddons()) do
 	end
 end
 
-ENT.sPID = Vector(1, 0, .5) -- PID parameters for steering
+ENT.sPID = Vector(1, 0, 0) -- PID parameters for steering
 ENT.tPID = Vector(1, 0, 0) -- PID parameters for throttle
 ENT.Throttle = 0
 ENT.Steering = 0
@@ -341,8 +341,9 @@ function ENT:IsDestroyed()
 		return self.v:IsDestroyed()
 	elseif self.v.IsSimfphyscar then
 		return self.v:GetCurHealth() <= 0
-	elseif VC and isfunction(self.v.VC_GetHealth) then
-		return self.v:VC_GetHealth(false) <= 0
+	elseif isfunction(self.v.VC_GetHealth) then
+		local health = self.v:VC_GetHealth(false)
+		return isnumber(health) and health <= 0
 	end
 end
 
@@ -419,7 +420,8 @@ function ENT:ShouldRefuel()
 		return self.v:GetFuelPercent() < self.RefuelThreshold
 	elseif self.v.IsSimfphyscar then
 		return self.v:GetFuel() / self.v:GetMaxFuel() < self.RefuelThreshold
-	elseif VC then
+	elseif isfunction(self.v.VC_fuelGet)
+	and isfunction(self.v.VC_fuelGetMax) then
 		return self.v:VC_fuelGet(false) / self.v:VC_fuelGetMax() < self.RefuelThreshold
 	end
 end
@@ -430,7 +432,8 @@ function ENT:Refuel()
 		self.v:Refuel()
 	elseif self.v.IsSimfphyscar then
 		self.v:SetFuel(self.v:GetMaxFuel())
-	elseif VC then
+	elseif isfunction(self.v.VC_fuelSet)
+	and isfunction(self.v.VC_fuelGetMax) then
 		self.v:VC_fuelSet(self.v:VC_fuelGetMax())
 	end
 end
@@ -871,7 +874,7 @@ function ENT:Initialize()
 		self.v, vehicle.DecentVehicle = vehicle, self
 		self.OnCollideCallback = self.v:AddCallback("PhysicsCollide", self.CarCollide)
 		
-		if not VC or VCModFixedAroundNPCDriver then
+		if not isfunction(self.v.VC_getStates) or VCModFixedAroundNPCDriver then
 			local oldname = self.v:GetName()
 			self.v:SetName "decentvehicle"
 			self.NPCDriver = ents.Create "npc_vehicledriver"
@@ -969,7 +972,7 @@ function ENT:OnRemove()
 	util.Effect("propspawn", e) -- Perform a spawn effect.
 end
 
-if not VC then return end -- WORKAROUND!!!
+if VCModFixedAroundNPCDriver then return end -- WORKAROUND!!!
 hook.Add("CanPlayerEnterVehicle", "Decent Vehicle: VCMod is not compatible with npc_vehicledriver", function(ply, vehicle, role)
-	if vehicle.DecentVehicle then return false end
+	if isfunction(vehicle.VC_getStates) and vehicle.DecentVehicle then return false end
 end)
