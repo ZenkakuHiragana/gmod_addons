@@ -115,8 +115,10 @@ function ENT:GetELSSound(v)
 		return vehicle.SirenIsOn
 	elseif vehicle.IsSimfphyscar then
 		return vehicle.ems and vehicle.ems:IsPlaying()
-	elseif VC then
-		return vehicle:VC_getELSSoundOn() or vehicle:VC_getStates().ELS_ManualOn
+	elseif isfunction(vehicle.VC_getELSSoundOn)
+	and isfunction(vehicle.VC_getStates) then
+		local states = vehicle:VC_getStates()
+		return vehicle:VC_getELSSoundOn() or states and states.ELS_ManualOn
 	end
 end
 
@@ -127,8 +129,9 @@ function ENT:GetHorn(v)
 		return vehicle.Horn:IsPlaying()
 	elseif vehicle.IsSimfphyscar then
 		return vehicle.HornKeyIsDown
-	elseif VC then
-		return vehicle:VC_getStates().HornOn
+	elseif isfunction(vehicle.VC_getStates) then
+		local states = vehicle:VC_getStates()
+		return istable(states) and states.HornOn
 	end
 end
 
@@ -140,7 +143,7 @@ function ENT:GetLocked(v)
 	elseif vehicle.IsSimfphyscar then
 		return vehicle.VehicleLocked
 	else
-		if VC then return vehicle:VC_isLocked() end
+		if isfunction(vehicle.VC_isLocked) then return vehicle:VC_isLocked() end
 		return tonumber(vehicle:GetKeyValues().VehicleLocked) ~= 0
 	end
 end
