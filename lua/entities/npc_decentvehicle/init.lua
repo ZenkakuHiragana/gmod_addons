@@ -48,6 +48,8 @@ ENT.MaxSpeedCoefficient = 1 -- Multiplying this on the maximum speed of the vehi
 ENT.UseLeftTurnLight = false -- Which turn light the vehicle should turn on.
 ENT.Emergency = CurTime()
 ENT.IsGivingWay = CurTime() -- Giving way if CurTime() < ENT.IsGivingWay
+ENT.NextDoLights = CurTime()
+ENT.NextGiveWay = CurTime()
 ENT.NextTrace = CurTime()
 ENT.StopByTrace = CurTime()
 
@@ -57,14 +59,19 @@ ENT.Preference = { -- Some preferences for Decent Vehicle here
 	DoTrace = true, -- Whether or not Decent Vehicle does some traces
 	LockVehicle = false, -- Whether or not Decent Vehicle allows other players to get in
 	LockVehicleDependsOnCVar = true, -- Whether or not LockVehicle depends on CVar
-	TraceInterval = 1 / 20, -- The interval between doing a trace and next time.
+	TraceInterval = 1 / 20,
+}
+
+ENT.Interval = { -- The interval of execution.
+	DoLights = 1 / 10, -- Checking lights
+	GiveWay = 1 / 20, -- Checking for giving way
+	Trace = 1 / 20, -- The time between doing a trace and next time.
 }
 
 local dvd = DecentVehicleDestination
 local vector_one = Vector(1, 1, 1)
 local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local KmphToHUpsSqr = KmphToHUps^2
-local TraceInterval = 1 / 20 -- DV will trace 20 times per second
 local TraceMax = 64
 local TraceMinLength = 200
 local TraceMinLengthSqr = TraceMinLength^2
@@ -73,6 +80,11 @@ local TraceHeightGap = math.sqrt(3) -- The multiplier between ground and the bot
 local GiveWayTime = 5 -- Time to reset the offset for giving way
 local GobackTime = 10 -- The time to start to go backward by the trace.
 local GobackDuration = 0.7 -- The duration of going backward by the trace.
+local Interval = {
+	DoLights = 1 / 10,
+	GiveWay = 1 / 20,
+	Trace = 1 / 20, -- DV will trace 20 times per second by default
+}
 local NightSkyTextureList = {
 	sky_borealis01 = true,
 	sky_day01_09 = true,
@@ -204,9 +216,11 @@ function ENT:GetVehicleParams()
 		self.BrakePower = self.v.BreakForce / 1000
 		self.MaxSpeed = self.v.MaxSpeed
 		self.MaxRevSpeed = self.v.ReverseMaxSpeed
+		self.Mass = self.v.CarMass
 	elseif self.v.IsSimfphyscar then
 		self.BrakePower = self.v:GetBrakePower()
-		self.MaxSpeed = self.v.Mass * self.v.Efficiency * self.v.PeakTorque / self.v.MaxGrip
+		self.Mass = self.v.Mass
+		self.MaxSpeed = self.Mass * self.v.Efficiency * self.v.PeakTorque / self.v.MaxGrip
 		self.MaxRevSpeed = self.MaxSpeed * math.abs(math.min(unpack(self.v.Gears)) / math.max(unpack(self.v.Gears)))
 		local positive_offset, num_positive, negative_offset, num_negative = 0, 0, 0, 0
 		for _, w in ipairs(self.v.Wheels) do
@@ -565,6 +579,7 @@ function ENT:DriveToWaypoint()
 end
 
 function ENT:DoLights()
+	if CurTime() < self.NextDoLights then return end
 	local fogenabled, fogend = GetFogInfo()
 	local fog = fogenabled and fogend < 5000
 	self:SetRunningLights(self:GetEngineStarted())
@@ -572,6 +587,7 @@ function ENT:DoLights()
 	self:SetFogLights(fog)
 	self:SetTurnLight(self.Waypoint and self.Waypoint.UseTurnLights or false, self.UseLeftTurnLight)
 	self:SetHazardLights(CurTime() < self.Emergency)
+	self.NextDoLights = CurTime() + (self.Interval.DoLights or Interval.DoLights)
 end
 
 function ENT:DoTrace()
@@ -608,7 +624,7 @@ function ENT:DoTrace()
 	local waypointpos = self.Waypoint.Target + heightoffset
 	local waypointdir = dvd.GetDir(start, waypointpos)
 	local pathdir = dvd.GetDir(prevpos, self.Waypoint.Target)
-	local sideoffset = pathdir:Cross(up) * bound * 3
+	local sideoffset = pathdir:Cross(up) * bound * 2.5
 	local startonpath = prevpos + pathdir * pathdir:Dot(start - prevpos) + heightoffset
 	local trwaypoint_isvalid = dvd.GetAng(waypointpos - start, tracedir) > .7
 	local tr = {
@@ -647,7 +663,7 @@ function ENT:DoTrace()
 	self.TraceWaypoint = util.TraceHull(trwaypoint)
 	self.TraceLeft = util.TraceHull(trleft)
 	self.TraceRight = util.TraceHull(trright)
-	self.NextTrace = self.Preference.TraceInterval or TraceInterval
+	self.NextTrace = CurTime() + (self.Interval.Trace or Interval.Trace)
 	bound = self.v:BoundingRadius() / 2
 	trwaypoint_isvalid = trwaypoint_isvalid and self.Trace.HitPos:Distance(tr.start) > self.TraceWaypoint.HitPos:Distance(tr.start)
 	debugoverlay.SweptBox(tr.start, tr.endpos, tr.mins, tr.maxs, angle_zero, .05, Color(0, 255, 0))
@@ -712,6 +728,9 @@ end
 function ENT:DoGiveWay()
 	if not self.Preference.GiveWay then return end
 	if CurTime() < self.IsGivingWay then return end
+	if CurTime() < self.NextGiveWay then return end
+	self.NextGiveWay = CurTime() + (self.Interval.GiveWay or Interval.GiveWay)
+	self.MaxSpeedCoefficient = 1
 	for k, ent in pairs(CorrectFindInSphere(self:GetPos(), DetectionRangeELS:GetInt())) do
 		if not ent:IsVehicle() then continue end
 		if ent == self.v then continue end
@@ -732,8 +751,6 @@ function ENT:DoGiveWay()
 		
 		return
 	end
-	
-	self.MaxSpeedCoefficient = 1
 end
 
 function ENT:FindFirstWaypoint()
