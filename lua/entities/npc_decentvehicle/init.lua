@@ -27,7 +27,7 @@ for _, a in ipairs(engine.GetAddons()) do
 	end
 end
 
-ENT.sPID = Vector(1, 0, 0) -- PID parameters for steering
+ENT.sPID = Vector(1, 0, .5) -- PID parameters for steering
 ENT.tPID = Vector(1, 0, 0) -- PID parameters for throttle
 ENT.Throttle = 0
 ENT.Steering = 0
@@ -499,8 +499,8 @@ function ENT:DriveToWaypoint()
 			local offset = self.WaypointOffset * vector_up:Cross(way_direction)
 			start_to_vehicle = start_to_vehicle - offset
 			local distance = way_direction:Cross(start_to_vehicle):Dot(up)
-			local length = way_direction:Dot(start_to_vehicle) + bound
-			local speed_dependant = bound - distance
+			local length = way_direction:Dot(start_to_vehicle) + bound * 1.5
+			local speed_dependant = bound * 1.5 - distance
 			local frac = math.max(length, length - speed_dependant * relspeed) / way_length
 			local p1, p2 = startpos + offset, waypointpos + offset
 			if frac > 1 and self.NextWaypoint then
@@ -609,7 +609,7 @@ function ENT:DoTrace()
 	
 	local velocitydot = velocity:Dot(tracedir)
 	local currentspeed = math.abs(velocitydot)
-	local trlength = math.max(TraceMinLength, currentspeed)
+	local trlength = math.max(TraceMinLength, currentspeed * .8)
 	self.TraceLength = Lerp((CurTime() - self.StopByTrace) / GobackTime, trlength, self.TraceLength or trlength)
 	local kmph = currentspeed / KmphToHUps
 	local groundpos = util.QuickTrace(vehiclepos, -vector_up * 32768, filter).HitPos
@@ -647,13 +647,13 @@ function ENT:DoTrace()
 	}
 	local trleft = {
 		start = startonpath - sideoffset,
-		endpos = startonpath - sideoffset + waypointdir * self.TraceLength,
+		endpos = startonpath - sideoffset + pathdir * self.TraceLength,
 		maxs = maxs, mins = mins,
 		filter = filter,
 	}
 	local trright = {
 		start = startonpath + sideoffset,
-		endpos = startonpath + sideoffset + waypointdir * self.TraceLength,
+		endpos = startonpath + sideoffset + pathdir * self.TraceLength,
 		maxs = maxs, mins = mins,
 		filter = filter,
 	}

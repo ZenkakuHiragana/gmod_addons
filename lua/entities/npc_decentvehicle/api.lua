@@ -14,7 +14,7 @@ local LIGHTLEVEL = {
 
 function ENT:GetMaxSteeringAngle()
 	if self.v.IsScar then
-		return self.v.MaxSteerForce * 5 -- Obviously this is not actually steering angle
+		return self.v.MaxSteerForce * 6 -- Obviously this is not actually steering angle
 	elseif self.v.IsSimfphyscar then
 		return self.v.VehicleData.steerangle
 	else
