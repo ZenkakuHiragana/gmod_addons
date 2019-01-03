@@ -552,7 +552,6 @@ function ENT:DriveToWaypoint()
 	if not self:ShouldStopGoingback() and 0 < GobackByTrace and GobackByTrace < GobackDuration then
 		goback = -1
 		handbrake = false
-		steering = -steering
 	else
 		if GobackByTrace > GobackDuration then
 			self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
@@ -578,7 +577,7 @@ function ENT:DriveToWaypoint()
 	hook.Run("Decent Vehicle: Drive", self)
 	local rest_length = dvd.GetDir(startpos or vehiclepos, waypointpos):Dot(waypointpos - vehiclepos)
 	local threshold = math.max(bound, math.max(0, velocitydot) * self.Prependicular)
-	return rest_length < threshold
+	return rest_length < threshold and not IsObstacle(self.TraceNextWaypoint)
 end
 
 function ENT:DoLights()
@@ -660,6 +659,16 @@ function ENT:DoTrace()
 		maxs = maxs, mins = mins,
 		filter = filter,
 	}
+	if self.NextWaypoint then
+		local trnext = {
+			start = start,
+			endpos = self.NextWaypoint.Target + heightoffset,
+			maxs = maxs, mins = mins,
+			filter = filter,
+		}
+		self.TraceNextWaypoint = util.TraceHull(trnext)
+		debugoverlay.SweptBox(trnext.start, trnext.endpos, trnext.mins, trnext.maxs, angle_zero, .05, Color(0, 255, 255))
+	end
 	
 	self.Trace = util.TraceHull(tr)
 	self.TraceBack = util.TraceHull(trback)
@@ -671,7 +680,7 @@ function ENT:DoTrace()
 	trwaypoint_isvalid = trwaypoint_isvalid and self.Trace.HitPos:Distance(tr.start) > self.TraceWaypoint.HitPos:Distance(tr.start)
 	debugoverlay.SweptBox(tr.start, tr.endpos, tr.mins, tr.maxs, angle_zero, .05, Color(0, 255, 0))
 	debugoverlay.SweptBox(trback.start, trback.endpos, trback.mins, trback.maxs, angle_zero, .05, Color(255, 255, 0))
-	debugoverlay.SweptBox(trwaypoint.start, trwaypoint.endpos, trwaypoint.mins, trwaypoint.maxs, angle_zero, .05, Color(0, 255, 255))
+	debugoverlay.SweptBox(trwaypoint.start, trwaypoint.endpos, trwaypoint.mins, trwaypoint.maxs, angle_zero, .05, Color(0, 255, 0))
 	debugoverlay.SweptBox(trleft.start, trleft.endpos, trleft.mins, trleft.maxs, angle_zero, .05, Color(255, 255, 0))
 	debugoverlay.SweptBox(trright.start, trright.endpos, trright.mins, trright.maxs, angle_zero, .05, Color(255, 255, 0))
 	debugoverlay.SweptBox(tr.start, self.Trace.HitPos, tr.mins, tr.maxs, angle_zero, .05)
@@ -687,14 +696,28 @@ function ENT:DoTrace()
 	end
 	
 	local ent = self.Trace.Entity
+	local forward = IsObstacle(self.Trace)
 	local left = IsObstacle(self.TraceLeft)
 	local right = IsObstacle(self.TraceRight)
 	local waypoint = trwaypoint_isvalid and IsObstacle(self.TraceWaypoint)
+	if forward and not waypoint and tracedir:Dot(waypointdir) > 0 then
+		local frac = .8
+		local trhit = {
+			start = start * (1 - frac) + self.Trace.HitPos * frac,
+			endpos = trwaypoint.endpos,
+			maxs = maxs, mins = mins,
+			filter = filter,
+		}
+		
+		forward = IsObstacle(util.TraceHull(trhit))
+		debugoverlay.SweptBox(trhit.start, trhit.endpos, trhit.mins, trhit.maxs, angle_zero, .05, Color(0, 255, 0))
+	end
+	
 	if trwaypoint_isvalid and not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
 		ent = self.TraceWaypoint.Entity
 	end
 	
-	if not (IsObstacle(self.Trace) or waypoint) then
+	if not (forward or waypoint) then
 		if CurTime() < self.StopByTrace + GobackTime then
 			self.StopByTrace = CurTime() + .1
 		end

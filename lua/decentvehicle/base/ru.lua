@@ -7,7 +7,9 @@ return {
     CVars = {
         DetectionRange = "Decent Vehicle: Транспорт найденый в этом радиусе будет автоматически управляться.",
         DetectionRangeELS = "Decent Vehicle: Радиус определенния транспорта с ELS, чтобы уступить им дорогу",
-        DriveSide = "Decent Vehicle: Решает какое движение.\n0: Правостороннее (Европа, Америка итд.)\n1: Левостороннее (Британия, Австралия итд.)",
+        DriveSide = [[Decent Vehicle: Решает какое движение.
+0: Правостороннее (Европа, Америка итд.)
+1: Левостороннее (Британия, Австралия итд.)]],
 		LockVehicle = "Decent Vehicle: Закрывать транспорт при спавне?",
         ShouldGoToRefuel = "Decent Vehicle: 1: Ехать на АЗС чтобы заправитьсч.  0: заправляться автоматичкски.",
         TimeToStopEmergency = "Decent Vehicle: Время в секундах чтобы выключить аварийные сигналы.",
@@ -17,11 +19,16 @@ return {
 2: Ходовые и фары
 3: Использовать все.]],
     },
+	DeletedWaypoints = "Decent Vehicle: Waypoints are deleted!",
     Errors = {
         AttachmentNotFound = "Decent Vehicle: attachment vehicle_feet_passenger0 не найден!",
         WaypointNotFound = "Decent Vehicle: Точка не найден!",
     },
+	GeneratedWaypoints = "Decent Vehicle: Waypoints are generated!",
+	LoadedWaypoints = "Decent Vehicle: Waypoints are restored!",
     OldVersionNotify = "Decent Vehicle: Эта версия устарела!",
+	OnDelete = "You are about to DELETE the waypoints.",
+	OnGenerate = "You are about to GENERATE the waypoints.",
     OnLoad = "Вы собираетесь ЗАГРУЗИТЬ точки.",
     OnSave = "Вы собираетесь СОХРАНИТЬ точки.",
     SavedWaypoints = "Decent Vehicle: Точки сохранены!",
@@ -32,6 +39,7 @@ return {
         Bidirectional = "Bi-directional соединение",
         BidirectionalHelp = "Connect bi-directional link automatically.",
         Category = "GreatZenkakuMan's tools",
+		Delete = "Delete waypoints",
         Description = "Создайте свой маршрут для транспорта!",
         DescriptionInMenu = "Создать маршруты для Decent Vehicle",
         DetectionRange = "Радиус для спавна",
@@ -42,6 +50,7 @@ return {
         DriveSide = "Левостороннее движение",
         FuelStation = "Заправка",
         FuelStationHelp = "Decent Vehicle будет ехать сюда чтобы заправиться.",
+		Generate = "Generate waypoints",
         Instructions = "Выберете точку и/или светофор чтобы соединить их.  Выберете транспорт управляемый Decent Vehicle, чтобы назначить ему группу.",
         Left = {
             "Создать новую точку.",

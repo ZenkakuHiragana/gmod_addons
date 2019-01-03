@@ -11,6 +11,9 @@ resource.AddWorkshop "1587455087"
 -- Waypoints are held in normal table.
 -- They're found by brute-force search.
 local dvd = DecentVehicleDestination
+local HULLS = 10
+local MAX_NODES = 1500
+local NODE_VERSION_NUMBER = 37
 local Exceptions = {Target = true, TrafficLight = true}
 local function GetWaypointFromID(id)
 	return assert(dvd.Waypoints[id], dvd.Texts.Errors.WaypointNotFound)
@@ -20,6 +23,7 @@ local function ClearUndoList()
 	for id, undolist in pairs(undo.GetTable()) do
 		for i, undotable in pairs(undolist) do
 			if undotable.Name ~= "Decent Vehicle Waypoint" then continue end
+			PrintTable(undotable)
 			undolist[i] = nil
 		end
 	end
@@ -27,7 +31,7 @@ end
 
 local function ConfirmSaveRestore(ply, save)
 	net.Start "Decent Vehicle: Save and restore"
-	net.WriteBool(save)
+	net.WriteUInt(save, dvd.POPUPWINDOW.BITS)
 	net.Send(ply)
 end
 
@@ -47,6 +51,7 @@ local function OverwriteWaypoints(source)
 	local side = GetConVar "decentvehicle_driveside"
 	if side then side:SetInt(source.DriveSide) end
 	dvd.DriveSide = source.DriveSide
+	ClearUndoList()
 	table.Empty(dvd.Waypoints)
 	net.Start "Decent Vehicle: Clear waypoints"
 	net.Broadcast()
@@ -82,7 +87,140 @@ local function OverwriteWaypoints(source)
 	
 	hook.Run("Decent Vehicle: OnLoadWaypoints", source)
 	
+	if #dvd.Waypoints == 0 then return end
+	net.Start "Decent Vehicle: Retrive waypoints"
+	WriteWaypoint(1)
+	net.Broadcast()
+end
+
+local function ParseAIN()
+	local path = string.format("maps/graphs/%s.ain", game.GetMap())
+	local f = file.Open(path, "rb", "GAME")
+	if not f then return end
+	
+	local node_version = f:ReadLong()
+	local map_version = f:ReadLong()
+	local numNodes = f:ReadLong()
+	local nodegraph = {
+		node_version = node_version,
+		map_version = map_version,
+	}
+	
+	assert(node_version == NODE_VERSION_NUMBER, "Decent Vehicle: Unknown graph file.")
+	assert(0 <= numNodes and numNodes <= MAX_NODES, "Decent Vehicle: Graph file has an unexpected amount of nodes")
+	
+	local nodes = {}
+	for i = 1, numNodes do
+		local x = f:ReadFloat()
+		local y = f:ReadFloat()
+		local z = f:ReadFloat()
+		local yaw = f:ReadFloat()
+		local v = Vector(x, y, z)
+		local flOffsets = {}
+		for i = 1, HULLS do
+			flOffsets[i] = f:ReadFloat()
+		end
+		
+		local nodetype = f:ReadByte()
+		local nodeinfo = f:ReadUShort()
+		local zone = f:ReadShort()
+		local node = {
+			pos = v,
+			yaw = yaw,
+			offset = flOffsets,
+			type = nodetype,
+			info = nodeinfo,
+			zone = zone,
+			neighbor = {},
+			numneighbors = 0,
+			link = {},
+			numlinks = 0
+		}
+		
+		table.insert(nodes, node)
+	end
+	
+	local numLinks = f:ReadLong()
+	local links = {}
+	for i = 1, numLinks do
+		local link = {}
+		local srcID = f:ReadShort()
+		local destID = f:ReadShort()
+		local nodesrc = assert(nodes[srcID + 1], "Decent Vehicle: Unknown source node")
+		local nodedest = assert(nodes[destID + 1], "Decent Vehicle: Unknown destination node")
+		table.insert(nodesrc. neighbor, nodedest)
+		nodesrc.numneighbors = nodesrc.numneighbors + 1
+		
+		table.insert(nodesrc.link, link)
+		nodesrc.numlinks = nodesrc.numlinks + 1
+		link.src, link.srcID = nodesrc, srcID + 1
+		
+		table.insert(nodedest.neighbor, nodesrc)
+		nodedest.numneighbors = nodedest.numneighbors + 1
+		
+		table.insert(nodedest.link, link)
+		nodedest.numlinks = nodedest.numlinks + 1
+		link.dest, link.destID = nodedest, destID + 1
+		
+		link.move = {}
+		for i = 1, HULLS do
+			link.move[i] = f:ReadByte()
+		end
+		
+		table.insert(links, link)
+	end
+	
+	local lookup = {}
+	for i = 1, numNodes do
+		table.insert(lookup, f:ReadLong())
+	end
+	
+	f:Close()
+	nodegraph.nodes = nodes
+	nodegraph.links = links
+	nodegraph.lookup = lookup
+	return nodegraph
+end
+
+local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
+local function GenerateWaypoints()
+	dvd.Nodegraph = dvd.Nodegraph or ParseAIN()
 	ClearUndoList()
+	table.Empty(dvd.Waypoints)
+	net.Start "Decent Vehicle: Clear waypoints"
+	net.Broadcast()
+	
+	local owner = player.GetByID(1)
+	local speed = GetConVar "dv_route_speed":GetFloat() * KmphToHUps
+	local time = CurTime()
+	local map = {}
+	for i, n in ipairs(dvd.Nodegraph.nodes) do
+		if n.type ~= 2 then continue end
+		table.insert(dvd.Waypoints, {
+			FuelStation = false,
+			Group = 0,
+			Neighbors = {},
+			Owner = owner,
+			SpeedLimit = speed,
+			Target = util.QuickTrace(n.pos + vector_up * dvd.WaypointSize, -vector_up * 32768).HitPos,
+			Time = time,
+			TrafficLight = nil,
+			UseTurnLights = false,
+			WaitUntilNext = 0,
+		})
+		
+		map[i] = #dvd.Waypoints
+	end
+	
+	for i, link in ipairs(dvd.Nodegraph.links) do
+		if link.move[HULL_LARGE_CENTERED + 1] ~= 1 then continue end
+		local d, s = map[link.destID], map[link.srcID]
+		if dvd.Waypoints[d] and dvd.Waypoints[s] then
+			table.insert(dvd.Waypoints[s].Neighbors, d)
+			table.insert(dvd.Waypoints[d].Neighbors, s)
+		end
+	end
+	
 	if #dvd.Waypoints == 0 then return end
 	net.Start "Decent Vehicle: Retrive waypoints"
 	WriteWaypoint(1)
@@ -116,8 +254,10 @@ hook.Add("Tick", "Decent Vehicle: Control traffic lights", function()
 	end
 end)
 
-concommand.Add("dv_route_save", function(ply) ConfirmSaveRestore(ply, true) end)
-concommand.Add("dv_route_load", function(ply) ConfirmSaveRestore(ply, false) end)
+concommand.Add("dv_route_save", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.SAVE) end)
+concommand.Add("dv_route_load", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.LOAD) end)
+concommand.Add("dv_route_delete", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.DELETE) end)
+concommand.Add("dv_route_generate", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.GENERATE) end)
 saverestore.AddSaveHook("Decent Vehicle", function(save)
 	saverestore.WriteTable(dvd.GetSaveTable(), save)
 end)
@@ -166,21 +306,28 @@ end)
 
 net.Receive("Decent Vehicle: Save and restore", function(_, ply)
 	if not ply:IsAdmin() then return end
-	local save = net.ReadBool()
+	local save = net.ReadUInt(dvd.POPUPWINDOW.BITS)
 	local dir = "decentvehicle/"
 	local path = dir .. game.GetMap()
 	local pngpath = "data/" .. path .. ".png"
 	local txtpath = "data/" .. path .. ".txt"
 	local scriptpath = "scripts/vehicles/" .. path .. ".txt"
-	if save then
+	if save == dvd.POPUPWINDOW.SAVE then
 		if not file.Exists(dir, "DATA") then file.CreateDir(dir) end
 		file.Write(path .. ".txt", util.Compress(util.TableToJSON(dvd.GetSaveTable())))
-	elseif file.Exists(txtpath, "GAME") then
-		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(txtpath, "GAME") or "")))
-	elseif file.Exists(scriptpath, "GAME") then
-		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(scriptpath, "GAME") or "")))
-	elseif file.Exists(pngpath, "GAME") then -- Backward compatibility
-		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(pngpath, "GAME") or "")))
+	elseif save == dvd.POPUPWINDOW.LOAD then
+		if file.Exists(txtpath, "GAME") then
+			OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(txtpath, "GAME") or "")))
+		elseif file.Exists(scriptpath, "GAME") then
+			OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(scriptpath, "GAME") or "")))
+		elseif file.Exists(pngpath, "GAME") then -- Backward compatibility
+			OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(pngpath, "GAME") or "")))
+		end
+	elseif save == dvd.POPUPWINDOW.DELETE then
+		file.Delete(path .. ".png")
+		file.Delete(path .. ".txt")
+	elseif save == dvd.POPUPWINDOW.GENERATE then
+		GenerateWaypoints()
 	end
 end)
 

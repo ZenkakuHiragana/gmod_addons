@@ -36,17 +36,19 @@ if CLIENT then
 	language.Add("tool.dv_route.0", texts.Instructions)
 	language.Add("tool.dv_route.left", texts.Left[1])
 	language.Add("tool.dv_route.left_1", texts.Left[2])
-	language.Add("tool.dv_route.load", texts.Restore)
 	language.Add("tool.dv_route.right", texts.Right[1])
 	
 	language.Add("tool.dv_route.bidirectional", texts.Bidirectional)
 	language.Add("tool.dv_route.bidirectional.help", texts.BidirectionalHelp)
+	language.Add("tool.dv_route.delete", texts.Delete)
 	language.Add("tool.dv_route.drawdistance", texts.DrawDistance)
 	language.Add("tool.dv_route.drawdistance.help", texts.DrawDistanceHelp)
 	language.Add("tool.dv_route.fuel", texts.FuelStation)
 	language.Add("tool.dv_route.fuel.help", texts.FuelStationHelp)
+	language.Add("tool.dv_route.generate", texts.Generate)
 	language.Add("tool.dv_route.group", texts.WaypointGroup)
 	language.Add("tool.dv_route.group.help", texts.WaypointGroupHelp)
+	language.Add("tool.dv_route.load", texts.Restore)
 	language.Add("tool.dv_route.save", texts.Save)
 	language.Add("tool.dv_route.shouldblink", texts.UseTurnLights)
 	language.Add("tool.dv_route.shouldblink.help", texts.UseTurnLightsHelp)
@@ -135,6 +137,18 @@ function TOOL:LeftClick(trace)
 		dvd.RemoveWaypoint(self.WaypointID)
 		self.WaypointID = -1
 		self.TrafficLight = nil
+		local removed = false
+		for id, undolist in pairs(undo.GetTable()) do
+			for i, undotable in pairs(undolist) do
+				if undotable.Name ~= "Decent Vehicle Waypoint" then continue end
+				if undotable.Owner ~= self:GetOwner() then continue end
+				undolist[i] = nil
+				removed = true
+				break
+			end
+			
+			if removed then break end
+		end
 	end
 	
 	self:SetStage(0)
@@ -209,6 +223,8 @@ function TOOL.BuildCPanel(CPanel)
 		
 		CPanel:Button("#tool.dv_route.save", "dv_route_save")
 		CPanel:Button("#tool.dv_route.load", "dv_route_load")
+		CPanel:Button("#tool.dv_route.delete", "dv_route_delete")
+		CPanel:Button("#tool.dv_route.generate", "dv_route_generate")
 	end
 	
 	CPanel:InvalidateLayout()

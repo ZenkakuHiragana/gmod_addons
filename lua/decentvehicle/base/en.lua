@@ -5,26 +5,33 @@
 
 return {
 	CVars = {
-		DetectionRange = "Decent Vehicle = A vehicle within this distance will drive automatically.",
-		DetectionRangeELS = "Decent Vehicle = Detection range of finding cars with ELS to give way.",
-		DriveSide = "Decent Vehicle = Determines which side of road Decent Vehicles think.\n0 = Right (Europe, America, etc.)\n1 = Left (UK, Australia, etc.)",
-		LockVehicle = "Decent Vehicle = Whether or not Decent Vehicle prevents players from getting in.",
-		ShouldGoToRefuel = "Decent Vehicle = 1 = Go to a fuel station to refuel.  0 = Refuel automatically.",
-		TimeToStopEmergency = "Decent Vehicle = Time to turn off hazard lights in seconds.",
-		TurnonLights = [[Decent Vehicle = The level of using lights.
-0 = Disabled
-1 = Only use running lights
-2 = Use running lights and headlights
-3 = Use all lights]],
+		DetectionRange = "Decent Vehicle: A vehicle within this distance will drive automatically.",
+		DetectionRangeELS = "Decent Vehicle: Detection range of finding cars with ELS to give way.",
+		DriveSide = [[Decent Vehicle: Determines which side of road Decent Vehicles think.
+0: Right (Europe, America, etc.)
+1: Left (UK, Australia, etc.)]],
+		LockVehicle = "Decent Vehicle Whether or not Decent Vehicle prevents players from getting in.",
+		ShouldGoToRefuel = "Decent Vehicle: 1: Go to a fuel station to refuel.  0: Refuel automatically.",
+		TimeToStopEmergency = "Decent Vehicle: Time to turn off hazard lights in seconds.",
+		TurnonLights = [[Decent Vehicle: The level of using lights.
+0: Disabled
+1: Only use running lights
+2: Use running lights and headlights
+3: Use all lights]],
 	},
+	DeletedWaypoints = "Decent Vehicle: Waypoints are deleted!",
 	Errors = {
-		AttachmentNotFound = "Decent Vehicle = attachment vehicle_feet_passenger0 is not found!",
-		WaypointNotFound = "Decent Vehicle = Waypoint is not found!",
+		AttachmentNotFound = "Decent Vehicle: attachment vehicle_feet_passenger0 is not found!",
+		WaypointNotFound = "Decent Vehicle: Waypoint is not found!",
 	},
-	OldVersionNotify = "Decent Vehicle = This is an old version.  Check for updates!",
+	GeneratedWaypoints = "Decent Vehicle: Waypoints are generated!",
+	LoadedWaypoints = "Decent Vehicle: Waypoints are restored!",
+	OldVersionNotify = "Decent Vehicle: This is an old version.  Check for updates!",
+	OnDelete = "You are about to DELETE the waypoints.",
+	OnGenerate = "You are about to GENERATE the waypoints.",
 	OnLoad = "You are about to LOAD the waypoints.",
 	OnSave = "You are about to SAVE the waypoints.",
-	SavedWaypoints = "Decent Vehicle = Waypoints are saved!",
+	SavedWaypoints = "Decent Vehicle: Waypoints are saved!",
 	SaveLoad_Cancel = "Cancel",
 	SaveLoad_OK = "OK",
 	Tools = {
@@ -32,6 +39,7 @@ return {
 		Bidirectional = "Bi-directional link",
 		BidirectionalHelp = "Connect bi-directional link automatically.",
 		Category = "GreatZenkakuMan's tools",
+		Delete = "Delete waypoints",
 		Description = "Create your own routes for vehicles!",
 		DescriptionInMenu = "Create routes for Decent Vehicles.",
 		DetectionRange = "Detection range for spawning",
@@ -42,6 +50,7 @@ return {
 		DriveSide = "Is left side of the road",
 		FuelStation = "Fuel station",
 		FuelStationHelp = "Decent Vehicles will go here to refuel its car.",
+		Generate = "Generate waypoints",
 		Instructions = "Select a waypoint or a traffic light to link.  Select a vehicle driven by a Decent Vehicle to assign its waypoint group.",
 		Left = {
 			"Create a new waypoint.",
@@ -65,12 +74,12 @@ return {
 		ServerSettings = "Server settings",
 		ShouldGoToRefuel = "Should go finding a fuel station",
 		ShowInfo = {
-			FuelStation = "Is fuel station = ",
-			Group = "Group = ",
-			ID = "ID = ",
-			SpeedLimit = "Speed limit [km/h] = ",
-			UseTurnLights = "Use turn lights = ",
-			WaitUntilNext = "Wait until next [seconds] = ",
+			FuelStation = "Is fuel station: ",
+			Group = "Group: ",
+			ID = "ID: ",
+			SpeedLimit = "Speed limit [km/h]: ",
+			UseTurnLights = "Use turn lights: ",
+			WaitUntilNext = "Wait until next [seconds]: ",
 		},
 		ShowUpdates = "Notify the latest updates",
 		ShowUpdatesHelp = "If checked, some notifications are shown when this addon is updated.",

@@ -71,27 +71,40 @@ end)
 net.Receive("Decent Vehicle: Add a neighbor", function()
 	local from = net.ReadUInt(24)
 	local to = net.ReadUInt(24)
+	if not dvd.Waypoints[from] then return end
 	table.insert(dvd.Waypoints[from].Neighbors, to)
 end)
 
 net.Receive("Decent Vehicle: Remove a neighbor", function()
 	local from = net.ReadUInt(24)
 	local to = net.ReadUInt(24)
+	if not dvd.Waypoints[from] then return end
 	table.RemoveByValue(dvd.Waypoints[from].Neighbors, to)
 end)
 
 net.Receive("Decent Vehicle: Traffic light", function()
 	local id = net.ReadUInt(24)
 	local traffic = net.ReadEntity()
+	if not dvd.Waypoints[id] then return end
 	dvd.Waypoints[id].TrafficLight = Either(IsValid(traffic), traffic, nil)
 end)
 
-local SaveText = dvd.Texts.OnSave
-local LoadText = dvd.Texts.OnLoad
+local PopupTexts = {
+	dvd.Texts.OnSave,
+	dvd.Texts.OnLoad,
+	dvd.Texts.OnDelete,
+	dvd.Texts.OnGenerate,
+}
+local Notifications = {
+	dvd.Texts.SavedWaypoints,
+	dvd.Texts.LoadedWaypoints,
+	dvd.Texts.DeletedWaypoints,
+	dvd.Texts.GeneratedWaypoints,
+}
 net.Receive("Decent Vehicle: Save and restore", function()
-	local save = net.ReadBool()
+	local save = net.ReadUInt(dvd.POPUPWINDOW.BITS)
 	local Confirm = vgui.Create "DFrame"
-	local Text = Label(save and SaveText or LoadText, Confirm)
+	local Text = Label(PopupTexts[save + 1], Confirm)
 	local Cancel = vgui.Create "DButton"
 	local OK = vgui.Create "DButton"
 	Confirm:Add(Cancel)
@@ -114,11 +127,9 @@ net.Receive("Decent Vehicle: Save and restore", function()
 	function Cancel:DoClick() Confirm:Close() end
 	function OK:DoClick()
 		net.Start "Decent Vehicle: Save and restore"
-		net.WriteBool(save)
+		net.WriteUInt(save, dvd.POPUPWINDOW.BITS)
 		net.SendToServer()
-		if save then
-			notification.AddLegacy(dvd.Texts.SavedWaypoints, NOTIFY_GENERIC, 5)
-		end
+		notification.AddLegacy(Notifications[save + 1], NOTIFY_GENERIC, 5)
 		
 		Confirm:Close()
 	end

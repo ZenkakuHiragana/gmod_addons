@@ -55,6 +55,13 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		Throttle = {},
 		Steering = {},
 	},
+	POPUPWINDOW = {
+		BITS = 2,
+		SAVE = 0,
+		LOAD = 1,
+		DELETE = 2,
+		GENERATE = 3,
+	},
 	SeatPos = {
 		["Source_models/airboat.mdl"] = Vector(0, 0, -29),
 		["Source_models/vehicle.mdl"] = Vector(-8, 0, -24),
@@ -66,7 +73,7 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		{Time = CurTime() + 33, Light = 1}, -- Light pattern #1
 		{Time = CurTime() + 40, Light = 3}, -- Light pattern #2
 	},
-	Version = {1, 0, 3}, -- Major version, Minor version, Revision
+	Version = {1, 0, 4}, -- Major version, Minor version, Revision
 	Waypoints = {},
 	WaypointSize = 32,
 }
