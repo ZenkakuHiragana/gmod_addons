@@ -185,10 +185,12 @@ net.Receive("Decent Vehicle: Clear waypoints", function()
 	table.Empty(dvd.Waypoints)
 end)
 
+local FuelStationColor = Color(192, 128, 0)
 local Height = vector_up * dvd.WaypointSize / 4
 local WaypointMaterial = Material "sprites/sent_ball"
 local LinkMaterial = Material "cable/blue_elec"
 local TrafficMaterial = Material "cable/redlaser"
+local UseTurnLightsMaterial = Material "icon16/arrow_turn_left.png"
 hook.Add("PostDrawTranslucentRenderables", "Decent Vehicle: Draw waypoints",
 function(bDrawingDepth, bDrawingSkybox)
 	local weapon = LocalPlayer():GetActiveWeapon()
@@ -210,7 +212,11 @@ function(bDrawingDepth, bDrawingSkybox)
 		local visible = EyeAngles():Forward():Dot(w.Target - EyePos()) > 0
 		if visible then
 			render.SetMaterial(WaypointMaterial)
-			render.DrawSprite(w.Target + Height, dvd.WaypointSize, dvd.WaypointSize, color_white)
+			render.DrawSprite(w.Target + Height, size, size, w.FuelStation and FuelColor or color_white)
+			if w.UseTurnLights then
+				render.SetMaterial(UseTurnLightsMaterial)
+				render.DrawSprite(w.Target + Height, size, size, color_white)
+			end
 		end
 		
 		render.SetMaterial(LinkMaterial)
