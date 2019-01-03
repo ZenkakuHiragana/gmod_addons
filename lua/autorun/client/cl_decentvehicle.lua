@@ -185,7 +185,7 @@ net.Receive("Decent Vehicle: Clear waypoints", function()
 	table.Empty(dvd.Waypoints)
 end)
 
-local FuelStationColor = Color(192, 128, 0)
+local FuelColor = Color(192, 128, 0)
 local Height = vector_up * dvd.WaypointSize / 4
 local WaypointMaterial = Material "sprites/sent_ball"
 local LinkMaterial = Material "cable/blue_elec"
@@ -200,6 +200,7 @@ function(bDrawingDepth, bDrawingSkybox)
 	local showpoints = GetConVar "dv_route_showpoints"
 	local drawdistance = GetConVar "dv_route_drawdistance"
 	local distsqr = drawdistance and drawdistance:GetFloat()^2 or 1000^2
+	local size = dvd.WaypointSize
 	if not always:GetBool() then
 		if weapon:GetClass() ~= "gmod_tool" then return end
 		local TOOL = LocalPlayer():GetTool()

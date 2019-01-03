@@ -23,7 +23,6 @@ local function ClearUndoList()
 	for id, undolist in pairs(undo.GetTable()) do
 		for i, undotable in pairs(undolist) do
 			if undotable.Name ~= "Decent Vehicle Waypoint" then continue end
-			PrintTable(undotable)
 			undolist[i] = nil
 		end
 	end
