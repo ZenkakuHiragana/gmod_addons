@@ -51,6 +51,8 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		"models/player/group03/male_08.mdl",
 		"models/player/group03/male_09.mdl",
 	},
+	KmphToHUps = 1000 * 3.2808399 * 16 / 3600,
+	KmToHU = 1000 * 3.2808399 * 16,
 	PID = {
 		Throttle = {},
 		Steering = {},

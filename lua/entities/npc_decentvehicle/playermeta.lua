@@ -12,6 +12,7 @@ function ENT:GetViewEntity() return NULL end
 function ENT:Give() end
 function ENT:SelectWeapon() end
 function ENT:SetEyeAngles() end
+function ENT:GetViewPunchAngles() return Angle() end
 function ENT:UniqueID() return self:EntIndex() end
 
 if CLIENT then

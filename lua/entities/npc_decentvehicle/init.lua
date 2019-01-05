@@ -54,28 +54,33 @@ ENT.NextTrace = CurTime()
 ENT.StopByTrace = CurTime()
 
 ENT.Preference = { -- Some preferences for Decent Vehicle here
-	GiveWay = true, -- Whether or not Decent Vehicle gives way for vehicles with ELS
-	StopAtTL = true, -- Whether or not Decent Vehicle stops at traffic lights with red sign
-	DoTrace = true, -- Whether or not Decent Vehicle does some traces
-	LockVehicle = false, -- Whether or not Decent Vehicle allows other players to get in
+	DoTrace = true, -- Whether or not it does some traces
+	GiveWay = true, -- Whether or not it gives way for vehicles with ELS
+	GiveWayTime = 5, -- Time to reset the offset for giving way
+	GobackDuration = 0.7, -- Duration of going back on stuck
+	GobackTime = 10, -- Time to start going back on stuck
+	LockVehicle = false, -- Whether or not it allows other players to get in
 	LockVehicleDependsOnCVar = true, -- Whether or not LockVehicle depends on CVar
-	TraceInterval = 1 / 20,
+	ShouldGoback = true, -- Whether or not it should go backward on stuck
+	StopAtTL = true, -- Whether or not it stops at traffic lights with red sign
+	StopEmergency = true, -- Whether or not it stops on crash
+	StopEmergencyDuration = 5, -- Duration of stopping on crash
+	StopEmergencyDurationDependsOnCVar = true, -- Same as LockVehicle, but for StopEmergencyDuration
+	TraceMaxBound = 64, -- Maximum hull size of trace: max = Vector(1, 1, 1) * this value, min = -max
+	TraceMinLength = 200, -- Minimum trace length in hammer units
+	WaitUntilNext = true, -- Whether or not it waits on WaitUntilNext
 }
 
 ENT.Interval = { -- The interval of execution.
 	DoLights = 1 / 10, -- Checking lights
 	GiveWay = 1 / 20, -- Checking for giving way
-	Trace = 1 / 20, -- The time between doing a trace and next time.
+	Trace = 1 / 15, -- The time between doing a trace and next time.
 }
 
 local dvd = DecentVehicleDestination
 local vector_one = Vector(1, 1, 1)
-local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
-local KmphToHUpsSqr = KmphToHUps^2
 local TraceMax = 64
 local TraceMinLength = 200
-local TraceMinLengthSqr = TraceMinLength^2
-local TraceThreshold = 10
 local TraceHeightGap = math.sqrt(3) -- The multiplier between ground and the bottom of the trace
 local GiveWayTime = 5 -- Time to reset the offset for giving way
 local GobackTime = 10 -- The time to start to go backward by the trace.
@@ -154,8 +159,13 @@ end
 function ENT:CarCollide(data)
 	self = self.v and self or self.DecentVehicle
 	if not self then return end
-	if data.Speed > 200 and not data.HitEntity:IsPlayer() then
-		self.Emergency = CurTime() + (self.EmergencyDuration or TimeToStopEmergency:GetFloat())
+	if self.Preference.StopEmergency and data.Speed > 200 and not data.HitEntity:IsPlayer() then
+		local duration = self.Preference.StopEmergencyDuration
+		if not duration or self.Preference.StopEmergencyDurationDependsOnCVar then
+			duration = TimeToStopEmergency:GetFloat()
+		end
+		
+		self.Emergency = CurTime() + duration
 	end
 	
 	hook.Run("Decent Vehicle: OnCollide", self, data)
@@ -391,6 +401,7 @@ end
 
 function ENT:ShouldStopGoingback()
 	if self.FormLine then return end
+	if not self.Preference.ShouldGoback then return true end
 	if IsValid(self.TraceBack.Entity) or self.TraceBack.HitWorld
 	and self.TraceBack.HitNormal:Dot(vector_up) < .7 then
 		self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
@@ -548,12 +559,14 @@ function ENT:DriveToWaypoint()
 		steering = -steering
 	end
 	
-	local GobackByTrace = CurTime() - self.StopByTrace - GobackTime
-	if not self:ShouldStopGoingback() and 0 < GobackByTrace and GobackByTrace < GobackDuration then
+	local gobacktime = self.Preference.GobackTime or self.GobackTime
+	local duration = self.Preference.GobackDuration or GobackDuration
+	local GobackByTrace = CurTime() - self.StopByTrace - gobacktime
+	if not self:ShouldStopGoingback() and 0 < GobackByTrace and GobackByTrace < duration then
 		goback = -1
 		handbrake = false
 	else
-		if GobackByTrace > GobackDuration then
+		if GobackByTrace > duration then
 			self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
 		end
 		
@@ -603,7 +616,8 @@ function ENT:DoTrace()
 	local vehiclepos = self.v:WorldSpaceCenter()
 	local velocity = self.v:GetVelocity()
 	local tracedir = Vector(velocity)
-	if velocity:LengthSqr() > TraceMinLengthSqr then
+	local tracemin = self.Preference.TraceMinLength or TraceMinLength
+	if velocity:LengthSqr() > tracemin^2 then
 		tracedir:Normalize()
 	else
 		tracedir = forward
@@ -611,12 +625,12 @@ function ENT:DoTrace()
 	
 	local velocitydot = velocity:Dot(tracedir)
 	local currentspeed = math.abs(velocitydot)
-	local trlength = math.max(TraceMinLength, currentspeed * .8)
+	local trlength = math.max(tracemin, currentspeed * .8)
 	self.TraceLength = Lerp((CurTime() - self.StopByTrace) / GobackTime, trlength, self.TraceLength or trlength)
-	local kmph = currentspeed / KmphToHUps
+	local kmph = currentspeed / dvd.KmphToHUps
 	local groundpos = util.QuickTrace(vehiclepos, -vector_up * 32768, filter).HitPos
 	local height = (vehiclepos.z - groundpos.z) / math.sqrt(2)
-	local bound = math.min(TraceMax, height)
+	local bound = math.min(self.Preference.TraceMaxBound or TraceMax, height)
 	/ Lerp(math.abs(math.sin(math.rad(self.v:GetAngles().yaw * 2))), 1, math.sqrt(2))
 	local maxs = vector_one * bound
 	local mins = -maxs
@@ -729,7 +743,7 @@ function ENT:DoTrace()
 		local dvTraceW = dv and dv.TraceWaypoint and dv.TraceWaypoint.Entity
 		self.FormLine = dv and dv:AtTrafficLight()
 		
-		if dv and dv:EntIndex() < self:EntIndex() then
+		if dv then
 			if dvTrace == self.v or dvTraceW == self.v
 			or (self:GetELSSound() and (left or right)
 			and self.TraceLength * self.Trace.Fraction / bound > 1) then
@@ -765,12 +779,13 @@ function ENT:DoGiveWay()
 		
 		local left = IsObstacle(self.TraceLeft)
 		local right = IsObstacle(self.TraceRight)
+		local time = self.Preference.GiveWayTime or GiveWayTime
 		if (dvd.DriveSide == dvd.DRIVESIDE_LEFT or right) and not left then
-			self.IsGivingWay = CurTime() + GiveWayTime
+			self.IsGivingWay = CurTime() + time
 			self.WaypointOffset = self.v:BoundingRadius() / 3
 			self.MaxSpeedCoefficient = .5
 		elseif (dvd.DriveSide == dvd.DRIVESIDE_RIGHT or left) and not right then
-			self.IsGivingWay = CurTime() + GiveWayTime
+			self.IsGivingWay = CurTime() + time
 			self.WaypointOffset = -self.v:BoundingRadius() / 3
 			self.MaxSpeedCoefficient = .5
 		end
@@ -804,7 +819,10 @@ function ENT:FindFirstWaypoint()
 end
 
 function ENT:SetupNextWaypoint()
-	self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
+	if self.Preference.WaitUntilNext then
+		self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
+	end
+	
 	if self.NextWaypoint and self.NextWaypoint.UseTurnLights then
 		local prevpos = self.v:WorldSpaceCenter()
 		if self.PrevWaypoint then prevpos = self.PrevWaypoint.Target end
@@ -908,6 +926,7 @@ function ENT:Initialize()
 			self.NPCDriver:Fire("SetDriversMaxSpeed", "100")
 			self.NPCDriver:Fire("SetDriversMinSpeed", "0")
 			self.NPCDriver.InVehicle = self.InVehicle
+			self.NPCDriver.GetViewPunchAngles = self.GetViewPunchAngles
 			function self.NPCDriver.KeyDown(_, key)
 				return key == IN_FORWARD and self.Throttle > 0
 				or key == IN_BACK and self.Throttle < 0

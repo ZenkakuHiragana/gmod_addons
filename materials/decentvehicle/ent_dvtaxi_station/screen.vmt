@@ -1,0 +1,27 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "decentvehicle/ent_dvtaxi_station/screen"
+	"$bumpmap" "decentvehicle/ent_dvtaxi_station/normal"
+	"$nodecal" "1"
+	"$phong" "1"
+	"$phongexponent" "27"
+	"$phongboost"	"1.3"
+	"$envmap" "env_cubemap"
+	"$envmapfresnel" "3"
+	"$phongfresnelranges" "[ 0 0 0]"
+	"$envmaptint" "[0 0 0]"
+	"$phongfix" "{0 0 0}"
+	"$colorfix" "{255 255 255}"
+	"Proxies"
+	{
+		"Equals"
+		{
+			srcVar1 $colorfix
+			resultVar	$color
+		}
+	}
+}
+
+
+
+

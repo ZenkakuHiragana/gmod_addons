@@ -4,7 +4,6 @@
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
 AddCSLuaFile()
-local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
 local dvd = DecentVehicleDestination
 local texts = dvd.Texts.Tools
 
@@ -93,7 +92,7 @@ function TOOL:LeftClick(trace)
 		newpoint.FuelStation = fuel
 		newpoint.UseTurnLights = shouldblink
 		newpoint.WaitUntilNext = wait
-		newpoint.SpeedLimit = speed * KmphToHUps
+		newpoint.SpeedLimit = speed * dvd.KmphToHUps
 		newpoint.Group = group
 		if dvd.Waypoints[oldpointID] then
 			dvd.AddNeighbor(oldpointID, self.WaypointID)
@@ -169,7 +168,7 @@ function TOOL:RightClick(trace)
 	waypoint.FuelStation = fuel
 	waypoint.UseTurnLights = shouldblink
 	waypoint.WaitUntilNext = wait
-	waypoint.SpeedLimit = speed * KmphToHUps
+	waypoint.SpeedLimit = speed * dvd.KmphToHUps
 	waypoint.Group = group
 	
 	self:SetStage(0)
@@ -245,7 +244,7 @@ function TOOL:DrawHUD()
 	for _, text in ipairs {
 		texts.ShowInfo.ID .. tostring(waypointID),
 		texts.ShowInfo.Group .. tostring(waypoint.Group),
-		texts.ShowInfo.SpeedLimit .. tostring(math.Round(waypoint.SpeedLimit / KmphToHUps, 2)),
+		texts.ShowInfo.SpeedLimit .. tostring(math.Round(waypoint.SpeedLimit / dvd.KmphToHUps, 2)),
 		texts.ShowInfo.WaitUntilNext .. tostring(math.Round(waypoint.WaitUntilNext, 2)),
 		texts.ShowInfo.UseTurnLights .. (waypoint.UseTurnLights and "Yes" or "No"),
 		texts.ShowInfo.FuelStation .. (waypoint.FuelStation and "Yes" or "No"),

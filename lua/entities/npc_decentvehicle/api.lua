@@ -250,10 +250,13 @@ function ENT:SetTurnLight(on, left)
 	if on == self:GetTurnLight(left) then return end
 	if self.v.IsScar then
 	elseif self.v.IsSimfphyscar then
-		net.Start "simfphys_turnsignal"
-		net.WriteEntity(self.v)
-		net.WriteInt(on and (left and SIMFPHYS.LEFT or SIMFPHYS.RIGHT) or SIMFPHYS.OFF, 32)
-		net.Broadcast()
+		if player.GetCount() > 0 then
+			net.Start "simfphys_turnsignal"
+			net.WriteEntity(self.v)
+			net.WriteInt(on and (left and SIMFPHYS.LEFT or SIMFPHYS.RIGHT) or SIMFPHYS.OFF, 32)
+			net.Broadcast()
+		end
+		
 		self.TurnLightLeft = on and left
 		self.TurnLightRight = on and not left
 		self.HazardLights = false
@@ -268,10 +271,13 @@ function ENT:SetHazardLights(on)
 	if on == self:GetHazardLights() then return end
 	if self.v.IsScar then
 	elseif self.v.IsSimfphyscar then
-		net.Start "simfphys_turnsignal"
-		net.WriteEntity(self.v)
-		net.WriteInt(on and SIMFPHYS.HAZARD or SIMFPHYS.OFF, 32)
-		net.Broadcast()
+		if player.GetCount() > 0 then
+			net.Start "simfphys_turnsignal"
+			net.WriteEntity(self.v)
+			net.WriteInt(on and SIMFPHYS.HAZARD or SIMFPHYS.OFF, 32)
+			net.Broadcast()
+		end
+		
 		self.TurnLightLeft = false
 		self.TurnLightRight = false
 		self.HazardLights = true

@@ -6,6 +6,7 @@
 -- This script stands for a framework of Decent Vehicle's waypoints.
 
 include "autorun/decentvehicle.lua"
+include "sv_decentvehicle_taxi.lua"
 resource.AddWorkshop "1587455087"
 
 -- Waypoints are held in normal table.
@@ -29,6 +30,7 @@ local function ClearUndoList()
 end
 
 local function ConfirmSaveRestore(ply, save)
+	if not (IsValid(ply) and ply:IsPlayer()) then return end
 	net.Start "Decent Vehicle: Save and restore"
 	net.WriteUInt(save, dvd.POPUPWINDOW.BITS)
 	net.Send(ply)
@@ -181,16 +183,14 @@ local function ParseAIN()
 	return nodegraph
 end
 
-local KmphToHUps = 1000 * 3.2808399 * 16 / 3600
-local function GenerateWaypoints()
+local function GenerateWaypoints(ply)
 	dvd.Nodegraph = dvd.Nodegraph or ParseAIN()
 	ClearUndoList()
 	table.Empty(dvd.Waypoints)
 	net.Start "Decent Vehicle: Clear waypoints"
 	net.Broadcast()
 	
-	local owner = player.GetByID(1)
-	local speed = GetConVar "dv_route_speed":GetFloat() * KmphToHUps
+	local speed = ply:GetInfoNum("dv_route_speed", 45) * dvd.KmphToHUps
 	local time = CurTime()
 	local map = {}
 	for i, n in ipairs(dvd.Nodegraph.nodes) do
@@ -199,7 +199,7 @@ local function GenerateWaypoints()
 			FuelStation = false,
 			Group = 0,
 			Neighbors = {},
-			Owner = owner,
+			Owner = ply,
 			SpeedLimit = speed,
 			Target = util.QuickTrace(n.pos + vector_up * dvd.WaypointSize, -vector_up * 32768).HitPos,
 			Time = time,
@@ -326,7 +326,7 @@ net.Receive("Decent Vehicle: Save and restore", function(_, ply)
 		file.Delete(path .. ".png")
 		file.Delete(path .. ".txt")
 	elseif save == dvd.POPUPWINDOW.GENERATE then
-		GenerateWaypoints()
+		GenerateWaypoints(ply)
 	end
 end)
 
@@ -594,7 +594,7 @@ function dvd.GetRoute(start, endpos, group)
 		if nodes[current].closed then continue end
 		if endpos[current] then
 			current = nodes[current]
-			local route = {}
+			local route = {(GetWaypointFromID(current.id))}
 			while current.parent do
 				debugoverlay.Sphere(GetWaypointFromID(current.id).Target, 30, 5, Color(0, 255, 0))
 				debugoverlay.SweptBox(GetWaypointFromID(current.parent.id).Target, GetWaypointFromID(current.id).Target, Vector(-10, -10, -10), Vector(10, 10, 10), angle_zero, 5, Color(0, 255, 0))

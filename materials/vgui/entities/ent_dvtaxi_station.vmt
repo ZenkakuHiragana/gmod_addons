@@ -5,7 +5,7 @@
 
 "UnlitGeneric"
 {
-	"$basetexture" "vgui/entities/dv_traffic_light"
+	"$basetexture" "vgui/entities/ent_dvtaxi_station"
 	"$nolod" 1
 	"$vertexalpha" 1
 	"$vertexcolor" 1
