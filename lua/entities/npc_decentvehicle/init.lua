@@ -42,6 +42,7 @@ ENT.SteeringOld = 0 -- Steering difference = (diff - self.SteeringOld) / FrameTi
 ENT.ThrottleInt = 0 -- Throttle integration
 ENT.ThrottleOld = 0 -- Throttle difference = (diff - self.ThrottleOld) / FrameTime()
 ENT.Prependicular = 0 -- If the next waypoint needs to turn quickly, this is close to 1.
+ENT.RelativeSpeed = 0 -- Current speed / maximum speed
 ENT.WaitUntilNext = CurTime()
 ENT.RefuelThreshold = .25 -- If the fuel is less than this fraction, the vehicle finds a fuel station.
 ENT.MaxSpeedCoefficient = 1 -- Multiplying this on the maximum speed of the vehicle.
@@ -583,6 +584,7 @@ function ENT:DriveToWaypoint()
 		self.NPCDriver:SetSaveValue("m_vecDesiredVelocity", desiredvelocity)
 	end
 	
+	self.RelativeSpeed = relspeed
 	self:SetHandbrake(handbrake)
 	self:SetThrottle(math.Clamp(throttle / estimateaccel, -1, 1) * goback)
 	self:SetSteering(steering)
@@ -609,6 +611,7 @@ function ENT:DoTrace()
 	if not self.Preference.DoTrace then return end
 	if not self.Waypoint then return end
 	if CurTime() < self.NextTrace then return end
+	local boundradius = self.v:BoundingRadius() / 2
 	local filter = self:GetTraceFilter()
 	local forward = self:GetVehicleForward()
 	local right = self:GetVehicleRight()
@@ -643,6 +646,8 @@ function ENT:DoTrace()
 	local sideoffset = pathdir:Cross(up) * bound * 2.5
 	local startonpath = prevpos + pathdir * pathdir:Dot(start - prevpos) + heightoffset
 	local trwaypoint_isvalid = dvd.GetAng(waypointpos - start, tracedir) > .7
+	
+	local boundsqr = bound^2
 	local tr = {
 		start = start,
 		endpos = start + tracedir * self.TraceLength,
@@ -681,7 +686,7 @@ function ENT:DoTrace()
 			filter = filter,
 		}
 		self.TraceNextWaypoint = util.TraceHull(trnext)
-		debugoverlay.SweptBox(trnext.start, trnext.endpos, trnext.mins, trnext.maxs, angle_zero, .05, Color(0, 255, 255))
+		debugoverlay.SweptBox(trnext.start, trnext.endpos, trnext.mins, trnext.maxs, angle_zero, self.Interval.Trace, Color(0, 255, 255))
 	end
 	
 	self.Trace = util.TraceHull(tr)
@@ -690,14 +695,13 @@ function ENT:DoTrace()
 	self.TraceLeft = util.TraceHull(trleft)
 	self.TraceRight = util.TraceHull(trright)
 	self.NextTrace = CurTime() + (self.Interval.Trace or Interval.Trace)
-	bound = self.v:BoundingRadius() / 2
 	trwaypoint_isvalid = trwaypoint_isvalid and self.Trace.HitPos:Distance(tr.start) > self.TraceWaypoint.HitPos:Distance(tr.start)
-	debugoverlay.SweptBox(tr.start, tr.endpos, tr.mins, tr.maxs, angle_zero, .05, Color(0, 255, 0))
-	debugoverlay.SweptBox(trback.start, trback.endpos, trback.mins, trback.maxs, angle_zero, .05, Color(255, 255, 0))
-	debugoverlay.SweptBox(trwaypoint.start, trwaypoint.endpos, trwaypoint.mins, trwaypoint.maxs, angle_zero, .05, Color(0, 255, 0))
-	debugoverlay.SweptBox(trleft.start, trleft.endpos, trleft.mins, trleft.maxs, angle_zero, .05, Color(255, 255, 0))
-	debugoverlay.SweptBox(trright.start, trright.endpos, trright.mins, trright.maxs, angle_zero, .05, Color(255, 255, 0))
-	debugoverlay.SweptBox(tr.start, self.Trace.HitPos, tr.mins, tr.maxs, angle_zero, .05)
+	debugoverlay.SweptBox(tr.start, tr.endpos, tr.mins, tr.maxs, angle_zero, self.Interval.Trace, Color(0, 255, 0))
+	debugoverlay.SweptBox(trback.start, trback.endpos, trback.mins, trback.maxs, angle_zero, self.Interval.Trace, Color(255, 255, 0))
+	debugoverlay.SweptBox(trwaypoint.start, trwaypoint.endpos, trwaypoint.mins, trwaypoint.maxs, angle_zero, self.Interval.Trace, Color(0, 255, 0))
+	debugoverlay.SweptBox(trleft.start, trleft.endpos, trleft.mins, trleft.maxs, angle_zero, self.Interval.Trace, Color(255, 255, 0))
+	debugoverlay.SweptBox(trright.start, trright.endpos, trright.mins, trright.maxs, angle_zero, self.Interval.Trace, Color(255, 255, 0))
+	debugoverlay.SweptBox(tr.start, self.Trace.HitPos, tr.mins, tr.maxs, angle_zero, self.Interval.Trace)
 	
 	if self.TraceLeft.StartSolid then
 		trleft.start, trleft.endpos = startonpath, start - sideoffset
@@ -710,28 +714,30 @@ function ENT:DoTrace()
 	end
 	
 	local ent = self.Trace.Entity
-	local forward = IsObstacle(self.Trace)
-	local left = IsObstacle(self.TraceLeft)
-	local right = IsObstacle(self.TraceRight)
-	local waypoint = trwaypoint_isvalid and IsObstacle(self.TraceWaypoint)
-	if forward and not waypoint and tracedir:Dot(waypointdir) > 0 then
-		local frac = .8
+	local hitforward = IsObstacle(self.Trace)
+	local hitleft = IsObstacle(self.TraceLeft)
+	local hitright = IsObstacle(self.TraceRight)
+	local hitwaypoint = trwaypoint_isvalid and IsObstacle(self.TraceWaypoint)
+	if hitforward and not hitwaypoint and tracedir:Dot(waypointdir) > 0 then
 		local trhit = {
-			start = start * (1 - frac) + self.Trace.HitPos * frac,
+			start = Lerp(.8, start, self.Trace.HitPos),
 			endpos = trwaypoint.endpos,
 			maxs = maxs, mins = mins,
 			filter = filter,
 		}
 		
-		forward = IsObstacle(util.TraceHull(trhit))
-		debugoverlay.SweptBox(trhit.start, trhit.endpos, trhit.mins, trhit.maxs, angle_zero, .05, Color(0, 255, 0))
+		debugoverlay.SweptBox(trhit.start, trhit.endpos, trhit.mins, trhit.maxs, angle_zero, self.Interval.Trace, Color(0, 255, 0))
+		if tracedir:Dot(trhit.endpos - trhit.start) > 0 then
+			local tr = util.TraceHull(trhit)
+			hitforward = IsObstacle(tr)
+		end
 	end
 	
 	if trwaypoint_isvalid and not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
 		ent = self.TraceWaypoint.Entity
 	end
 	
-	if not (forward or waypoint) then
+	if not (hitforward or hitwaypoint) then
 		if CurTime() < self.StopByTrace + GobackTime then
 			self.StopByTrace = CurTime() + .1
 		end
@@ -745,18 +751,18 @@ function ENT:DoTrace()
 		
 		if dv then
 			if dvTrace == self.v or dvTraceW == self.v
-			or (self:GetELSSound() and (left or right)
-			and self.TraceLength * self.Trace.Fraction / bound > 1) then
+			or (self:GetELSSound() and (hitleft or hitright)
+			and self.TraceLength * self.Trace.Fraction / boundradius > 1) then
 				self.StopByTrace = CurTime() + .1
 			end
 		end
 	end
 	
 	if CurTime() > self.IsGivingWay then
-		if left and not right then
-			self.WaypointOffset = -bound
-		elseif right and not left then
-			self.WaypointOffset = bound
+		if hitleft and not hitright then
+			self.WaypointOffset = -boundradius
+		elseif hitright and not hitleft then
+			self.WaypointOffset = boundradius
 		else
 			self.WaypointOffset = 0
 		end
@@ -926,7 +932,8 @@ function ENT:Initialize()
 			self.NPCDriver:Fire("SetDriversMaxSpeed", "100")
 			self.NPCDriver:Fire("SetDriversMinSpeed", "0")
 			self.NPCDriver.InVehicle = self.InVehicle
-			self.NPCDriver.GetViewPunchAngles = self.GetViewPunchAngles
+			self.NPCDriver.GetViewPunchAngles = self.GetViewPunchAngles -- For Seat Weaponizer 2
+			self.NPCDriver.SetViewPunchAngles = self.SetViewPunchAngles -- Just to be sure
 			function self.NPCDriver.KeyDown(_, key)
 				return key == IN_FORWARD and self.Throttle > 0
 				or key == IN_BACK and self.Throttle < 0

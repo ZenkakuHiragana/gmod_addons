@@ -9,6 +9,14 @@
 
 include "autorun/decentvehicle.lua"
 
+-- Returns if v1 < v2
+local VersionConst = Vector(1e8, 1e4, 1)
+local function CompareVersion(v1, v2)
+	v1 = Vector(tonumber(v1[1]) or 0, tonumber(v1[2]) or 0, tonumber(v1[3]) or 0)
+	v2 = Vector(tonumber(v2[1]) or 0, tonumber(v2[2]) or 0, tonumber(v2[3]) or 0)
+	return v1:Dot(VersionConst) < v2:Dot(VersionConst)
+end
+
 local dvd = DecentVehicleDestination
 local function NotifyUpdate(d)
 	if not d then return end
@@ -19,14 +27,13 @@ local function NotifyUpdate(d)
 	if not (showupdates and showupdates:GetBool()) then return end
 	
 	if not file.Exists("decentvehicle", "DATA") then file.CreateDir "decentvehicle" end
-	local versioncheck = "decentvehicle/version.txt"
-	local checkedversion = file.Read(versioncheck) or 0
+	local versionfile = "decentvehicle/version.txt"
+	local checkedversion = string.Explode(".", file.Read(versionfile) or "0.0.0")
 	local version = string.Explode(".", header:sub(8):Trim())
-	if version[1] and tonumber(version[1]) > dvd.Version[1]
-	or version[2] and tonumber(version[2]) > dvd.Version[2]
-	or version[3] and tonumber(version[3]) > dvd.Version[3] then
+	if tonumber(checkedversion[1]) > 1e8 then checkedversion = {} end -- Backward compatibility
+	if CompareVersion(dvd.Version, version) then
 		notification.AddLegacy(dvd.Texts.OldVersionNotify, NOTIFY_ERROR, 15)
-	elseif tonumber(checkedversion) < d.updated then
+	elseif CompareVersion(checkedversion, dvd.Version) then
 		notification.AddLegacy("Decent Vehicle " .. header, NOTIFY_GENERIC, 18)
 		
 		local i = 0
@@ -40,7 +47,8 @@ local function NotifyUpdate(d)
 			i = i + 1
 		end
 		
-		file.Write(versioncheck, tostring(d.updated))
+		file.Write(versionfile, string.format("%d.%d.%d",
+		dvd.Version[1], dvd.Version[2], dvd.Version[3]))
 	end
 end
 

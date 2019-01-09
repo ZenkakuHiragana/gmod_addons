@@ -32,7 +32,7 @@ function ENT:GetMaxSteeringAngle()
 end
 
 function ENT:GetTraceFilter()
-	local filter = {self, self.v}
+	local filter = table.Add({self, self.v}, constraint.GetAllConstrainedEntities(self.v))
 	if self.v.IsScar then
 		table.Add(filter, self.v.Seats or {})
 		table.Add(filter, self.v.Wheels)
