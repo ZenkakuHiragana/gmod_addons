@@ -86,6 +86,12 @@ local TraceHeightGap = math.sqrt(3) -- The multiplier between ground and the bot
 local GiveWayTime = 5 -- Time to reset the offset for giving way
 local GobackTime = 10 -- The time to start to go backward by the trace.
 local GobackDuration = 0.7 -- The duration of going backward by the trace.
+local TimeToStopEmergency = dvd.CVars.TimeToStopEmergency
+local ShouldGoToRefuel = dvd.CVars.ShouldGoToRefuel
+local DetectionRange = dvd.CVars.DetectionRange
+local DetectionRangeELS = dvd.CVars.DetectionRangeELS
+local DriveSide = dvd.CVars.DriveSide
+local LockVehicle = dvd.CVars.LockVehicle
 local Interval = {
 	DoLights = 1 / 10,
 	GiveWay = 1 / 20,
@@ -96,19 +102,6 @@ local NightSkyTextureList = {
 	sky_day01_09 = true,
 	sky_day02_09 = true,
 }
-
-local CVarFlags = {FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}
-local TimeToStopEmergency = CreateConVar("decentvehicle_timetostopemergency", 5, CVarFlags, dvd.Texts.CVars.TimeToStopEmergency)
-local ShouldGoToRefuel = CreateConVar("decentvehicle_gotorefuel", 1, CVarFlags, dvd.Texts.CVars.ShouldGoToRefuel)
-local DetectionRange = CreateConVar("decentvehicle_detectionrange", 30, CVarFlags, dvd.Texts.CVars.DetectionRange)
-local DetectionRangeELS = CreateConVar("decentvehicle_elsrange", 300, CVarFlags, dvd.Texts.CVars.DetectionRangeELS)
-local DriveSide = CreateConVar("decentvehicle_driveside", 0, CVarFlags, dvd.Texts.CVars.DriveSide)
-local LockVehicle = CreateConVar("decentvehicle_lock", 0, CVarFlags, dvd.Texts.CVars.LockVehicle)
-cvars.AddChangeCallback("decentvehicle_driveside", function(cvar, old, new)
-	local side = tonumber(new)
-	if not (side == dvd.DRIVESIDE_LEFT or side == dvd.DRIVESIDE_RIGHT) then return end
-	dvd.DriveSide = side
-end, "Decent Vehicle: Drive side callback")
 
 local function IsObstacle(tr)
 	return tr and (IsValid(tr.Entity) or tr.HitWorld and tr.HitNormal:Dot(vector_up) < .7)

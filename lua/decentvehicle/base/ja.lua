@@ -13,7 +13,7 @@ return {
 		LockVehicle = "Decent Vehicle: 1にすると、Decent Vehicleの操縦する車両にプレイヤーが乗れないようになる。",
 		ShouldGoToRefuel = "Decent Vehicle: 1: ガソリンスタンドに向かって給油する  0: 自動的に給油されるようにする",
 		TimeToStopEmergency = "Decent Vehicle: 衝突時、ハザードランプを消すまでの時間。",
-		TurnonLights = [[Decent Vehicle: 使用するライトのレベル。
+		TurnOnLights = [[Decent Vehicle: 使用するライトのレベル。
 0: 無効
 1: デイライトのみ
 2: デイライトとヘッドライト

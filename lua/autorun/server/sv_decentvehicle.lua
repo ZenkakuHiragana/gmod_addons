@@ -6,16 +6,16 @@
 -- This script stands for a framework of Decent Vehicle's waypoints.
 
 include "autorun/decentvehicle.lua"
-include "sv_decentvehicle_taxi.lua"
 resource.AddWorkshop "1587455087"
 
 -- Waypoints are held in normal table.
 -- They're found by brute-force search.
 local dvd = DecentVehicleDestination
+local CVarFlags = {FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}
+local Exceptions = {Target = true, TrafficLight = true}
 local HULLS = 10
 local MAX_NODES = 1500
 local NODE_VERSION_NUMBER = 37
-local Exceptions = {Target = true, TrafficLight = true}
 local function GetWaypointFromID(id)
 	return assert(dvd.Waypoints[id], dvd.Texts.Errors.WaypointNotFound)
 end
@@ -41,6 +41,11 @@ local function WriteWaypoint(id)
 	net.WriteUInt(id, 24)
 	net.WriteVector(waypoint.Target)
 	net.WriteEntity(waypoint.TrafficLight or NULL)
+	net.WriteBool(waypoint.FuelStation)
+	net.WriteBool(waypoint.UseTurnLights)
+	net.WriteFloat(waypoint.WaitUntilNext)
+	net.WriteFloat(waypoint.SpeedLimit)
+	net.WriteInt(waypoint.Group, 8)
 	net.WriteUInt(#waypoint.Neighbors, 14)
 	for i, n in ipairs(waypoint.Neighbors) do
 		net.WriteUInt(n, 24)
@@ -92,6 +97,19 @@ local function OverwriteWaypoints(source)
 	net.Start "Decent Vehicle: Retrive waypoints"
 	WriteWaypoint(1)
 	net.Broadcast()
+end
+
+local function LoadWaypoints(path)
+	local pngpath = string.format("data/%s.png", path)
+	local txtpath = string.format("data/%s.txt", path)
+	local scriptpath = string.format("scripts/vehicles/%s.txt", path)
+	if file.Exists(txtpath, "GAME") then
+		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(txtpath, "GAME") or "")))
+	elseif file.Exists(scriptpath, "GAME") then
+		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(scriptpath, "GAME") or "")))
+	elseif file.Exists(pngpath, "GAME") then -- Backward compatibility
+		OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(pngpath, "GAME") or "")))
+	end
 end
 
 local function ParseAIN()
@@ -226,6 +244,24 @@ local function GenerateWaypoints(ply)
 	net.Broadcast()
 end
 
+dvd.CVars = dvd.CVars or {
+	AutoLoad = CreateConVar("decentvehicle_autoload", 0, CVarFlags, dvd.Texts.CVars.AutoLoad),
+	DetectionRange = CreateConVar("decentvehicle_detectionrange", 30, CVarFlags, dvd.Texts.CVars.DetectionRange),
+	DetectionRangeELS = CreateConVar("decentvehicle_elsrange", 300, CVarFlags, dvd.Texts.CVars.DetectionRangeELS),
+	DriveSide = CreateConVar("decentvehicle_driveside", 0, CVarFlags, dvd.Texts.CVars.DriveSide),
+	LockVehicle = CreateConVar("decentvehicle_lock", 0, CVarFlags, dvd.Texts.CVars.LockVehicle),
+	Police = {
+		ChangeCode = CreateConVar("decentvehicle_police_changecodetimer", 60, CVarFlags, dvd.Texts.Police.CVars.ChangeCode),
+	},
+	ShouldGoToRefuel = CreateConVar("decentvehicle_gotorefuel", 1, CVarFlags, dvd.Texts.CVars.ShouldGoToRefuel),
+	Taxi = {
+		UnitPrice = CreateConVar("decentvehicle_taxi_unitprice", 5, CVarFlags, dvd.Texts.Taxi.UnitPrice),
+	},
+	TimeToStopEmergency = CreateConVar("decentvehicle_timetostopemergency", 5, CVarFlags, dvd.Texts.CVars.TimeToStopEmergency),
+	TurnOnLights = CreateConVar("decentvehicle_turnonlights", 3, CVarFlags, dvd.Texts.CVars.TurnOnLights),
+}
+
+include "sv_decentvehicle_taxi.lua"
 util.AddNetworkString "Decent Vehicle: Add a waypoint"
 util.AddNetworkString "Decent Vehicle: Remove a waypoint"
 util.AddNetworkString "Decent Vehicle: Add a neighbor"
@@ -235,6 +271,35 @@ util.AddNetworkString "Decent Vehicle: Retrive waypoints"
 util.AddNetworkString "Decent Vehicle: Send waypoint info"
 util.AddNetworkString "Decent Vehicle: Clear waypoints"
 util.AddNetworkString "Decent Vehicle: Save and restore"
+concommand.Add("dv_route_save", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.SAVE) end)
+concommand.Add("dv_route_load", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.LOAD) end)
+concommand.Add("dv_route_delete", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.DELETE) end)
+concommand.Add("dv_route_generate", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.GENERATE) end)
+cvars.AddChangeCallback("decentvehicle_driveside", function(cvar, old, new)
+	local side = tonumber(new)
+	if not (side == dvd.DRIVESIDE_LEFT or side == dvd.DRIVESIDE_RIGHT) then return end
+	dvd.DriveSide = side
+end, "Decent Vehicle: Drive side callback")
+
+duplicator.RegisterEntityModifier("Decent Vehicle: Save waypoints", function(ply, ent, data)
+	OverwriteWaypoints(data)
+	dvd.SaveEntity = ent
+end)
+
+saverestore.AddSaveHook("Decent Vehicle", function(save)
+	saverestore.WriteTable(dvd.GetSaveTable(), save)
+end)
+
+saverestore.AddRestoreHook("Decent Vehicle", function(restore)
+	OverwriteWaypoints(saverestore.ReadTable(restore))
+	for id, undolist in pairs(undo.GetTable()) do
+		for i, undotable in pairs(undolist) do
+			if undotable.Name ~= "Decent Vehicle Waypoint" then continue end
+			undolist[i].Functions[1] = {dvd.UndoWaypoint, {}}
+		end
+	end
+end)
+
 hook.Add("PostCleanupMap", "Decent Vehicle: Clean up waypoints", function()
 	dvd.Waypoints = {}
 	ClearUndoList()
@@ -251,29 +316,6 @@ hook.Add("Tick", "Decent Vehicle: Control traffic lights", function()
 		TL.Light = TL.Light % 3 + 1
 		TL.Time = CurTime() + dvd.TLDuration[TL.Light]
 	end
-end)
-
-concommand.Add("dv_route_save", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.SAVE) end)
-concommand.Add("dv_route_load", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.LOAD) end)
-concommand.Add("dv_route_delete", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.DELETE) end)
-concommand.Add("dv_route_generate", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.GENERATE) end)
-saverestore.AddSaveHook("Decent Vehicle", function(save)
-	saverestore.WriteTable(dvd.GetSaveTable(), save)
-end)
-
-saverestore.AddRestoreHook("Decent Vehicle", function(restore)
-	OverwriteWaypoints(saverestore.ReadTable(restore))
-	for id, undolist in pairs(undo.GetTable()) do
-		for i, undotable in pairs(undolist) do
-			if undotable.Name ~= "Decent Vehicle Waypoint" then continue end
-			undolist[i].Functions[1] = {dvd.UndoWaypoint, {}}
-		end
-	end
-end)
-
-duplicator.RegisterEntityModifier("Decent Vehicle: Save waypoints", function(ply, ent, data)
-	OverwriteWaypoints(data)
-	dvd.SaveEntity = ent
 end)
 
 net.Receive("Decent Vehicle: Retrive waypoints", function(_, ply)
@@ -308,20 +350,11 @@ net.Receive("Decent Vehicle: Save and restore", function(_, ply)
 	local save = net.ReadUInt(dvd.POPUPWINDOW.BITS)
 	local dir = "decentvehicle/"
 	local path = dir .. game.GetMap()
-	local pngpath = "data/" .. path .. ".png"
-	local txtpath = "data/" .. path .. ".txt"
-	local scriptpath = "scripts/vehicles/" .. path .. ".txt"
 	if save == dvd.POPUPWINDOW.SAVE then
 		if not file.Exists(dir, "DATA") then file.CreateDir(dir) end
 		file.Write(path .. ".txt", util.Compress(util.TableToJSON(dvd.GetSaveTable())))
 	elseif save == dvd.POPUPWINDOW.LOAD then
-		if file.Exists(txtpath, "GAME") then
-			OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(txtpath, "GAME") or "")))
-		elseif file.Exists(scriptpath, "GAME") then
-			OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(scriptpath, "GAME") or "")))
-		elseif file.Exists(pngpath, "GAME") then -- Backward compatibility
-			OverwriteWaypoints(util.JSONToTable(util.Decompress(file.Read(pngpath, "GAME") or "")))
-		end
+		LoadWaypoints(path)
 	elseif save == dvd.POPUPWINDOW.DELETE then
 		file.Delete(path .. ".png")
 		file.Delete(path .. ".txt")
@@ -334,17 +367,23 @@ end)
 -- Returns:
 --   table save		| A table for saving waypoints.
 function dvd.GetSaveTable()
+	local TrafficLights = {}
 	local save = {TrafficLights = {}}
 	for i, w in ipairs(dvd.Waypoints) do
 		save[i] = table.Copy(w)
 		save[i].TrafficLight = nil
+		if IsValid(w.TrafficLight) and w.TrafficLight.IsDVTrafficLight then
+			local index = w.TrafficLight:EntIndex()
+			TrafficLights[index] = table.ForceInsert(TrafficLights[index], i)
+		end
 	end
-	
-	for i, t in ipairs(ents.GetAll()) do
+
+	for i, w in pairs(TrafficLights) do
+		local t = Entity(i)
+		if not IsValid(t) then continue end
 		if not t.IsDVTrafficLight then continue end
-		if not istable(t.Waypoints) then continue end
 		table.insert(save.TrafficLights, {
-			Waypoints = table.Copy(t.Waypoints),
+			Waypoints = w,
 			Pattern = t:GetPattern(),
 			Pos = t:GetPos(),
 			Ang = t:GetAngles(),
@@ -636,3 +675,5 @@ function dvd.GetRouteVector(start, endpos, group)
 end
 
 hook.Run "Decent Vehicle: PostInitialize"
+if not dvd.CVars.AutoLoad:GetBool() then return end
+LoadWaypoints("decentvehicle/" .. game.GetMap())

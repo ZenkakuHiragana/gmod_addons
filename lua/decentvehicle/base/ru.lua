@@ -13,7 +13,7 @@ return {
 		LockVehicle = "Decent Vehicle: Закрывать транспорт при спавне?",
         ShouldGoToRefuel = "Decent Vehicle: 1: Ехать на АЗС чтобы заправитьсч.  0: заправляться автоматичкски.",
         TimeToStopEmergency = "Decent Vehicle: Время в секундах чтобы выключить аварийные сигналы.",
-        TurnonLights = [[Decent Vehicle: Уровень использования фаи.
+        TurnOnLights = [[Decent Vehicle: Уровень использования фаи.
 0: Выключены
 1: Только ходовые
 2: Ходовые и фары

@@ -161,6 +161,11 @@ net.Receive("Decent Vehicle: Retrive waypoints", function()
 	local pos = net.ReadVector()
 	local traffic = net.ReadEntity()
 	if not IsValid(traffic) then traffic = nil end
+	local fuelstation = net.ReadBool()
+	local useturnlights = net.ReadBool()
+	local waituntilnext = net.ReadFloat()
+	local speedlimit = net.ReadFloat()
+	local group = net.ReadInt(8)
 	local num = net.ReadUInt(14)
 	local neighbors = {}
 	for i = 1, num do
@@ -170,6 +175,11 @@ net.Receive("Decent Vehicle: Retrive waypoints", function()
 	dvd.Waypoints[id] = {
 		Target = pos,
 		TrafficLight = traffic,
+		FuelStation = fuelstation,
+		UseTurnLights = useturnlights,
+		WaitUntilNext = waituntilnext,
+		SpeedLimit = speedlimit,
+		Group = group,
 		Neighbors = neighbors,
 	}
 	
@@ -194,11 +204,14 @@ net.Receive("Decent Vehicle: Clear waypoints", function()
 end)
 
 local FuelColor = Color(192, 128, 0)
+local SelectedColor = Color(96, 192, 0)
 local Height = vector_up * dvd.WaypointSize / 4
 local WaypointMaterial = Material "sprites/sent_ball"
 local LinkMaterial = Material "cable/blue_elec"
 local TrafficMaterial = Material "cable/redlaser"
 local UseTurnLightsMaterial = Material "icon16/arrow_turn_left.png"
+local SelectRadiusMaterial = Material "cable/new_cable_lit"
+local NumPolys = 192
 hook.Add("PostDrawTranslucentRenderables", "Decent Vehicle: Draw waypoints",
 function(bDrawingDepth, bDrawingSkybox)
 	local weapon = LocalPlayer():GetActiveWeapon()
@@ -209,19 +222,48 @@ function(bDrawingDepth, bDrawingSkybox)
 	local drawdistance = GetConVar "dv_route_drawdistance"
 	local distsqr = drawdistance and drawdistance:GetFloat()^2 or 1000^2
 	local size = dvd.WaypointSize
-	if not always:GetBool() then
-		if weapon:GetClass() ~= "gmod_tool" then return end
-		local TOOL = LocalPlayer():GetTool()
-		if not (TOOL and TOOL.IsDecentVehicleTool) then return end
-	end
+	local TOOL = LocalPlayer():GetTool()
+	local ToolEquiped = weapon:GetClass() == "gmod_tool" and TOOL and TOOL.IsDecentVehicleTool
+	local MultiEdit = LocalPlayer():KeyDown(IN_USE)
+	local Trace = LocalPlayer():GetEyeTrace()
+	local UpdateRadius = GetConVar "dv_route_updateradius"
+	local Radius = UpdateRadius and UpdateRadius:GetInt() or 0
+	local RadiusSqr = Radius^2
+	if not (always:GetBool() or ToolEquiped) then return end
 	
 	if bDrawingSkybox or not (showpoints and showpoints:GetBool()) then return end
+	if MultiEdit then
+		render.SetMaterial(SelectRadiusMaterial)
+		render.StartBeam(NumPolys + 1)
+		local filter = player.GetAll()
+		local BaseNormal = Trace.HitNormal:Dot(vector_up) > .7 and Trace.HitNormal or vector_up
+		local TraceVector = BaseNormal * 32768
+		local BaseAngle = BaseNormal:Angle()
+		for i = 0, NumPolys do
+			local pos = Vector(0, Radius, 0)
+			pos:Rotate(Angle(0, 0, 360 * i / NumPolys))
+
+			local start = LocalToWorld(pos, angle_zero, Trace.HitPos, BaseAngle)
+			local tr = util.TraceLine {start = start, endpos = start + TraceVector, mask = MASK_SOLID_BRUSHONLY}
+			tr = util.TraceLine {start = tr.HitPos, endpos = tr.HitPos - TraceVector, mask = MASK_SOLID, filter = filter}
+
+			render.AddBeam(tr.HitPos + BaseNormal, 10, i, SelectedColor)
+		end
+
+		render.EndBeam()
+	end
+
 	for _, w in ipairs(dvd.Waypoints) do
 		if w.Target:DistToSqr(EyePos()) > distsqr then continue end
 		local visible = EyeAngles():Forward():Dot(w.Target - EyePos()) > 0
 		if visible then
+			local color = w.FuelStation and FuelColor or color_white
+			if MultiEdit and Trace.HitPos:DistToSqr(w.Target) < RadiusSqr then
+				color = SelectedColor
+			end
+
 			render.SetMaterial(WaypointMaterial)
-			render.DrawSprite(w.Target + Height, size, size, w.FuelStation and FuelColor or color_white)
+			render.DrawSprite(w.Target + Height, size, size, color)
 			if w.UseTurnLights then
 				render.SetMaterial(UseTurnLightsMaterial)
 				render.DrawSprite(w.Target + Height, size, size, color_white)

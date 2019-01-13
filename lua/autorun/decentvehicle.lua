@@ -141,31 +141,17 @@ local function ReadTexts(convar, old, new)
 	local directories = select(2, file.Find("decentvehicle/*", "LUA"))
 	for _, dir in ipairs(directories) do
 		if SERVER then -- We need to run AddCSLuaFile() for all languages.
-			local path = "decentvehicle/" .. dir .. "/"
+			local path = string.format("decentvehicle/%s/", dir)
 			local files = file.Find(path .. "*.lua", "LUA")
 			for _, f in ipairs(files) do
 				AddCSLuaFile(path .. f)
 			end
 		end
 		
-		local path = "decentvehicle/" .. dir .. "/" .. new .. ".lua"
-		local exists = file.Exists(path, "LUA")
-		if exists then
-			local text = include(path)
-			for k, v in pairs(text or {}) do
-				dvd.Texts[k] = v
-			end
-		end
-		
-		path = "decentvehicle/" .. dir .. "/en.lua"
-		exists = file.Exists(path, "LUA")
-		if exists then
-			local text = include(path)
-			for k, v in pairs(text or {}) do
-				if dvd.Texts[k] then continue end
-				dvd.Texts[k] = v
-			end
-		end
+		local path = string.format("decentvehicle/%s/en.lua", dir)
+		if file.Exists(path, "LUA") then table.Merge(dvd.Texts, include(path)) end
+		path = string.format("decentvehicle/%s/%s.lua", dir, new)
+		if file.Exists(path, "LUA") then table.Merge(dvd.Texts, include(path)) end
 	end
 end
 

@@ -35,11 +35,9 @@ list.Set("NPC", "npc_dvpolice", {
 	Category = "GreatZenkakuMan's NPCs",
 })
 
-local color_green = Color(0, 255, 0)
-local ChangeCode = CreateConVar("decentpolice_changecodetimer", 60,
-{FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED},
-"Decent Police: After that time(in seconds) DP will change code.")
 if CLIENT then return end
+local color_green = Color(0, 255, 0)
+local ChangeCode = dvd.CVars.Police.ChangeCode
 
 --[[ 
 arguments:

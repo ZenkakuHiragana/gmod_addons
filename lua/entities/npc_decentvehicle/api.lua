@@ -4,7 +4,7 @@
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
 local dvd = DecentVehicleDestination
-local TurnonLights = CreateConVar("decentvehicle_turnonlights", 3, CVarFlags, dvd.Texts.CVars.TurnonLights)
+local TurnOnLights = dvd.CVars.TurnOnLights
 local LIGHTLEVEL = {
 	NONE = 0,
 	RUNNING = 1,
@@ -164,7 +164,7 @@ function ENT:GetEngineStarted(v)
 end
 
 function ENT:SetRunningLights(on)
-	local lightlevel = TurnonLights:GetInt()
+	local lightlevel = TurnOnLights:GetInt()
 	on = on and lightlevel ~= LIGHTLEVEL.NONE
 	if on == self:GetRunningLights() then return end
 	if self.v.IsScar then
@@ -179,7 +179,7 @@ function ENT:SetRunningLights(on)
 end
 
 function ENT:SetFogLights(on)
-	local lightlevel = TurnonLights:GetInt()
+	local lightlevel = TurnOnLights:GetInt()
 	on = on and lightlevel == LIGHTLEVEL.ALL
 	if on == self:GetFogLights() then return end
 	if self.v.IsScar then
@@ -205,7 +205,7 @@ local function SCAREmulateKey(self, key, state, func, ...)
 end
 
 function ENT:SetLights(on, highbeams)
-	local lightlevel = TurnonLights:GetInt()
+	local lightlevel = TurnOnLights:GetInt()
 	on = on and lightlevel >= LIGHTLEVEL.HEADLIGHTS
 	if self.v.IsScar then
 		if on == self:GetLights() then return end

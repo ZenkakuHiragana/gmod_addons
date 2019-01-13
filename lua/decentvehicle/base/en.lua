@@ -5,6 +5,7 @@
 
 return {
 	CVars = {
+		AutoLoad = "Decent Vehicle: Automatically loads waypoints on startup.",
 		DetectionRange = "Decent Vehicle: A vehicle within this distance will drive automatically.",
 		DetectionRangeELS = "Decent Vehicle: Detection range of finding cars with ELS to give way.",
 		DriveSide = [[Decent Vehicle: Determines which side of road Decent Vehicles think.
@@ -13,7 +14,7 @@ return {
 		LockVehicle = "Decent Vehicle Whether or not Decent Vehicle prevents players from getting in.",
 		ShouldGoToRefuel = "Decent Vehicle: 1: Go to a fuel station to refuel.  0: Refuel automatically.",
 		TimeToStopEmergency = "Decent Vehicle: Time to turn off hazard lights in seconds.",
-		TurnonLights = [[Decent Vehicle: The level of using lights.
+		TurnOnLights = [[Decent Vehicle: The level of using lights.
 0: Disabled
 1: Only use running lights
 2: Use running lights and headlights
@@ -36,6 +37,8 @@ return {
 	SaveLoad_OK = "OK",
 	Tools = {
 		AlwaysDrawWaypoints = "Always draw waypoints",
+		AutoLoad = "Load waypoints on startup",
+		AutoLoadHelp = "Automatically loads waypoints when the map is loaded.",
 		Bidirectional = "Bi-directional link",
 		BidirectionalHelp = "Connect bi-directional link automatically.",
 		Category = "GreatZenkakuMan's tools",
@@ -83,6 +86,8 @@ return {
 		},
 		ShowUpdates = "Notify the latest updates",
 		ShowUpdatesHelp = "If checked, some notifications are shown when this addon is updated.",
+		UpdateRadius = "Update radius",
+		UpdateRadiusHelp = "Waypoints in this radius will be updated at a time when you press E + Right click.",
 		UseTurnLights = "Use turn signals",
 		UseTurnLightsHelp = "Decent Vehicles will use turn signals when they go to the waypoint.",
 		WaitTime = "Wait time [seconds]",

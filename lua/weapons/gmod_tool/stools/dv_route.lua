@@ -27,6 +27,7 @@ TOOL.ClientConVar["showalways"] = 0
 TOOL.ClientConVar["showpoints"] = 1
 TOOL.ClientConVar["showupdates"] = 1
 TOOL.ClientConVar["speed"] = 40
+TOOL.ClientConVar["updateradius"] = 100
 TOOL.ClientConVar["wait"] = 0
 
 if CLIENT then
@@ -36,28 +37,6 @@ if CLIENT then
 	language.Add("tool.dv_route.left", texts.Left[1])
 	language.Add("tool.dv_route.left_1", texts.Left[2])
 	language.Add("tool.dv_route.right", texts.Right[1])
-	
-	language.Add("tool.dv_route.bidirectional", texts.Bidirectional)
-	language.Add("tool.dv_route.bidirectional.help", texts.BidirectionalHelp)
-	language.Add("tool.dv_route.delete", texts.Delete)
-	language.Add("tool.dv_route.drawdistance", texts.DrawDistance)
-	language.Add("tool.dv_route.drawdistance.help", texts.DrawDistanceHelp)
-	language.Add("tool.dv_route.fuel", texts.FuelStation)
-	language.Add("tool.dv_route.fuel.help", texts.FuelStationHelp)
-	language.Add("tool.dv_route.generate", texts.Generate)
-	language.Add("tool.dv_route.group", texts.WaypointGroup)
-	language.Add("tool.dv_route.group.help", texts.WaypointGroupHelp)
-	language.Add("tool.dv_route.load", texts.Restore)
-	language.Add("tool.dv_route.save", texts.Save)
-	language.Add("tool.dv_route.shouldblink", texts.UseTurnLights)
-	language.Add("tool.dv_route.shouldblink.help", texts.UseTurnLightsHelp)
-	language.Add("tool.dv_route.showalways", texts.AlwaysDrawWaypoints)
-	language.Add("tool.dv_route.showpoints", texts.DrawWaypoints)
-	language.Add("tool.dv_route.showupdates", texts.ShowUpdates)
-	language.Add("tool.dv_route.showupdates.help", texts.ShowUpdatesHelp)
-	language.Add("tool.dv_route.speed", texts.MaxSpeed)
-	language.Add("tool.dv_route.wait", texts.WaitTime)
-	language.Add("tool.dv_route.wait.help", texts.WaitTimeHelp)
 end
 
 function TOOL:LeftClick(trace)
@@ -161,15 +140,36 @@ function TOOL:RightClick(trace)
 	local speed = self:GetClientNumber "speed"
 	local wait = self:GetClientNumber "wait"
 	local pos = trace.HitPos
-	local waypoint = dvd.GetNearestWaypoint(pos, dvd.WaypointSize)
-	if not waypoint then return end
-	if CLIENT then return true end
+	local waypoints = {}
+	if self:GetOwner():KeyDown(IN_USE) then
+		local RadiusSqr = self:GetClientNumber "updateradius"^2
+		for i, w in ipairs(dvd.Waypoints) do
+			if pos:DistToSqr(w.Target) > RadiusSqr then continue end
+			table.insert(waypoints, i)
+		end
+	else
+		waypoints = {select(2, dvd.GetNearestWaypoint(pos, dvd.WaypointSize))}
+	end
 	
-	waypoint.FuelStation = fuel
-	waypoint.UseTurnLights = shouldblink
-	waypoint.WaitUntilNext = wait
-	waypoint.SpeedLimit = speed * dvd.KmphToHUps
-	waypoint.Group = group
+	if #waypoints == 0 then return end
+	for _, i in ipairs(waypoints) do
+		local w = dvd.Waypoints[i]
+		if not w then continue end
+		w.FuelStation = fuel
+		w.UseTurnLights = shouldblink
+		w.WaitUntilNext = wait
+		w.SpeedLimit = speed * dvd.KmphToHUps
+		w.Group = group
+
+		net.Start "Decent Vehicle: Send waypoint info"
+		net.WriteUInt(i, 24)
+		net.WriteUInt(w.Group, 16)
+		net.WriteFloat(w.SpeedLimit)
+		net.WriteFloat(w.WaitUntilNext)
+		net.WriteBool(w.UseTurnLights)
+		net.WriteBool(w.FuelStation)
+		net.Broadcast()
+	end
 	
 	self:SetStage(0)
 	return true
@@ -192,21 +192,23 @@ function TOOL.BuildCPanel(CPanel)
 	end
 	
 	CPanel:Help(texts.DescriptionInMenu)
-	CPanel:CheckBox("#tool.dv_route.showupdates", "dv_route_showupdates"):SetToolTip "#tool.dv_route.showupdates.help"
-	CPanel:CheckBox("#tool.dv_route.showpoints", "dv_route_showpoints")
-	CPanel:CheckBox("#tool.dv_route.showalways", "dv_route_showalways")
-	CPanel:CheckBox("#tool.dv_route.bidirectional", "dv_route_bidirectional"):SetToolTip "#tool.dv_route.bidirectional.help"
-	CPanel:CheckBox("#tool.dv_route.shouldblink", "dv_route_shouldblink"):SetToolTip "#tool.dv_route.shouldblink.help"
-	CPanel:CheckBox("#tool.dv_route.fuel", "dv_route_fuel"):SetToolTip "#tool.dv_route.fuel.help"
-	CPanel:NumSlider("#tool.dv_route.drawdistance", "dv_route_drawdistance", 2000, 10000, 0):SetToolTip "#tool.dv_route.drawdistance.help"
-	CPanel:NumSlider("#tool.dv_route.group", "dv_route_group", 0, 20, 0):SetToolTip "#tool.dv_route.group.help"
-	CPanel:NumSlider("#tool.dv_route.wait", "dv_route_wait", 0, 100, 2):SetToolTip "#tool.dv_route.wait.help"
-	CPanel:NumSlider("#tool.dv_route.speed", "dv_route_speed", 5, 500, 0)
+	CPanel:CheckBox(texts.ShowUpdates, "dv_route_showupdates"):SetToolTip(texts.ShowUpdatesHelp)
+	CPanel:CheckBox(texts.DrawWaypoints, "dv_route_showpoints")
+	CPanel:CheckBox(texts.AlwaysDrawWaypoints, "dv_route_showalways")
+	CPanel:CheckBox(texts.Bidirectional, "dv_route_bidirectional"):SetToolTip(texts.BidirectionalHelp)
+	CPanel:CheckBox(texts.UseTurnLights, "dv_route_shouldblink"):SetToolTip(texts.UseTurnLightsHelp)
+	CPanel:CheckBox(texts.FuelStation, "dv_route_fuel"):SetToolTip(texts.FuelStationHelp)
+	CPanel:NumSlider(texts.UpdateRadius, "dv_route_updateradius", 100, 400, 0):SetToolTip(texts.UpdateRadiusHelp)
+	CPanel:NumSlider(texts.DrawDistance, "dv_route_drawdistance", 2000, 10000, 0):SetToolTip(texts.DrawDistanceHelp)
+	CPanel:NumSlider(texts.WaypointGroup, "dv_route_group", 0, 20, 0):SetToolTip(texts.WaypointGroupHelp)
+	CPanel:NumSlider(texts.WaitTime, "dv_route_wait", 0, 100, 2):SetToolTip(texts.WaitTimeHelp)
+	CPanel:NumSlider(texts.MaxSpeed, "dv_route_speed", 5, 500, 0)
 	
 	if LocalPlayer():IsAdmin() then
 		CPanel:Help ""
 		local label = CPanel:Help(texts.ServerSettings)
 		label:SetTextColor(CPanel:GetSkin().Colours.Tree.Hover)
+		CPanel:CheckBox(texts.AutoLoad, "decentvehicle_autoload"):SetToolTip(texts.AutoLoadHelp)
 		CPanel:CheckBox(texts.DriveSide, "decentvehicle_driveside")
 		CPanel:CheckBox(texts.ShouldGoToRefuel, "decentvehicle_gotorefuel")
 		CPanel:CheckBox(texts.LockVehicle, "decentvehicle_lock"):SetToolTip(texts.LockVehicleHelp)
@@ -220,10 +222,10 @@ function TOOL.BuildCPanel(CPanel)
 		combobox:AddChoice(texts.LightLevel.Headlights, 2)
 		combobox:AddChoice(texts.LightLevel.All, 3)
 		
-		CPanel:Button("#tool.dv_route.save", "dv_route_save")
-		CPanel:Button("#tool.dv_route.load", "dv_route_load")
-		CPanel:Button("#tool.dv_route.delete", "dv_route_delete")
-		CPanel:Button("#tool.dv_route.generate", "dv_route_generate")
+		CPanel:Button(texts.Save, "dv_route_save")
+		CPanel:Button(texts.Restore, "dv_route_load")
+		CPanel:Button(texts.Delete, "dv_route_delete")
+		CPanel:Button(texts.Generate, "dv_route_generate")
 	end
 	
 	CPanel:InvalidateLayout()

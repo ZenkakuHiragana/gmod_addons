@@ -2,7 +2,7 @@
 -- Copyright © 2018-2030 Decent Vehicle
 -- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
--- AND PROOF-READ AND EDITED BY ARCTIC (https://steamcommunity.com/id/ArcticWinterZzZ/)
+-- Proof-read and edited by Arctic (https://steamcommunity.com/id/ArcticWinterZzZ/).
 
 return {
 	npc_dvtaxi = "Decent Taxi",

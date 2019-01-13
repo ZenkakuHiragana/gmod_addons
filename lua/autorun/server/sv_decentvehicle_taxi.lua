@@ -5,8 +5,7 @@
 
 local dvd = DecentVehicleDestination
 if not dvd then return end
-local UnitPrice = CreateConVar("decentvehicle_taxi_unitprice", 5,
-{FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}, dvd.Texts.Taxi.UnitPrice)
+local UnitPrice = dvd.CVars.Taxi.UnitPrice
 
 dvd.TaxiDrivers = dvd.TaxiDrivers or {}
 dvd.TaxiStations = dvd.TaxiStations or {}
