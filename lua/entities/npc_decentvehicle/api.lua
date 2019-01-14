@@ -76,6 +76,8 @@ function ENT:GetLights(highbeams)
 	elseif isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
 		return istable(states) and Either(highbeams, states.HighBeams, states.LowBeams)
+	elseif Photon and isfunction(self.v.ELS_Illuminate) then
+		return self.v:ELS_Illuminate()
 	end
 end
 
@@ -86,6 +88,8 @@ function ENT:GetTurnLight(left)
 	elseif isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
 		return istable(states) and Either(left, states.TurnLightLeft, states.TurnLightRight)
+	elseif Photon and isfunction(self.v.CAR_TurnLeft) and isfunction(self.v.CAR_TurnRight) then
+		return Either(left, self.v:CAR_TurnLeft(), self.v:CAR_TurnRight())
 	end
 end
 
@@ -96,6 +100,8 @@ function ENT:GetHazardLights()
 	elseif isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
 		return istable(states) and states.HazardLights
+	elseif Photon and isfunction(self.v.CAR_Hazards) then
+		return self.v:CAR_Hazards()
 	end
 end
 
@@ -108,6 +114,9 @@ function ENT:GetELS(v)
 		return vehicle:GetEMSEnabled()
 	elseif isfunction(vehicle.VC_getELSLightsOn) then
 		return vehicle:VC_getELSLightsOn()
+	elseif Photon and isfunction(self.v.ELS_Siren)
+	and isfunction(self.v.ELS_Lights) then
+		return self.v:ELS_Siren() and self.v:ELS_Lights()
 	end
 end
 
@@ -122,6 +131,8 @@ function ENT:GetELSSound(v)
 	and isfunction(vehicle.VC_getStates) then
 		local states = vehicle:VC_getStates()
 		return vehicle:VC_getELSSoundOn() or istable(states) and states.ELS_ManualOn
+	elseif Photon and isfunction(self.v.ELS_Siren) then
+		return self.v:ELS_Siren()
 	end
 end
 
@@ -135,6 +146,9 @@ function ENT:GetHorn(v)
 	elseif isfunction(vehicle.VC_getStates) then
 		local states = vehicle:VC_getStates()
 		return istable(states) and states.HornOn
+	elseif Photon and isnumber(EMV_HORN)
+	and isfunction(vehicle.ELS_Horn) then
+		return vehicle:GetDTBool(EMV_HORN)
 	end
 end
 
@@ -242,6 +256,15 @@ function ENT:SetLights(on, highbeams)
 		else
 			self.v:VC_setLowBeams(on)
 		end
+	elseif Photon and isfunction(self.v.ELS_IllumOn)
+	and isfunction(self.v.ELS_IllumOff)
+	and isfunction(self.v.ELS_Illuminate) then
+		if on == self:GetLights(highbeams) then return end
+		if on then
+			self.v:ELS_IllumOn()
+		else
+			self.v:ELS_IllumOff()
+		end
 	end
 end
 
@@ -264,6 +287,18 @@ function ENT:SetTurnLight(on, left)
 	and isfunction(self.v.VC_setTurnLightRight) then
 		self.v:VC_setTurnLightLeft(on and left)
 		self.v:VC_setTurnLightRight(on and not left)
+	elseif Photon and isfunction(self.v.CAR_TurnLeft)
+	and isfunction(self.v.CAR_TurnRight)
+	and isfunction(self.v.CAR_StopSignals) then
+		if on then
+			if left then
+				self.v:CAR_TurnLeft(true)
+			else
+				self.v:CAR_TurnRight(true)
+			end
+		else
+			self.v:CAR_StopSignals()
+		end
 	end
 end
 
@@ -283,6 +318,13 @@ function ENT:SetHazardLights(on)
 		self.HazardLights = true
 	elseif isfunction(self.v.VC_setHazardLights) then
 		self.v:VC_setHazardLights(on)
+	elseif Photon and isfunction(self.v.CAR_Hazards)
+	and isfunction(self.v.CAR_StopSignals) then
+		if on then
+			self.v:CAR_Hazards(true)
+		else
+			self.v:CAR_StopSignals()
+		end
 	end
 end
 
@@ -308,6 +350,15 @@ function ENT:SetELS(on)
 	and isfunction(self.v.VC_setELSSound) then
 		self.v:VC_setELSLights(on)
 		self.v:VC_setELSSound(on)
+	elseif Photon and isfunction(self.v.ELS_SirenOn)
+	and isfunction(self.v.ELS_SirenOff)
+	and isfunction(self.v.ELS_LightsOff) then
+		if on then
+			self.v:ELS_SirenOn()
+		else
+			self.v:ELS_SirenOff()
+			self.v:ELS_LightsOff()
+		end
 	end
 end
 
@@ -330,6 +381,16 @@ function ENT:SetELSSound(on)
 		end
 	elseif isfunction(self.v.VC_setELSSound) then
 		self.v:VC_setELSSound(on)
+	elseif Photon and isfunction(self.v.ELS_SirenOn)
+	and isfunction(self.v.ELS_SirenOff)
+	and isfunction(self.v.ELS_LightsOff) then
+		if on then
+			self.v:ELS_SirenOn()
+		else
+			self.v:ELS_SirenOff()
+		end
+
+		self.v:ELS_LightsOff()
 	end
 end
 
@@ -353,6 +414,8 @@ function ENT:SetHorn(on)
 		if not istable(states) then return end
 		states.HornOn = true
 		self.v:VC_setStates(states)
+	elseif Photon and isfunction(self.v.ELS_Horn) then
+		self.v:ELS_Horn(on)
 	end
 end
 

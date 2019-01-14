@@ -104,17 +104,12 @@ function ENT:DVPolice_GenerateWaypoint(ent, turn)
 end
 
 function ENT:GetCurrentMaxSpeed()
-	if IsValid(self.DVPolice_Target) then 
-		local speed = 80
-		
-		if self.v:GetClass() == "prop_vehicle_jeep" and VC and math.abs(self.v:GetSteering()) > .3 then
-			speed = 35 -- lower speed on turning
-		end
-		
-		return speed * dvd.KmphToHUps
-	end
+	local limit = self.Waypoint.SpeedLimit
+	self.Waypoint.SpeedLimit = limit * 10
+	local base = self.BaseClass.GetCurrentMaxSpeed(self)
+	self.Waypoint.SpeedLimit = limit
 	
-	return self.BaseClass.GetCurrentMaxSpeed(self)
+	return base
 end
 
 function ENT:TargetStopped()
@@ -308,7 +303,7 @@ function ENT:Think()
 		self.DVPolice_Target = nil -- "ak th3n n3v3r mind" (forgot it)
 		self:FindFirstWaypoint()
 		hook.Run("Decent Police: Reset Target", self)
-	elseif self:GetPos():Distance(self.DVPolice_Target:GetPos()) > 6000 then -- If target too far
+	elseif self:GetPos():DistToSqr(self.DVPolice_Target:GetPos()) > 36000000 then -- If target too far
 		self.DVPolice_LastTarget = self.DVPolice_Target -- don't chase anymore, but remember this guy
 		hook.Run("Decent Police: Added wanted list", self, self.DVPolice_Target)
 		local route = dvd.GetRouteVector(self.v:GetPos(), self.DVPolice_Target:GetPos(), self.Group)

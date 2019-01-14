@@ -80,6 +80,7 @@ ENT.Interval = { -- The interval of execution.
 
 local dvd = DecentVehicleDestination
 local vector_one = Vector(1, 1, 1)
+local NIGHT, DAWN = 0, 1 -- Constant values used in Atmos
 local TraceMax = 64
 local TraceMinLength = 200
 local TraceHeightGap = math.sqrt(3) -- The multiplier between ground and the bottom of the trace
@@ -117,10 +118,13 @@ local function FilterUTurnAndGroup(self, waypoint, n)
 end
 
 local function GetNight()
-	if StormFox then return StormFox.IsNight() end
+	if istable(StormFox) then return StormFox.IsNight() end
+	if istable(AtmosGlobal) then
+		return AtmosGlobal.m_LastPeriod == NIGHT or AtmosGlobal.m_LastPeriod == DAWN
+	end
+
 	local skyname = GetConVar "sv_skyname" :GetString()
-	return NightSkyTextureList[skyname]
-	or tobool(skyname:lower():find "night")
+	return NightSkyTextureList[skyname] or tobool(skyname:lower():find "night")
 end
 
 local function GetFogInfo()
@@ -954,14 +958,30 @@ function ENT:Initialize()
 	self.Trace = {}
 	self.TraceBack = {}
 	self.TraceWaypoint = {}
+	self.TraceLeft = {}
+	self.TraceRight = {}
+	self.TraceNextWaypoint = {}
 	
+	self.Preference = table.Copy(self.Preference)
 	if self.Preference.LockVehicleDependsOnCVar then
-		self.Preference = table.Copy(self.Preference)
 		self.Preference.LockVehicle = LockVehicle:GetBool()
 	end
 	
 	if self.Preference.LockVehicle then
 		self:SetLocked(true)
+	end
+
+	if Photon and istable(self.v.VehicleTable) and self.v.VehicleTable.Photon then
+		self.v.PhotonUnitIDRequestTime = math.huge
+		if isfunction(self.v.IsBraking) then
+			self.OldPhotonIsBraking = self.v.IsBraking
+			self.v.IsBraking = self.IsBraking
+		end
+
+		if isfunction(self.v.IsReversing) then
+			self.OldPhotonIsReversing = self.v.IsReversing
+			self.v.IsReversing = self.IsReversing
+		end
 	end
 end
 
@@ -1007,6 +1027,12 @@ function ENT:OnRemove()
 			self.NPCDriver:Fire "Stop"
 			SafeRemoveEntity(self.NPCDriver)
 		end
+	end
+
+	if Photon and istable(self.v.VehicleTable) and self.v.VehicleTable.Photon then
+		self.v.PhotonUnitIDRequestTime = nil
+		self.v.IsBraking = self.OldPhotonIsBraking
+		self.v.IsReversing = self.OldPhotonIsReversing
 	end
 	
 	local e = EffectData()

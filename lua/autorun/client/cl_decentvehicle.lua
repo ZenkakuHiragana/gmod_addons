@@ -212,6 +212,7 @@ local TrafficMaterial = Material "cable/redlaser"
 local UseTurnLightsMaterial = Material "icon16/arrow_turn_left.png"
 local SelectRadiusMaterial = Material "cable/new_cable_lit"
 local NumPolys = 192
+local AngleStep = 360 / NumPolys
 hook.Add("PostDrawTranslucentRenderables", "Decent Vehicle: Draw waypoints",
 function(bDrawingDepth, bDrawingSkybox)
 	local weapon = LocalPlayer():GetActiveWeapon()
@@ -232,7 +233,7 @@ function(bDrawingDepth, bDrawingSkybox)
 	if not (always:GetBool() or ToolEquiped) then return end
 	
 	if bDrawingSkybox or not (showpoints and showpoints:GetBool()) then return end
-	if MultiEdit then
+	if ToolEquiped and MultiEdit then
 		render.SetMaterial(SelectRadiusMaterial)
 		render.StartBeam(NumPolys + 1)
 		local filter = player.GetAll()
@@ -241,7 +242,7 @@ function(bDrawingDepth, bDrawingSkybox)
 		local BaseAngle = BaseNormal:Angle()
 		for i = 0, NumPolys do
 			local pos = Vector(0, Radius, 0)
-			pos:Rotate(Angle(0, 0, 360 * i / NumPolys))
+			pos:Rotate(Angle(0, 0, AngleStep * i))
 
 			local start = LocalToWorld(pos, angle_zero, Trace.HitPos, BaseAngle)
 			local tr = util.TraceLine {start = start, endpos = start + TraceVector, mask = MASK_SOLID_BRUSHONLY}

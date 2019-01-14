@@ -41,13 +41,32 @@ function ENT:KeyDown(key)
 	or false
 end
 
+if Photon then
+	function ENT:IsBraking()
+		local dv = self.DecentVehicle
+		if not IsValid(dv) then return false end
+		return dv.HandBrake
+	end
+
+	function ENT:IsReversing()
+		local dv = self.DecentVehicle
+		if not IsValid(dv) then return false end
+		return dv.Throttle < 0 and self:GetVelocity():Dot(dv:GetVehicleForward()) < 0
+	end
+end
+
 local dvd = DecentVehicleDestination
 local vehiclemeta = FindMetaTable "Vehicle"
 local GetDriver = vehiclemeta.GetDriver
 if not dvd or dvd.HasChangedVehicleMeta then return end
 function vehiclemeta:GetDriver(...)
-	if self.DecentVehicle and self.__IsSW_Motorbike then
-		return self.DecentVehicle
+	if self.DecentVehicle then
+		if Photon and istable(self.VehicleTable) and self.VehicleTable.Photon
+		and IsValid(self.PhotonVehicleSpawner) and self.PhotonVehicleSpawner:IsPlayer() then
+			return self.PhotonVehicleSpawner
+		elseif self.__IsSW_Motorbike then
+			return self.DecentVehicle
+		end
 	end
 	
 	return GetDriver(self, ...)
