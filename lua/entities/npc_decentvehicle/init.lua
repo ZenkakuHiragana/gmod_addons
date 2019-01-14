@@ -78,9 +78,16 @@ ENT.Interval = { -- The interval of execution.
 	Trace = 1 / 15, -- The time between doing a trace and next time.
 }
 
+-- Constant values used in Atmos
+local TIME_NOON			= 12	-- 12:00 pm
+local TIME_MIDNIGHT		= 0		-- 12:00 am
+local TIME_DAWN_START	= 4		-- 4:00 am
+local TIME_DAWN_END		= 6.5	-- 6:30 am
+local TIME_DUSK_START	= 19	-- 7:00 pm
+local TIME_DUSK_END		= 20.5	-- 8:30 pm
+
 local dvd = DecentVehicleDestination
 local vector_one = Vector(1, 1, 1)
-local NIGHT, DAWN = 0, 1 -- Constant values used in Atmos
 local TraceMax = 64
 local TraceMinLength = 200
 local TraceHeightGap = math.sqrt(3) -- The multiplier between ground and the bottom of the trace
@@ -119,8 +126,9 @@ end
 
 local function GetNight()
 	if istable(StormFox) then return StormFox.IsNight() end
-	if istable(AtmosGlobal) then
-		return AtmosGlobal.m_LastPeriod == NIGHT or AtmosGlobal.m_LastPeriod == DAWN
+	if istable(AtmosGlobal) and isnumber(AtmosGlobal.m_Time) then
+		local t = AtmosGlobal.m_Time
+		return t > TIME_DUSK_END or t < TIME_DAWN_END
 	end
 
 	local skyname = GetConVar "sv_skyname" :GetString()
