@@ -16,10 +16,6 @@ local Exceptions = {Target = true, TrafficLight = true}
 local HULLS = 10
 local MAX_NODES = 1500
 local NODE_VERSION_NUMBER = 37
-local function GetWaypointFromID(id)
-	return assert(dvd.Waypoints[id], dvd.Texts.Errors.WaypointNotFound)
-end
-
 local function ClearUndoList()
 	for id, undolist in pairs(undo.GetTable()) do
 		for i, undotable in pairs(undolist) do
@@ -37,7 +33,7 @@ local function ConfirmSaveRestore(ply, save)
 end
 
 local function WriteWaypoint(id)
-	local waypoint = GetWaypointFromID(id)
+	local waypoint = dvd.Waypoints[id]
 	net.WriteUInt(id, 24)
 	net.WriteVector(waypoint.Target)
 	net.WriteEntity(waypoint.TrafficLight or NULL)
@@ -467,7 +463,9 @@ end
 --   number from	| The waypoint ID the link starts from.
 --   number to		| The waypoint ID connected to.
 function dvd.AddNeighbor(from, to)
-	table.insert(GetWaypointFromID(from).Neighbors, to)
+	local w = dvd.Waypoints[from]
+	if not w then return end
+	table.insert(w.Neighbors, to)
 	net.Start "Decent Vehicle: Add a neighbor"
 	net.WriteUInt(from, 24)
 	net.WriteUInt(to, 24)
@@ -480,7 +478,9 @@ end
 --   number from	| The waypoint ID the link starts from.
 --   number to		| The waypoint ID connected to.
 function dvd.RemoveNeighbor(from, to)
-	table.RemoveByValue(GetWaypointFromID(from).Neighbors, to)
+	local w = dvd.Waypoints[from]
+	if not w then return end
+	table.RemoveByValue(w.Neighbors, to)
 	net.Start "Decent Vehicle: Remove a neighbor"
 	net.WriteUInt(from, 24)
 	net.WriteUInt(to, 24)
@@ -492,7 +492,8 @@ end
 --   number id		| The waypoint ID.
 --   number group	| Waypoint group to check.
 function dvd.WaypointAvailable(id, group)
-	local waypoint = GetWaypointFromID(id)
+	local waypoint = dvd.Waypoints[id]
+	if not waypoint then return end
 	return waypoint.Group == 0 or waypoint.Group == group
 end
 
@@ -501,7 +502,8 @@ end
 --   number id		| The waypoint ID.
 --   Entity traffic	| The traffic light entity.  Giving nil to remove the link.
 function dvd.AddTrafficLight(id, traffic)
-	local waypoint = GetWaypointFromID(id)
+	local waypoint = dvd.Waypoints[id]
+	if not waypoint then return end
 	if not IsValid(traffic) then traffic = nil end
 	if traffic then
 		if not traffic.IsDVTrafficLight then return end
@@ -534,7 +536,7 @@ function dvd.GetRandomNeighbor(waypoint, filter)
 	
 	local suggestion = {}
 	for i, n in ipairs(waypoint.Neighbors) do
-		local w = GetWaypointFromID(n)
+		local w = dvd.Waypoints[n]
 		if not w then continue end
 		if not (isfunction(filter) and filter(waypoint, n)) then continue end
 		table.insert(suggestion, w)
@@ -571,10 +573,15 @@ function dvd.GetRoute(start, endpos, group)
 	end
 	
 	local function EstimateCost(node)
-		node = GetWaypointFromID(node.id).Target
+		local w = dvd.Waypoints[node.id]
 		local cost = math.huge
+		if not w then return cost end
+
+		node = w.Target
 		for id in pairs(endpos) do
-			cost = math.min(cost, node:Distance(GetWaypointFromID(id).Target))
+			local wi = dvd.Waypoints[id]
+			if not wi then continue end
+			cost = math.min(cost, node:Distance(wi.Target))
 		end
 		
 		return cost
@@ -582,14 +589,14 @@ function dvd.GetRoute(start, endpos, group)
 	
 	local function AddToOpenList(node, parent)
 		if parent then
-			local nodepos = GetWaypointFromID(node.id).Target
-			local parentpos = GetWaypointFromID(parent.id).Target
+			local nodepos = dvd.Waypoints[node.id].Target
+			local parentpos = dvd.Waypoints[parent.id].Target
 			local cost = parentpos:Distance(nodepos)
-			local grandpa = parent.parent
-			if grandpa then -- Angle between waypoints is considered as cost
-				local gppos = GetWaypointFromID(grandpa.id).Target
-				cost = cost --* (2 - dvd.GetAng3(gppos, parentpos, nodepos))
-			end
+			-- local grandpa = parent.parent
+			-- if grandpa then -- Angle between waypoints is considered as cost
+			-- 	local gppos = dvd.Waypoints[grandpa.id].Target
+			-- 	cost = cost * (2 - dvd.GetAng3(gppos, parentpos, nodepos))
+			-- end
 			
 			node.cost = parent.cost + cost
 		end
@@ -633,11 +640,11 @@ function dvd.GetRoute(start, endpos, group)
 		if nodes[current].closed then continue end
 		if endpos[current] then
 			current = nodes[current]
-			local route = {(GetWaypointFromID(current.id))}
+			local route = {dvd.Waypoints[current.id]}
 			while current.parent do
-				debugoverlay.Sphere(GetWaypointFromID(current.id).Target, 30, 5, Color(0, 255, 0))
-				debugoverlay.SweptBox(GetWaypointFromID(current.parent.id).Target, GetWaypointFromID(current.id).Target, Vector(-10, -10, -10), Vector(10, 10, 10), angle_zero, 5, Color(0, 255, 0))
-				table.insert(route, (GetWaypointFromID(current.id)))
+				debugoverlay.Sphere(dvd.Waypoints[current.id].Target, 30, 5, Color(0, 255, 0))
+				debugoverlay.SweptBox(dvd.Waypoints[current.parent.id].Target, dvd.Waypoints[current.id].Target, Vector(-10, -10, -10), Vector(10, 10, 10), angle_zero, 5, Color(0, 255, 0))
+				table.insert(route, dvd.Waypoints[current.id])
 				current = current.parent
 			end
 			
@@ -645,7 +652,7 @@ function dvd.GetRoute(start, endpos, group)
 		end
 		
 		nodes[current].closed = true
-		for i, n in ipairs(GetWaypointFromID(nodes[current].id).Neighbors) do
+		for i, n in ipairs(dvd.Waypoints[nodes[current].id].Neighbors) do
 			if nodes[n] and nodes[n].closed ~= nil then continue end
 			if not dvd.WaypointAvailable(n, group) then continue end
 			AddToOpenList(nodes[n] or CreateNode(n), nodes[current])
