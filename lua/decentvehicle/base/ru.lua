@@ -5,6 +5,7 @@
 
 return {
     CVars = {
+        AutoLoad = "Decent Vehicle: Загружать точки автоматически при загрузке.",
         DetectionRange = "Decent Vehicle: Транспорт найденый в этом радиусе будет автоматически управляться.",
         DetectionRangeELS = "Decent Vehicle: Радиус определенния транспорта с ELS, чтобы уступить им дорогу",
         DriveSide = [[Decent Vehicle: Решает какое движение.
@@ -35,7 +36,9 @@ return {
     SaveLoad_Cancel = "Отмена",
     SaveLoad_OK = "ОК",
     Tools = {
-		AlwaysDrawWaypoints = "Постоянно отрисовывать точки",
+        AlwaysDrawWaypoints = "Постоянно отрисовывать точки",
+        AutoLoad = "Загружать точки при загрузке игры",
+        AutoLoadHelp = "Decent Vehicle будет автоматически загружать точки при загрузке карты.",
         Bidirectional = "Bi-directional соединение",
         BidirectionalHelp = "Connect bi-directional link automatically.",
         Category = "GreatZenkakuMan's tools",
@@ -83,6 +86,8 @@ return {
         },
         ShowUpdates = "Уведомлять об обновлениях",
         ShowUpdatesHelp = "Если отмечено, вы будете уведомлены о всех обновлениях.",
+        UpdateRadius = "Обновить радиус",
+        UpdateRadiusHelp = "Точки в этом радиусе будут обновлены в то время, когда вы нажмете E + Правая Кнопка Мыши.",
         UseTurnLights = "Использовать поворотники",
         UseTurnLightsHelp = "Decent Vehicles будет использовать поворотники.",
         WaitTime = "Ожидание [секунды]",

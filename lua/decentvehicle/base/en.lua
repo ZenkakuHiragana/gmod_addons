@@ -5,13 +5,13 @@
 
 return {
 	CVars = {
-		AutoLoad = "Decent Vehicle: Automatically loads waypoints on startup.",
+		AutoLoad = "Decent Vehicle: Whether or not Decent Vehicle automatically loads waypoints on startup.",
 		DetectionRange = "Decent Vehicle: A vehicle within this distance will drive automatically.",
 		DetectionRangeELS = "Decent Vehicle: Detection range of finding cars with ELS to give way.",
 		DriveSide = [[Decent Vehicle: Determines which side of road Decent Vehicles think.
 0: Right (Europe, America, etc.)
 1: Left (UK, Australia, etc.)]],
-		LockVehicle = "Decent Vehicle Whether or not Decent Vehicle prevents players from getting in.",
+		LockVehicle = "Decent Vehicle: Whether or not Decent Vehicle prevents players from getting in.",
 		ShouldGoToRefuel = "Decent Vehicle: 1: Go to a fuel station to refuel.  0: Refuel automatically.",
 		TimeToStopEmergency = "Decent Vehicle: Time to turn off hazard lights in seconds.",
 		TurnOnLights = [[Decent Vehicle: The level of using lights.
@@ -38,7 +38,7 @@ return {
 	Tools = {
 		AlwaysDrawWaypoints = "Always draw waypoints",
 		AutoLoad = "Load waypoints on startup",
-		AutoLoadHelp = "Automatically loads waypoints when the map is loaded.",
+		AutoLoadHelp = "If checked, Decent Vehicle will automatically load waypoints when the map is loaded.",
 		Bidirectional = "Bi-directional link",
 		BidirectionalHelp = "Connect bi-directional link automatically.",
 		Category = "GreatZenkakuMan's tools",
@@ -93,7 +93,8 @@ return {
 		WaitTime = "Wait time [seconds]",
 		WaitTimeHelp = "After Decent Vehicles reached the waypoint, they wait for this seconds.",
 		WaypointGroup = "Waypoint group",
-		WaypointGroupHelp = "You can force Decent Vehicles to run along specified group of waypoints.\n0 means all vehicles can go there.",
+		WaypointGroupHelp = [[You can force Decent Vehicles to run along specified group of waypoints.
+0 means all vehicles can go there.]],
 	},
 	UndoText = "Undone Decent Vehicle's waypoint",
 }

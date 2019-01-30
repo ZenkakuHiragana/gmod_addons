@@ -10,11 +10,17 @@ local UnitPrice = dvd.CVars.Taxi.UnitPrice
 dvd.TaxiDrivers = dvd.TaxiDrivers or {}
 dvd.TaxiStations = dvd.TaxiStations or {}
 local function GetDriver(seat)
-	if not seat.DecentVehicle then
-		if seat.IsScarSeat then
-			seat = seat.EntOwner
-		else
-			seat = seat:GetParent()
+	if seat.DecentVehicle then return seat.DecentVehicle end
+	if seat.IsScarSeat then
+		seat = seat.EntOwner
+	elseif IsValid(seat:GetParent()) then
+		seat = seat:GetParent()
+	else
+		for e in pairs(constraint.GetAllConstrainedEntities(seat)) do
+			if e.DecentVehicle then
+				seat = e
+				break
+			end
 		end
 	end
 	
