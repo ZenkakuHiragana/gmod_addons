@@ -5,6 +5,7 @@
 
 return {
 	CVars = {
+		AutoLoad = "Decent Vehicle: マップ読み込み時に自動的にウェイポイントを読み込むかどうか。",
 		DetectionRange = "Decent Vehicle: スポーン時に車両を検索する範囲。",
 		DetectionRangeELS = "Decent Vehicle: 運転中、非常灯付きの車を検知する範囲。",
 		DriveSide = [[Decent Vehicle: 左側通行か右側通行か。
@@ -83,6 +84,8 @@ return {
 		},
 		ShowUpdates = "アップデートを通知する",
 		ShowUpdatesHelp = "チェックすると、アップデートされたときに通知が出るようになる。",
+		UpdateRadius = "アップデートの適用半径",
+		UpdateRadiusHelp = "E + 右クリックでこの範囲にあるウェイポイントが一度に更新される。",
 		UseTurnLights = "ウィンカーを使う",
 		UseTurnLightsHelp = "これが有効化されたウェイポイントへ向かうとき、ウィンカーを使うようになる。",
 		WaitTime = "待ち時間 [秒]",

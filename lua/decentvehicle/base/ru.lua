@@ -5,6 +5,7 @@
 
 return {
     CVars = {
+        AutoLoad = "Decent Vehicle: Загружать точки автоматически при загрузке.",
         DetectionRange = "Decent Vehicle: Транспорт найденый в этом радиусе будет автоматически управляться.",
         DetectionRangeELS = "Decent Vehicle: Радиус определенния транспорта с ELS, чтобы уступить им дорогу",
         DriveSide = [[Decent Vehicle: Решает какое движение.
@@ -83,6 +84,8 @@ return {
         },
         ShowUpdates = "Уведомлять об обновлениях",
         ShowUpdatesHelp = "Если отмечено, вы будете уведомлены о всех обновлениях.",
+        UpdateRadius = "Обновить радиус",
+        UpdateRadiusHelp = "Точки в этом радиусе будут обновлены в то время, когда вы нажмете E + Правая Кнопка Мыши.",
         UseTurnLights = "Использовать поворотники",
         UseTurnLightsHelp = "Decent Vehicles будет использовать поворотники.",
         WaitTime = "Ожидание [секунды]",
