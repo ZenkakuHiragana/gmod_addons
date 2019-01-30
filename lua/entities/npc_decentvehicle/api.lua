@@ -51,7 +51,8 @@ function ENT:GetRunningLights()
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
 		return self.SimfphysRunningLights
-	elseif isfunction(self.v.VC_getStates) then
+	elseif vcmod_main
+	and isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
 		return istable(states) and states.RunningLights
 	end
@@ -62,7 +63,8 @@ function ENT:GetFogLights()
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
 		return self.SimfphysFogLights
-	elseif isfunction(self.v.VC_getStates) then
+	elseif vcmod_main
+	and isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
 		return istable(states) and states.FogLights
 	end
@@ -73,10 +75,12 @@ function ENT:GetLights(highbeams)
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
 		return Either(highbeams, self.v:GetLampsEnabled(), self.v:GetLightsEnabled())
-	elseif isfunction(self.v.VC_getStates) then
+	elseif vcmod_main
+	and isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
 		return istable(states) and Either(highbeams, states.HighBeams, states.LowBeams)
-	elseif Photon and isfunction(self.v.ELS_Illuminate) then
+	elseif Photon
+	and isfunction(self.v.ELS_Illuminate) then
 		return self.v:ELS_Illuminate()
 	end
 end
@@ -85,10 +89,13 @@ function ENT:GetTurnLight(left)
 	if self.v.IsScar then -- Does SCAR have turn lights?
 	elseif self.v.IsSimfphyscar then
 		return Either(left, self.TurnLightLeft, self.TurnLightRight)
-	elseif isfunction(self.v.VC_getStates) then
+	elseif vcmod_main
+	and isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
 		return istable(states) and Either(left, states.TurnLightLeft, states.TurnLightRight)
-	elseif Photon and isfunction(self.v.CAR_TurnLeft) and isfunction(self.v.CAR_TurnRight) then
+	elseif Photon
+	and isfunction(self.v.CAR_TurnLeft)
+	and isfunction(self.v.CAR_TurnRight) then
 		return Either(left, self.v:CAR_TurnLeft(), self.v:CAR_TurnRight())
 	end
 end
@@ -97,10 +104,12 @@ function ENT:GetHazardLights()
 	if self.v.IsScar then
 	elseif self.v.IsSimfphyscar then
 		return self.HazardLights
-	elseif isfunction(self.v.VC_getStates) then
+	elseif vcmod_main
+	and isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
 		return istable(states) and states.HazardLights
-	elseif Photon and isfunction(self.v.CAR_Hazards) then
+	elseif Photon
+	and isfunction(self.v.CAR_Hazards) then
 		return self.v:CAR_Hazards()
 	end
 end
@@ -112,9 +121,11 @@ function ENT:GetELS(v)
 		return vehicle.SirenIsOn
 	elseif vehicle.IsSimfphyscar then
 		return vehicle:GetEMSEnabled()
-	elseif isfunction(vehicle.VC_getELSLightsOn) then
+	elseif vcmod_main and vcmod_els
+	and isfunction(vehicle.VC_getELSLightsOn) then
 		return vehicle:VC_getELSLightsOn()
-	elseif Photon and isfunction(self.v.ELS_Siren)
+	elseif Photon
+	and isfunction(self.v.ELS_Siren)
 	and isfunction(self.v.ELS_Lights) then
 		return self.v:ELS_Siren() and self.v:ELS_Lights()
 	end
@@ -127,11 +138,13 @@ function ENT:GetELSSound(v)
 		return vehicle.SirenIsOn
 	elseif vehicle.IsSimfphyscar then
 		return vehicle.ems and vehicle.ems:IsPlaying()
-	elseif isfunction(vehicle.VC_getELSSoundOn)
+	elseif vcmod_main and vcmod_els
+	and isfunction(vehicle.VC_getELSSoundOn)
 	and isfunction(vehicle.VC_getStates) then
 		local states = vehicle:VC_getStates()
 		return vehicle:VC_getELSSoundOn() or istable(states) and states.ELS_ManualOn
-	elseif Photon and isfunction(self.v.ELS_Siren) then
+	elseif Photon
+	and isfunction(self.v.ELS_Siren) then
 		return self.v:ELS_Siren()
 	end
 end
@@ -143,10 +156,12 @@ function ENT:GetHorn(v)
 		return vehicle.Horn:IsPlaying()
 	elseif vehicle.IsSimfphyscar then
 		return vehicle.HornKeyIsDown
-	elseif isfunction(vehicle.VC_getStates) then
+	elseif vcmod_main
+	and isfunction(vehicle.VC_getStates) then
 		local states = vehicle:VC_getStates()
 		return istable(states) and states.HornOn
-	elseif Photon and isnumber(EMV_HORN)
+	elseif Photon
+	and isnumber(EMV_HORN)
 	and isfunction(vehicle.ELS_Horn) then
 		return vehicle:GetDTBool(EMV_HORN)
 	end
@@ -159,8 +174,10 @@ function ENT:GetLocked(v)
 		return vehicle:IsLocked()
 	elseif vehicle.IsSimfphyscar then
 		return vehicle.VehicleLocked
+	elseif vcmod_main
+	and isfunction(vehicle.VC_isLocked) then
+		return vehicle:VC_isLocked()
 	else
-		if isfunction(vehicle.VC_isLocked) then return vehicle:VC_isLocked() end
 		return tonumber(vehicle:GetKeyValues().VehicleLocked) ~= 0
 	end
 end
@@ -187,7 +204,8 @@ function ENT:SetRunningLights(on)
 		self.v:SetFogLightsEnabled(not on)
 		numpad.Activate(self, KEY_V, false)
 		self.keystate = nil
-	elseif isfunction(self.v.VC_setRunningLights) then
+	elseif vcmod_main
+	and isfunction(self.v.VC_setRunningLights) then
 		self.v:VC_setRunningLights(on)
 	end
 end
@@ -202,7 +220,8 @@ function ENT:SetFogLights(on)
 		self.v:SetFogLightsEnabled(not on)
 		numpad.Activate(self, KEY_V, false)
 		self.keystate = nil
-	elseif isfunction(self.v.VC_setFogLights) then
+	elseif vcmod_main
+	and isfunction(self.v.VC_setFogLights) then
 		self.v:VC_setFogLights(on)
 	end
 end
@@ -248,7 +267,8 @@ function ENT:SetLights(on, highbeams)
 		end
 		
 		self.keystate = nil
-	elseif isfunction(self.v.VC_setHighBeams)
+	elseif vcmod_main
+	and isfunction(self.v.VC_setHighBeams)
 	and isfunction(self.v.VC_setLowBeams) then
 		if on == self:GetLights(highbeams) then return end
 		if highbeams then
@@ -256,7 +276,8 @@ function ENT:SetLights(on, highbeams)
 		else
 			self.v:VC_setLowBeams(on)
 		end
-	elseif Photon and isfunction(self.v.ELS_IllumOn)
+	elseif Photon
+	and isfunction(self.v.ELS_IllumOn)
 	and isfunction(self.v.ELS_IllumOff)
 	and isfunction(self.v.ELS_Illuminate) then
 		if on == self:GetLights(highbeams) then return end
@@ -283,11 +304,13 @@ function ENT:SetTurnLight(on, left)
 		self.TurnLightLeft = on and left
 		self.TurnLightRight = on and not left
 		self.HazardLights = false
-	elseif isfunction(self.v.VC_setTurnLightLeft)
+	elseif vcmod_main
+	and isfunction(self.v.VC_setTurnLightLeft)
 	and isfunction(self.v.VC_setTurnLightRight) then
 		self.v:VC_setTurnLightLeft(on and left)
 		self.v:VC_setTurnLightRight(on and not left)
-	elseif Photon and isfunction(self.v.CAR_TurnLeft)
+	elseif Photon
+	and isfunction(self.v.CAR_TurnLeft)
 	and isfunction(self.v.CAR_TurnRight)
 	and isfunction(self.v.CAR_StopSignals) then
 		if on then
@@ -316,9 +339,11 @@ function ENT:SetHazardLights(on)
 		self.TurnLightLeft = false
 		self.TurnLightRight = false
 		self.HazardLights = true
-	elseif isfunction(self.v.VC_setHazardLights) then
+	elseif vcmod_main
+	and isfunction(self.v.VC_setHazardLights) then
 		self.v:VC_setHazardLights(on)
-	elseif Photon and isfunction(self.v.CAR_Hazards)
+	elseif Photon
+	and isfunction(self.v.CAR_Hazards)
 	and isfunction(self.v.CAR_StopSignals) then
 		if on then
 			self.v:CAR_Hazards(true)
@@ -346,11 +371,13 @@ function ENT:SetELS(on)
 		self.v.emson = not on
 		self.v.KeyPressedTime = CurTime() - dt
 		numpad.Deactivate(self, KEY_H, false)
-	elseif isfunction(self.v.VC_setELSLights)
+	elseif vcmod_main and vcmod_els
+	and isfunction(self.v.VC_setELSLights)
 	and isfunction(self.v.VC_setELSSound) then
 		self.v:VC_setELSLights(on)
 		self.v:VC_setELSSound(on)
-	elseif Photon and isfunction(self.v.ELS_SirenOn)
+	elseif Photon
+	and isfunction(self.v.ELS_SirenOn)
 	and isfunction(self.v.ELS_SirenOff)
 	and isfunction(self.v.ELS_LightsOff) then
 		if on then
@@ -379,9 +406,11 @@ function ENT:SetELSSound(on)
 				self.v.ems:Stop()
 			end
 		end
-	elseif isfunction(self.v.VC_setELSSound) then
+	elseif vcmod_main and vcmod_els
+	and isfunction(self.v.VC_setELSSound) then
 		self.v:VC_setELSSound(on)
-	elseif Photon and isfunction(self.v.ELS_SirenOn)
+	elseif Photon
+	and isfunction(self.v.ELS_SirenOn)
 	and isfunction(self.v.ELS_SirenOff)
 	and isfunction(self.v.ELS_LightsOff) then
 		if on then
@@ -408,13 +437,15 @@ function ENT:SetHorn(on)
 		else
 			self.v.HornKeyIsDown = false
 		end
-	elseif isfunction(self.v.VC_getStates)
+	elseif vcmod_main
+	and isfunction(self.v.VC_getStates)
 	and isfunction(self.v.VC_setStates) then
 		local states = self.v:VC_getStates()
 		if not istable(states) then return end
 		states.HornOn = true
 		self.v:VC_setStates(states)
-	elseif Photon and isfunction(self.v.ELS_Horn) then
+	elseif Photon
+	and isfunction(self.v.ELS_Horn) then
 		self.v:ELS_Horn(on)
 	end
 end
@@ -439,7 +470,8 @@ function ENT:SetLocked(locked)
 			seat:Fire(locked and "Lock" or "Unlock")
 		end
 		
-		if isfunction(self.v.VC_lock)
+		if vcmod_main
+		and isfunction(self.v.VC_lock)
 		and isfunction(self.v.VC_unLock) then
 			if locked then
 				self.v:VC_lock()
