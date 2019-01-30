@@ -157,7 +157,7 @@ hook.Add("Decent Vehicle: OnReachedWaypoint", "Taxi reaches", function(self)
 end)
 
 hook.Add("PlayerEnteredVehicle", "Decent Vehicle: Player entered a taxi", function(ply, seat, role)
-	local dv = GetDriver(seat)
+	local dv = GetDriver(seat) -- TODO: Consider constrained vehicle if the vehicle is just a seat.
 	if not (dv and dv.IsDVTaxiDriver) then return end
 	if not dv.Caller then
 		ply:ChatPrint(dvd.Texts.Taxi.Getin)
