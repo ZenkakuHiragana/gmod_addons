@@ -75,7 +75,7 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		{Time = CurTime() + 33, Light = 1}, -- Light pattern #1
 		{Time = CurTime() + 40, Light = 3}, -- Light pattern #2
 	},
-	Version = {1, 0, 5}, -- Major version, Minor version, Revision
+	Version = {1, 0, 6}, -- Major version, Minor version, Revision
 	Waypoints = {},
 	WaypointSize = 32,
 }
