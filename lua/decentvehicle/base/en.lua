@@ -11,6 +11,7 @@ return {
 		DriveSide = [[Decent Vehicle: Determines which side of road Decent Vehicles think.
 0: Right (Europe, America, etc.)
 1: Left (UK, Australia, etc.)]],
+		ForceHeadlights = "Decent Vehicle: Forces Decent Vehicle to enable headlights.",
 		LockVehicle = "Decent Vehicle: Whether or not Decent Vehicle prevents players from getting in.",
 		ShouldGoToRefuel = "Decent Vehicle: 1: Go to a fuel station to refuel.  0: Refuel automatically.",
 		TimeToStopEmergency = "Decent Vehicle: Time to turn off hazard lights in seconds.",
@@ -51,6 +52,8 @@ return {
 		DrawDistanceHelp = "The maximum distance to draw waypoints.",
 		DrawWaypoints = "Draw waypoints",
 		DriveSide = "Is left side of the road",
+		ForceHeadlights = "Force headlights",
+		ForceHeadlightsHelp = "Forces Decent Vehicle to enable headlights.",
 		FuelStation = "Fuel station",
 		FuelStationHelp = "Decent Vehicles will go here to refuel its car.",
 		Generate = "Generate waypoints",

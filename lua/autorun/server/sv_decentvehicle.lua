@@ -49,9 +49,12 @@ end
 
 local function OverwriteWaypoints(source)
 	if source == dvd then return end
-	local side = GetConVar "decentvehicle_driveside"
-	if side then side:SetInt(source.DriveSide) end
-	dvd.DriveSide = source.DriveSide
+	dvd.CVars.ForceHeadlights:SetInt(source.ForceHeadlights and 1 or 0) -- Added from version 1.0.7
+	dvd.CVars.DriveSide:SetInt(source.DriveSide or 0)
+	dvd.DriveSide = source.DriveSide or 0
+	net.Start "Decent Vehicle: Sync CVar"
+	net.Broadcast()
+	
 	ClearUndoList()
 	table.Empty(dvd.Waypoints)
 	net.Start "Decent Vehicle: Clear waypoints"
@@ -250,6 +253,7 @@ util.AddNetworkString "Decent Vehicle: Send waypoint info"
 util.AddNetworkString "Decent Vehicle: Clear waypoints"
 util.AddNetworkString "Decent Vehicle: Save and restore"
 util.AddNetworkString "Decent Vehicle: Change serverside value"
+util.AddNetworkString "Decent Vehicle: Sync CVar"
 concommand.Add("dv_route_save", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.SAVE) end)
 concommand.Add("dv_route_load", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.LOAD) end)
 concommand.Add("dv_route_delete", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.DELETE) end)
@@ -287,6 +291,8 @@ end)
 hook.Add("InitPostEntity", "Decent Vehicle: Load waypoints", function()
 	dvd.SaveEntity = ents.Create "env_dv_save"
 	dvd.SaveEntity:Spawn()
+	if not dvd.CVars.AutoLoad:GetBool() then return end
+	LoadWaypoints("decentvehicle/" .. game.GetMap())
 end)
 
 hook.Add("Tick", "Decent Vehicle: Control traffic lights", function()
@@ -378,6 +384,7 @@ function dvd.GetSaveTable()
 	end
 	
 	save.DriveSide = dvd.DriveSide
+	save.ForceHeadlights = dvd.CVars.ForceHeadlights:GetBool() -- Added from version 1.0.7
 	hook.Run("Decent Vehicle: OnSaveWaypoints", save)
 	return save
 end
@@ -672,5 +679,3 @@ function dvd.GetRouteVector(start, endpos, group)
 end
 
 hook.Run "Decent Vehicle: PostInitialize"
-if not dvd.CVars.AutoLoad:GetBool() then return end
-LoadWaypoints("decentvehicle/" .. game.GetMap())

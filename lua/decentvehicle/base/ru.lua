@@ -11,6 +11,7 @@ return {
         DriveSide = [[Decent Vehicle: Решает какое движение.
 0: Правостороннее (Европа, Америка итд.)
 1: Левостороннее (Британия, Австралия итд.)]],
+        ForceHeadlights = "Decent Vehicle: Заставляет Decent Vehicle включить фары",
 		LockVehicle = "Decent Vehicle: Закрывать транспорт при спавне?",
         ShouldGoToRefuel = "Decent Vehicle: 1: Ехать на АЗС чтобы заправитьсч.  0: заправляться автоматичкски.",
         TimeToStopEmergency = "Decent Vehicle: Время в секундах чтобы выключить аварийные сигналы.",
@@ -51,6 +52,8 @@ return {
 		DrawDistanceHelp = "Дистанция, на которой будут отрисовываться точки",
         DrawWaypoints = "Отображать точки",
         DriveSide = "Левостороннее движение",
+		ForceHeadlights = "Включить фары",
+		ForceHeadlightsHelp = "Заставляет Decent Vehicle включить фары",
         FuelStation = "Заправка",
         FuelStationHelp = "Decent Vehicle будет ехать сюда чтобы заправиться.",
 		Generate = "Сгенерировать точки",

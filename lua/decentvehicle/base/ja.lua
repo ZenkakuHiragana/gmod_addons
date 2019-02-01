@@ -11,6 +11,7 @@ return {
 		DriveSide = [[Decent Vehicle: 左側通行か右側通行か。
 0: 右側通行 (ヨーロッパやアメリカなど)
 1: 左側通行 (イギリスやオーストラリアなど)]],
+		ForceHeadlights = "Decent Vehicle: 常にヘッドライトを点灯させるかどうか。",
 		LockVehicle = "Decent Vehicle: 1にすると、Decent Vehicleの操縦する車両にプレイヤーが乗れないようになる。",
 		ShouldGoToRefuel = "Decent Vehicle: 1: ガソリンスタンドに向かって給油する  0: 自動的に給油されるようにする",
 		TimeToStopEmergency = "Decent Vehicle: 衝突時、ハザードランプを消すまでの時間。",
@@ -51,6 +52,8 @@ return {
 		DrawDistanceHelp = "ウェイポイントを描画する最大の距離。",
 		DrawWaypoints = "ウェイポイントを描画する",
 		DriveSide = "左側通行",
+		ForceHeadlights = "ヘッドライトを常に点灯する",
+		ForceHeadlightsHelp = "チェックを入れると、Decent Vehicleは昼夜問わずヘッドライトを点灯するようになる。",
 		FuelStation = "ガソリンスタンド",
 		FuelStationHelp = "給油のために向かう地点であるかどうか。",
 		Generate = "ウェイポイントの生成",

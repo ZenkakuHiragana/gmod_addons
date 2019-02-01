@@ -75,7 +75,7 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		{Time = CurTime() + 33, Light = 1}, -- Light pattern #1
 		{Time = CurTime() + 40, Light = 3}, -- Light pattern #2
 	},
-	Version = {1, 0, 6}, -- Major version, Minor version, Revision
+	Version = {1, 0, 7}, -- Major version, Minor version, Revision
 	Waypoints = {},
 	WaypointSize = 32,
 }
@@ -164,6 +164,7 @@ dvd.CVars = dvd.CVars or {
 	DetectionRange = CreateConVar("decentvehicle_detectionrange", 30, CVarFlags, dvd.Texts.CVars.DetectionRange),
 	DetectionRangeELS = CreateConVar("decentvehicle_elsrange", 300, CVarFlags, dvd.Texts.CVars.DetectionRangeELS),
 	DriveSide = CreateConVar("decentvehicle_driveside", 0, CVarFlags, dvd.Texts.CVars.DriveSide),
+	ForceHeadlights = CreateConVar("decentvehicle_forceheadlights", 0, CVarFlags, dvd.Texts.CVars.ForceHeadlights),
 	LockVehicle = CreateConVar("decentvehicle_lock", 0, CVarFlags, dvd.Texts.CVars.LockVehicle),
 	Police = {
 		ChangeCode = CreateConVar("decentvehicle_police_changecodetimer", 60, CVarFlags, dvd.Texts.Police.CVars.ChangeCode),

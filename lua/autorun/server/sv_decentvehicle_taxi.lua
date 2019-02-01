@@ -107,7 +107,7 @@ net.Receive("Decent Vehicle: Call a taxi", function(_, ply)
 		dv.Coming = true
 		dv.Transporting = false
 		ply:ChatPrint(dvd.Texts.Taxi.Coming)
-		ply:ChatPrint(dvd.Texts.Taxi.ShowCarName:format(dv.CarName))
+		ply:ChatPrint(dvd.Texts.Taxi.ShowCarName:format(dv:GetNWString "CarName"))
 	elseif ent.IsDVTaxiDriver then
 		StartGoing(ply, ent, dv)
 	end

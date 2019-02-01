@@ -203,6 +203,10 @@ net.Receive("Decent Vehicle: Clear waypoints", function()
 	table.Empty(dvd.Waypoints)
 end)
 
+net.Receive("Decent Vehicle: Sync CVar", function()
+	hook.Run "Decent Vehicle: Sync CVar"
+end)
+
 local FuelColor = Color(192, 128, 0)
 local SelectedColor = Color(96, 192, 0)
 local Height = vector_up * dvd.WaypointSize / 4
@@ -224,16 +228,16 @@ function(bDrawingDepth, bDrawingSkybox)
 	local distsqr = drawdistance and drawdistance:GetFloat()^2 or 1000^2
 	local size = dvd.WaypointSize
 	local TOOL = LocalPlayer():GetTool()
-	local ToolEquiped = weapon:GetClass() == "gmod_tool" and TOOL and TOOL.IsDecentVehicleTool
-	local MultiEdit = LocalPlayer():KeyDown(IN_USE)
+	local ToolEquipped = weapon:GetClass() == "gmod_tool" and TOOL and TOOL.IsDecentVehicleTool
+	local MultiEdit = ToolEquipped and LocalPlayer():KeyDown(IN_USE)
 	local Trace = LocalPlayer():GetEyeTrace()
 	local UpdateRadius = GetConVar "dv_route_updateradius"
 	local Radius = UpdateRadius and UpdateRadius:GetInt() or 0
 	local RadiusSqr = Radius^2
-	if not (always:GetBool() or ToolEquiped) then return end
+	if not (always:GetBool() or ToolEquipped) then return end
 	
 	if bDrawingSkybox or not (showpoints and showpoints:GetBool()) then return end
-	if ToolEquiped and MultiEdit then
+	if MultiEdit then
 		render.SetMaterial(SelectRadiusMaterial)
 		render.StartBeam(NumPolys + 1)
 		local filter = player.GetAll()

@@ -125,6 +125,7 @@ local function FilterUTurnAndGroup(self, waypoint, n)
 end
 
 local function GetNight()
+	if dvd.CVars.ForceHeadlights:GetBool() then return true end
 	if istable(StormFox) then return StormFox.IsNight() end
 	if istable(AtmosGlobal) and isnumber(AtmosGlobal.m_Time) then
 		local t = AtmosGlobal.m_Time

@@ -69,7 +69,8 @@ function ENT:Initialize()
 	self.BaseClass.Initialize(self)
 	if not IsValid(self.v) then return end
 	dvd.TaxiDrivers[self] = true
-	self.CarName = self.v.PrintName
+	if CLIENT or not istable(self.v.VehicleTable) then return end
+	self:SetNWString("CarName", self.v.VehicleTable.Name)
 end
 
 function ENT:OnRemove()

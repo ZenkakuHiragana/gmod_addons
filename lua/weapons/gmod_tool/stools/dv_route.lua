@@ -211,16 +211,23 @@ function TOOL.BuildCPanel(CPanel)
 		local label = CPanel:Help(texts.ServerSettings)
 		label:SetTextColor(CPanel:GetSkin().Colours.Tree.Hover)
 		for printname, cvarname in SortedPairs {
-			[texts.AutoLoad] = "decentvehicle_autoload",
-			[texts.DriveSide] = "decentvehicle_driveside",
-			[texts.LockVehicle] = "decentvehicle_gotorefuel",
-			[texts.ShouldGoToRefuel] = "decentvehicle_lock",
+			AutoLoad = "decentvehicle_autoload",
+			DriveSide = "decentvehicle_driveside",
+			ForceHeadlights = "decentvehicle_forceheadlights",
+			LockVehicle = "decentvehicle_gotorefuel",
+			ShouldGoToRefuel = "decentvehicle_lock",
 		} do
 			local c = vgui.Create("DCheckBoxLabel", CPanel)
 			local cvar = GetConVar(cvarname)
-			c:SetText(printname)
+			c:SetText(texts[printname])
 			c:SetTextColor(c:GetSkin().Colours.Label.Dark)
-			if cvar then c:SetChecked(cvar:GetBool()) end
+			if cvar then
+				hook.Add("Decent Vehicle: Sync CVar", printname, function()
+					c:SetChecked(cvar:GetBool())
+				end)
+			end
+
+			if texts[printname .. "Help"] then c:SetTooltip(texts[printname .. "Help"]) end
 			function c:OnChange(checked)
 				net.Start "Decent Vehicle: Change serverside value"
 				net.WriteString(cvarname)
@@ -232,23 +239,29 @@ function TOOL.BuildCPanel(CPanel)
 		end
 
 		for printname, cvartable in SortedPairs {
-			[texts.DetectionRange] = {
+			DetectionRange = {
 				name = "decentvehicle_detectionrange",
 				min = 1, max = 64, decimals = 0,
 			},
-			[texts.DetectionRangeELS] = {
+			DetectionRangeELS = {
 				name = "decentvehicle_elsrange",
 				min = 0, max = 1000, decimals = 0,
 			},
 		} do
 			local n = vgui.Create("DNumSlider", CPanel)
 			local cvar = GetConVar(cvartable.name)
-			n:SetText(printname)
+			n:SetText(texts[printname])
 			n:SetMinMax(cvartable.min, cvartable.max)
 			n:SetDecimals(cvartable.decimals)
 			n:SizeToContents()
 			n.Label:SetTextColor(n.Label:GetSkin().Colours.Label.Dark)
-			if cvar then n:SetValue(cvar:GetFloat()) end
+			if cvar then
+				hook.Add("Decent Vehicle: Sync CVar", printname, function()
+					n:SetValue(cvar:GetFloat())
+				end)
+			end
+
+			if texts[printname .. "Help"] then n:SetTooltip(texts[printname .. "Help"]) end
 			function n:OnValueChanged(value)
 				net.Start "Decent Vehicle: Change serverside value"
 				net.WriteString(cvartable.name)
@@ -278,7 +291,9 @@ function TOOL.BuildCPanel(CPanel)
 		end
 
 		if cvarlightlevel and comboboxvalues[cvarlightlevel:GetInt()] then
-			combobox:SetValue(comboboxvalues[cvarlightlevel:GetInt()])
+			hook.Add("Decent Vehicle: Sync CVar", texts.LightLevel.Title, function()
+				combobox:SetValue(comboboxvalues[cvarlightlevel:GetInt()])
+			end)
 		end
 		
 		function combobox:OnSelect(index, value, data)
@@ -293,6 +308,7 @@ function TOOL.BuildCPanel(CPanel)
 		CPanel:Button(texts.Restore, "dv_route_load")
 		CPanel:Button(texts.Delete, "dv_route_delete")
 		CPanel:Button(texts.Generate, "dv_route_generate")
+		hook.Run "Decent Vehicle: Sync CVar"
 	end
 	
 	CPanel:InvalidateLayout()

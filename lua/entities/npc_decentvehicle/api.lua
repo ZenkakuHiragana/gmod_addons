@@ -74,7 +74,7 @@ function ENT:GetLights(highbeams)
 	if self.v.IsScar then
 		return self.v:GetNWBool "HeadlightsOn"
 	elseif self.v.IsSimfphyscar then
-		return Either(highbeams, self.v:GetLampsEnabled(), self.v:GetLightsEnabled())
+		return Either(highbeams, self.v.LampsActivated, self.v.LightsActivated)
 	elseif vcmod_main
 	and isfunction(self.v.VC_getStates) then
 		local states = self.v:VC_getStates()
@@ -255,7 +255,6 @@ function ENT:SetLights(on, highbeams)
 		if on and highbeams ~= self:GetLights(true) then
 			self.v.LampsActivated = not highbeams
 			self.v.KeyPressedTime = CurTime()
-			self.v.NextLightCheck = CurTime()
 			if LightsActivated then
 				numpad.Deactivate(self, KEY_F, false)
 			else
