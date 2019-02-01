@@ -161,14 +161,16 @@ function TOOL:RightClick(trace)
 		w.SpeedLimit = speed * dvd.KmphToHUps
 		w.Group = group
 
-		net.Start "Decent Vehicle: Send waypoint info"
-		net.WriteUInt(i, 24)
-		net.WriteUInt(w.Group, 16)
-		net.WriteFloat(w.SpeedLimit)
-		net.WriteFloat(w.WaitUntilNext)
-		net.WriteBool(w.UseTurnLights)
-		net.WriteBool(w.FuelStation)
-		net.Broadcast()
+		if SERVER then
+			net.Start "Decent Vehicle: Send waypoint info"
+			net.WriteUInt(i, 24)
+			net.WriteUInt(w.Group, 16)
+			net.WriteFloat(w.SpeedLimit)
+			net.WriteFloat(w.WaitUntilNext)
+			net.WriteBool(w.UseTurnLights)
+			net.WriteBool(w.FuelStation)
+			net.Broadcast()
+		end
 	end
 	
 	self:SetStage(0)
@@ -208,20 +210,85 @@ function TOOL.BuildCPanel(CPanel)
 		CPanel:Help ""
 		local label = CPanel:Help(texts.ServerSettings)
 		label:SetTextColor(CPanel:GetSkin().Colours.Tree.Hover)
-		CPanel:CheckBox(texts.AutoLoad, "decentvehicle_autoload"):SetToolTip(texts.AutoLoadHelp)
-		CPanel:CheckBox(texts.DriveSide, "decentvehicle_driveside")
-		CPanel:CheckBox(texts.ShouldGoToRefuel, "decentvehicle_gotorefuel")
-		CPanel:CheckBox(texts.LockVehicle, "decentvehicle_lock"):SetToolTip(texts.LockVehicleHelp)
-		CPanel:NumSlider(texts.DetectionRange, "decentvehicle_detectionrange", 1, 64, 0)
-		CPanel:NumSlider(texts.DetectionRangeELS, "decentvehicle_elsrange", 0, 1000, 0)
+		for printname, cvarname in SortedPairs {
+			[texts.AutoLoad] = "decentvehicle_autoload",
+			[texts.DriveSide] = "decentvehicle_driveside",
+			[texts.LockVehicle] = "decentvehicle_gotorefuel",
+			[texts.ShouldGoToRefuel] = "decentvehicle_lock",
+		} do
+			local c = vgui.Create("DCheckBoxLabel", CPanel)
+			local cvar = GetConVar(cvarname)
+			c:SetText(printname)
+			c:SetTextColor(c:GetSkin().Colours.Label.Dark)
+			if cvar then c:SetChecked(cvar:GetBool()) end
+			function c:OnChange(checked)
+				net.Start "Decent Vehicle: Change serverside value"
+				net.WriteString(cvarname)
+				net.WriteString(checked and "1" or "0")
+				net.SendToServer()
+			end
+
+			CPanel:AddItem(c)
+		end
+
+		for printname, cvartable in SortedPairs {
+			[texts.DetectionRange] = {
+				name = "decentvehicle_detectionrange",
+				min = 1, max = 64, decimals = 0,
+			},
+			[texts.DetectionRangeELS] = {
+				name = "decentvehicle_elsrange",
+				min = 0, max = 1000, decimals = 0,
+			},
+		} do
+			local n = vgui.Create("DNumSlider", CPanel)
+			local cvar = GetConVar(cvartable.name)
+			n:SetText(printname)
+			n:SetMinMax(cvartable.min, cvartable.max)
+			n:SetDecimals(cvartable.decimals)
+			n:SizeToContents()
+			n.Label:SetTextColor(n.Label:GetSkin().Colours.Label.Dark)
+			if cvar then n:SetValue(cvar:GetFloat()) end
+			function n:OnValueChanged(value)
+				net.Start "Decent Vehicle: Change serverside value"
+				net.WriteString(cvartable.name)
+				net.WriteString(tostring(value))
+				net.SendToServer()
+			end
+
+			CPanel:AddItem(n)
+		end
 		
-		local combobox, label = CPanel:ComboBox(texts.LightLevel.Title, "decentvehicle_turnonlights")
+		local cvarlightlevelname = "decentvehicle_turnonlights"
+		local cvarlightlevel = GetConVar(cvarlightlevelname)
+		local comboboxlabel = vgui.Create("DLabel", CPanel)
+		local combobox = vgui.Create("DComboBox", CPanel)
+		local comboboxvalues = {
+			[0] = texts.LightLevel.None,
+			[1] = texts.LightLevel.Running,
+			[2] = texts.LightLevel.Headlights,
+			[3] = texts.LightLevel.All,
+		}
+		comboboxlabel:SetText(texts.LightLevel.Title)
+		comboboxlabel:SetTextColor(comboboxlabel:GetSkin().Colours.Label.Dark)
 		combobox:SetSortItems(false)
-		combobox:AddChoice(texts.LightLevel.None, 0)
-		combobox:AddChoice(texts.LightLevel.Running, 1)
-		combobox:AddChoice(texts.LightLevel.Headlights, 2)
-		combobox:AddChoice(texts.LightLevel.All, 3)
+		combobox:Dock(FILL)
+		for i, printname in SortedPairs(comboboxvalues) do
+			combobox:AddChoice(printname, i)
+		end
+
+		if cvarlightlevel and comboboxvalues[cvarlightlevel:GetInt()] then
+			combobox:SetValue(comboboxvalues[cvarlightlevel:GetInt()])
+		end
 		
+		function combobox:OnSelect(index, value, data)
+			net.Start "Decent Vehicle: Change serverside value"
+			net.WriteString(cvarlightlevelname)
+			net.WriteString(tostring(index))
+			net.SendToServer()
+		end
+
+		CPanel:AddItem(comboboxlabel, combobox)
 		CPanel:Button(texts.Save, "dv_route_save")
 		CPanel:Button(texts.Restore, "dv_route_load")
 		CPanel:Button(texts.Delete, "dv_route_delete")

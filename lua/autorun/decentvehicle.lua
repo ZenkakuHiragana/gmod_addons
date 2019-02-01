@@ -80,13 +80,15 @@ DecentVehicleDestination = DecentVehicleDestination or {
 	WaypointSize = 32,
 }
 
+local dvd = DecentVehicleDestination
+local CVarFlags = {FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}
+
 -- Gets direction vector from v1 to v2.
 -- Arguments:
 --   Vector v1	| The beginning point.
 --   Vector v2	| The ending point.
 -- Returns:
 --   Vector dir	| Normalized vector of v2 - v1.
-local dvd = DecentVehicleDestination
 function dvd.GetDir(v1, v2)
 	return (v2 - v1):GetNormalized()
 end
@@ -157,3 +159,19 @@ end
 
 ReadTexts("gmod_language", lang, lang)
 cvars.AddChangeCallback("gmod_language", ReadTexts, "Decent Vehicle: OnLanguageChanged")
+dvd.CVars = dvd.CVars or {
+	AutoLoad = CreateConVar("decentvehicle_autoload", 0, CVarFlags, dvd.Texts.CVars.AutoLoad),
+	DetectionRange = CreateConVar("decentvehicle_detectionrange", 30, CVarFlags, dvd.Texts.CVars.DetectionRange),
+	DetectionRangeELS = CreateConVar("decentvehicle_elsrange", 300, CVarFlags, dvd.Texts.CVars.DetectionRangeELS),
+	DriveSide = CreateConVar("decentvehicle_driveside", 0, CVarFlags, dvd.Texts.CVars.DriveSide),
+	LockVehicle = CreateConVar("decentvehicle_lock", 0, CVarFlags, dvd.Texts.CVars.LockVehicle),
+	Police = {
+		ChangeCode = CreateConVar("decentvehicle_police_changecodetimer", 60, CVarFlags, dvd.Texts.Police.CVars.ChangeCode),
+	},
+	ShouldGoToRefuel = CreateConVar("decentvehicle_gotorefuel", 1, CVarFlags, dvd.Texts.CVars.ShouldGoToRefuel),
+	Taxi = {
+		UnitPrice = CreateConVar("decentvehicle_taxi_unitprice", 5, CVarFlags, dvd.Texts.Taxi.UnitPrice),
+	},
+	TimeToStopEmergency = CreateConVar("decentvehicle_timetostopemergency", 5, CVarFlags, dvd.Texts.CVars.TimeToStopEmergency),
+	TurnOnLights = CreateConVar("decentvehicle_turnonlights", 3, CVarFlags, dvd.Texts.CVars.TurnOnLights),
+}

@@ -11,7 +11,6 @@ resource.AddWorkshop "1587455087"
 -- Waypoints are held in normal table.
 -- They're found by brute-force search.
 local dvd = DecentVehicleDestination
-local CVarFlags = {FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}
 local Exceptions = {Target = true, TrafficLight = true}
 local HULLS = 10
 local MAX_NODES = 1500
@@ -240,23 +239,6 @@ local function GenerateWaypoints(ply)
 	net.Broadcast()
 end
 
-dvd.CVars = dvd.CVars or {
-	AutoLoad = CreateConVar("decentvehicle_autoload", 0, CVarFlags, dvd.Texts.CVars.AutoLoad),
-	DetectionRange = CreateConVar("decentvehicle_detectionrange", 30, CVarFlags, dvd.Texts.CVars.DetectionRange),
-	DetectionRangeELS = CreateConVar("decentvehicle_elsrange", 300, CVarFlags, dvd.Texts.CVars.DetectionRangeELS),
-	DriveSide = CreateConVar("decentvehicle_driveside", 0, CVarFlags, dvd.Texts.CVars.DriveSide),
-	LockVehicle = CreateConVar("decentvehicle_lock", 0, CVarFlags, dvd.Texts.CVars.LockVehicle),
-	Police = {
-		ChangeCode = CreateConVar("decentvehicle_police_changecodetimer", 60, CVarFlags, dvd.Texts.Police.CVars.ChangeCode),
-	},
-	ShouldGoToRefuel = CreateConVar("decentvehicle_gotorefuel", 1, CVarFlags, dvd.Texts.CVars.ShouldGoToRefuel),
-	Taxi = {
-		UnitPrice = CreateConVar("decentvehicle_taxi_unitprice", 5, CVarFlags, dvd.Texts.Taxi.UnitPrice),
-	},
-	TimeToStopEmergency = CreateConVar("decentvehicle_timetostopemergency", 5, CVarFlags, dvd.Texts.CVars.TimeToStopEmergency),
-	TurnOnLights = CreateConVar("decentvehicle_turnonlights", 3, CVarFlags, dvd.Texts.CVars.TurnOnLights),
-}
-
 include "sv_decentvehicle_taxi.lua"
 util.AddNetworkString "Decent Vehicle: Add a waypoint"
 util.AddNetworkString "Decent Vehicle: Remove a waypoint"
@@ -267,6 +249,7 @@ util.AddNetworkString "Decent Vehicle: Retrive waypoints"
 util.AddNetworkString "Decent Vehicle: Send waypoint info"
 util.AddNetworkString "Decent Vehicle: Clear waypoints"
 util.AddNetworkString "Decent Vehicle: Save and restore"
+util.AddNetworkString "Decent Vehicle: Change serverside value"
 concommand.Add("dv_route_save", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.SAVE) end)
 concommand.Add("dv_route_load", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.LOAD) end)
 concommand.Add("dv_route_delete", function(ply) ConfirmSaveRestore(ply, dvd.POPUPWINDOW.DELETE) end)
@@ -357,6 +340,13 @@ net.Receive("Decent Vehicle: Save and restore", function(_, ply)
 	elseif save == dvd.POPUPWINDOW.GENERATE then
 		GenerateWaypoints(ply)
 	end
+end)
+
+net.Receive("Decent Vehicle: Change serverside value", function(_, ply)
+	if not ply:IsAdmin() then return end
+	local cvar = GetConVar(net.ReadString())
+	if not cvar then return end
+	cvar:SetString(net.ReadString())
 end)
 
 -- Gets a table that contains all waypoints information.
