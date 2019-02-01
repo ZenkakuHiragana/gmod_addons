@@ -54,11 +54,13 @@ local function StartGoing(ply, ent, dv)
 	local fare = math.max(unitprice, math.Round(distance / dvd.KmToHU * unitprice, 0))
 	if engine.ActiveGamemode() == "darkrp" then
 		if ply.DarkRPVars.money < fare then
-			ply:ChatPrint(dvd.Texts.Taxi.NotEnoughMoney)
+			net.Start "Decent Vehicle: The taxi driver says something localized"
+			net.WriteUInt(7, 4) -- The taxi found its passenger does not have enough money
+			net.Send(ply)
 			dv.Caller = nil
 			dv.Coming = false
 			dv.Transporting = false
-			dv.WaitForCaller = false
+			dv.WaitForCaller = nil
 			return
 		end
 	end
@@ -66,26 +68,33 @@ local function StartGoing(ply, ent, dv)
 	dv.Coming = false
 	dv.Fare = fare
 	dv.Transporting = true
-	dv.WaitForCaller = false
+	dv.WaitForCaller = nil
 	dv.WaypointList = route
 
-	ply:ChatPrint(dvd.Texts.Taxi.StartGoing)
+	net.Start "Decent Vehicle: The taxi driver says something localized"
+	net.WriteUInt(3, 4) -- The taxi started running to its destination
+	net.Send(ply)
 end
 
 util.AddNetworkString "Decent Vehicle: Open a taxi menu"
 util.AddNetworkString "Decent Vehicle: Call a taxi"
 util.AddNetworkString "Decent Vehicle: Exit vehicle"
+util.AddNetworkString "Decent Vehicle: The taxi driver says something localized"
 net.Receive("Decent Vehicle: Call a taxi", function(_, ply)
 	local destination = net.ReadString()
 	local ent = net.ReadEntity()
 	local beginning = ent.IsDVTaxiStation and ent:GetStationName()
 	local dv = ent.IsDVTaxiDriver and ent or GetNearestTaxiDriver(ply:GetPos())
 
-	if not dv then ply:ChatPrint(dvd.Texts.Taxi.NoDriverFound) return end
+	if not dv then
+		net.Start "Decent Vehicle: The taxi driver says something localized"
+		net.WriteUInt(8, 4) -- No taxi driver in the map
+		net.Send(ply)
+		return
+	end
+
 	if dv.Coming or dv.Transporting then return end
-	
-	local cometo = {}
-	local goingto = {}
+	local cometo, goingto = {}, {}
 	for st in pairs(dvd.TaxiStations) do
 		if not (IsValid(st) and st.IsDVTaxiStation) then continue end
 		local name = st:GetStationName()
@@ -106,8 +115,10 @@ net.Receive("Decent Vehicle: Call a taxi", function(_, ply)
 		dv.Caller = ply
 		dv.Coming = true
 		dv.Transporting = false
-		ply:ChatPrint(dvd.Texts.Taxi.Coming)
-		ply:ChatPrint(dvd.Texts.Taxi.ShowCarName:format(dv:GetNWString "CarName"))
+		net.Start "Decent Vehicle: The taxi driver says something localized"
+		net.WriteUInt(0, 4) -- The taxi is called by its passenger
+		net.WriteEntity(dv)
+		net.Send(ply)
 	elseif ent.IsDVTaxiDriver then
 		StartGoing(ply, ent, dv)
 	end
@@ -152,21 +163,27 @@ end)
 hook.Add("Decent Vehicle: OnReachedWaypoint", "Taxi reaches", function(self)
 	if not self.IsDVTaxiDriver then return end
 	if not istable(self.WaypointList) or #self.WaypointList > 0 then return end
-	if not self.Caller then return end
+	if not (IsValid(self.Caller) and self.Caller:IsPlayer()) then return end
 	if self.Coming then
 		self.WaitForCaller = CurTime() + math.random(30, 50)
-		self.Caller:ChatPrint(dvd.Texts.Taxi.Arrived)
+		net.Start "Decent Vehicle: The taxi driver says something localized"
+		net.WriteUInt(2, 4) -- The taxi arrived at where its passenger is
+		net.Send(self.Caller)
 	elseif self.Transporting then
 		self.WaitForCaller = true
-		self.Caller:ChatPrint(dvd.Texts.Taxi.ArrivedDestination)
+		net.Start "Decent Vehicle: The taxi driver says something localized"
+		net.WriteUInt(4, 4) -- The taxi arrived at its destination
+		net.Send(self.Caller)
 	end
 end)
 
 hook.Add("PlayerEnteredVehicle", "Decent Vehicle: Player entered a taxi", function(ply, seat, role)
-	local dv = GetDriver(seat) -- TODO: Consider constrained vehicle if the vehicle is just a seat.
+	local dv = GetDriver(seat)
 	if not (dv and dv.IsDVTaxiDriver) then return end
 	if not dv.Caller then
-		ply:ChatPrint(dvd.Texts.Taxi.Getin)
+		net.Start "Decent Vehicle: The taxi driver says something localized"
+		net.WriteUInt(1, 4) -- A new passenger got in the taxi
+		net.Send(ply)
 		net.Start "Decent Vehicle: Open a taxi menu"
 		net.WriteEntity(dv)
 		net.Send(ply)
@@ -179,7 +196,9 @@ hook.Add("PlayerEnteredVehicle", "Decent Vehicle: Player entered a taxi", functi
 		
 		dv.ClearMemory = nil
 	elseif dv.WaitForCaller then
-		ply:ChatPrint(dvd.Texts.Taxi.Busy)
+		net.Start "Decent Vehicle: The taxi driver says something localized"
+		net.WriteUInt(6, 4) -- The taxi always has another passenger
+		net.Send(ply)
 	end 
 end)
 

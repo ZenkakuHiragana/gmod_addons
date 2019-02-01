@@ -57,3 +57,23 @@ net.Receive("Decent Vehicle: Open a taxi menu", function()
 		DFrame:Close()
 	end
 end)
+
+local quotes = {
+	[0] = "Coming",
+	[1] = "Getin",
+	[2] = "Arrived",
+	[3] = "StartGoing",
+	[4] = "ArrivedDestination",
+	[5] = "Getoff",
+	[6] = "Busy",
+	[7] = "NotEnoughMoney",
+	[8] = "NoDriverFound",
+}
+net.Receive("Decent Vehicle: The taxi driver says something localized", function()
+	local t = net.ReadUInt(4)
+	LocalPlayer():ChatPrint(dvd.Texts.Taxi[quotes[t]])
+	if t ~= 0 then return end
+	local dv = net.ReadEntity()
+	if not IsValid(dv) then return end
+	LocalPlayer():ChatPrint(dvd.Texts.Taxi.ShowCarName:format(dv:GetNWString "CarName"))
+end)

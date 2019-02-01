@@ -161,7 +161,7 @@ function TOOL:RightClick(trace)
 		w.SpeedLimit = speed * dvd.KmphToHUps
 		w.Group = group
 
-		if SERVER then
+		if SERVER and player.GetCount() > 0 then
 			net.Start "Decent Vehicle: Send waypoint info"
 			net.WriteUInt(i, 24)
 			net.WriteUInt(w.Group, 16)

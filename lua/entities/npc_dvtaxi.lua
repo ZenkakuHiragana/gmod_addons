@@ -26,8 +26,10 @@ function ENT:Think()
 	self.BaseClass.Think(self)
 	if isnumber(self.WaitForCaller) and CurTime() > self.WaitForCaller
 	or isnumber(self.ClearMemory) and CurTime() > self.ClearMemory then
-		if isnumber(self.ClearMemory) and IsValid(self.Caller) and self.Caller:IsPlayer() then
-			self.Caller:ChatPrint(dvd.Texts.Taxi.Getoff)
+		if IsValid(self.Caller) and self.Caller:IsPlayer() then
+			net.Start "Decent Vehicle: The taxi driver says something localized"
+			net.WriteUInt(5, 4) -- The passenger got off the taxi
+			net.Send(self.Caller)
 			if engine.ActiveGamemode() == "darkrp" then
 				self.Caller:ChatPrint(dvd.Texts.Taxi.Fare:format(dv.Fare))
 				self.Caller:SetDarkRPVar("money", math.max(self.Caller.DarkRPVars.money - dv.Fare, 0))
@@ -37,10 +39,12 @@ function ENT:Think()
 			if self.v.IsScar then seats = self.v.Seats end
 			for i, s in ipairs(seats) do
 				if not (IsValid(s) and s:IsVehicle()) then continue end
-				if self.v.IsScar and s.IsScarSeat then continue end
+				if self.v.IsScar and not s.IsScarSeat then continue end
 				local p = s:GetDriver()
 				if IsValid(p) and p:IsPlayer() and self.Caller ~= p then
-					p:ChatPrint(dvd.Texts.Taxi.Getin)
+					net.Start "Decent Vehicle: The taxi driver says something localized"
+					net.WriteUInt(1, 4) -- A new passenger got in the taxi
+					net.Send(p)
 					net.Start "Decent Vehicle: Open a taxi menu"
 					net.WriteEntity(self)
 					net.Send(p)

@@ -52,13 +52,15 @@ local function OverwriteWaypoints(source)
 	dvd.CVars.ForceHeadlights:SetInt(source.ForceHeadlights and 1 or 0) -- Added from version 1.0.7
 	dvd.CVars.DriveSide:SetInt(source.DriveSide or 0)
 	dvd.DriveSide = source.DriveSide or 0
-	net.Start "Decent Vehicle: Sync CVar"
-	net.Broadcast()
-	
 	ClearUndoList()
 	table.Empty(dvd.Waypoints)
-	net.Start "Decent Vehicle: Clear waypoints"
-	net.Broadcast()
+	
+	if player.GetCount() > 0 then
+		net.Start "Decent Vehicle: Sync CVar"
+		net.Broadcast()
+		net.Start "Decent Vehicle: Clear waypoints"
+		net.Broadcast()
+	end
 	
 	for i, t in ipairs(ents.GetAll()) do
 		if t.IsDVTrafficLight then t:Remove() end
@@ -91,7 +93,7 @@ local function OverwriteWaypoints(source)
 	
 	hook.Run("Decent Vehicle: OnLoadWaypoints", source)
 	
-	if #dvd.Waypoints == 0 then return end
+	if #dvd.Waypoints * player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Retrive waypoints"
 	WriteWaypoint(1)
 	net.Broadcast()
@@ -203,8 +205,10 @@ local function GenerateWaypoints(ply)
 	dvd.Nodegraph = dvd.Nodegraph or ParseAIN()
 	ClearUndoList()
 	table.Empty(dvd.Waypoints)
-	net.Start "Decent Vehicle: Clear waypoints"
-	net.Broadcast()
+	if player.GetCount() > 0 then
+		net.Start "Decent Vehicle: Clear waypoints"
+		net.Broadcast()
+	end
 	
 	local speed = ply:GetInfoNum("dv_route_speed", 45) * dvd.KmphToHUps
 	local time = CurTime()
@@ -236,7 +240,7 @@ local function GenerateWaypoints(ply)
 		end
 	end
 	
-	if #dvd.Waypoints == 0 then return end
+	if #dvd.Waypoints * player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Retrive waypoints"
 	WriteWaypoint(1)
 	net.Broadcast()
@@ -398,9 +402,12 @@ end
 function dvd.AddWaypoint(pos)
 	local waypoint = {Target = pos, Neighbors = {}}
 	table.insert(dvd.Waypoints, waypoint)
-	net.Start "Decent Vehicle: Add a waypoint"
-	net.WriteVector(pos)
-	net.Broadcast()
+	if player.GetCount() > 0 then
+		net.Start "Decent Vehicle: Add a waypoint"
+		net.WriteVector(pos)
+		net.Broadcast()
+	end
+
 	return waypoint
 end
 
@@ -424,6 +431,7 @@ function dvd.RemoveWaypoint(id)
 	end
 	
 	table.remove(dvd.Waypoints, id)
+	if player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Remove a waypoint"
 	net.WriteUInt(id, 24)
 	net.Broadcast()
@@ -463,6 +471,7 @@ function dvd.AddNeighbor(from, to)
 	local w = dvd.Waypoints[from]
 	if not w then return end
 	table.insert(w.Neighbors, to)
+	if player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Add a neighbor"
 	net.WriteUInt(from, 24)
 	net.WriteUInt(to, 24)
@@ -478,6 +487,7 @@ function dvd.RemoveNeighbor(from, to)
 	local w = dvd.Waypoints[from]
 	if not w then return end
 	table.RemoveByValue(w.Neighbors, to)
+	if player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Remove a neighbor"
 	net.WriteUInt(from, 24)
 	net.WriteUInt(to, 24)
@@ -516,6 +526,7 @@ function dvd.AddTrafficLight(id, traffic)
 	end
 	
 	waypoint.TrafficLight = traffic
+	if player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Traffic light"
 	net.WriteUInt(id, 24)
 	net.WriteEntity(traffic or NULL)
@@ -589,11 +600,11 @@ function dvd.GetRoute(start, endpos, group)
 			local nodepos = dvd.Waypoints[node.id].Target
 			local parentpos = dvd.Waypoints[parent.id].Target
 			local cost = parentpos:Distance(nodepos)
-			-- local grandpa = parent.parent
-			-- if grandpa then -- Angle between waypoints is considered as cost
-			-- 	local gppos = dvd.Waypoints[grandpa.id].Target
-			-- 	cost = cost * (2 - dvd.GetAng3(gppos, parentpos, nodepos))
-			-- end
+			local grandpa = parent.parent
+			if grandpa then -- Angle between waypoints is considered as cost
+				local gppos = dvd.Waypoints[grandpa.id].Target
+				cost = cost * (2 - dvd.GetAng3(gppos, parentpos, nodepos))
+			end
 			
 			node.cost = parent.cost + cost
 		end
