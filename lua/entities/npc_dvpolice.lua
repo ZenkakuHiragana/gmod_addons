@@ -29,11 +29,11 @@ ENT.Preference = { -- Some preferences for the behavior of the base AI.
     WaitUntilNext = true, -- Whether or not it waits on WaitUntilNext
 }
 
-list.Set("NPC", "npc_dvpolice", {
-	Name = ENT.PrintName,
-	Class = "npc_dvpolice",
-	Category = "GreatZenkakuMan's NPCs",
-})
+-- list.Set("NPC", "npc_dvpolice", {
+-- 	Name = ENT.PrintName,
+-- 	Class = "npc_dvpolice",
+-- 	Category = "GreatZenkakuMan's NPCs",
+-- })
 
 if CLIENT then return end
 local color_green = Color(0, 255, 0)
