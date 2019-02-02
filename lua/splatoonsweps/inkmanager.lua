@@ -160,7 +160,7 @@ function ss.GetSurfaceColor(tr)
 				p.x = p.x - (1 - r.ratio) / 2 -- 0 <= x <= r.ratio
 				p.x = p.x / r.ratio * w -- 0 <= x <= w
 				p.x, p.y = math.Round(p.x), math.Round(p.y)
-				if 0 < p.x and p.x < w and 0 < p.y and p.y < h and t[(p.y - 1) * w + p.x] then
+				if 0 < p.x and p.x < w and 0 < p.y and p.y < h and t[p.x] and t[p.x][p.y] then
 					return r.color
 				end
 			end

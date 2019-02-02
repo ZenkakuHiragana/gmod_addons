@@ -18,20 +18,6 @@ function ss.hook(func)
 	end
 end
 
-for i = 1, 9 do
-	local mask = {}
-	local masktxt = file.Open("data/splatoonsweps/shot" .. tostring(i) .. ".txt", "rb", "GAME")
-	mask.width = masktxt:ReadByte()
-	mask.height = masktxt:ReadByte()
-	for p = 1, mask.width * mask.height do
-		mask[p] = masktxt:Read(1) == "1"
-	end
-	
-	ss.InkShotMaterials[i] = mask
-	masktxt:Close()
-end
-
-include "const.lua"
 include "text.lua"
 include "convars.lua"
 include "inkmanager.lua"
@@ -438,6 +424,7 @@ end
 --   Player ply			| The player who can hear it.
 --   string soundName	| The sound to play.
 function ss.EmitSound(ply, soundName, soundLevel, pitchPercent, volume, channel)
+	if not (IsValid(ply) and ply:IsPlayer()) then return end
 	if SERVER and ss.mp then
 		net.Start "SplatoonSWEPs: Send a sound"
 		net.WriteString(soundName)
@@ -446,7 +433,6 @@ function ss.EmitSound(ply, soundName, soundLevel, pitchPercent, volume, channel)
 		net.WriteFloat(volume or 1)
 		net.WriteUInt((channel or CHAN_AUTO) + 1, 8)
 		net.Send(ply)
-		return
 	elseif CLIENT and IsFirstTimePredicted() or ss.sp then
 		ply:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
 	end
@@ -673,11 +659,13 @@ else
 end
 
 local width = 16
+local splt_EditScale = GetConVar "splt_EditScale"
 hook.Add("Tick", "SplatoonSWEPs: Fix playermodel hull change", function()
 	for _, p in ipairs(player.GetAll()) do
 		local is = ss.CheckSplatoonPlayermodels[p:GetModel()]
-		if not p:Alive() then ss.PlayerHullChanged[p] = nil continue end
-		if is and GetConVar "splt_EditScale":GetInt() ~= 0 and ss.PlayerHullChanged[p] ~= true then
+		if not p:Alive() then
+			ss.PlayerHullChanged[p] = nil
+		elseif is and splt_EditScale:GetInt() ~= 0 and ss.PlayerHullChanged[p] ~= true then
 			p:SetViewOffset(Vector(0, 0, 42))
 			p:SetViewOffsetDucked(Vector(0, 0, 28))
 			p:SetHull(Vector(-width, -width, 0), Vector(width, width, 53))

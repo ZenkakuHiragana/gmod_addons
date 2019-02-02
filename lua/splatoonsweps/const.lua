@@ -4,79 +4,13 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
-function ss.ReadJSON(name)
-	local path = "data/splatoonsweps/constants/" .. name .. ".json"
-	return file.Exists(path, "GAME") and util.JSONToTable(file.Read(path, true)) or {}
-end
-
 ss.sp = game.SinglePlayer()
 ss.mp = not ss.sp
-ss.Options = ss.ReadJSON "options"
-ss.WeaponClassNames = ss.ReadJSON "weaponclasses"
-ss.WeaponClassNames2 = ss.ReadJSON "weaponclasses2"
-ss.TEXTUREFLAGS = ss.ReadJSON "textureflags"
-ss.RTResID = {
-	MINIMUM	= 0, -- 2048x2048,		32MB
-	SMALL	= 1, --	4096x4096,		128MB
-	DSMALL	= 2, --	2x4096x4096,	256MB
-	MEDIUM	= 3, --	8192x8192,		512MB
-	DMEDIUM	= 4, --	2x8192x8192,	1GB 
-	LARGE	= 5, --	16384x16384,	2GB
-	DLARGE	= 6, --	2x16384x16384,	4GB
-	ULTRA	= 7, --	32768x32768,	8GB
-	DULTRA	= 8, --	2x32768x32768,	16GB
-}
-
-ss.RTSize = {
-	[ss.RTResID.MINIMUM	] = 2048,
-	[ss.RTResID.SMALL	] = 4096,
-	[ss.RTResID.DSMALL	] = 5792,
-	[ss.RTResID.MEDIUM	] = 8192,
-	[ss.RTResID.DMEDIUM	] = 11585,
-	[ss.RTResID.LARGE	] = 16384,
-	[ss.RTResID.DLARGE	] = 23170,
-	[ss.RTResID.ULTRA	] = 32768,
-	[ss.RTResID.DULTRA	] = 40132,
-}
-
-ss.RTName = {
-	BaseTexture = "splatoonsweps_basetexture",
-	Normalmap = "splatoonsweps_normalmap",
-	Lightmap = "splatoonsweps_lightmap",
-	RenderTarget = "splatoonsweps_rendertarget",
-	WaterMaterial = "splatoonsweps_watermaterial",
-	RTScope = "splatoonsweps_rtscope",
-}
-
-ss.RTFlags = {
-	BaseTexture = bit.bor(
-		ss.TEXTUREFLAGS.NOMIP,
-		ss.TEXTUREFLAGS.NOLOD,
-		ss.TEXTUREFLAGS.ALL_MIPS,
-		ss.TEXTUREFLAGS.PROCEDURAL,
-		ss.TEXTUREFLAGS.RENDERTARGET,
-		ss.TEXTUREFLAGS.NODEPTHBUFFER
-	),
-	Normalmap = bit.bor(
-		ss.TEXTUREFLAGS.NORMAL,
-		ss.TEXTUREFLAGS.NOMIP,
-		ss.TEXTUREFLAGS.NOLOD,
-		ss.TEXTUREFLAGS.ALL_MIPS,
-		ss.TEXTUREFLAGS.PROCEDURAL,
-		ss.TEXTUREFLAGS.RENDERTARGET,
-		ss.TEXTUREFLAGS.NODEPTHBUFFER,
-		ss.TEXTUREFLAGS.SSBUMP
-	),
-	Lightmap = bit.bor(
-		ss.TEXTUREFLAGS.NOMIP,
-		ss.TEXTUREFLAGS.NOLOD,
-		ss.TEXTUREFLAGS.ALL_MIPS,
-		ss.TEXTUREFLAGS.PROCEDURAL,
-		ss.TEXTUREFLAGS.RENDERTARGET,
-		ss.TEXTUREFLAGS.NODEPTHBUFFER
-	),
-}
-
+ss.Options = include "splatoonsweps/constants/options.lua"
+ss.WeaponClassNames = include "splatoonsweps/constants/weaponclasses.lua"
+ss.WeaponClassNames2 = include "splatoonsweps/constants/weaponclasses2.lua"
+ss.TEXTUREFLAGS = include "splatoonsweps/constants/textureflags.lua"
+ss.RenderTarget = table.Merge(ss.RenderTarget, include "splatoonsweps/constants/rendertarget.lua")
 ss.InkTankModel = Model "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl"
 ss.PLAYER = {
 	GIRL = 1,
@@ -126,73 +60,11 @@ function ss.GetSquidmodel(pmid)
 	return file.Exists(squid, "GAME") and squid or nil
 end
 
--- List of available ink colors(25 colors)
-ss.InkColors = {
-	HSVToColor(0,	1,	1	),
-	HSVToColor(30,	1,	1	),
-	HSVToColor(60,	1,	1	),
-	HSVToColor(80,	1,	1	),
-	HSVToColor(120,	1,	1	),
-	HSVToColor(150,	1,	1	),
-	HSVToColor(180,	1,	1	),
-	HSVToColor(210,	1,	1	),
-	HSVToColor(240,	1,	1	),
-	HSVToColor(270,	1,	1	),
-	HSVToColor(300,	1,	1	),
-	HSVToColor(330,	1,	1	),
-	
-	HSVToColor(0,	1,	.5	),
-	HSVToColor(60,	1,	.5	),
-	HSVToColor(120,	1,	.5	),
-	HSVToColor(180,	1,	.5	),
-	HSVToColor(240,	1,	.5	),
-	HSVToColor(300,	1,	.5	),
-	
-	HSVToColor(105,	.5,	1	),
-	HSVToColor(210,	.5,	1	),
-	HSVToColor(315,	.5,	1	),
-	
-	HSVToColor(0,	0,	.03	),
-	HSVToColor(0,	0,	.5	),
-	HSVToColor(0,	0,	.75	),
-	HSVToColor(0,	0,	.999),
-}
-
---Workaround of issue #2407 in Facepunch/garrysmod-issues
-for i, c in ipairs(ss.InkColors) do
+for i, t in ipairs(include "splatoonsweps/constants/inkcolors.lua") do
+	local c = HSVToColor(t[1], t[2], t[3])
 	ss.InkColors[i] = ColorAlpha(c, c.a)
+	ss.CrosshairColors[i] = t[4]
 end
-
-ss.CrosshairColors = {
-	2, -- Red -> Orange
-	1, -- Orange -> Red
-	14, -- Yellow -> Olive
-	14, -- Yellowish green -> Olive
-	15, -- Lime -> Green
-	16, -- Spring green -> Dark cyan
-	16, -- Cyan -> Dark cyan
-	10, -- Azure blue -> Light indigo
-	18, -- Blue -> Purple
-	9, -- Light indigo -> Blue
-	12, -- Magenta -> Deep pink
-	11, -- Deep pink -> Magenta
-	
-	1, -- Maroon -> Red
-	15, -- Olive -> Green
-	19, -- Green -> Light green
-	10, -- Dark cyan -> Light indigo
-	10, -- Navy -> Light indigo
-	8, -- Purple -> Azure blue
-	
-	15, -- Light green -> Green
-	16, -- Light blue -> Dark cyan
-	11, -- Pink -> Magenta
-	
-	22, -- Black -> Black
-	23, -- Gray -> Gray
-	24, -- Light gray -> Light gray
-	25, -- White -> White
-}
 
 ss.Materials = {
 	Crosshair = {
@@ -204,9 +76,26 @@ ss.Materials = {
 	},
 }
 
-ss.Particles = {
-	MuzzleMist = "splatoonsweps_muzzlemist",
-}
+do -- Ink distribution map
+	local one = string.byte "1"
+	local path = "splatoonsweps/constants/inkdistributions/shot%d.lua"
+	for i = 1, 9 do
+		local f, mask = path:format(i), {}
+		local w, h, data = include(f)
+		mask.width, mask.height = w, h
+		data = string.Explode("\n", data)
+		for y = 1, h do
+			for x, d in ipairs {data[y]:byte(1, #data[y])} do
+				mask[x] = mask[x] or {}
+				mask[x][y] = d == one
+			end
+		end
+
+		ss.InkShotMaterials[i] = mask
+	end
+end
+
+ss.Particles = {MuzzleMist = "splatoonsweps_muzzlemist"}
 game.AddParticles "particles/splatoonsweps.pcf"
 for _, p in pairs(ss.Particles) do PrecacheParticleSystem(p) end
 

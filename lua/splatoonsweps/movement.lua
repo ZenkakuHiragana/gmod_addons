@@ -1812,18 +1812,21 @@ end
 local AttackMask = bit.bnot(IN_ATTACK)
 local DuckMask = bit.bnot(IN_DUCK)
 function ss.MoveHook(w, p, m)
+	local crouching = p:Crouching()
+
 	ply, mv = p, m
 	ss.ProtectedCall(w.Move, w, p, m)
 	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and w:GetOnEnemyInk() and ply:KeyDown(IN_DUCK)
 	w.PreventCrouching = w:GetKey() ~= 0 and w:GetKey() ~= IN_DUCK or CurTime() < w:GetCooldown()
 	if w.PreventCrouching or w.EnemyInkPreventCrouching then
 		mv:SetButtons(bit.band(mv:GetButtons(), DuckMask))
+		crouching = false
 	end
 	
 	local maxspeed = math.min(mv:GetMaxSpeed(), w.InklingSpeed * 1.1)
 	if ply:OnGround() then -- Max speed clip
 		maxspeed = ss.ProtectedCall(w.CustomMoveSpeed, w) or w.InklingSpeed
-		maxspeed = maxspeed * Either(ply:Crouching(), ss.SquidSpeedOutofInk, 1)
+		maxspeed = maxspeed * Either(crouching, ss.SquidSpeedOutofInk, 1)
 		maxspeed = w:GetInInk() and w.SquidSpeed or maxspeed
 		maxspeed = w:GetOnEnemyInk() and w.OnEnemyInkSpeed or maxspeed
 		maxspeed = maxspeed * (w.IsDisruptored and ss.DisruptoredSpeed or 1)
@@ -1876,12 +1879,14 @@ function ss.MoveHook(w, p, m)
 	
 	-- Send viewmodel animation.
 	local infence = Either(SERVER, w:GetInFence(), me.m_bInFence[ply])
-	if ply:Crouching() then
+	if crouching then
 		w.SwimSound:ChangeVolume(math.Clamp(mv:GetVelocity():Length() / w.SquidSpeed * (w:GetInInk() and 1 or 0), 0, 1))
 		if not w:GetOldCrouching() then
 			ply:RemoveAllDecals()
-			w:EmitSound "SplatoonSWEPs_Player.ToSquid"
 			w:SendWeaponAnim(ss.ViewModel.Squid)
+			if IsFirstTimePredicted() then
+				w:EmitSound "SplatoonSWEPs_Player.ToSquid"
+			end
 		end
 		
 		if w:GetOnEnemyInk() then
@@ -1891,17 +1896,19 @@ function ss.MoveHook(w, p, m)
 		end
 	elseif infence then -- Cannot stand while in fence
 		mv:AddKey(IN_DUCK) -- it's not correct behavior though
-	elseif not ply:Crouching() and w:GetOldCrouching() then
+	elseif w:GetOldCrouching() then
 		w.SwimSound:ChangeVolume(0)
-		w:EmitSound "SplatoonSWEPs_Player.ToHuman"
 		w:SendWeaponAnim(w:GetThrowing() and ss.ViewModel.Throwing or ss.ViewModel.Standing)
+		if IsFirstTimePredicted() then
+			w:EmitSound "SplatoonSWEPs_Player.ToHuman"
+		end
 	end
 	
 	w.OnOutofInk = w:GetInWallInk()
-	w:SetOldCrouching(ply:Crouching())
+	w:SetOldCrouching(crouching)
 	me.m_angViewPunchAngles[ply] = ply:GetViewPunchAngles()
 	me.m_bAllowAutoMovement[ply] = true
-	me.m_bInDuckJump[ply] = ply:Crouching() and not ply:OnGround()
+	me.m_bInDuckJump[ply] = crouching and not ply:OnGround()
 	me.m_entGroundEntity[ply] = ply:GetGroundEntity()
 	me.m_flClientMaxSpeed[ply] = mv:GetMaxClientSpeed()
 	me.m_flConstraintRadius[ply] = mv:GetConstraintRadius()

@@ -7,8 +7,10 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	AspectSum = 0,				-- 
 	AspectSumX = 0,				-- 
 	AspectSumY = 0,				-- 
+	CrosshairColors = {},		--
 	Displacements = {},			-- 
 	IMesh = {},					-- 
+	InkColors = {},				--
 	InkShotMaterials = {},		-- 
 	InkQueue = {},				-- 
 	Models = {},				-- 
@@ -27,7 +29,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 		Moved = {},				-- 
 		Normals = {},			-- 
 		Origins = {},			-- 
-		u = {}, v = {},		-- 
+		u = {}, v = {},			-- 
 		Vertices = {},			-- 
 	},
 	WeaponRecord = {},			-- 
@@ -38,7 +40,6 @@ include "drawarc.lua"
 include "inkmanager.lua"
 include "network.lua"
 include "splatoonsweps/shared.lua"
-include "splatoonsweps/text.lua"
 include "userinfo.lua"
 
 local ss = SplatoonSWEPs
@@ -230,7 +231,7 @@ function ss.PrepareInkSurface(write)
 		INK_SURFACE_DELTA_NORMAL = 2
 	end
 	
-	local rtsize = math.min(ss.RTSize[ss.GetOption "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(rt.Size[ss.GetOption "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
 	local rtmargin = 4 / rtsize -- Render Target margin
 	local arearatio = 41.3329546960896 / rtsize * -- arearatio[units/pixel], Found by Excel bulldozing
@@ -392,48 +393,48 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
 	if file.Exists(crashpath, "DATA") then -- If the client has crashed before, RT shrinks.
 		local res = ss.GetConVar "RTResolution"
-		if res then res:SetInt(ss.RTResID.MINIMUM) end
+		if res then res:SetInt(rt.RESOLUTION.MINIMUM) end
 		notification.AddLegacy(ss.Text.Error.CrashDetected, NOTIFY_GENERIC, 15)
 	end
 	
 	file.Write(crashpath, "")
 	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
 	
-	local rtsize = math.min(ss.RTSize[ss.GetOption "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(rt.Size[ss.GetOption "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	rt.BaseTexture = GetRenderTargetEx(
-		ss.RTName.BaseTexture,
+		rt.Name.BaseTexture,
 		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
-		ss.RTFlags.BaseTexture,
+		rt.Flags.BaseTexture,
 		CREATERENDERTARGETFLAGS_HDR,
 		IMAGE_FORMAT_BGRA4444 -- 8192x8192, 128MB
 	)
 	rtsize = math.min(rt.BaseTexture:Width(), rt.BaseTexture:Height())
 	rt.Normalmap = GetRenderTargetEx(
-		ss.RTName.Normalmap,
+		rt.Name.Normalmap,
 		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
-		ss.RTFlags.Normalmap,
+		rt.Flags.Normalmap,
 		CREATERENDERTARGETFLAGS_HDR,
 		IMAGE_FORMAT_BGRA4444 -- 8192x8192, 128MB
 	)
 	rt.Lightmap = GetRenderTargetEx(
-		ss.RTName.Lightmap,
+		rt.Name.Lightmap,
 		rtsize, rtsize,
 		RT_SIZE_NO_CHANGE,
 		MATERIAL_RT_DEPTH_NONE,
-		ss.RTFlags.Lightmap,
+		rt.Flags.Lightmap,
 		CREATERENDERTARGETFLAGS_HDR,
 		IMAGE_FORMAT_RGBA8888 -- 8192x8192, 256MB
 	)
 	rt.Material = CreateMaterial(
-		ss.RTName.RenderTarget,
+		rt.Name.RenderTarget,
 		"LightmappedGeneric",
 		{
-			["$basetexture"] = ss.RTName.BaseTexture,
-			["$bumpmap"] = ss.RTName.Normalmap,
+			["$basetexture"] = rt.Name.BaseTexture,
+			["$bumpmap"] = rt.Name.Normalmap,
 			["$ssbump"] = "1",
 			["$nolod"] = "1",
 			["$alpha"] = ".95",
@@ -441,10 +442,10 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 		}
 	)
 	rt.WaterMaterial = CreateMaterial(
-		ss.RTName.WaterMaterial,
+		rt.Name.WaterMaterial,
 		"Refract",
 		{
-			["$normalmap"] = ss.RTName.Normalmap,
+			["$normalmap"] = rt.Name.Normalmap,
 			["$nolod"] = "1",
 			["$bluramount"] = "2",
 			["$refractamount"] = ".1",

@@ -337,7 +337,8 @@ end
 
 function SWEP:DrawWorldModelTranslucent()
 	if self:GetHolstering() then return end
-	if IsValid(self.Owner) and self:Crouching() then return end
+	if IsValid(self.Owner) and self:Crouching() and (self:GetInInk()
+	or self:GetNWBool "BecomeSquid" and IsValid(self.Squid)) then return end
 	
 	local cameradistance = 1
 	local bone_ent = self.Owner

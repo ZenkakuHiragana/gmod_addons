@@ -119,9 +119,13 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	if not able then
 		if p.TripleShotDelay then self:SetCooldown(CurTime()) end
 		if self:GetPreviousHasInk() then
-			ss.EmitSound(self.Owner, ss.TankEmpty)
+			if CLIENT and IsFirstTimePredicted() or ss.sp then
+				self.Owner:EmitSound(ss.TankEmpty)
+			end
+
 			self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
 			self:SetPreviousHasInk(false)
+			self.PreviousHasInk = false
 		elseif CurTime() > self:GetNextPlayEmpty() then
 			self:EmitSound "SplatoonSWEPs.EmptyShot"
 			self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)

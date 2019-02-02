@@ -401,9 +401,9 @@ local function GeneratePreferenceTab(tab)
 	tab.Preference.ResolutionSelector:Dock(BOTTOM)
 	tab.Preference.ResolutionSelector:SetSize(300, 17)
 	tab.Preference.ResolutionSelector:SetToolTip(ss.Text.DescRTResolution)
-	tab.Preference.ResolutionSelector:SetValue(ss.Text.RTResolutionName[ss.GetOption "RTResolution" + 1])
-	for i = 1, #ss.Text.RTResolutionName do
-		tab.Preference.ResolutionSelector:AddChoice(ss.Text.RTResolutionName[i])
+	tab.Preference.ResolutionSelector:SetValue(ss.Text.RTResolutions[ss.GetOption "RTResolution" + 1])
+	for i = 1, #ss.Text.RTResolutions do
+		tab.Preference.ResolutionSelector:AddChoice(ss.Text.RTResolutions[i])
 	end
 	
 	-- "Ink buffer size:" Label
@@ -428,7 +428,7 @@ local function GeneratePreferenceTab(tab)
 	function tab.Preference.Panel:Think()
 		local selected = tab.Preference.ResolutionSelector:GetSelectedID() or ss.GetOption "RTResolution" + 1
 		selected = selected - 1
-		tab.Preference.LabelResetRequired:SetVisible(RTSize and RTSize ~= ss.RTSize[selected])
+		tab.Preference.LabelResetRequired:SetVisible(RTSize and RTSize ~= ss.RenderTarget.Size[selected])
 		if RTSize or not ss.RenderTarget.BaseTexture then return end
 		RTSize = ss.RenderTarget.BaseTexture:Width()
 	end

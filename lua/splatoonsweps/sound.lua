@@ -43,7 +43,7 @@ sound.Add {
 }
 
 sound.Add {
-	channel = CHAN_BODY,
+	channel = CHAN_ITEM,
 	name = "SplatoonSWEPs_Player.ToHuman",
 	level = 75,
 	sound = "splatoonsweps/player/tohuman.wav",
@@ -52,7 +52,7 @@ sound.Add {
 }
 
 sound.Add {
-	channel = CHAN_BODY,
+	channel = CHAN_ITEM,
 	name = "SplatoonSWEPs_Player.ToSquid",
 	level = 75,
 	sound = "splatoonsweps/player/tosquid.wav",

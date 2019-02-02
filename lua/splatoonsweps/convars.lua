@@ -1,10 +1,13 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
+
+require "greatzenkakuman/cvartree"
+local gc = greatzenkakuman.cvartree
 local ServerPrefix = "sv_splatoonsweps_"
 local ClientPrefix = "cl_splatoonsweps_"
 local ServerFlags = {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}
-local CVarDesc = {ss.Text.CVarDescription}
+local CVarDesc = {ss.Text.CVars}
 local function RegisterConVars(prefix, group)
 	local desc = CVarDesc[1]
 	group = group or ss.Options
@@ -42,7 +45,7 @@ end
 
 if CLIENT then
 	RegisterConVars(ClientPrefix)
-	CVarDesc = {ss.Text.CVarDescription}
+	CVarDesc = {ss.Text.CVars}
 end
 
 RegisterConVars(ServerPrefix)

@@ -7,23 +7,25 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	AspectSumX = 0,
 	AspectSumY = 0,
 	BSP = {},
+	CrosshairColors = {},
 	Displacements = {},
 	Models = {},
 	NoCollide = {},
 	NumInkEntities = 0,
+	InkColors = {},
 	InkQueue = {},
 	InkShotMaterials = {},
 	PaintSchedule = {},
 	PlayerHullChanged = {},
 	PlayerID = {},
 	PlayersReady = {},
+	RenderTarget = {},
 	WeaponRecord = {},
 }
 
 include "splatoonsweps/const.lua"
 include "network.lua"
 include "splatoonsweps/shared.lua"
-include "splatoonsweps/text.lua"
 include "bsp.lua"
 
 local ss = SplatoonSWEPs
@@ -45,7 +47,7 @@ concommand.Add("sv_splatoonsweps_clear", function(ply, cmd, args, argstr)
 	if not IsValid(ply) and game.IsDedicated() or IsValid(ply) and ply:IsAdmin() then
 		ss.ClearAllInk()
 	end
-end, nil, ss.Text.CVarDescription.Clear, FCVAR_SERVER_CAN_EXECUTE)
+end, nil, ss.Text.CVars.Clear, FCVAR_SERVER_CAN_EXECUTE)
 
 -- Clears all ink in the world.
 -- Sends a net message to clear ink on clientside.
@@ -71,6 +73,7 @@ end
 --   number duration	| The number of seconds to display the notification for.
 function ss.SendError(msg, user, icon, duration)
 	if user and not user:IsPlayer() then return end
+	if not user and player.GetCount() == 0 then return end
 	net.Start "SplatoonSWEPs: Send an error message"
 	net.WriteUInt(icon or 1, ss.SEND_ERROR_NOTIFY_BITS)
 	net.WriteUInt(duration or 8, ss.SEND_ERROR_DURATION_BITS)
@@ -170,6 +173,11 @@ hook.Add("PlayerInitialSpawn", "SplatoonSWEPs: Add a player", function(ply)
 end)
 
 hook.Add("PlayerAuthed", "SplatoonSWEPs: Store player ID", function(ply, id)
+	if ss.IsGameInProgress then
+		ply:Kick "Splatoon SWEPs: The game is in progress"
+		return
+	end
+
 	ss.PlayerID[ply] = id
 end)
 
