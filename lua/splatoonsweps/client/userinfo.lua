@@ -10,14 +10,14 @@ local weaponlisticon = "splatoonsweps/icons/weaponlist.png"
 local equipped = Material "icon16/accept.png"
 local WeaponFilters = {}
 local function GetColor() -- Get current color for preview model
-	local color = ss.GetColor(ss.GetOption "InkColor")
+	local color = ss.GetColor(ss.GetOption "inkcolor")
 	return Vector(color.r, color.g, color.b) / 255
 end
 
 local function GetPlayermodel(i)
-	local model = ss.Playermodel[i or ss.GetOption "Playermodel"] or
-	player_manager.TranslatePlayerModel(GetConVar "cl_playermodel":GetString())
-	local exists = file.Exists(model, "GAME")
+	local model = ss.Playermodel[i or ss.GetOption "playermodel"]
+	or player_manager.TranslatePlayerModel(GetConVar "cl_playermodel":GetString())
+	local exists = model and file.Exists(model, "GAME")
 	if not exists and IsValid(LocalPlayer()) then
 		model = LocalPlayer():GetModel()
 	end
@@ -75,14 +75,26 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 	end
 	
 	function self:Think()
-		local newmodel, exists = GetPlayermodel()
-		if self:GetModel() ~= newmodel then
-			local newsquid = ss.CheckSplatoonPlayermodels[newmodel]
-			local newcam = newsquid and 26 or 34
-			self.Entity:SetModel(newmodel)
+		local model = GetPlayermodel()
+		if self:GetModel() ~= model then
+			local issquid = ss.CheckSplatoonPlayermodels[model]
+			local campos = issquid and 26 or 34
+			self.Entity:SetModel(model)
 			self.Entity:InvalidateBoneCache()
-			self.Entity:SetPos(Vector(newsquid and 130 or 160, 0, -newcam))
+			self.Entity:SetPos(Vector(issquid and 130 or 160, 0, -campos))
 			self.ClassName = nil
+		end
+
+		if not ss.Playermodel[ss.GetOption "playermodel"] and IsValid(LocalPlayer()) then
+			self.Entity:SetSkin(LocalPlayer():GetSkin())
+			for i = 0, LocalPlayer():GetNumBodyGroups() - 1 do
+				self.Entity:SetBodygroup(i, LocalPlayer():GetBodygroup(i))
+			end
+		else
+			self.Entity:SetSkin(0)
+			for i = 0, self.Entity:GetNumBodyGroups() - 1 do
+				self.Entity:SetBodygroup(i, 0)
+			end
 		end
 		
 		local w = ss.IsValidInkling(LocalPlayer())
@@ -114,6 +126,10 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 			self.Weapon.Visible = true
 			self.Weapon:SetModel(w.ModelPath .. "w_right.mdl")
 			self.Weapon:SetSkin(w.Skin or 0)
+			for i = 0, self.Weapon:GetNumBodyGroups() - 1 do
+				self.Weapon:SetBodygroup(i, 0)
+			end
+
 			for i, v in pairs(w.Bodygroup or {}) do
 				self.Weapon:SetBodygroup(i, v)
 			end
@@ -214,7 +230,7 @@ local function GenerateWeaponSpecificOptions(tab, side)
 		if k == w.ClassName then
 			local cvar = CVarName(k:lower())
 			for k, v in SortedPairs(v) do
-				if k == "Level" then
+				if k == "level" then
 					local slider = side.Weapon.Contents:Add "DNumSlider"
 					slider.Label:SetTextColor(slider.Label:GetSkin().Colours.Label.Dark)
 					slider:SetConVar(cvar(k:lower()))
@@ -235,7 +251,7 @@ local function GenerateWeaponSpecificOptions(tab, side)
 	side:InvalidateLayout()
 end
 
-local function GenerateWeaponIcons(tab, side)
+local function GenerateWeaponIcons(tab)
 	tab.Weapon.List.IconList:Clear()
 	
 	local WeaponList = list.GetForEdit "Weapon"
@@ -310,7 +326,7 @@ local function GenerateWeaponIcons(tab, side)
 	end
 end
 
-local function GenerateWeaponTab(tab, side)
+local function GenerateWeaponTab(tab)
 	tab.Weapon = ss.IsValidInkling(LocalPlayer()) 
 	tab.Weapon = tab.Weapon and "entities/" .. tab.Weapon.ClassName .. ".png"
 	tab.Weapon = tab:AddSheet("", vgui.Create("DPanel", tab), tab.Weapon or configicon)
@@ -328,7 +344,7 @@ local function GenerateWeaponTab(tab, side)
 		end
 	end
 	
-	GenerateWeaponIcons(tab, side)
+	GenerateWeaponIcons(tab)
 end
 
 local function GeneratePreferenceTab(tab)
@@ -354,7 +370,7 @@ local function GeneratePreferenceTab(tab)
 		local i = color:GetID()
 		color:SetToolTip(ss.Text.ColorNames[i])
 		function color:DoClick()
-			local cvar = ss.GetConVar "InkColor"
+			local cvar = ss.GetConVar "inkcolor"
 			if not cvar then return end
 			cvar:SetInt(i)
 		end
@@ -382,7 +398,7 @@ local function GeneratePreferenceTab(tab)
 		item:SetModel(model)
 		item:SetToolTip(c)
 		function item:DoClick()
-			local cvar = ss.GetConVar "Playermodel"
+			local cvar = ss.GetConVar "playermodel"
 			if cvar then cvar:SetInt(i) end
 		end
 		
@@ -401,7 +417,7 @@ local function GeneratePreferenceTab(tab)
 	tab.Preference.ResolutionSelector:Dock(BOTTOM)
 	tab.Preference.ResolutionSelector:SetSize(300, 17)
 	tab.Preference.ResolutionSelector:SetToolTip(ss.Text.DescRTResolution)
-	tab.Preference.ResolutionSelector:SetValue(ss.Text.RTResolutions[ss.GetOption "RTResolution" + 1])
+	tab.Preference.ResolutionSelector:SetValue(ss.Text.RTResolutions[ss.GetOption "rtresolution" + 1])
 	for i = 1, #ss.Text.RTResolutions do
 		tab.Preference.ResolutionSelector:AddChoice(ss.Text.RTResolutions[i])
 	end
@@ -426,7 +442,7 @@ local function GeneratePreferenceTab(tab)
 	
 	local RTSize
 	function tab.Preference.Panel:Think()
-		local selected = tab.Preference.ResolutionSelector:GetSelectedID() or ss.GetOption "RTResolution" + 1
+		local selected = tab.Preference.ResolutionSelector:GetSelectedID() or ss.GetOption "rtresolution" + 1
 		selected = selected - 1
 		tab.Preference.LabelResetRequired:SetVisible(RTSize and RTSize ~= ss.RenderTarget.Size[selected])
 		if RTSize or not ss.RenderTarget.BaseTexture then return end
@@ -434,7 +450,7 @@ local function GeneratePreferenceTab(tab)
 	end
 	
 	function tab.Preference.ResolutionSelector:OnSelect(index, value, data)
-		local cvar = ss.GetConVar "RTResolution"
+		local cvar = ss.GetConVar "rtresolution"
 		if not cvar then return end
 		cvar:SetInt(index - 1)
 	end
@@ -517,9 +533,9 @@ local function GenerateSideOptions(tab, side)
 	end
 end
 
-local function GenerateWeaponContent(self)
+local function GenerateWeaponContents(self)
 	if self.PropPanel then
-		self.PropPanel.SideOption:Remove()
+		-- self.PropPanel.SideOption:Remove()
 		if dragndrop.IsDragging() then return end
 		self.PropPanel:Remove()
 	end
@@ -529,22 +545,22 @@ local function GenerateWeaponContent(self)
 	self.PropPanel:SetVisible(false)
 	
 	local navbar = self.PanelContent.ContentNavBar
-	self.PropPanel.SideOption = vgui.Create("DCategoryList", navbar)
-	self.PropPanel.SideOption:Dock(BOTTOM)
-	self.PropPanel.SideOption:SetSize(navbar:GetWide(), ScrH() * .6)
-	function self.PropPanel.SideOption.Think()
-		local panel = self.PropPanel
-		local opt = panel.SideOption
-		if opt:IsVisible() ~= panel:IsVisible() then
-			opt:SetVisible(panel:IsVisible())
-			navbar.Tree:InvalidateLayout()
-		end
+	-- self.PropPanel.SideOption = vgui.Create("DCategoryList", navbar)
+	-- self.PropPanel.SideOption:Dock(BOTTOM)
+	-- self.PropPanel.SideOption:SetSize(navbar:GetWide(), ScrH() * .6)
+	-- function self.PropPanel.SideOption.Think()
+	-- 	local panel = self.PropPanel
+	-- 	local opt = panel.SideOption
+	-- 	if opt:IsVisible() ~= panel:IsVisible() then
+	-- 		opt:SetVisible(panel:IsVisible())
+	-- 		navbar.Tree:InvalidateLayout()
+	-- 	end
 		
-		local w = ss.IsValidInkling(LocalPlayer())
-		if self.PropPanel.SideOption.WeaponClass == (w and w.ClassName) then return end
-		self.PropPanel.SideOption.WeaponClass = w and w.ClassName
-		GenerateWeaponSpecificOptions(tab, self.PropPanel.SideOption)
-	end
+	-- 	local w = ss.IsValidInkling(LocalPlayer())
+	-- 	if self.PropPanel.SideOption.WeaponClass == (w and w.ClassName) then return end
+	-- 	self.PropPanel.SideOption.WeaponClass = w and w.ClassName
+	-- 	GenerateWeaponSpecificOptions(tab, self.PropPanel.SideOption)
+	-- end
 	
 	local tab = vgui.Create("SplatoonSWEPs.DPropertySheetPlus")
 	self.PropPanel:Add(tab)
@@ -554,16 +570,16 @@ local function GenerateWeaponContent(self)
 	
 	WeaponFilters = {}
 	GeneratePreview(tab)
-	GenerateWeaponTab(tab, self.PropPanel.SideOption)
+	GenerateWeaponTab(tab)
 	GeneratePreferenceTab(tab)
-	GenerateSideOptions(tab, self.PropPanel.SideOption)
+	-- GenerateSideOptions(tab, self.PropPanel.SideOption)
 end
 
 hook.Add("PopulateWeapons", "SplatoonSWEPs: Generate weapon list",
 function(PanelContent, tree, node)
 	local node = tree:AddNode("SplatoonSWEPs", weaponlisticon)
 	node.PanelContent = PanelContent
-	node.DoPopulate = GenerateWeaponContent
+	node.DoPopulate = GenerateWeaponContents
 	node.OriginalThink = node.Think
 	node.ScrW, node.ScrH = ScrW(), ScrH()
 	function node:DoClick()

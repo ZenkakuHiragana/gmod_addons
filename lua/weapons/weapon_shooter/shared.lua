@@ -15,7 +15,7 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	end
 	
 	local col = ss.vector_one * self.Primary.ColRadius
-	local dy = FirePosition * (self:GetNWBool "Southpaw" and -1 or 1)
+	local dy = FirePosition * (self:GetNWBool "southpaw" and -1 or 1)
 	local dp = -Vector(0, dy, FirePosition) dp:Rotate(ang)
 	local t = ss.SquidTrace
 	t.start, t.endpos = shootpos, shootpos + aim
@@ -35,7 +35,7 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	
 	t.start, t.endpos = pos, tr.HitPos
 	local trtest = util.TraceHull(t)
-	if self:GetNWBool "AvoidWalls" and tr.HitPos:DistToSqr(shootpos) > trtest.HitPos:DistToSqr(pos) * 9 then
+	if self:GetNWBool "avoidwalls" and tr.HitPos:DistToSqr(shootpos) > trtest.HitPos:DistToSqr(pos) * 9 then
 		for dir, negate in ipairs {false, "y", "z", "yz", 0} do --right, left, up
 			if negate then
 				if negate == 0 then
@@ -166,7 +166,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		local e = EffectData()
 		e:SetAttachment(self.SplashInit)
 		e:SetAngles(ang)
-		e:SetColor(self:GetNWInt "ColorCode")
+		e:SetColor(self:GetNWInt "inkcolor")
 		e:SetEntity(self)
 		e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)
 		e:SetOrigin(pos)
@@ -227,7 +227,7 @@ function SWEP:CustomMoveSpeed()
 end
 
 function SWEP:Move(ply, mv)
-	if self:GetNWBool "ToggleADS" then
+	if self:GetNWBool "toggleads" then
 		if ply:KeyPressed(IN_USE) then
 			self:SetADS(not self:GetADS())
 		end

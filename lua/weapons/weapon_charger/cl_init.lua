@@ -21,11 +21,11 @@ function SWEP:ClientInit()
 	self:GetBase().ClientInit(self)
 	
 	if not self.Scoped then return end
-	self.RTScope = GetRenderTarget(ss.RTName.RTScope, 512, 512)
+	self.RTScope = GetRenderTarget(ss.RenderTarget.Name.RTScope, 512, 512)
 	self:AddSchedule(0, function(self, sched)
 		local vm = self.Owner:GetViewModel()
 		if not IsValid(vm) then return end
-		if self.RTScope and self:GetNWBool "UseRTScope" then
+		if self.RTScope and self:GetNWBool "usertscope" then
 			self.RTName = self.RTName or vm:GetMaterials()[self.RTScopeNum] .. "rt"
 			self.RTMaterial = self.RTMaterial or Material(self.RTName)
 			self.RTMaterial:SetTexture("$basetexture", self.RTScope)
@@ -54,7 +54,7 @@ function SWEP:ClientInit()
 		self.Owner:SetNoDraw(
 			self:IsMine() and
 			self:GetScopedProgress() == 1 and
-			not self:GetNWBool "UseRTScope")
+			not self:GetNWBool "usertscope")
 	end)
 end
 
@@ -64,7 +64,7 @@ function SWEP:DisplayAmmo()
 end
 
 function SWEP:GetScopedSize()
-	return 1 + (self:GetNWBool "UseRTScope" and self:IsTPS() and 0 or self:GetScopedProgress(true))
+	return 1 + (self:GetNWBool "usertscope" and self:IsTPS() and 0 or self:GetScopedProgress(true))
 end
 
 function SWEP:DrawFourLines(t) end
@@ -128,7 +128,7 @@ local DebugRefract = Material "dev/reflectivity_10"
 local DebugRefDefault = DebugRefract:GetFloat "$refractamount"
 local MatRefDefault = MatRefScope:GetFloat "$refractamount"
 function SWEP:RenderScreenspaceEffects()
-	if not self.Scoped or self:GetNWBool "UseRTScope" then return end
+	if not self.Scoped or self:GetNWBool "usertscope" then return end
 	local prog = self:GetScopedProgress(true)
 	if prog == 0 then return end
 	local padding = surface.DrawTexturedRectUV
@@ -167,13 +167,13 @@ function SWEP:DrawCrosshair(x, y, t)
 end
 
 function SWEP:TranslateFOV(fov)
-	if not self.Scoped or self:GetNWBool "UseRTScope" then return end
+	if not self.Scoped or self:GetNWBool "usertscope" then return end
 	return Lerp(self:GetScopedProgress(true), fov, self.Primary.Scope.FOV)
 end
 
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	ss.ProtectedCall(self:GetBase().PreViewModelDrawn, self, vm, weapon, ply)
-	if self:GetNWBool "UseRTScope" then return end
+	if self:GetNWBool "usertscope" then return end
 	render.SetBlend((1 - self:GetScopedProgress(true))^2)
 end
 
@@ -191,7 +191,7 @@ function SWEP:PostDrawViewModel(vm, weapon, ply)
 end
 
 function SWEP:PreDrawWorldModel()
-	if not self.Scoped or self:GetNWBool "UseRTScope" then return end
+	if not self.Scoped or self:GetNWBool "usertscope" then return end
 	return self:GetScopedProgress(true) == 1
 end
 
@@ -214,7 +214,7 @@ function SWEP:GetArmPos()
 			if not self.Owner:OnGround() or self:GetInk() < prog * self.Primary.TakeAmmo then
 				self.SwayTime = scope.SwayTime * self.Primary.EmptyChargeMul
 			end
-		elseif not self:GetNWBool "UseRTScope" then
+		elseif not self:GetNWBool "usertscope" then
 			self.SwayTime = self.SwayTime / 2
 		end
 		
@@ -224,7 +224,7 @@ function SWEP:GetArmPos()
 end
 
 function SWEP:CustomCalcView(ply, pos, ang, fov)
-	if self:GetNWBool "UseRTScope" then return end
+	if self:GetNWBool "usertscope" then return end
 	if not (self.Scoped and self:IsTPS() and self:IsMine()) then return end
 	local p, a = self:GetFirePosition()
 	local frac = self:GetScopedProgress(true)

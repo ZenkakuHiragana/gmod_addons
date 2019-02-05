@@ -73,47 +73,26 @@ function SWEP:GetFOV()
 	return self.Owner:GetFOV()
 end
 
-local Options = {
-	Playermodel = "PMID",
-	InkColor = "ColorCode",
-	CanHealStand = true,
-	CanHealInk = true,
-	CanReloadStand = true,
-	CanReloadInk = true,
-	BecomeSquid = true,
-	AvoidWalls = true,
-	Southpaw = true,
-	ToggleADS = true,
-}
-function SWEP:GetOptions()
+function SWEP:GetOptions(opt, getopt)
 	if not self:IsMine() then return end
-	local queue = {ss.Options}
-	local getoption = {true}
-	while #queue > 0 do
-		local t = table.remove(queue, 1)
-		local g = table.remove(getoption, 1)
-		if not isfunction(g) then g = ss.GetOption end
-		for name, default in pairs(t) do
-			if (not istable(default) and t ~= ss.Options) or Options[name]
-			or name == self.Base or name == self.ClassName then
-				if istable(default) then
-					table.insert(queue, default)
-					table.insert(getoption, g(name))
-				else
-					local alias = isstring(Options[name]) and Options[name] or name
-					local value = g(name, self.Owner)
-					if isbool(value) then
-						if self:GetNWBool(alias) ~= value then
-							self:SetNWBool(alias, value)
-						end
-					else
-						if self:GetNWInt(alias) ~= value then
-							self:SetNWInt(alias, value)
-						end
-					end
+	local gc = greatzenkakuman.cvartree
+	for name, pt in gc.IteratePreferences "splatoonsweps" do
+		if pt.options and pt.options.serverside then continue end
+		if #pt.location > 1 then
+			local valid = false
+			for _, dir in ipairs(pt.location) do
+				if dir:find(self.Base) or dir:find(self.ClassName) then
+					valid = true
+					break
 				end
 			end
+
+			if not valid then continue end
 		end
+
+		local value = gc.GetValue(pt, self.Owner)
+		if isbool(value) and self:GetNWBool(name) ~= value then self:SetNWBool(name, value) end
+		if isnumber(value) and self:GetNWInt(name) ~= value then self:SetNWInt(name, value) end
 	end
 end
 
@@ -136,7 +115,7 @@ local InkTraceLength = 20
 local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:UpdateInkState() -- Set if player is in ink
 	local ang = Angle(0, self.Owner:GetAngles().yaw)
-	local c = self:GetNWInt "ColorCode"
+	local c = self:GetNWInt "inkcolor"
 	local filter = {self, self.Owner}
 	local p = self.Owner:WorldSpaceCenter()
 	local fw, right = ang:Forward() * InkTraceLength, ang:Right() * InkTraceLength
@@ -237,7 +216,7 @@ function SWEP:SharedThinkBase()
 		self:SetBodygroup(k, v)
 	end
 	
-	local ShouldNoDraw = Either(self:GetNWBool "BecomeSquid", self:Crouching(), self:GetInInk())
+	local ShouldNoDraw = Either(self:GetNWBool "becomesquid", self:Crouching(), self:GetInInk())
 	self.Owner:DrawShadow(not ShouldNoDraw)
 	self:DrawShadow(not ShouldNoDraw)
 	
@@ -315,7 +294,7 @@ function SWEP:ChangeInInk(name, old, new)
 		local t = util.QuickTrace(self.Owner:GetPos(), -vector_up * 16384, {self, self.Owner})
 		e:SetAngles(t.HitNormal:Angle())
 		e:SetAttachment(10)
-		e:SetColor(self:GetNWInt "ColorCode")
+		e:SetColor(self:GetNWInt "inkcolor")
 		e:SetEntity(self)
 		e:SetFlags((f > .5 and 7 or 3) + (CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0))
 		e:SetOrigin(t.HitPos)
@@ -384,11 +363,11 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Int", "GroundColor") -- Surface ink color.
 	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
 	self.HealSchedule = self:AddNetworkSchedule(HealingDelay, function(self, schedule)
-		local canheal = self:GetNWBool "CanHealInk" and self:GetInInk() -- Gradually heals the owner
+		local canheal = self:GetNWBool "canhealink" and self:GetInInk() -- Gradually heals the owner
 		local timescale = ss.GetTimeScale(self.Owner)
 		local delay = HealingDelay / timescale / (canheal and 8 or 1)
 		if schedule:GetDelay() ~= delay then schedule:SetDelay(delay) end
-		if not self:GetOnEnemyInk() and (self:GetNWBool "CanHealStand" or canheal) then
+		if not self:GetOnEnemyInk() and (self:GetNWBool "canhealstand" or canheal) then
 			local health = math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth())
 			if self.Owner:Health() ~= health then self.Owner:SetHealth(health) end
 		end
@@ -396,10 +375,10 @@ function SWEP:SetupDataTables()
 	
 	self.ReloadSchedule = self:AddNetworkSchedule(0, function(self, schedule)
 		local reloadamount = math.max(0, schedule:SinceLastCalled()) -- Recharging ink
-		local fastreload = self:GetNWBool "CanReloadInk" and self:GetInInk()
+		local fastreload = self:GetNWBool "canreloadink" and self:GetInInk()
 		local timescale = ss.GetTimeScale(self.Owner)
 		local mul = ReloadMultiply * (fastreload and 10/3 or 1) * timescale
-		if self:GetNWBool "CanReloadStand" or fastreload then
+		if self:GetNWBool "canreloadstand" or fastreload then
 			local ink = math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.MaxInkAmount)
 			if self:GetInk() ~= ink then self:SetInk(ink) end
 		end

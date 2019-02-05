@@ -401,8 +401,8 @@ end
 -- Returning:
 --   bool          | The colors are the same.
 function ss.IsAlly(c1, c2)
-	c1 = isentity(c1) and IsValid(c1) and c1:GetNWInt "ColorCode" or c1
-	c2 = isentity(c2) and IsValid(c2) and c2:GetNWInt "ColorCode" or c2
+	c1 = isentity(c1) and IsValid(c1) and c1:GetNWInt "inkcolor" or c1
+	c2 = isentity(c2) and IsValid(c2) and c2:GetNWInt "inkcolor" or c2
 	return not ss.GetOption "FF" and c1 == c2
 end
 
@@ -441,7 +441,7 @@ end
 -- Play footstep sound of ink.
 function ss.PlayerFootstep(w, ply, pos, foot, soundName, volume, filter)
 	if SERVER and ss.mp then return end
-	if ply:Crouching() and w:GetNWBool "BecomeSquid" and w:GetGroundColor() < 0
+	if ply:Crouching() and w:GetNWBool "becomesquid" and w:GetGroundColor() < 0
 	or not ply:Crouching() and w:GetGroundColor() >= 0 then
 		ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		return true
@@ -519,10 +519,9 @@ hook.Add("KeyRelease", "SplatoonSWEPs: Throw sub weapon", ss.hook "KeyRelease")
 local weaponslot = {
 	weapon_roller = 0,
 	weapon_shooter = 1,
-	weapon_blaster = 2,
+	weapon_blaster_base = 2,
 	weapon_splatling = 3,
 	weapon_charger = 4,
-	weapon_scope = 4,
 	weapon_slosher = 5,
 }
 local function SetupIcons(SWEP)

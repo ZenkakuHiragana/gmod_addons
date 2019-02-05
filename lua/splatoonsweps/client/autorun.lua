@@ -231,7 +231,7 @@ function ss.PrepareInkSurface(write)
 		INK_SURFACE_DELTA_NORMAL = 2
 	end
 	
-	local rtsize = math.min(rt.Size[ss.GetOption "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(rt.Size[ss.GetOption "rtresolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
 	local rtmargin = 4 / rtsize -- Render Target margin
 	local arearatio = 41.3329546960896 / rtsize * -- arearatio[units/pixel], Found by Excel bulldozing
@@ -392,7 +392,7 @@ local IMAGE_FORMAT_BGRA4444 = 19
 hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function()
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
 	if file.Exists(crashpath, "DATA") then -- If the client has crashed before, RT shrinks.
-		local res = ss.GetConVar "RTResolution"
+		local res = ss.GetConVar "rtresolution"
 		if res then res:SetInt(rt.RESOLUTION.MINIMUM) end
 		notification.AddLegacy(ss.Text.Error.CrashDetected, NOTIFY_GENERIC, 15)
 	end
@@ -400,7 +400,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	file.Write(crashpath, "")
 	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
 	
-	local rtsize = math.min(rt.Size[ss.GetOption "RTResolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = math.min(rt.Size[ss.GetOption "rtresolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	rt.BaseTexture = GetRenderTargetEx(
 		rt.Name.BaseTexture,
 		rtsize, rtsize,
@@ -471,7 +471,7 @@ end)
 
 function ss.PostPlayerDraw(w, ply) render.SetBlend(1) end
 function ss.PrePlayerDraw(w, ply)
-	local ShouldNoDraw = Either(w:GetNWBool "BecomeSquid" and IsValid(w.Squid), ply:Crouching(), w:GetInInk())
+	local ShouldNoDraw = Either(w:GetNWBool "becomesquid" and IsValid(w.Squid), ply:Crouching(), w:GetInInk())
 	if ShouldNoDraw then return true end
 	if w:IsCarriedByLocalPlayer() then
 		render.SetBlend(w:GetCameraFade())
@@ -482,7 +482,7 @@ end
 
 function ss.RenderScreenspaceEffects(w)
 	ss.ProtectedCall(w.RenderScreenspaceEffects, w)
-	if not w:GetInInk() or LocalPlayer():ShouldDrawLocalPlayer() or not ss.GetOption "DrawInkOverlay" then return end
+	if not w:GetInInk() or LocalPlayer():ShouldDrawLocalPlayer() or not ss.GetOption "drawinkoverlay" then return end
 	local color = w:GetInkColorProxy()
 	DrawMaterialOverlay("effects/water_warp01", .1)
 	surface.SetDrawColor(ColorAlpha(color:ToColor(),

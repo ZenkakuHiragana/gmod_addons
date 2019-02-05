@@ -173,7 +173,7 @@ function SWEP:CreateModels(t)
 end
 
 function SWEP:MakeSquidModel(id)
-	self.SquidModelNumber = self:GetNWInt "PMID"
+	self.SquidModelNumber = self:GetNWInt "playermodel"
 	== ss.PLAYER.OCTO and ss.SQUID.OCTO or ss.SQUID.INKLING
 	local modelpath = ss.Squidmodel[self.SquidModelNumber] -- Octopus or squid?
 	if IsValid(self.Squid) then self.Squid:Remove() end
@@ -196,7 +196,7 @@ function SWEP:MakeSquidModel(id)
 		end
 	elseif not self.ErrorSquidModel then
 		self.ErrorSquidModel = true
-		if self:GetNWBool "BecomeSquid" then
+		if self:GetNWBool "becomesquid" then
 			self:PopupError "WeaponSquidModelNotFound"
 		end
 	end
@@ -302,7 +302,7 @@ function SWEP:DrawWorldModel()
 		if self:Crouching() then
 			if self:GetInInk() then
 				return
-			elseif self:GetNWBool "BecomeSquid" and IsValid(self.Squid) then
+			elseif self:GetNWBool "becomesquid" and IsValid(self.Squid) then
 				-- It seems changing eye position doesn't work.
 				self.Squid:SetEyeTarget(self.Squid:GetPos() + self.Squid:GetUp() * 100)
 				-- Move clientside model to player's position.
@@ -338,7 +338,7 @@ end
 function SWEP:DrawWorldModelTranslucent()
 	if self:GetHolstering() then return end
 	if IsValid(self.Owner) and self:Crouching() and (self:GetInInk()
-	or self:GetNWBool "BecomeSquid" and IsValid(self.Squid)) then return end
+	or self:GetNWBool "becomesquid" and IsValid(self.Squid)) then return end
 	
 	local cameradistance = 1
 	local bone_ent = self.Owner
@@ -496,7 +496,7 @@ end
 
 function SWEP:DoDrawCrosshair(x, y)
 	self.Cursor = self.Owner:GetEyeTrace().HitPos:ToScreen()
-	if not ss.GetOption "DrawCrosshair" then return end
+	if not ss.GetOption "drawcrosshair" then return end
 	x, y = self.Cursor.x, self.Cursor.y
 	
 	return ss.ProtectedCall(self.DrawCrosshair, self, x, y,

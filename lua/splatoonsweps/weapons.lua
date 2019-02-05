@@ -196,7 +196,7 @@ sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
 	
 	e:SetAngles(ang) -- Angle difference
 	e:SetAttachment(a) -- Effect duration
-	e:SetColor(self:GetNWInt "ColorCode") -- Splash color
+	e:SetColor(self:GetNWInt "inkcolor") -- Splash color
 	e:SetEntity(self) -- Enitity attach to
 	e:SetFlags(tpslag) -- Splash mode
 	e:SetScale(s) -- Splash length
@@ -209,7 +209,7 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 	local da, r1, r2, t1, t2 = math.Rand(0, 360), 40, 30, 6, 13
 	local tpslag = self:IsCarriedByLocalPlayer()
 	and self.Owner:ShouldDrawLocalPlayer() and 128 or 0
-	e:SetColor(self:GetNWInt "ColorCode")
+	e:SetColor(self:GetNWInt "inkcolor")
 	e:SetEntity(self)
 	
 	if options[2] == "CHARGER" then

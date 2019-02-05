@@ -349,7 +349,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		Angle = isdrop and isdrop.Angle or w.InitAngle,
 		Base = base,
 		ClassName = w.ClassName,
-		Color = isdrop and isdrop.Color or w:GetNWInt "ColorCode",
+		Color = isdrop and isdrop.Color or w:GetNWInt "inkcolor",
 		Info = info,
 		InitDirection = isdrop and -vector_up or w.InitVelocity:GetNormalized(),
 		InitPos = pos,

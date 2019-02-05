@@ -119,9 +119,7 @@ ss.ViewModel = { -- Viewmodel animations
 	Throw = ACT_VM_THROW, --Actual throw animation
 }
 
-function ss.GetColor(colorid)
-	return ss.InkColors[colorid or math.random(ss.MAX_COLORS)]
-end
+function ss.GetColor(colorid) return ss.InkColors[tonumber(colorid)] end
 
 if game.GetMap() == "gm_inkopolis_b1" then
 	ss.SquidSolidMask = bit.band(MASK_PLAYERSOLID, bit.bnot(CONTENTS_PLAYERCLIP))

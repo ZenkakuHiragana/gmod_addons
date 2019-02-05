@@ -24,7 +24,7 @@ function SWEP:ChangePlayermodel(data)
 	
 	self.Owner:SetSubMaterial()
 	self.Owner:SetPlayerColor(data.PlayerColor)
-	if self:GetNWInt "PMID" <= ss.PLAYER.BOY then
+	if self:GetNWInt "playermodel" <= ss.PLAYER.BOY then
 		ss.ProtectedCall(self.Owner.SplatColors, self.Owner)
 	end
 	
@@ -76,7 +76,7 @@ end
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
 	self:GetOptions()
-	self.Color = ss.GetColor(self:GetNWInt "ColorCode")
+	self.Color = ss.GetColor(self:GetNWInt "inkcolor")
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
@@ -116,7 +116,7 @@ function SWEP:Deploy()
 			self.BackupPlayerInfo.SubMaterial[i] = submat
 		end
 		
-		local PMPath = ss.Playermodel[self:GetNWInt "PMID"]
+		local PMPath = ss.Playermodel[self:GetNWInt "playermodel"]
 		if PMPath then
 			if file.Exists(PMPath, "GAME") then
 				self.PMTable = {
@@ -179,7 +179,7 @@ function SWEP:Think()
 	ss.ProtectedCall(self.ServerThink, self)
 	
 	if not self.Owner:IsPlayer() then return end
-	local PMPath = ss.Playermodel[self:GetNWInt "PMID"]
+	local PMPath = ss.Playermodel[self:GetNWInt "playermodel"]
 	if PMPath then
 		if file.Exists(PMPath, "GAME") then
 			self.PMTable = {

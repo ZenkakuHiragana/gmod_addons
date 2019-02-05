@@ -9,10 +9,12 @@ return {Options = {
     DoomStyle = "DOOMスタイル",
     DrawCrosshair = "照準の描画",
     DrawInkOverlay = "インクオーバーレイの描画",
-    MoveViewmodel = "ビューモデルを動かす",
+    Enabled = "Splatoon SWEPsの有効化",
+    FF = "同士討ちの有効化",
+    MoveViewmodel = "壁を避けて狙うとき、ビューモデルを動かす",
     NewStyleCrosshair = "Splatoon 2風の照準",
     Southpaw = "左利き",
-    ToggleADS = "アイアンサイト 切り替え/ホールド",
+    ToggleADS = "アイアンサイト切り替え",
     weapon_charger = {
         UseRTScope = "リアルなスコープを使う",
         weapon_herocharger = {
@@ -24,7 +26,7 @@ return {Options = {
             Level = "ヒーローシューターのレベル",
         },
         weapon_octoshot = {
-            Advanced = "オクタシューター: ワカメ付きタコゾネス仕様",
+            Advanced = "オクタシューター: 上級タコゾネス仕様",
         },
         weapon_nzap85 = {
             PistolStyle = "N-ZAP85: ピストル風",

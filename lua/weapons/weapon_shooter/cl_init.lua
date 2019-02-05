@@ -143,7 +143,7 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
 		
 		if not t.HitEntity then continue end
-		surface.SetDrawColor(ss.GetColor(self:GetNWInt "ColorCode"))
+		surface.SetDrawColor(ss.GetColor(self:GetNWInt "inkcolor"))
 		surface.SetMaterial(ss.Materials.Crosshair.LineColor)
 		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
 	end
@@ -192,7 +192,7 @@ function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 	/ ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
 	for mat, col in pairs {
 		[""] = color_white,
-		Color = ss.GetColor(self:GetNWInt "ColorCode")
+		Color = ss.GetColor(self:GetNWInt "inkcolor")
 	} do
 		surface.SetMaterial(ss.Materials.Crosshair["Line" .. mat])
 		surface.SetDrawColor(col)
@@ -250,9 +250,9 @@ function SWEP:GetViewModelPosition(pos, ang)
 	if self:GetThrowing() then
 		armpos = 1
 	elseif not armpos then
-		if ss.GetOption "DoomStyle" then
+		if ss.GetOption "doomstyle" then
 			armpos = 5
-		elseif ss.GetOption "MoveViewmodel" and not self:Crouching() then
+		elseif ss.GetOption "moveviewmodel" and not self:Crouching() then
 			if not self.Cursor then return pos, ang end
 			local x, y = self.Cursor.x, self.Cursor.y
 			armpos = select(3, self:GetFirePosition())
@@ -261,7 +261,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 		end
 	end
 	
-	if self:GetNWBool "Southpaw" then
+	if self:GetNWBool "southpaw" then
 		armpos = SouthpawAlt[armpos] or armpos
 	end
 	
@@ -295,9 +295,9 @@ end
 
 function SWEP:SetupDrawCrosshair()
 	local t = {Size = {}}
-	t.CrosshairColor = ss.GetColor(ss.CrosshairColors[self:GetNWInt "ColorCode"])
+	t.CrosshairColor = ss.GetColor(ss.CrosshairColors[self:GetNWInt "inkcolor"])
 	t.pos, t.dir = self:GetFirePosition()
-	t.IsSplatoon2 = ss.GetOption "NewStyleCrosshair"
+	t.IsSplatoon2 = ss.GetOption "newstylecrosshair"
 	local res = math.sqrt(ScrW() * ScrH() / originalres)
 	for param, size in pairs {
 		Dot = self.Crosshair.Dot,

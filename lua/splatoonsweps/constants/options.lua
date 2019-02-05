@@ -9,36 +9,24 @@ return {
 	DoomStyle = false,
 	DrawCrosshair = true,
 	DrawInkOverlay = true,
-	Enabled = {true},
-	FF = {false},
-	InkColor = 1,
+	Enabled = {true, order = 1, serverside = true},
+	FF = {false, order = 2, serverside = true},
+	InkColor = {1, hidden = true},
 	MoveViewmodel = true,
 	NewStyleCrosshair = false,
-	Playermodel = 1,
-	RTResolution = 1,
+	Playermodel = {1, hidden = true},
+	RTResolution = {1, hidden = true},
 	Southpaw = false,
 	ToggleADS = false,
 	weapon_charger = {
 		UseRTScope = false,
-		weapon_herocharger = {
-			Level = 0,
-		},
+		weapon_herocharger = {Level = {0, min = 0, max = 3}, __subcategory = true},
 	},
 	weapon_shooter = {
-		weapon_heroshot = {
-			Level = 0,
-		},
-		weapon_octoshot = {
-			Advanced = true,
-		},
-		weapon_nzap85 = {
-			PistolStyle = false,
-		},
-		weapon_nzap89 = {
-			PistolStyle = false,
-		},
-		weapon_nzap83 = {
-			PistolStyle = false,
-		}
+		weapon_heroshot = {Level = {0, min = 0, max = 3}, __subcategory = true},
+		weapon_octoshot = {Advanced = true, __subcategory = true},
+		weapon_nzap85 = {PistolStyle = false, __subcategory = true},
+		weapon_nzap89 = {PistolStyle = false, __subcategory = true},
+		weapon_nzap83 = {PistolStyle = false, __subcategory = true},
 	},
 }

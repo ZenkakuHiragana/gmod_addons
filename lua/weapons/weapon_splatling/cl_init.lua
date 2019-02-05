@@ -24,7 +24,7 @@ SWEP.Crosshair = {
 
 local function Spin(self, vm, weapon, ply)
 	if self:GetCharge() < math.huge or self:GetFireInk() > 0 then
-		local sgn = self:GetNWBool "Southpaw" and -1 or 1
+		local sgn = self:GetNWBool "southpaw" and -1 or 1
 		local prog = self:GetFireInk() > 0 and self:GetFireAt() or self:GetChargeProgress(true)
 		local b = self:LookupBone "rotate_1" or 0
 		local a = self:GetManipulateBoneAngles(b)
@@ -57,7 +57,7 @@ function SWEP:ClientInit()
 end
 
 function SWEP:GetArmPos()
-	return (self:GetADS() or ss.GetOption "DoomStyle") and 5 or 1
+	return (self:GetADS() or ss.GetOption "doomstyle") and 5 or 1
 end
 
 function SWEP:DisplayAmmo()
@@ -99,7 +99,7 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 		local dx = w / math.sqrt(2) - h
 		for _, info in ipairs {
 			{Color = basecolor, Material = ss.Materials.Crosshair.Line},
-			{Color= ss.GetColor(self:GetNWInt "ColorCode"), Material = ss.Materials.Crosshair.LineColor},
+			{Color= ss.GetColor(self:GetNWInt "inkcolor"), Material = ss.Materials.Crosshair.LineColor},
 		} do
 			surface.SetDrawColor(info.Color)
 			surface.SetMaterial(info.Material)
@@ -120,7 +120,7 @@ function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 	/ ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
 	for mat, col in pairs {
 		[""] = color_white,
-		Color = ss.GetColor(self:GetNWInt "ColorCode")
+		Color = ss.GetColor(self:GetNWInt "inkcolor")
 	} do
 		surface.SetMaterial(ss.Materials.Crosshair["Line" .. mat])
 		surface.SetDrawColor(col)
@@ -218,9 +218,9 @@ end
 
 function SWEP:SetupDrawCrosshair()
 	local t = {Size = {}}
-	t.CrosshairColor = ss.GetColor(ss.CrosshairColors[self:GetNWInt "ColorCode"])
+	t.CrosshairColor = ss.GetColor(ss.CrosshairColors[self:GetNWInt "inkcolor"])
 	t.pos, t.dir = self:GetFirePosition()
-	t.IsSplatoon2 = ss.GetOption "NewStyleCrosshair"
+	t.IsSplatoon2 = ss.GetOption "newstylecrosshair"
 	local res = math.sqrt(ScrW() * ScrH() / originalres)
 	for param, size in pairs {
 		Dot = self.Crosshair.Dot,

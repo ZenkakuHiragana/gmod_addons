@@ -27,11 +27,11 @@ function EFFECT:Render()
 	local prog = self:GetChargeProgress(true)
 	if prog == 0 then return end
 	local scprog =  self:GetScopedProgress(true) * 255
-	if self:GetNWBool "UseRTScope" and self:IsMine() and self:IsTPS() then
+	if self:GetNWBool "usertscope" and self:IsMine() and self:IsTPS() then
 		scprog = 0
 	end
 	
-	local color = ColorAlpha(ss.GetColor(self:GetNWInt "ColorCode"), 255 - scprog)
+	local color = ColorAlpha(ss.GetColor(self:GetNWInt "inkcolor"), 255 - scprog)
 	local shootpos, dir = self:GetFirePosition()
 	local pos, ang = self:GetMuzzlePosition()
 	local col = ss.vector_one * self:GetColRadius()

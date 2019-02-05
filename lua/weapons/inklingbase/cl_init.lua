@@ -126,7 +126,7 @@ function SWEP:Holster()
 		self.SurpressDrawingVM = true
 		local vm = self.Owner:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
-		if self:GetNWBool "BecomeSquid" and self.HullDuckMins then
+		if self:GetNWBool "becomesquid" and self.HullDuckMins then
 			self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
 			self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 		end
@@ -162,7 +162,7 @@ function SWEP:Think()
 	end
 	
 	if IsValid(self.Squid) then
-		if self:GetNWInt "PMID" == ss.PLAYER.OCTO then
+		if self:GetNWInt "playermodel" == ss.PLAYER.OCTO then
 			if self.SquidModelNumber ~= ss.SQUID.OCTO then
 				self.Squid:SetModel(ss.Squidmodel[ss.SQUID.OCTO])
 				self.SquidModelNumber = ss.SQUID.OCTO

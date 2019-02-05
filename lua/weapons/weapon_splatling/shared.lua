@@ -28,7 +28,7 @@ function SWEP:ResetSkin()
 	if not ss.ChargingEyeSkin[self.Owner:GetModel()] then return end
 	
 	local skin = 0
-	if self:GetNWInt "PMID" == ss.PLAYER.NOCHANGE then
+	if self:GetNWInt "playermodel" == ss.PLAYER.NOCHANGE then
 		skin = CLIENT and
 		GetConVar "cl_playerskin":GetInt() or
 		self.BackupPlayerInfo.Playermodel.Skin
@@ -140,7 +140,7 @@ end
 
 local rand = "SplatoonSWEPs: Spread"
 function SWEP:Move(ply, mv)
-	if self:GetNWBool "ToggleADS" then
+	if self:GetNWBool "toggleads" then
 		if ply:KeyPressed(IN_USE) then
 			self:SetADS(not self:GetADS())
 		end
@@ -223,7 +223,7 @@ function SWEP:Move(ply, mv)
 			local e = EffectData()
 			e:SetAttachment(self.SplashInit)
 			e:SetAngles(angle_initvelocity)
-			e:SetColor(self:GetNWInt "ColorCode")
+			e:SetColor(self:GetNWInt "inkcolor")
 			e:SetEntity(self)
 			e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)
 			e:SetOrigin(pos)
