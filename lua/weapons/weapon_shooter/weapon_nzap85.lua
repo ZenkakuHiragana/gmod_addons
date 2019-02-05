@@ -61,15 +61,19 @@ local function SetViewModel(self)
 	if not IsValid(self.Owner) then return end
 	local vm = self.Owner:GetViewModel()
 	if not IsValid(vm) then return end
-	local pistol = self:GetNWBool("pistolstyle",
-	ss.Options[self.Base][self.ClassName].PistolStyle)
-	self.ViewModel = self.ModelPath .. "c_viewmodel" .. (pistol and "2" or "") .. ".mdl"
+	local pistol = self:GetNWBool "pistolstyle"
+	self.ViewModel = string.format("%sc_viewmodel%s.mdl", self.ModelPath, pistol and "2" or "")
 	vm:SetWeaponModel(self.ViewModel, self)
 end
 
 function SWEP:SharedInit()
 	ss.ProtectedCall(self.BaseClass.SharedInit, self)
 	SetViewModel(self)
+	self:AddSchedule(0, function(self, schedule)
+		if tobool(self.ViewModel:find "2") ~= self:GetNWBool "pistolstyle" then
+			SetViewModel(self)
+		end
+	end)
 end
 
 function SWEP:SharedDeploy()
@@ -80,7 +84,7 @@ end
 function SWEP:CustomActivity()
 	local armpos = ss.ProtectedCall(self.BaseClass.CustomActivity, self)
 	if not armpos then return end
-	if self:GetNWBool("pistolstyle", ss.Options[self.Base][self.ClassName].PistolStyle) then
+	if self:GetNWBool "pistolstyle" then
 		return "revolver"
 	end
 	
@@ -91,7 +95,7 @@ if SERVER then return end
 function SWEP:GetArmPos()
 	local armpos = self.BaseClass.GetArmPos(self)
 	if not armpos then return end
-	local pistol = self:GetNWBool("pistolstyle", ss.Options[self.Base][self.ClassName].PistolStyle)
+	local pistol = self:GetNWBool "pistolstyle"
 	local offset = pistol and self.ADSOffset2 or self.ADSOffset
 	local ang = pistol and self.ADSAngOffset2 or self.ADSAngOffset
 	self.IronSightsPos[6] = self.IronSightsPos[5] + offset

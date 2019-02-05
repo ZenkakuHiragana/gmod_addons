@@ -79,15 +79,8 @@ function SWEP:GetOptions(opt, getopt)
 	for name, pt in gc.IteratePreferences "splatoonsweps" do
 		if pt.options and pt.options.serverside then continue end
 		if #pt.location > 1 then
-			local valid = false
-			for _, dir in ipairs(pt.location) do
-				if dir:find(self.Base) or dir:find(self.ClassName) then
-					valid = true
-					break
-				end
-			end
-
-			if not valid then continue end
+			if pt.location[2] ~= self.Base then continue end
+			if pt.location[3] ~= self.ClassName then continue end
 		end
 
 		local value = gc.GetValue(pt, self.Owner)
