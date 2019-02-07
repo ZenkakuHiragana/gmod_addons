@@ -1,5 +1,6 @@
 "VertexLitGeneric"
 {
+	"$basetexture" "models/debug/debugwhite"
 	"$bumpmap" "splatoonsweps/weapons/primaries/aerospray/aerospray_normal"
 	"$lightwarptexture" "splatoonsweps/weapons/primaries/aerospray/aerospray_lightwarp"
 	"$nocull" "1"
