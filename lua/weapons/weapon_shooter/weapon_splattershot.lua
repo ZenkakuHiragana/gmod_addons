@@ -26,7 +26,7 @@ SWEP.Variations = {
 		ClassName = "weapon_heroshot",
 		SharedThink = Either(SERVER, nil, function(self)
 			ss.ProtectedCall(self.BaseClass.SharedThink, self)
-			self.Skin = self:GetNWInt("level", ss.Options[self.Base][self.ClassName].Level)
+			self.Skin = self:GetNWInt "level"
 		end),
 	},
 	{
@@ -37,7 +37,7 @@ SWEP.Variations = {
 		Skin = 1,
 		SharedThink = Either(SERVER, nil, function(self)
 			ss.ProtectedCall(self.BaseClass.SharedThink, self)
-			self.Skin = self:GetNWBool("advanced", ss.Options[self.Base][self.ClassName].Advanced)
+			self.Skin = self:GetNWBool "advanced"
 			self.Skin = self.Skin and 1 or 0
 		end),
 	},

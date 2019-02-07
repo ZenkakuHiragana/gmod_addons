@@ -15,7 +15,7 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	end
 	
 	local col = ss.vector_one * self.Primary.ColRadius
-	local dy = FirePosition * (self:GetNWBool "southpaw" and -1 or 1)
+	local dy = FirePosition * (self:GetNWBool "lefthand" and -1 or 1)
 	local dp = -Vector(0, dy, FirePosition) dp:Rotate(ang)
 	local t = ss.SquidTrace
 	t.start, t.endpos = shootpos, shootpos + aim

@@ -7,10 +7,10 @@ return {
 この変更を反映するにはGMODの再起動が必要です。
 また、高解像度になるほど多くのVRAM容量が要求されます。
 変更の際にはビデオメモリの容量が十分にあることを確認してください。]],
+    OverrideHelpText = "サーバー側の設定を優先する",
     Sidemenu = {
-        CommonOptions = "オプション(共通)",
         Equipped = "装備中",
-        Specific = "オプション(ブキ固有)",
+        FilterTitle = "Splatoon SWEPs: ブキフィルタ",
         SortPrefix = "並べ替え: ",
         Sort = {
             Name = "名前",
@@ -28,7 +28,6 @@ return {
             Customized = "カスタム",
             SheldonsPicks = "ブキチセレクション",
         },
-        WeaponList = "ブキリスト",
         WeaponTypePrefix = "ブキタイプ: ",
         WeaponType = {
             All = "すべて",

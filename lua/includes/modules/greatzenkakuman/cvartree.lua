@@ -120,8 +120,8 @@ end
 function SetPrintName(cvar, name)
 	local t = GetCVarTable(cvar)
 	t.printname = name
-	if not t.panel then return end
-	t.panel:SetText(name)
+	if t.panel then t.panel:SetText(name) end
+	if t.paneladmin then t.paneladmin:SetText(name) end
 end
 
 function IteratePreferences(root)
@@ -155,15 +155,16 @@ end
 -- PreferenceTable -> pt, IsEnabledPanel -> e
 local idprefix = "GreatZenkakuMan's Module: CVarTree"
 local function EnablePanel(pt, e)
-	pt.panel:SetEnabled(e)
-	for _, c in ipairs(pt.panel:GetChildren()) do c:SetEnabled(e) end
+	if not pt.paneladmin then return end
+	pt.paneladmin:SetEnabled(e)
+	for _, c in ipairs(pt.paneladmin:GetChildren()) do c:SetEnabled(e) end
 
 	if pt.options.type == "number" then
 		local s = e and "Dark" or "Default"
-		local l, t = pt.panel.Label, pt.panel:GetTextArea()
+		local l, t = pt.paneladmin.Label, pt.paneladmin:GetTextArea()
 		l:SetTextColor(l:GetSkin().Colours.Label[s])
 		t:SetTextColor(t:GetSkin().Colours.Label[s])
-		for _, c in ipairs(pt.panel:GetChildren()) do
+		for _, c in ipairs(pt.paneladmin:GetChildren()) do
 			c:SetMouseInputEnabled(e)
 			c:SetKeyboardInputEnabled(e)
 		end
@@ -172,13 +173,22 @@ end
 
 local function GetOnChange(pt)
 	if pt.options.type == "boolean" then
-		return function(convar, old, new) pt.panel:SetChecked(tobool(new)) end
+		return function(convar, old, new)
+			if not (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin()) then return end
+			if pt.panel then pt.panel:SetChecked(tobool(new)) end
+			if pt.paneladmin then pt.paneladmin:SetChecked(tobool(new)) end
+		end
 	elseif pt.options.type == "number" then
-		return function(convar, old, new) pt.panel:SetValue(tonumber(new)) end
+		return function(convar, old, new)
+			if not (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin()) then return end
+			if pt.panel then pt.panel:SetValue(tonumber(new)) end
+			if pt.paneladmin then pt.paneladmin:SetValue(tonumber(new)) end
+		end
 	end
 end
 
 local function GetDermaPanelOnChange(pt)
+	if not pt.paneladmin then return end
 	local name, getvalue
 	if pt.options.type == "boolean" then
 		name = "OnChange"
@@ -188,38 +198,39 @@ local function GetDermaPanelOnChange(pt)
 		getvalue = tostring
 	end
 
-	pt.panel[name] = function(self, value)
+	pt.paneladmin[name] = function(self, value)
 		net.Start "greatzenkakuman.cvartree.adminchange"
-		net.WriteString(pt.panel.CVarName)
+		net.WriteString(pt.paneladmin.CVarName)
 		net.WriteString(getvalue(value))
 		net.SendToServer()
 	end
 
-	return pt.panel[name]
+	return pt.paneladmin[name]
 end
 
 local function MakeElement(p, admin, pt)
 	local cvar = Either(admin, pt.sv, pt.cl)
+	local panel = admin and "paneladmin" or "panel"
 	if not cvar or Either(admin, pt.options.clientside, pt.options.serverside) then return end
 	if pt.options.type == "boolean" then
-		pt.panel = vgui.Create("DCheckBoxLabel", p)
-		pt.panel:SetTextColor(pt.panel:GetSkin().Colours.Label.Dark)
-		pt.panel:SetValue(cvar:GetBool())
+		pt[panel] = vgui.Create("DCheckBoxLabel", p)
+		pt[panel]:SetTextColor(pt[panel]:GetSkin().Colours.Label.Dark)
+		pt[panel]:SetValue(cvar:GetBool())
 	elseif pt.options.type == "number" then
-		pt.panel = vgui.Create("DNumSlider", p)
-		pt.panel:SetMinMax(pt.options.min, pt.options.max)
-		pt.panel:SetDecimals(pt.options.decimals or 0)
-		pt.panel:SetValue(cvar:GetInt())
-		pt.panel.Label:SetTextColor(pt.panel.Label:GetSkin().Colours.Label.Dark)
+		pt[panel] = vgui.Create("DNumSlider", p)
+		pt[panel]:SetMinMax(pt.options.min, pt.options.max)
+		pt[panel]:SetDecimals(pt.options.decimals or 0)
+		pt[panel]:SetValue(cvar:GetInt())
+		pt[panel].Label:SetTextColor(pt[panel].Label:GetSkin().Colours.Label.Dark)
 	end
 
-	pt.panel.CVarName = cvar:GetName()
-	pt.panel:SetText(pt.printname)
+	pt[panel].CVarName = cvar:GetName()
+	pt[panel]:SetText(pt.printname)
 
 	local override
 	if admin then
 		local onchange = GetDermaPanelOnChange(pt)
-		cvars.AddChangeCallback(pt.panel.CVarName, GetOnChange(pt))
+		cvars.AddChangeCallback(pt[panel].CVarName, GetOnChange(pt))
 		
 		if not pt.options.serverside then
 			local checked = cvar:GetInt() ~= -1
@@ -227,7 +238,8 @@ local function MakeElement(p, admin, pt)
 			override = vgui.Create("DCheckBox", p)
 			override:SetTooltip(OverrideHelpText)
 			override:SetValue(checked)
-			cvars.AddChangeCallback(pt.panel.CVarName, function(convar, old, new)
+			cvars.AddChangeCallback(pt[panel].CVarName, function(convar, old, new)
+				if not (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin()) then return end
 				local checked = tonumber(new) ~= -1
 				override:SetChecked(checked)
 				EnablePanel(pt, checked)
@@ -237,23 +249,23 @@ local function MakeElement(p, admin, pt)
 				EnablePanel(pt, checked)
 				onchange(pt.cl:GetDefault())
 				net.Start "greatzenkakuman.cvartree.adminchange"
-				net.WriteString(pt.panel.CVarName)
+				net.WriteString(pt[panel].CVarName)
 				net.WriteString(checked and pt.cl:GetDefault() or "-1")
 				net.SendToServer()
 			end
 		end
 	else
-		pt.panel:SetConVar(cvar:GetName())
+		pt[panel]:SetConVar(cvar:GetName())
 	end
 
-	p:AddItem(override or pt.panel, override and pt.panel)
+	p:AddItem(override or pt[panel], override and pt[panel])
 	if override then
-		local t = (pt.panel:GetTall() - 15) / 2
+		local t = (pt[panel]:GetTall() - 15) / 2
 		local b = t + (t > math.floor(t) and 1 or 0)
 		override:DockMargin(0, math.floor(t), 0, b)
 		override:SetWidth(15)
-		pt.panel:Dock(TOP)
-		pt.panel:DockMargin(10, 0, 0, 0)
+		pt[panel]:Dock(TOP)
+		pt[panel]:DockMargin(10, 0, 0, 0)
 	end
 end
 
@@ -312,6 +324,13 @@ function AddGUI(name)
 		"CVarTreeAdmin" .. printname, printname, "", "", function(p)
 			p:ClearControls()
 			MakeGUI(p, name, true)
+			local think = p.Think
+			function p:Think()
+				if not IsValid(LocalPlayer()) then return end
+				p.Think = think
+				if LocalPlayer():IsAdmin() then return end
+				p:Remove()
+			end
 		end)
 	end)
 end

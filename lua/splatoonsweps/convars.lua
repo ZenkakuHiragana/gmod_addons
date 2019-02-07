@@ -6,6 +6,7 @@ require "greatzenkakuman/cvartree"
 local gc = greatzenkakuman.cvartree
 local prefix = "Splatoon SWEPs: "
 
+gc.OverrideHelpText = ss.Text.OverrideHelpText
 gc.SetCVarPrefix("splatoonsweps", {printname = ss.Text.Category})
 local function RegisterConVars(opt, helptext, guitext)
 	for cvarname, cvartable in pairs(opt) do

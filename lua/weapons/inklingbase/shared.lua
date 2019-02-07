@@ -80,7 +80,7 @@ function SWEP:GetOptions(opt, getopt)
 		if pt.options and pt.options.serverside then continue end
 		if #pt.location > 1 then
 			if pt.location[2] ~= self.Base then continue end
-			if pt.location[3] ~= self.ClassName then continue end
+			if #pt.location > 2 and pt.location[3] ~= self.ClassName then continue end
 		end
 
 		local value = gc.GetValue(pt, self.Owner)

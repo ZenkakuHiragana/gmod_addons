@@ -24,7 +24,7 @@ SWEP.Crosshair = {
 
 local function Spin(self, vm, weapon, ply)
 	if self:GetCharge() < math.huge or self:GetFireInk() > 0 then
-		local sgn = self:GetNWBool "southpaw" and -1 or 1
+		local sgn = self:GetNWBool "lefthand" and -1 or 1
 		local prog = self:GetFireInk() > 0 and self:GetFireAt() or self:GetChargeProgress(true)
 		local b = self:LookupBone "rotate_1" or 0
 		local a = self:GetManipulateBoneAngles(b)

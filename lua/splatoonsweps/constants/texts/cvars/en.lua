@@ -13,11 +13,27 @@ return {CVars = {
     Enabled = "Enable or disable Splatoon SWEPs. (1: enabled, 0: disabled)",
     FF = "Enable friendly fire. (1: enabled, 0: disabled)",
     InkColor = "Your ink color.  Available values are:\n",
+    LeftHand = "Use left hand to hold weapons. (1: enabled, 0: disabled)",
     MoveViewmodel = "Move viewmodel when avoid setting is enabled. (1: enabled, 0: disabled)",
     NewStyleCrosshair = "Make crosshair act like Splatoon 2. (1: enabled, 0: disabled)",
     Playermodel = "Your thirdperson model.  Available values are:\n",
-    RTResolution = "The resolution of RenderTarget used in ink system.\nTo apply the change, restart your GMOD client.\nHigher option needs more VRAM.\nMake sure your graphics card has enough space of video memory.\n0: If your client has crashed while SplatoonSWEPs is loading, this value is set.  The resolution is 2048x2048, and the VRAM usage is 32MB.\n1: RT has 4096x4096 resolution.\n    This option uses 128MB of your VRAM.\n2: RT has 2x4096x4096 resolution.\n    The resolution is twice as large as option 1.\n    This option uses 256MB of your VRAM.\n3: 8192x8192, using 512MB.\n4: 2x8192x8192, 1GB.\n5: 16384x16384, 2GB.\n6: 2x16384x16384, 4GB.\n7: 32768x32768, 8GB.\n8: 2x32768x32768, 16GB.",
-    Southpaw = "Use left hand to hold weapons. (1: enabled, 0: disabled)",
+    RTResolution = [[The resolution of RenderTarget used in ink system.
+To apply the change, restart your GMOD client.
+Higher option needs more VRAM.
+Make sure your graphics card has enough space of video memory.
+0: If your client has crashed while SplatoonSWEPs is loading, this value is set.
+    The resolution is 2048x2048, and the VRAM usage is 32MB.
+1: RT has 4096x4096 resolution.
+    This option uses 128MB of your VRAM.
+2: RT has 2x4096x4096 resolution.
+    The resolution is twice as large as option 1.
+    This option uses 256MB of your VRAM.
+3: 8192x8192, using 512MB.
+4: 2x8192x8192, 1GB.
+5: 16384x16384, 2GB.
+6: 2x16384x16384, 4GB.
+7: 32768x32768, 8GB.
+8: 2x32768x32768, 16GB.]],
     ToggleADS = "Aim down sight mode. (1: toggle, 0: hold)",
     weapon_charger = {
         UseRTScope = "For scoped chargers, use realistic scope instead of standard scope effect. (1: enabled, 0: disabled)",

@@ -32,7 +32,7 @@ SWEP.Variations = {
 		ScopePos = Vector(-5, 6.03, .2),
 		SharedThink = Either(SERVER, nil, function(self)
 			ss.ProtectedCall(self.BaseClass.SharedThink, self)
-			self.Skin = self:GetNWInt("level", ss.Options[self.Base][self.ClassName].Level)
+			self.Skin = self:GetNWInt "level"
 		end),
 	},
 	{

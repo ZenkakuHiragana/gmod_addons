@@ -8,10 +8,10 @@ return {
 To apply the change, restart your GMOD client.
 Higher option needs more VRAM.
 Make sure your graphics card has enough space of video memory.]],
+    OverrideHelpText = "Override this setting with serverside value",
     Sidemenu = {
-        CommonOptions = "Common preferences",
         Equipped = "Equipped",
-        Specific = "Weapon-specific preferences",
+        FilterTitle = "Splatoon SWEPs: Weapons Filter",
         SortPrefix = "Sort: ",
         Sort = {
             Name = "Name",
@@ -29,7 +29,6 @@ Make sure your graphics card has enough space of video memory.]],
             Customized = "Customized",
             SheldonsPicks = "Sheldon's Picks",
         },
-        WeaponList = "Weapon list",
         WeaponTypePrefix = "Weapon type: ",
         WeaponType = {
             All = "All",

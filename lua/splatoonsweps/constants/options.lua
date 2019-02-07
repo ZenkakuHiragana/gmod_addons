@@ -12,11 +12,11 @@ return {
 	Enabled = {true, order = 1, serverside = true},
 	FF = {false, order = 2, serverside = true},
 	InkColor = {1, hidden = true},
+	LeftHand = false,
 	MoveViewmodel = true,
 	NewStyleCrosshair = false,
 	Playermodel = {1, hidden = true},
 	RTResolution = {1, hidden = true},
-	Southpaw = false,
 	ToggleADS = false,
 	weapon_charger = {
 		UseRTScope = false,

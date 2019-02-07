@@ -147,29 +147,6 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 	ss.ProtectedCall(LocalPlayer().SplatColors, self.Entity)
 end
 
-local function CreateCheckBox(parent, cvar, text)
-	local check = parent:Add "DCheckBoxLabel"
-	check:SetConVar(cvar)
-	check:SetText(text)
-	check:SizeToContents()
-	check:SetTall(check:GetTall() + 2)
-	check:SetTextColor(check:GetSkin().Colours.Label.Dark)
-	check.PerformLayout = CheckBoxLabelPerformLayout
-	return check
-end
-
-local function DividerThink(self)
-	local w = self:GetSize()
-	if w == self.w then return end
-	self:SetLeftWidth(self:GetWide() * self.ratio)
-	self.w = w
-end
-
-local function DividerSaveRatio(self, mode)
-	self:MouseRelease(mode)
-	self.ratio = self:GetLeftWidth() / self:GetWide()
-end
-
 local function GeneratePreview(tab)
 	tab.PreviewBase = vgui.Create("SplatoonSWEPs.DFrameChild", tab)
 	tab.PreviewBase:SetSize(360, 360)
@@ -211,44 +188,6 @@ local function GeneratePreview(tab)
 	end
 	
 	SetPlayerModel(tab.Preview)
-end
-
-local function GenerateWeaponSpecificOptions(tab, side)
-	side.Weapon = side.Weapon or side:Add(ss.Text.Sidemenu.Specific)
-	if side.Weapon.Contents then
-		side.Weapon.Contents:Clear()
-	else
-		side.Weapon:SetContents(vgui.Create "DListLayout")
-	end
-	
-	local w = ss.IsValidInkling(LocalPlayer())
-	side.Weapon:SetVisible(w and ss.Options[w.Base] and ss.Text.Options[w.Base])
-	if not side.Weapon:IsVisible() then return end
-	local Text = ss.Text.Options[w.Base]
-	local CVarName = ss.GetConVarName(w.Base) 
-	for k, v in SortedPairs(ss.Options[w.Base]) do
-		if k == w.ClassName then
-			local cvar = CVarName(k:lower())
-			for k, v in SortedPairs(v) do
-				if k == "level" then
-					local slider = side.Weapon.Contents:Add "DNumSlider"
-					slider.Label:SetTextColor(slider.Label:GetSkin().Colours.Label.Dark)
-					slider:SetConVar(cvar(k:lower()))
-					slider:SetDecimals(0)
-					slider:SetMinMax(0, 3)
-					slider:SetText(Text[w.ClassName][k])
-				else
-					CreateCheckBox(side.Weapon.Contents, cvar(k:lower()), Text[w.ClassName][k])
-				end
-			end
-		elseif isbool(v) then
-			local cvar = CVarName(k:lower())
-			if not ConVarExists(cvar) then continue end
-			CreateCheckBox(side.Weapon.Contents, cvar, Text[k])
-		end
-	end
-	
-	side:InvalidateLayout()
 end
 
 local function GenerateWeaponIcons(tab)
@@ -466,9 +405,10 @@ local function CheckBoxLabelPerformLayout(self)
 end
 
 local function GenerateFilter(tab, side)
-	side.Filter = side:Add(ss.Text.Sidemenu.WeaponList)
-	side.Filter:SetContents(vgui.Create "DListLayout")
-	local eq = side.Filter.Contents:Add "DCheckBoxLabel"
+	side:SetLabel(ss.Text.Sidemenu.FilterTitle)
+	side:SetContents(vgui.Create "DListLayout")
+	side.Contents:SetPaintBackground(true)
+	local eq = side.Contents:Add "DCheckBoxLabel"
 	eq:SetText(ss.Text.Sidemenu.Equipped)
 	eq:SizeToContents()
 	eq:SetTall(eq:GetTall() + 2)
@@ -479,7 +419,7 @@ local function GenerateFilter(tab, side)
 		GenerateWeaponIcons(tab)
 	end
 	
-	local wt = side.Filter.Contents:Add "DComboBox"
+	local wt = side.Contents:Add "DComboBox"
 	local prefix = ss.Text.Sidemenu.WeaponTypePrefix
 	wt:SetSortItems()
 	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.All, nil, true)
@@ -493,7 +433,7 @@ local function GenerateFilter(tab, side)
 		GenerateWeaponIcons(tab)
 	end
 	
-	local var = side.Filter.Contents:Add "DComboBox"
+	local var = side.Contents:Add "DComboBox"
 	prefix = ss.Text.Sidemenu.VariationsPrefix
 	var:SetSortItems()
 	var:AddChoice(prefix .. ss.Text.Sidemenu.Variations.All, nil, true)
@@ -505,7 +445,7 @@ local function GenerateFilter(tab, side)
 		GenerateWeaponIcons(tab)
 	end
 	
-	local sort = side.Filter.Contents:Add "DComboBox"
+	local sort = side.Contents:Add "DComboBox"
 	prefix = ss.Text.Sidemenu.SortPrefix
 	sort:SetSortItems()
 	sort:AddChoice(prefix .. ss.Text.Sidemenu.Sort.Name, "PrintName", true)
@@ -521,21 +461,9 @@ local function GenerateFilter(tab, side)
 	end
 end
 
-local function GenerateSideOptions(tab, side)
-	GenerateFilter(tab, side)
-	
-	side.Common = side:Add(ss.Text.Sidemenu.CommonOptions)
-	side.Common:SetContents(vgui.Create "DListLayout")
-	for k, v in SortedPairs(ss.Options) do
-		local cvar = ss.GetConVarName(k)
-		if not (isbool(v) and ConVarExists(cvar)) then continue end
-		CreateCheckBox(side.Common.Contents, cvar, ss.Text.Options[k])
-	end
-end
-
 local function GenerateWeaponContents(self)
 	if self.PropPanel then
-		-- self.PropPanel.SideOption:Remove()
+		self.PropPanel.SideOption:Remove()
 		if dragndrop.IsDragging() then return end
 		self.PropPanel:Remove()
 	end
@@ -545,22 +473,16 @@ local function GenerateWeaponContents(self)
 	self.PropPanel:SetVisible(false)
 	
 	local navbar = self.PanelContent.ContentNavBar
-	-- self.PropPanel.SideOption = vgui.Create("DCategoryList", navbar)
-	-- self.PropPanel.SideOption:Dock(BOTTOM)
-	-- self.PropPanel.SideOption:SetSize(navbar:GetWide(), ScrH() * .6)
-	-- function self.PropPanel.SideOption.Think()
-	-- 	local panel = self.PropPanel
-	-- 	local opt = panel.SideOption
-	-- 	if opt:IsVisible() ~= panel:IsVisible() then
-	-- 		opt:SetVisible(panel:IsVisible())
-	-- 		navbar.Tree:InvalidateLayout()
-	-- 	end
-		
-	-- 	local w = ss.IsValidInkling(LocalPlayer())
-	-- 	if self.PropPanel.SideOption.WeaponClass == (w and w.ClassName) then return end
-	-- 	self.PropPanel.SideOption.WeaponClass = w and w.ClassName
-	-- 	GenerateWeaponSpecificOptions(tab, self.PropPanel.SideOption)
-	-- end
+	self.PropPanel.SideOption = vgui.Create("DCollapsibleCategory", navbar)
+	self.PropPanel.SideOption:Dock(TOP)
+	function self.PropPanel.SideOption.Think()
+		local panel = self.PropPanel
+		local opt = panel.SideOption
+		if opt:IsVisible() ~= panel:IsVisible() then
+			opt:SetVisible(panel:IsVisible())
+			navbar.Tree:InvalidateLayout()
+		end
+	end
 	
 	local tab = vgui.Create("SplatoonSWEPs.DPropertySheetPlus")
 	self.PropPanel:Add(tab)
@@ -572,7 +494,7 @@ local function GenerateWeaponContents(self)
 	GeneratePreview(tab)
 	GenerateWeaponTab(tab)
 	GeneratePreferenceTab(tab)
-	-- GenerateSideOptions(tab, self.PropPanel.SideOption)
+	GenerateFilter(tab, self.PropPanel.SideOption)
 end
 
 hook.Add("PopulateWeapons", "SplatoonSWEPs: Generate weapon list",
