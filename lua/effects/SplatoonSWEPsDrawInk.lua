@@ -4,6 +4,7 @@ if not ss then return end
 
 local surf = ss.SequentialSurfaces
 function EFFECT:Init(e)
+	if not ss.RenderTarget.Ready then return end
 	local i = math.abs(e:GetScale())
 	local info = e:GetStart() -- Vector(Radius, Inkangle, Ratio)
 	local pos = e:GetOrigin()

@@ -74,8 +74,13 @@ function Simulate.weapon_shooter(ink)
 				Color = ink.Color,
 				SplashInit = ink.WeaponSplashInit,
 			})
-			if util.QuickTrace(ink.InitPos + ink.InitDirection * NextLength,
-			ink.InitDirection * ink.Info.SplashInterval, ink.filter).Hit then
+			local start = ink.InitPos + ink.InitDirection * NextLength
+			if util.TraceLine {
+				start = start,
+				endpos = start + ink.InitDirection * ink.Info.SplashInterval,
+				filter = ink.filter,
+				mask = ss.SquidSolidMask,
+			}.Hit then
 				break
 			end
 			
@@ -182,7 +187,7 @@ function Simulate.weapon_charger(ink)
 			collisiongroup = ink.collisiongroup,
 			endpos = ink.InitPos + dir * NextLength,
 			filter = ink.filter,
-			mask = MASK_SHOT_HULL,
+			mask = ss.SquidSolidMask,
 			maxs = ink.maxs,
 			mins = ink.mins,
 			start = ink.InitPos,
@@ -363,7 +368,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		-- collisiongroup = COLLISION_GROUP_IN_VEHICLE,
 		endpos = Vector(),
 		filter = ply,
-		mask = MASK_SHOT,
+		mask = ss.SquidSolidMask,
 		maxs = ss.vector_one * info.ColRadius,
 		mins = -ss.vector_one * info.ColRadius,
 		start = pos,

@@ -64,7 +64,7 @@ local MAX_TRIANGLES = math.floor(32768 / 3) -- mesh library limitation
 local INK_SURFACE_DELTA_NORMAL = .8 -- Distance between map surface and ink mesh
 local PLANES, NODES, LEAFS, MODELS = 1, 5, 10, 14 -- Lump index
 local function GenerateBSPTree()
-	local mapfile = "maps/" .. game.GetMap() .. ".bsp"
+	local mapfile = string.format("maps/%s.bsp", game.GetMap())
 	assert(file.Exists(mapfile, "GAME"), "SplatoonSWEPs: Attempt to load a non-existent map!")
 	
 	local bsp = file.Open(mapfile, "rb", "GAME")
@@ -145,7 +145,7 @@ end
 function ss.PrepareInkSurface(write)
 	GenerateBSPTree()
 	
-	local path = "splatoonsweps/" .. game.GetMap() .. "_decompress.txt"
+	local path = string.format("splatoonsweps/%s_decompress.txt", game.GetMap())
 	file.Write(path, util.Decompress(write:sub(5))) -- First 4 bytes are map CRC.  Remove them.
 	local data = file.Open("data/" .. path, "rb", "GAME")
 	local numsurfs = data:ReadULong()
@@ -226,11 +226,15 @@ function ss.PrepareInkSurface(write)
 	data:Close()
 	file.Delete(path)
 	
-	-- HACKHACK - These are Splatoon 2 maps made by Lpower531. It has special decals that hides our ink.
-	if game.GetMap() == "gm_moray_towers" or game.GetMap() == "gm_kelp_dome" then
-		INK_SURFACE_DELTA_NORMAL = 2
-	end
-	
+	if ({ -- HACKHACK - These are Splatoon maps made by Lpower531. It has special decals that hides our ink.
+		gm_flounder_heights_day = true,
+		gm_flounder_heights_night = true,
+		gm_kelp_dome = true,
+		gm_kelp_dome_fes = true,
+		gm_moray_towers = true,
+		gm_new_albacore_hotel = true,
+	})[game.GetMap()] then INK_SURFACE_DELTA_NORMAL = 2 end
+
 	local rtsize = math.min(rt.Size[ss.GetOption "rtresolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	local rtarea = rtsize^2
 	local rtmargin = 4 / rtsize -- Render Target margin
@@ -437,8 +441,8 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 			["$bumpmap"] = rt.Name.Normalmap,
 			["$ssbump"] = "1",
 			["$nolod"] = "1",
-			["$alpha"] = ".95",
-			["$alphatest"] = "1",
+			["$alpha"] = ".975",
+			["$translucent"] = "1",
 		}
 	)
 	rt.WaterMaterial = CreateMaterial(
@@ -448,19 +452,19 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 			["$normalmap"] = rt.Name.Normalmap,
 			["$nolod"] = "1",
 			["$bluramount"] = "2",
-			["$refractamount"] = ".1",
+			["$refractamount"] = ".125",
 			["$refracttint"] = "[1 1 1]",
 		}
 	)
 	
 	file.Delete(crashpath)
-	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
-	local pathbsp = "maps/" .. game.GetMap() .. ".bsp"
+	local path = string.format("splatoonsweps/%s.txt", game.GetMap())
+	local pathbsp = string.format("maps/%s.bsp", game.GetMap())
 	local data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, "rb", "GAME")
-	if data:Size() < 4 or data:ReadULong() ~= tonumber(util.CRC(file.Read(pathbsp, true) or "")) then
+	if not data or data:Size() < 4 or data:ReadULong() ~= tonumber(util.CRC(file.Read(pathbsp, true) or "")) then
+		if data then data:Close() end
 		net.Start "SplatoonSWEPs: Redownload ink data"
 		net.SendToServer()
-		data:Close()
 		ss.Data = ""
 		return
 	end

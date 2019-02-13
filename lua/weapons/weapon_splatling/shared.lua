@@ -274,8 +274,7 @@ function SWEP:CustomActivity()
 	if CLIENT and self:IsCarriedByLocalPlayer() then at = at - self:Ping() end
 	if CurTime() > at then return "crossbow" end
 	local aimpos = select(3, self:GetFirePosition())
-	return self:GetADS() and not ss.ChargingEyeSkin[self.Owner:GetModel()]
-	and "ar2" or (aimpos == 3 or aimpos == 4) and "rpg" or "crossbow"
+	return (aimpos == 3 or aimpos == 4) and "rpg" or "crossbow"
 end
 
 function SWEP:UpdateAnimation(ply, vel, max) end

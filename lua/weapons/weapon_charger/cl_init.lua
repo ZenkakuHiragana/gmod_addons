@@ -218,7 +218,7 @@ function SWEP:GetArmPos()
 			self.SwayTime = self.SwayTime / 2
 		end
 		
-		self.ArmBegin = SysTime() - (SysTime() - self.ArmBegin) / SwayTime * self.SwayTime / timescale
+		self.ArmBegin = RealTime() - (RealTime() - self.ArmBegin) / SwayTime * self.SwayTime / timescale
 		return 6
 	end
 end

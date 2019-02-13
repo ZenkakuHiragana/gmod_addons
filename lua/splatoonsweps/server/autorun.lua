@@ -24,8 +24,8 @@ SplatoonSWEPs = SplatoonSWEPs or {
 }
 
 include "splatoonsweps/const.lua"
-include "network.lua"
 include "splatoonsweps/shared.lua"
+include "network.lua"
 include "bsp.lua"
 
 local ss = SplatoonSWEPs
@@ -91,9 +91,9 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 	ss.BSP:Init() --Parse the map
 	ss.BSP = nil
 	collectgarbage "collect"
-	local path = "splatoonsweps/" .. game.GetMap() .. ".txt"
+	local path = string.format("splatoonsweps/%s.txt", game.GetMap())
 	local data = file.Open(path, "rb", "DATA")
-	local mapCRC = tonumber(util.CRC(file.Read("maps/" .. game.GetMap() .. ".bsp", true) or "")) or 0
+	local mapCRC = tonumber(util.CRC(file.Read(string.format("maps/%s.bsp", game.GetMap()), true) or "")) or 0
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
 	if not data or data:Size() < 4 or data:ReadULong() ~= mapCRC then --First 4 bytes are map CRC.
 		file.Write(path, "") --Create an empty file
@@ -133,10 +133,6 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 		
 		for i, disp in pairs(ss.Displacements) do
 			local power = math.log(math.sqrt(#disp + 1) - 1, 2) - 1 --1, 2, 3
-			if power ~= math.floor(power) then
-				ErrorNoHalt "SplatoonSWEPs: Displacement power isn't an integer!"
-				continue
-			end
 			
 			data:WriteUShort(i)
 			data:WriteByte(power)
@@ -162,7 +158,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 		for c in write:gmatch "." do data:WriteByte(c:byte()) end
 		data:Close() --data = map CRC + compressed data
 	end
-	
+
 	resource.AddSingleFile("data/" .. path)
 end)
 

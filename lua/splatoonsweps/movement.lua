@@ -73,11 +73,11 @@ function ss.InitializeMoveEmulation(ply)
 		or var:find "m_n" then t[ply] = 0 end
 	end
 	
-	me.m_surfaceFriction[ply] = 1
-	me.m_surfaceProps[ply] = 0
-	me.m_outJumpVel[ply] = Vector()
-	me.m_outStepHeight[ply] = 0
-	me.m_outWishVel[ply] = Vector()
+	me.m_surfaceFriction[ply] = me.m_surfaceFriction[ply] or 1
+	me.m_surfaceProps[ply] = me.m_surfaceProps[ply] or 0
+	me.m_outJumpVel[ply] = me.m_outJumpVel[ply] or Vector()
+	me.m_outStepHeight[ply] = me.m_outStepHeight[ply] or 0
+	me.m_outWishVel[ply] = me.m_outWishVel[ply] or Vector()
 end
 
 local COORD_FRACTIONAL_BITS = 5
@@ -1842,8 +1842,9 @@ function ss.MoveHook(w, p, m)
 	
 	for v, i in pairs {
 		[mv:GetVelocity()] = true, -- Current velocity
-		[me.m_vecVelocity[ply]] = false,
+		[me.m_vecVelocity[ply] or false] = false,
 	} do -- Wall climbing
+		if not v then continue end
 		local speed, vz = v:Length2D(), v.z -- Horizontal speed, Z component
 		if w:GetInWallInk() and mv:KeyDown(WALLCLIMB_KEYS) then
 			vz = math.max(math.abs(vz) * -.75, vz + math.min(

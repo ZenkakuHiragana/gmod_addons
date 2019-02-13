@@ -25,8 +25,9 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function()
 		return
 	end
 	
-	file.Write("splatoonsweps/" .. game.GetMap() .. ".txt", redownload)
+	file.Write(string.format("splatoonsweps/%s.txt", game.GetMap()), redownload)
 	ss.PrepareInkSurface(redownload)
+	notification.AddLegacy(ss.Text.LateReadyToSplat, NOTIFY_HINT, 8)
 end)
 
 net.Receive("SplatoonSWEPs: Send a sound", function()

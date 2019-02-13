@@ -8,6 +8,7 @@ return {
 To apply the change, restart your GMOD client.
 Higher option needs more VRAM.
 Make sure your graphics card has enough space of video memory.]],
+    LateReadyToSplat = "Splatoon SWEPs: You're now ready to paint the map, but re-joining the server is recommended.",
     OverrideHelpText = "Override this setting with serverside value",
     Sidemenu = {
         Equipped = "Equipped",

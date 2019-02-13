@@ -75,6 +75,12 @@ end
 
 function SWEP:Deploy()
 	if not (IsValid(self.Owner) and self.Owner:Health() > 0) then return true end
+	if self.Owner:IsPlayer() and not table.HasValue(ss.PlayersReady, self.Owner) then
+		ss.SendError("LocalPlayerNotReadyToSplat", self.Owner)
+		self:Remove()
+		return
+	end
+
 	self:GetOptions()
 	self.Color = ss.GetColor(self:GetNWInt "inkcolor")
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
@@ -203,5 +209,11 @@ function SWEP:Think()
 	
 	if self.Owner:GetPlayerColor() ~= self:GetInkColorProxy() then
 		self.Owner:SetPlayerColor(self:GetInkColorProxy())
+	end
+
+	local vm = self.Owner:GetViewModel()
+	if not IsValid(vm) then return end
+	if vm:GetSequenceActivityName(vm:GetSequence()) == "ACT_VM_DRAW" and vm:GetCycle() > 0.999 then
+		self:SendWeaponAnim(ACT_VM_IDLE)
 	end
 end

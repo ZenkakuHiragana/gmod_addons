@@ -7,6 +7,7 @@ return {
 この変更を反映するにはGMODの再起動が必要です。
 また、高解像度になるほど多くのVRAM容量が要求されます。
 変更の際にはビデオメモリの容量が十分にあることを確認してください。]],
+    LateReadyToSplat = "Splatoon SWEPs: マップを塗り替えす準備ができましたが、サーバーに参加し直すことを推奨します。",
     OverrideHelpText = "サーバー側の設定を優先する",
     Sidemenu = {
         Equipped = "装備中",

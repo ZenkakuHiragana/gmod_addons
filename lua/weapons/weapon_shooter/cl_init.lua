@@ -247,7 +247,8 @@ function SWEP:GetViewModelPosition(pos, ang)
 	end
 	
 	local armpos = ss.ProtectedCall(self.GetArmPos, self)
-	if self:GetThrowing() then
+	if self:GetHolstering() or self:GetThrowing()
+	or vm:GetSequenceActivityName(vm:GetSequence()) == "ACT_VM_DRAW" then
 		armpos = 1
 	elseif not armpos then
 		if ss.GetOption "doomstyle" then

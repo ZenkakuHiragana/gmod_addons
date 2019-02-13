@@ -101,8 +101,10 @@ function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, su
 	}
 	
 	local ink = surf.InkCircles[id]
-	for r, z in pairs(ink) do
-		if next(r.bounds) then
+	for i, r in ipairs(ink) do
+		if not next(r.bounds) then
+			table.remove(ink, i)
+		else
 			for nb in pairs(newink.bounds) do
 				for b in pairs(r.bounds) do
 					local n1, n2, n3, n4 = unpack(nb) -- xmin, ymin, xmax, ymax
@@ -127,12 +129,10 @@ function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, su
 					end
 				end
 			end
-		else
-			ink[r] = nil
 		end
 	end
 	
-	ink[newink] = CurTime()
+	ink[#ink + 1] = newink
 end
 
 -- Takes a TraceResult and returns ink color of its HitPos.
@@ -149,7 +149,10 @@ function ss.GetSurfaceColor(tr)
 			if surf.Normals[i]:Dot(tr.HitNormal) <= ss.MAX_COS_DEG_DIFF * ((SERVER and index < 0 or CLIENT and ss.Displacements[i]) and .5 or 1) or not
 			ss.CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
 			local p2d = ss.To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
-			for r in SortedPairsByValue(surf.InkCircles[i], true) do
+			local ink = surf.InkCircles[i]
+			for k = #ink, 1, -1 do
+				local r = ink[k]
+				if not r then continue end
 				local t = ss.InkShotMaterials[r.texid]
 				local w, h = t.width, t.height
 				local p = (p2d - r.pos) / r.radius
