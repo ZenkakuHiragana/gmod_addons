@@ -35,26 +35,26 @@ return {CVars = {
 7: 32768x32768、8GB。
 8: 2x32768x32768、16GB。]],
     ToggleADS = "アイアンサイト切り替え(1)/ホールド(0)",
-    weapon_charger = {
+    weapon_splatoonsweps_charger = {
         UseRTScope = "スコープ付きチャージャーで、リアルなスコープを使う。 (1: 有効, 0: 無効)",
-        weapon_herocharger = {
+        weapon_splatoonsweps_herocharger = {
             Level = "ヒーローチャージャーレプリカのレベル。 (0, 1, 2, 3 → レベル 1, 2, 3, 4)",
         },
     },
-    weapon_shooter = {
-        weapon_heroshot = {
+    weapon_splatoonsweps_shooter = {
+        weapon_splatoonsweps_heroshot = {
             Level = "ヒーローシューターレプリカのレベル。 (0, 1, 2, 3 → レベル 1, 2, 3, 4)",
         },
-        weapon_octoshot = {
+        weapon_splatoonsweps_octoshot = {
             Advanced = "オクタシューターレプリカのスキン。 (0: 通常タコゾネス, 1: ワカメ付きタコゾネス)",
         },
-        weapon_nzap85 = {
+        weapon_splatoonsweps_nzap85 = {
             PistolStyle = "N-ZAP 85をピストルのように構える。 (1: 有効, 0: 無効)",
         },
-        weapon_nzap89 = {
+        weapon_splatoonsweps_nzap89 = {
             PistolStyle = "N-ZAP 89をピストルのように構える。 (1: 有効, 0: 無効)",
         },
-        weapon_nzap83 = {
+        weapon_splatoonsweps_nzap83 = {
             PistolStyle = "N-ZAP 83をピストルのように構える。 (1: 有効, 0: 無効)",
         },
     },

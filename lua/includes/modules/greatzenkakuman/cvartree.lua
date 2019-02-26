@@ -270,9 +270,7 @@ local function MakeElement(p, admin, pt)
 end
 
 local function MakeGUI(p, nametable, admin)
-	local categories = {}
-	local ordered = {}
-	local preferences = {}
+	local categories, ordered, preferences = {}, {}, {}
 	for name, pt in pairs(GetCVarTable(nametable)) do
 		if name:StartWith "__" then continue end
 		if not istable(pt) then continue end

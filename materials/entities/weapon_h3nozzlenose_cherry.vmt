@@ -1,7 +1,0 @@
-"UnlitGeneric"
-{
-	"$basetexture" "entities/weapon_h3nozzlenose_cherry"
-	"$nolod" 1
-	"$vertexalpha" 1
-	"$vertexcolor" 1
-}

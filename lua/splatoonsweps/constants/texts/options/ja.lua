@@ -15,26 +15,26 @@ return {Options = {
     MoveViewmodel = "壁を避けて狙うとき、ビューモデルを動かす",
     NewStyleCrosshair = "Splatoon 2風の照準",
     ToggleADS = "アイアンサイト切り替え",
-    weapon_charger = {
+    weapon_splatoonsweps_charger = {
         UseRTScope = "リアルなスコープを使う",
-        weapon_herocharger = {
+        weapon_splatoonsweps_herocharger = {
             Level = "ヒーローチャージャーのレベル",
         },
     },
-    weapon_shooter = {
-        weapon_heroshot = {
+    weapon_splatoonsweps_shooter = {
+        weapon_splatoonsweps_heroshot = {
             Level = "ヒーローシューターのレベル",
         },
-        weapon_octoshot = {
+        weapon_splatoonsweps_octoshot = {
             Advanced = "オクタシューター: 上級タコゾネス仕様",
         },
-        weapon_nzap85 = {
+        weapon_splatoonsweps_nzap85 = {
             PistolStyle = "N-ZAP85: ピストル風",
         },
-        weapon_nzap89 = {
+        weapon_splatoonsweps_nzap89 = {
             PistolStyle = "N-ZAP89: ピストル風",
         },
-        weapon_nzap83 = {
+        weapon_splatoonsweps_nzap83 = {
             PistolStyle = "N-ZAP83: ピストル風",
         },
     },

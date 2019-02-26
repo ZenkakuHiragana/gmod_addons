@@ -35,26 +35,26 @@ Make sure your graphics card has enough space of video memory.
 7: 32768x32768, 8GB.
 8: 2x32768x32768, 16GB.]],
     ToggleADS = "Aim down sight mode. (1: toggle, 0: hold)",
-    weapon_charger = {
+    weapon_splatoonsweps_charger = {
         UseRTScope = "For scoped chargers, use realistic scope instead of standard scope effect. (1: enabled, 0: disabled)",
-        weapon_herocharger = {
+        weapon_splatoonsweps_herocharger = {
             Level = "The level of Hero Charger Replica. (0, 1, 2, 3 -> Level 1, 2, 3, 4)",
         },
     },
-    weapon_shooter = {
-        weapon_heroshot = {
+    weapon_splatoonsweps_shooter = {
+        weapon_splatoonsweps_heroshot = {
             Level = "The level of Hero Shot Replica. (0, 1, 2, 3 -> Level 1, 2, 3, 4)",
         },
-        weapon_octoshot = {
+        weapon_splatoonsweps_octoshot = {
             Advanced = "Skin color for Octoshot Replica. (set to 0 for standard octalian's weapon color, 1 for elite octalian's)",
         },
-        weapon_nzap85 = {
+        weapon_splatoonsweps_nzap85 = {
             PistolStyle = "Hold N-ZAP '85 like a pistol instead of a rifle. (1: enabled, 0: disabled)",
         },
-        weapon_nzap89 = {
+        weapon_splatoonsweps_nzap89 = {
             PistolStyle = "Hold N-ZAP '89 like a pistol instead of a rifle. (1: enabled, 0: disabled)",
         },
-        weapon_nzap83 = {
+        weapon_splatoonsweps_nzap83 = {
             PistolStyle = "Hold N-ZAP '83 like a pistol instead of a rifle. (1: enabled, 0: disabled)",
         },
     },

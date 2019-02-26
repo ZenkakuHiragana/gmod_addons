@@ -122,7 +122,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 		end
 		
 		if self.ClassName ~= w.ClassName then
-			self.Entity:SetSequence(w.Base == "weapon_splatling" and "idle_crossbow" or "idle_passive")
+			self.Entity:SetSequence(w.Base == "weapon_splatoonsweps_splatling" and "idle_crossbow" or "idle_passive")
 			self.Weapon.Visible = true
 			self.Weapon:SetModel(w.ModelPath .. "w_right.mdl")
 			self.Weapon:SetSkin(w.Skin or 0)
@@ -309,9 +309,16 @@ local function GeneratePreferenceTab(tab)
 		local i = color:GetID()
 		color:SetToolTip(ss.Text.ColorNames[i])
 		function color:DoClick()
-			local cvar = ss.GetConVar "inkcolor"
-			if not cvar then return end
-			cvar:SetInt(i)
+			if ss.sp then
+				net.Start "greatzenkakuman.cvartree.adminchange"
+				net.WriteString(ss.GetConVarName("inkcolor", true))
+				net.WriteString(tostring(i))
+				net.SendToServer()
+			else
+				local cvar = ss.GetConVar "inkcolor"
+				if not cvar then return end
+				cvar:SetInt(i)
+			end
 		end
 	end
 	
@@ -337,8 +344,16 @@ local function GeneratePreferenceTab(tab)
 		item:SetModel(model)
 		item:SetToolTip(c)
 		function item:DoClick()
-			local cvar = ss.GetConVar "playermodel"
-			if cvar then cvar:SetInt(i) end
+			if ss.sp then
+				net.Start "greatzenkakuman.cvartree.adminchange"
+				net.WriteString(ss.GetConVarName("playermodel", true))
+				net.WriteString(tostring(i))
+				net.SendToServer()
+			else
+				local cvar = ss.GetConVar "playermodel"
+				if not cvar then return end
+				cvar:SetInt(i)
+			end
 		end
 		
 		function item:Think()
@@ -423,11 +438,11 @@ local function GenerateFilter(tab, side)
 	local prefix = ss.Text.Sidemenu.WeaponTypePrefix
 	wt:SetSortItems()
 	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.All, nil, true)
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Shooters, "weapon_shooter")
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Chargers, "weapon_charger")
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Rollers, "weapon_roller")
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Splatlings, "weapon_splatling")
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Sloshers, "weapon_slosher")
+	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Shooters, "weapon_splatoonsweps_shooter")
+	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Chargers, "weapon_splatoonsweps_charger")
+	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Rollers, "weapon_splatoonsweps_roller")
+	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Splatlings, "weapon_splatoonsweps_splatling")
+	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Sloshers, "weapon_splatoonsweps_slosher")
 	function wt:OnSelect(index, value, data)
 		WeaponFilters.Type = data
 		GenerateWeaponIcons(tab)

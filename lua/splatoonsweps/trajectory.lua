@@ -29,7 +29,7 @@ end
 -- The first some frames(1/60 sec.) ink flies without gravity.
 -- After that, ink decelerates horizontally and is affected by gravity.
 local Simulate, HitPaint, HitEntity = {}, {}, {}
-function Simulate.weapon_shooter(ink)
+function Simulate.weapon_splatoonsweps_shooter(ink)
 	local g = physenv.GetGravity() * ss.InkGravityMul
 	local LifeTime = math.max(0, CurTime() - ink.InitTime)
 	local PrevTime = ink.Time
@@ -90,10 +90,10 @@ function Simulate.weapon_shooter(ink)
 	end
 end
 
-function HitPaint.weapon_shooter(ink, t)
+function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	local ratio = 1
 	local radius = ink.InkRadius
-	if not ink.IsDrop and ink.Base ~= "weapon_charger"
+	if not ink.IsDrop and ink.Base ~= "weapon_splatoonsweps_charger"
 	and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
 		local actual = (t.HitPos - ink.InitPos):Length2D()
 		local min = SplashDistance + ink.PaintNearDistance
@@ -118,7 +118,7 @@ function HitPaint.weapon_shooter(ink, t)
 	ink.Angle, ink.InkType, ratio, ink.filter, ink.ClassName)
 end
 
-function HitEntity.weapon_shooter(ink, t, w)
+function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
 	local d, e, o = DamageInfo(), t.Entity, ink.filter
 	local frac = (math.max(0, CurTime() - ink.InitTime)
 	- ink.Info.DecreaseDamage) / ink.Info.MinDamageTime
@@ -148,7 +148,7 @@ function HitEntity.weapon_shooter(ink, t, w)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
-function Simulate.weapon_charger(ink)
+function Simulate.weapon_splatoonsweps_charger(ink)
 	local g = physenv.GetGravity() * ss.InkGravityMul
 	local dir = ink.InitDirection
 	local LifeTime = math.max(0, CurTime() - ink.InitTime)
@@ -207,7 +207,7 @@ function Simulate.weapon_charger(ink)
 			t = ss.AddInk(ink.filter, ink.StraightPos, ss.GetDropType(), droptable)
 			t.Ratio = ink.Ratio
 			
-			HitPaint.weapon_charger(ink, {
+			HitPaint.weapon_splatoonsweps_charger(ink, {
 				FractionPaintWall = .8,
 				HitPos = ink.InitPos + dir * ink.Range,
 				HitNormal = -dir,
@@ -221,14 +221,14 @@ function Simulate.weapon_charger(ink)
 	dropdata.PlayHitSound = nil
 end
 
-function HitPaint.weapon_charger(ink, t)
+function HitPaint.weapon_splatoonsweps_charger(ink, t)
 	if t.HitNormal.z > ss.MAX_COS_DEG_DIFF then return end
 	
 	local wallfrac = math.Remap(ink.Charge, 0, ink.Info.WallPaintCharge, 0, 1)
 	local radius = ink.SplashRadius / ink.Info.SplashRadiusMul
 	local SplashNum = math.Round(Lerp(wallfrac, ink.Info.MinWallPaintNum, ink.Info.MaxWallPaintNum))
 	ink.InkRadius, ink.Ratio = ink.SplashRadius * ((1 + 1 / ink.Ratio) / 2), 1
-	HitPaint.weapon_shooter(ink, t)
+	HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	for i = 1, SplashNum do
 		local pos = t.HitPos - vector_up * i * radius * Lerp(wallfrac, 1, 1.25)
 		local tr = util.TraceLine {
@@ -257,7 +257,7 @@ function HitPaint.weapon_charger(ink, t)
 	end
 end
 
-function HitEntity.weapon_charger(ink, t, w)
+function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 	local LifeTime = math.max(0, CurTime() - FrameTime() - ink.InitTime)
 	if LifeTime > ink.Straight then return end
 	local d, e, o = DamageInfo(), t.Entity, ink.filter
@@ -287,9 +287,9 @@ function HitEntity.weapon_charger(ink, t, w)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
-Simulate.weapon_splatling = Simulate.weapon_shooter
-HitPaint.weapon_splatling = HitPaint.weapon_shooter
-HitEntity.weapon_splatling = HitEntity.weapon_shooter
+Simulate.weapon_splatoonsweps_splatling = Simulate.weapon_splatoonsweps_shooter
+HitPaint.weapon_splatoonsweps_splatling = HitPaint.weapon_splatoonsweps_shooter
+HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shooter
 
 local function ProcessInkQueue(ply)
 	while true do
@@ -345,7 +345,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 	if not (isdrop or w) then return {} end
 	if isdrop then w = isdrop end
 	local info = isdrop and dropdata or w.Primary
-	local base = isdrop and "weapon_shooter" or w.Base
+	local base = isdrop and "weapon_splatoonsweps_shooter" or w.Base
 	local IsLP = Either(isdrop,
 		(isdrop or {}).IsCarriedByLocalPlayer,
 		SERVER or ss.ProtectedCall(w.IsCarriedByLocalPlayer, w))
@@ -374,7 +374,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		start = pos,
 	}
 	
-	if base == "weapon_charger" then
+	if base == "weapon_splatoonsweps_charger" then
 		local prog = w:GetChargeProgress()
 		local Speed = w:GetInkVelocity()
 		local SplashRadius = Lerp(prog, info.MinSplashRadius, info.MaxSplashRadius)

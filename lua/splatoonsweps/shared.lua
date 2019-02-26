@@ -517,17 +517,17 @@ hook.Add("KeyPress", "SplatoonSWEPs: Check a valid key", ss.hook "KeyPress")
 hook.Add("KeyRelease", "SplatoonSWEPs: Throw sub weapon", ss.hook "KeyRelease")
 
 local weaponslot = {
-	weapon_roller = 0,
-	weapon_shooter = 1,
-	weapon_blaster_base = 2,
-	weapon_splatling = 3,
-	weapon_charger = 4,
-	weapon_slosher = 5,
+	weapon_splatoonsweps_roller = 0,
+	weapon_splatoonsweps_shooter = 1,
+	weapon_splatoonsweps_blaster_base = 2,
+	weapon_splatoonsweps_splatling = 3,
+	weapon_splatoonsweps_charger = 4,
+	weapon_splatoonsweps_slosher = 5,
 }
 local function SetupIcons(SWEP)
 	if SERVER then return end
 	local icon = "entities/" .. SWEP.ClassName
-	if not file.Exists("materials/" .. icon .. ".vmt", "GAME") then
+	if not file.Exists(string.format("materials/%s.vmt", icon), "GAME") then
 		icon = "weapons/swep"
 	end
 	
@@ -546,8 +546,8 @@ local function RegisterWeapons()
 	for base in pairs(weaponslot) do
 		local LuaFolderPath = "weapons/" .. base
 		for i, LuaFilePath in ipairs(file.Find(LuaFolderPath .. "/weapon_*.lua", "LUA")) do
-			local ClassName = LuaFilePath:StripExtension()
-			LuaFilePath = LuaFolderPath .. "/" .. LuaFilePath
+			local ClassName = "weapon_splatoonsweps_" .. LuaFilePath:StripExtension():sub(8)
+			LuaFilePath = string.format("%s/%s", LuaFolderPath, LuaFilePath)
 			
 			if SERVER then AddCSLuaFile(LuaFilePath) end
 			SWEP = {
@@ -558,7 +558,8 @@ local function RegisterWeapons()
 			
 			include(LuaFilePath)
 			SetupIcons(SWEP)
-			SWEP.ModelPath = SWEP.ModelPath or "models/splatoonsweps/" .. SWEP.ClassName .. "/"
+			local modelpath = "models/splatoonsweps/%s/"
+			SWEP.ModelPath = SWEP.ModelPath or string.format(modelpath, SWEP.ClassName)
 			SWEP.ViewModel = SWEP.ModelPath .. "c_viewmodel.mdl"
 			SWEP.WorldModel = SWEP.ModelPath .. "w_right.mdl"
 			SWEP.Category = ss.Text.Category
@@ -567,13 +568,17 @@ local function RegisterWeapons()
 			SWEP.SlotPos = i
 			
 			for _, v in ipairs(SWEP.Variations or {}) do
-				local UniqueModelPath = "models/splatoonsweps/" .. v.ClassName .. "/"
+				v.ClassName = v.ClassName and "weapon_splatoonsweps_" .. v.ClassName
+				or string.format("%s_%s", SWEP.ClassName, v.Suffix)
+
+				local UniqueModelPath = string.format(modelpath, v.ClassName)
 				v.Base = base
 				v.Category = ss.Text.Category
 				v.PrintName = ss.Text.PrintNames[v.ClassName]
 				v.ModelPath = v.ModelPath or file.Exists(UniqueModelPath, "GAME") and UniqueModelPath or SWEP.ModelPath
 				v.ViewModel = v.ModelPath .. "c_viewmodel.mdl"
 				v.WorldModel = v.ModelPath .. "w_right.mdl"
+				v = table.Merge(table.Copy(SWEP), v)
 				SetupIcons(v)
 				setmetatable(v, {__index = SWEP})
 				weapons.Register(v, v.ClassName)

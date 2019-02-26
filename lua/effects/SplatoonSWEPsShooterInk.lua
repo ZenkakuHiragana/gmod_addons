@@ -13,7 +13,7 @@ function EFFECT:Init(e)
 	local f = e:GetFlags()
 	local p = self.Weapon.Primary
 	self.IsDrop = bit.band(f, 1) > 0
-	self.IsCharger = self.Weapon.Base == "weapon_charger"
+	self.IsCharger = self.Weapon.Base == "weapon_splatoonsweps_charger"
 	self.InitTime = CurTime() - self.Weapon:Ping() * bit.band(f, 128) / 128
 	self.TrailInitTime = self.InitTime + ss.ShooterTrailDelay
 	self.TruePos, self.TrueAng, self.TrueVelocity = e:GetOrigin(), e:GetAngles(), e:GetStart()

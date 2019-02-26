@@ -1,9 +1,9 @@
 AddCSLuaFile()
 return {CategoryNames = {
-    weapon_blaster_base = "Blasters",
-    weapon_charger = "Chargers",
-    weapon_roller = "Rollers",
-    weapon_shooter = "Shooters",
-    weapon_slosher = "Sloshers",
-    weapon_splatling = "Splatlings",
+    weapon_splatoonsweps_blaster_base = "Blasters",
+    weapon_splatoonsweps_charger = "Chargers",
+    weapon_splatoonsweps_roller = "Rollers",
+    weapon_splatoonsweps_shooter = "Shooters",
+    weapon_splatoonsweps_slosher = "Sloshers",
+    weapon_splatoonsweps_splatling = "Splatlings",
 }}

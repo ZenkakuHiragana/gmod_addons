@@ -37,7 +37,7 @@ end
 
 ss.CustomPrimary = {}
 ss.CustomSecondary = {}
-function ss.CustomPrimary.weapon_shooter(p, info)
+function ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
 	p.Straight = info.Delay.Straight * ss.FrameToSec
 	p.Damage = info.Damage * ss.ToHammerHealth
 	p.MinDamage = info.MinDamage * ss.ToHammerHealth
@@ -65,7 +65,7 @@ function ss.CustomPrimary.weapon_shooter(p, info)
 	p.TripleShotDelay = info.Delay.TripleShot * ss.FrameToSec
 end
 
-function ss.CustomPrimary.weapon_charger(p, info)
+function ss.CustomPrimary.weapon_splatoonsweps_charger(p, info)
 	p.EmptyChargeMul = info.EmptyChargeMul
 	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
 	p.JumpPower = info.JumpMul * ss.InklingJumpPower
@@ -110,8 +110,8 @@ function ss.CustomPrimary.weapon_charger(p, info)
 	p.Scope.SwayTime = (info.Scope.EndMove - info.Scope.StartMove) * p.MaxChargeTime
 end
 
-function ss.CustomPrimary.weapon_splatling(p, info)
-	ss.CustomPrimary.weapon_shooter(p, info)
+function ss.CustomPrimary.weapon_splatoonsweps_splatling(p, info)
+	ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
 	p.Automatic = true
 	p.EmptyChargeMul = info.EmptyChargeMul
 	p.JumpPower = info.JumpMul * ss.InklingJumpPower
