@@ -47,17 +47,22 @@ function SWEP:GetScopedProgress(ping)
 end
 
 function SWEP:ResetSkin()
-	if not ss.ChargingEyeSkin[self.Owner:GetModel()] then return end
-	
-	local skin = 0
-	if self:GetNWInt "playermodel" == ss.PLAYER.NOCHANGE then
-		skin = CLIENT and
-		GetConVar "cl_playerskin":GetInt() or
-		self.BackupPlayerInfo.Playermodel.Skin
+	if ss.ChargingEyeSkin[self.Owner:GetModel()] then
+		local skin = 0
+		if self:GetNWInt "playermodel" == ss.PLAYER.NOCHANGE then
+			skin = CLIENT and
+			GetConVar "cl_playerskin":GetInt() or
+			self.BackupPlayerInfo.Playermodel.Skin
+		end
+		
+		if self.Owner:GetSkin() == skin then return end
+		self.Owner:SetSkin(skin)
+	elseif ss.TwilightPlayermodels[self.Owner:GetModel()] then
+		local l = self.Owner:GetFlexIDByName "Blink_L"
+		local r = self.Owner:GetFlexIDByName "Blink_R"
+		if l then self.Owner:SetFlexWeight(l, 0) end
+		if r then self.Owner:SetFlexWeight(r, 0) end
 	end
-	
-	if self.Owner:GetSkin() == skin then return end
-	self.Owner:SetSkin(skin)
 end
 
 function SWEP:ResetCharge()
@@ -128,6 +133,11 @@ function SWEP:SharedPrimaryAttack()
 	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
 	if skin and self.Owner:GetSkin() ~= skin then
 		self.Owner:SetSkin(skin)
+	elseif ss.TwilightPlayermodels[self.Owner:GetModel()] then
+		local l = self.Owner:GetFlexIDByName "Blink_L"
+		local r = self.Owner:GetFlexIDByName "Blink_R"
+		if l then self.Owner:SetFlexWeight(l, .3) end
+		if r then self.Owner:SetFlexWeight(r, 1) end
 	end
 	
 	if not self:IsFirstTimePredicted() then return end
@@ -153,8 +163,13 @@ function SWEP:Move(ply, mv)
 		self:SetADS(ply:KeyDown(IN_USE))
 	end
 	
-	if CurTime() > self:GetAimTimer() and self.Owner:GetSkin() == ss.ChargingEyeSkin[self.Owner:GetModel()] then
-		self:ResetSkin()
+	if CurTime() > self:GetAimTimer() then
+		local f = self.Owner:GetFlexIDByName "Blink_R"
+		if self.Owner:GetSkin() == ss.ChargingEyeSkin[self.Owner:GetModel()]
+		or ss.TwilightPlayermodels[self.Owner:GetModel()]
+		and f and self.Owner:GetFlexWeight(f) == 1 then
+			self:ResetSkin()
+		end
 	end
 	
 	if ply:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end

@@ -162,7 +162,7 @@ function SWEP:Think()
 	end
 	
 	if IsValid(self.Squid) then
-		if self:GetNWInt "playermodel" == ss.PLAYER.OCTO then
+		if ss.SquidmodelIndex[self:GetNWInt "playermodel"] == ss.SQUID.OCTO then
 			if self.SquidModelNumber ~= ss.SQUID.OCTO then
 				self.Squid:SetModel(ss.Squidmodel[ss.SQUID.OCTO])
 				self.SquidModelNumber = ss.SQUID.OCTO

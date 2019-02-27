@@ -83,6 +83,15 @@ function SWEP:ClientInit()
 	self.IronSightsPos[6] = self.IronSightsPos[5] + self.ADSOffset
 end
 
+function SWEP:ClientThink()
+	if self.IsOctoShot then
+		self.Skin = self:GetNWBool "advanced"
+		self.Skin = self.Skin and 1 or 0
+	elseif self.IsHeroShot then
+		self.Skin = self:GetNWInt "level"
+	end
+end
+
 function SWEP:GetMuzzlePosition()
 	local ent = self:IsTPS() and self or self.Owner:GetViewModel()
 	local a = ent:GetAttachment(ent:LookupAttachment "muzzle")

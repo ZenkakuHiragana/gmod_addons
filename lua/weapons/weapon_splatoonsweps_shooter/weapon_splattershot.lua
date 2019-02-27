@@ -24,18 +24,11 @@ SWEP.Variations = {
 	},
 	{
 		ClassName = "heroshot",
-		SharedThink = Either(SERVER, nil, function(self)
-			ss.ProtectedCall(self.BaseClass.SharedThink, self)
-			self.Skin = self:GetNWInt "level"
-		end),
+		IsHeroShot = true,
 	},
 	{
 		ClassName = "octoshot",
-		SharedThink = Either(SERVER, nil, function(self)
-			ss.ProtectedCall(self.BaseClass.SharedThink, self)
-			self.Skin = self:GetNWBool "advanced"
-			self.Skin = self.Skin and 1 or 0
-		end),
+		IsOctoShot = true,
 		ShootSound = "SplatoonSWEPs.Octoshot",
 		Skin = 1,
 		Special = "inkzooka",

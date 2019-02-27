@@ -58,6 +58,15 @@ function SWEP:ClientInit()
 	end)
 end
 
+function SWEP:Holster()
+	self:GetBase().Holster(self)
+	if not self.RTScope then return end
+	if not IsValid(self.Owner) then return end
+	local vm = self.Owner:GetViewModel()
+	if not IsValid(vm) then return end
+	vm:SetSubMaterial(self.RTScopeNum - 1)
+end
+
 function SWEP:DisplayAmmo()
 	if self:GetCharge() == math.huge then return 0 end
 	return math.max(self:GetChargeProgress(true) * 100, 0)

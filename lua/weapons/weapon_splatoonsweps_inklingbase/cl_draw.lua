@@ -173,8 +173,7 @@ function SWEP:CreateModels(t)
 end
 
 function SWEP:MakeSquidModel(id)
-	self.SquidModelNumber = self:GetNWInt "playermodel"
-	== ss.PLAYER.OCTO and ss.SQUID.OCTO or ss.SQUID.INKLING
+	self.SquidModelNumber = ss.SquidmodelIndex[self:GetNWInt "playermodel"] or ss.SQUID.INKLING
 	local modelpath = ss.Squidmodel[self.SquidModelNumber] -- Octopus or squid?
 	if IsValid(self.Squid) then self.Squid:Remove() end
 	if file.Exists(modelpath, "GAME") then

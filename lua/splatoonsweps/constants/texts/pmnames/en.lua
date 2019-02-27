@@ -1,9 +1,11 @@
 AddCSLuaFile()
 return {PlayermodelNames = {
+	"Don't change playermodel",
 	"Inkling Girl",
 	"Inkling Boy",
-	"Octoling",
 	"Marie",
 	"Callie",
-	"Don't change playermodel",
+	"Octoling",
+	"Octoling Girl",
+	"Octoling Boy",
 }}

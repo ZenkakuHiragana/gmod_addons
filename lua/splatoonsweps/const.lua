@@ -4,6 +4,14 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
+local InkGirl = Model "models/drlilrobot/splatoon/ply/inkling_girl.mdl"
+local InkBoy = Model "models/drlilrobot/splatoon/ply/inkling_boy.mdl"
+local Octo = Model "models/drlilrobot/splatoon/ply/octoling.mdl"
+local Marie = Model "models/drlilrobot/splatoon/ply/marie.mdl"
+local Callie = Model "models/drlilrobot/splatoon/ply/callie.mdl"
+local OctoGirl = Model "models/player/octoling.mdl"
+local OctoBoy = Model "models/player/octoling_male.mdl"
+
 ss.sp = game.SinglePlayer()
 ss.mp = not ss.sp
 ss.Options = include "splatoonsweps/constants/options.lua"
@@ -12,21 +20,16 @@ ss.WeaponClassNames2 = include "splatoonsweps/constants/weaponclasses2.lua"
 ss.TEXTUREFLAGS = include "splatoonsweps/constants/textureflags.lua"
 ss.RenderTarget = table.Merge(ss.RenderTarget, include "splatoonsweps/constants/rendertarget.lua")
 ss.InkTankModel = Model "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl"
+ss.Playermodel = {nil, InkGirl, InkBoy, Marie, Callie, Octo, OctoGirl, OctoBoy}
 ss.PLAYER = {
-	GIRL = 1,
-	BOY = 2,
-	OCTO = 3,
+	NOCHANGE = 1,
+	GIRL = 2,
+	BOY = 3,
 	MARIE = 4,
 	CALLIE = 5,
-	NOCHANGE = 6,
-}
-ss.Playermodel = {
-	Model "models/drlilrobot/splatoon/ply/inkling_girl.mdl",
-	Model "models/drlilrobot/splatoon/ply/inkling_boy.mdl",
-	Model "models/drlilrobot/splatoon/ply/octoling.mdl",
-	Model "models/drlilrobot/splatoon/ply/marie.mdl",
-	Model "models/drlilrobot/splatoon/ply/callie.mdl",
-	nil,
+	OCTO = 6,
+	OCTOGIRL = 7,
+	OCTOBOY = 8,
 }
 
 ss.SQUID = {
@@ -35,16 +38,22 @@ ss.SQUID = {
 	OCTO = 3,
 }
 ss.Squidmodel = {
-	Model "models/props_splatoon/squids/squid_beta.mdl",
-	Model "models/props_splatoon/squids/kraken_beta.mdl",
-	Model "models/props_splatoon/squids/octopus_beta.mdl",
+	[ss.SQUID.INKLING] = Model "models/props_splatoon/squids/squid_beta.mdl",
+	[ss.SQUID.KRAKEN] = Model "models/props_splatoon/squids/kraken_beta.mdl",
+	[ss.SQUID.OCTO] = Model "models/props_splatoon/squids/octopus_beta.mdl",
 }
 
-local Marie = "models/drlilrobot/splatoon/ply/marie.mdl"
-local Callie = "models/drlilrobot/splatoon/ply/callie.mdl"
-local InkBoy = "models/drlilrobot/splatoon/ply/inkling_boy.mdl"
-local InkGirl = "models/drlilrobot/splatoon/ply/inkling_girl.mdl"
-local Octo = "models/drlilrobot/splatoon/ply/octoling.mdl"
+ss.SquidmodelIndex = {
+	[ss.PLAYER.NOCHANGE] = ss.SQUID.INKLING,
+	[ss.PLAYER.GIRL] = ss.SQUID.INKLING,
+	[ss.PLAYER.BOY] = ss.SQUID.INKLING,
+	[ss.PLAYER.MARIE] = ss.SQUID.INKLING,
+	[ss.PLAYER.CALLIE] = ss.SQUID.INKLING,
+	[ss.PLAYER.OCTO] = ss.SQUID.OCTO,
+	[ss.PLAYER.OCTOGIRL] = ss.SQUID.OCTO,
+	[ss.PLAYER.OCTOBOY] = ss.SQUID.OCTO,
+}
+
 ss.ChargingEyeSkin = {
 	[Marie] = 0,
 	[Callie] = 5,
@@ -52,11 +61,21 @@ ss.ChargingEyeSkin = {
 	[InkGirl] = 4,
 	[Octo] = 4,
 }
-ss.CheckSplatoonPlayermodels = ss.ChargingEyeSkin
+ss.DrLilRobotPlayermodels = {
+	[InkGirl] = true,
+	[InkBoy] = true,
+	[Marie] = true,
+	[Callie] = true,
+	[Octo] = true,
+}
+ss.TwilightPlayermodels = {
+	[OctoGirl] = true,
+	[OctoBoy] = true, -- Can't apply flex manipulation with Octoling boy.
+}
 
 function ss.GetSquidmodel(pmid)
 	if pmid == ss.PLAYER.NOCHANGE then return end
-	local squid = ss.Squidmodel[pmid == ss.PLAYER.OCTO and ss.SQUID.OCTO or ss.SQUID.INKLING]
+	local squid = ss.Squidmodel[ss.SquidmodelIndex[pmid] or ss.SQUID.INKLING]
 	return file.Exists(squid, "GAME") and squid or nil
 end
 

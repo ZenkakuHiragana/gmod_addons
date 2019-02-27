@@ -2,8 +2,11 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_inklingbase"
+SWEP.HeroColor = {ss.GetColor(8), ss.GetColor(11), ss.GetColor(2), ss.GetColor(5)}
 
 local FirePosition = 10
+local rand = "SplatoonSWEPs: Spread"
+local randsplash = "SplatoonSWEPs: SplashNum"
 function SWEP:GetRange() return self.Primary.Range end
 function SWEP:GetFirePosition(aim, ang, shootpos)
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
@@ -76,17 +79,45 @@ function SWEP:GetSpreadAmount()
 	ss.mDegRandomY
 end
 
+function SWEP:GenerateSplashInitTable()
+	local n, t = self.Primary.SplashPatterns, self.SplashInitTable
+	for i = 0, n - 1 do t[i + 1] = (i * (self.Primary.TripleShotDelay and 3 or 1)) % n end
+	for i = 1, n do
+		local k = math.floor(util.SharedRandom(randsplash, i, n))
+		t[i], t[k] = t[k], t[i]
+	end
+end
+
 function SWEP:SharedInit()
-	self:SetNextPlayEmpty(CurTime())
+	self.SplashInitTable = {} -- A random permutation table for splash init
 	self:SetAimTimer(CurTime())
+	self:SetNextPlayEmpty(CurTime())
+	self:SetSplashInitMul(1)
+	if CLIENT or not self.IsHeroShot then return end
+	-- self.Trail = util.SpriteTrail(self, self:LookupAttachment "trail",
+	-- self.HeroColor[self:GetNWInt "level" + 1], true, 3, 1, .5, .125, "sprites/physbeama")
 end
 
 function SWEP:SharedDeploy()
+	self:SetSplashInitMul(1)
+	self:GenerateSplashInitTable()
+	if SERVER and self.IsHeroShot and IsValid(self.Owner) and self.Owner:IsPlayer() then
+		local vm = self.Owner:GetViewModel()
+		if IsValid(vm) then
+			-- self.TrailViewmodel = util.SpriteTrail(vm, vm:LookupAttachment "trail",
+			-- self.HeroColor[self:GetNWInt "level" + 1], true, 3, 1, .5, .125, "sprites/physbeama")
+		end
+	end
+
 	if not self.Primary.TripleShotDelay then return end
 	self.TripleSchedule:SetDone(0)
 end
 
-local rand = "SplatoonSWEPs: Spread"
+function SWEP:SharedHolster()
+	if CLIENT or not self.IsHeroShot then return end
+	-- SafeRemoveEntity(self.TrailViewmodel)
+end
+
 function SWEP:GetSpread()
 	local DegRandX, DegRandY = self:GetSpreadAmount()
 	local sgnx = math.Round(util.SharedRandom(rand, 0, 1, CurTime())) * 2 - 1
@@ -149,14 +180,19 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	ang:RotateAroundAxis(right, ry)
 	self.InitVelocity = ang:Forward() * p.InitVelocity
 	self.InitAngle = ang.yaw
-	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns
-	self.SplashNum = math.floor(p.SplashNum) + math.Round(util.SharedRandom("SplatoonSWEPs: SplashNum", 0, 1))
-	self:SetSplashInitMul(self:GetSplashInitMul() + (p.TripleShotDelay and 3 or 1))
+	self.SplashInit = self.SplashInitTable[self:GetSplashInitMul()]
+	self.SplashNum = math.floor(p.SplashNum) + (util.SharedRandom(randsplash, 0, 1) < p.SplashNum % 1 and 1 or 0)
+	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:SetPreviousHasInk(true)
 	self:ResetSequence "fire"
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 	self:EmitSound(self.ShootSound)
+	if self:GetSplashInitMul() > p.SplashPatterns then
+		self:SetSplashInitMul(1)
+		self:GenerateSplashInitTable()
+	end
+
 	if self:IsFirstTimePredicted() then
 		local rnda = p.Recoil * -1
 		local rndb = p.Recoil * math.Rand(-1, 1)
@@ -218,7 +254,8 @@ function SWEP:CustomActivity()
 	aimpos = (aimpos == 3 or aimpos == 4) and "rpg" or "crossbow"
 	return (self:GetADS() or self.Scoped
 	and self:GetChargeProgress(CLIENT) > self.Primary.Scope.StartMove)
-	and not ss.ChargingEyeSkin[self.Owner:GetModel()]
+	and not (ss.DrLilRobotPlayermodels[self.Owner:GetModel()]
+	or ss.TwilightPlayermodels[self.Owner:GetModel()])
 	and "ar2" or aimpos
 end
 

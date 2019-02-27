@@ -666,7 +666,7 @@ local width = 16
 local splt_EditScale = GetConVar "splt_EditScale"
 hook.Add("Tick", "SplatoonSWEPs: Fix playermodel hull change", function()
 	for _, p in ipairs(player.GetAll()) do
-		local is = ss.CheckSplatoonPlayermodels[p:GetModel()]
+		local is = ss.DrLilRobotPlayermodels[p:GetModel()]
 		if not p:Alive() then
 			ss.PlayerHullChanged[p] = nil
 		elseif is and splt_EditScale:GetInt() ~= 0 and ss.PlayerHullChanged[p] ~= true then

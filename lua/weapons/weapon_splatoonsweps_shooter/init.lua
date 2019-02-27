@@ -12,6 +12,13 @@ function SWEP:ServerInit()
 	self:SetNPCMaxRest(self.Primary.TripleShotDelay)
 end
 
+function SWEP:ServerThink()
+	local c = self.HeroColor[self:GetNWInt "level" + 1]
+	for _, t in ipairs {self.Trail, self.TrailViewmodel} do
+		if IsValid(t) then t:Fire("Color", tostring(c)) end
+	end
+end
+
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
 	self:PrimaryAttack()
 	self:AddSchedule(self.Primary.Delay, 1, function(self, schedule)

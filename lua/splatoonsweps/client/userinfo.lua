@@ -27,7 +27,7 @@ end
 
 local function SetPlayerModel(self) -- Apply changes to preview model
 	local model, exists = GetPlayermodel()
-	local issquid = ss.CheckSplatoonPlayermodels[model]
+	local issquid = ss.DrLilRobotPlayermodels[model]
 	local campos = issquid and 26 or 34
 	self.AnimTime = SysTime()
 	self:SetModel(model)
@@ -77,7 +77,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 	function self:Think()
 		local model = GetPlayermodel()
 		if self:GetModel() ~= model then
-			local issquid = ss.CheckSplatoonPlayermodels[model]
+			local issquid = ss.DrLilRobotPlayermodels[model]
 			local campos = issquid and 26 or 34
 			self.Entity:SetModel(model)
 			self.Entity:InvalidateBoneCache()

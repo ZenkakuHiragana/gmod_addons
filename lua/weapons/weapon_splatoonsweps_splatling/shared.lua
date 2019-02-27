@@ -24,18 +24,33 @@ function SWEP:GetRange()
 	return self:GetInitVelocity() * (self.Primary.Straight + ss.ShooterDecreaseFrame / 2)
 end
 
-function SWEP:ResetSkin()
-	if not ss.ChargingEyeSkin[self.Owner:GetModel()] then return end
-	
-	local skin = 0
-	if self:GetNWInt "playermodel" == ss.PLAYER.NOCHANGE then
-		skin = CLIENT and
-		GetConVar "cl_playerskin":GetInt() or
-		self.BackupPlayerInfo.Playermodel.Skin
+local randsplash = "SplatoonSWEPs: SplashNum"
+function SWEP:GenerateSplashInitTable()
+	local n, t = self.Primary.SplashPatterns, self.SplashInitTable
+	for i = 0, n - 1 do t[i + 1] = (i * (self.Primary.TripleShotDelay and 3 or 1)) % n end
+	for i = 1, n do
+		local k = math.floor(util.SharedRandom(randsplash, i, n))
+		t[i], t[k] = t[k], t[i]
 	end
-	
-	if self.Owner:GetSkin() == skin then return end
-	self.Owner:SetSkin(skin)
+end
+
+function SWEP:ResetSkin()
+	if ss.ChargingEyeSkin[self.Owner:GetModel()] then
+		local skin = 0
+		if self:GetNWInt "playermodel" == ss.PLAYER.NOCHANGE then
+			skin = CLIENT and
+			GetConVar "cl_playerskin":GetInt() or
+			self.BackupPlayerInfo.Playermodel.Skin
+		end
+		
+		if self.Owner:GetSkin() == skin then return end
+		self.Owner:SetSkin(skin)
+	elseif ss.TwilightPlayermodels[self.Owner:GetModel()] then
+		local l = self.Owner:GetFlexIDByName "Blink_L"
+		local r = self.Owner:GetFlexIDByName "Blink_R"
+		if l then self.Owner:SetFlexWeight(l, 0) end
+		if r then self.Owner:SetFlexWeight(r, 0) end
+	end
 end
 
 function SWEP:ResetCharge()
@@ -49,7 +64,6 @@ function SWEP:ResetCharge()
 	self.AimSound:Stop()
 end
 
-SWEP.SharedDeploy = SWEP.ResetCharge
 SWEP.SharedHolster = SWEP.ResetCharge
 function SWEP:AddPlaylist(p)
 	table.insert(p, self.AimSound)
@@ -88,14 +102,21 @@ function SWEP:PlayChargeSound()
 	end
 end
 
+function SWEP:SharedDeploy()
+	self:SetSplashInitMul(1)
+	self:GenerateSplashInitTable()
+	self:ResetCharge()
+end
+
 function SWEP:SharedInit()
 	self.AimSound = CreateSound(self, ss.ChargerAim)
 	self.SpinupSound = {}
+	self.SplashInitTable = {}
 	for _, s in ipairs(self.ChargeSound) do table.insert(self.SpinupSound, CreateSound(self, s)) end
 	self.AirTimeFraction = 1 - 1 / self.Primary.EmptyChargeMul
 	self.MediumCharge = (self.Primary.MaxChargeTime[1] - self.Primary.MinChargeTime) / (self.Primary.MaxChargeTime[2] - self.Primary.MinChargeTime)
 	self:SetAimTimer(CurTime())
-	self:ResetCharge()
+	self:SharedDeploy()
 end
 
 function SWEP:SharedPrimaryAttack()
@@ -128,6 +149,11 @@ function SWEP:SharedPrimaryAttack()
 	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
 	if skin and self.Owner:GetSkin() ~= skin then
 		self.Owner:SetSkin(skin)
+	elseif ss.TwilightPlayermodels[self.Owner:GetModel()] then
+		local l = self.Owner:GetFlexIDByName "Blink_L"
+		local r = self.Owner:GetFlexIDByName "Blink_R"
+		if l then self.Owner:SetFlexWeight(l, .3) end
+		if r then self.Owner:SetFlexWeight(r, 1) end
 	end
 end
 
@@ -154,8 +180,13 @@ function SWEP:Move(ply, mv)
 		end
 	end
 	
-	if CurTime() > self:GetAimTimer() and self.Owner:GetSkin() == ss.ChargingEyeSkin[self.Owner:GetModel()] then
-		self:ResetSkin()
+	if CurTime() > self:GetAimTimer() then
+		local f = self.Owner:GetFlexIDByName "Blink_R"
+		if self.Owner:GetSkin() == ss.ChargingEyeSkin[self.Owner:GetModel()]
+		or ss.TwilightPlayermodels[self.Owner:GetModel()]
+		and f and self.Owner:GetFlexWeight(f) == 1 then
+			self:ResetSkin()
+		end
 	end
 	
 	if self:GetFireInk() > 0 then
@@ -208,13 +239,18 @@ function SWEP:Move(ply, mv)
 		InitVelocity = InitVelocity + sgnv * fracv * p.SpreadVelocity * p.InitVelocity
 		self.InitVelocity = angle_initvelocity:Forward() * InitVelocity
 		self.InitAngle = angle_initvelocity.yaw
-		self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns
-		self.SplashNum = math.floor(p.SplashNum) + math.Round(util.SharedRandom("SplatoonSWEPs: SplashNum", 0, 1))
+		self.SplashInit = self.SplashInitTable[self:GetSplashInitMul()]
+		self.SplashNum = math.floor(p.SplashNum) + math.Round(util.SharedRandom(randsplash, 0, 1))
 		self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 		self:ResetSequence "fire"
 		self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 		self.Owner:SetAnimation(PLAYER_ATTACK1)
 		self:EmitSound(self.ShootSound)
+		if self:GetSplashInitMul() > p.SplashPatterns then
+			self:SetSplashInitMul(1)
+			self:GenerateSplashInitTable()
+		end
+
 		if self:IsFirstTimePredicted() then
 			local rnda = p.Recoil * -1
 			local rndb = p.Recoil * math.Rand(-1, 1)
