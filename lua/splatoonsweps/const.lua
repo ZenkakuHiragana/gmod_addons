@@ -88,10 +88,11 @@ end
 ss.Materials = {
 	Crosshair = {
 		Dot = Material "splatoonsweps/crosshair/dot.vmt",
-		Outer = Material "splatoonsweps/crosshair/outer.vmt",
+		Flash = Material "splatoonsweps/crosshair/charged.vmt",
 		Inner = Material "splatoonsweps/crosshair/inner.vmt",
 		Line = Material "splatoonsweps/crosshair/line.vmt",
 		LineColor = Material "splatoonsweps/crosshair/linecolor.vmt",
+		Outer = Material "splatoonsweps/crosshair/outer.vmt",
 	},
 }
 

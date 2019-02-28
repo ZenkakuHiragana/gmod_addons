@@ -52,6 +52,7 @@ SWEP.PreViewModelDrawn = Spin
 SWEP.PreDrawWorldModel = Spin
 
 function SWEP:ClientInit()
+	self.CrosshairFlashTime = CurTime()
 	self.MinChargeDeg = self.Primary.MinChargeTime / self.Primary.MaxChargeTime[1] * 360
 	self:GetBase().ClientInit(self)
 end
@@ -118,10 +119,7 @@ function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 	local w, h = t.Size.HitLine * mul, t.Size.HitWidth * mul
 	local lp = s + math.max(PaintFraction - (t.Distance
 	/ ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
-	for mat, col in pairs {
-		[""] = color_white,
-		Color = ss.GetColor(self:GetNWInt "inkcolor")
-	} do
+	for mat, col in pairs {[""] = color_white, Color = ss.GetColor(self:GetNWInt "inkcolor")} do
 		surface.SetMaterial(ss.Materials.Crosshair["Line" .. mat])
 		surface.SetDrawColor(col)
 		for i = 1, 4 do
@@ -203,8 +201,17 @@ function SWEP:DrawCenterDot(t) -- Center circle
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s)
 end
 
+function SWEP:DrawCrosshairFlash(t)
+	if CurTime() > self.CrosshairFlashTime + self.FlashDuration then return end
+	local s = t.Size.OutsideColored * 2
+	surface.SetMaterial(ss.Materials.Crosshair.Flash)
+	surface.SetDrawColor(ColorAlpha(self.Color, (self.CrosshairFlashTime + self.FlashDuration - CurTime()) / self.FlashDuration * 255))
+	surface.DrawTexturedRect(t.HitPosScreen.x - s / 2, t.HitPosScreen.y - s / 2, s, s)
+end
+
 function SWEP:DrawCrosshair(x, y, t)
 	if self:GetCharge() == math.huge and self:GetFireInk() == 0 then return end
+	t.EndPosScreen = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range):ToScreen()
 	t.CrosshairDarkColor = ColorAlpha(t.CrosshairColor, 192)
 	t.CrosshairDarkColor.r, t.CrosshairDarkColor.g, t.CrosshairDarkColor.b
 	= t.CrosshairDarkColor.r / 2, t.CrosshairDarkColor.g / 2, t.CrosshairDarkColor.b / 2
@@ -213,6 +220,7 @@ function SWEP:DrawCrosshair(x, y, t)
 	self:DrawChargeCircle(t)
 	self:DrawHitCross(t)
 	self:DrawFourLines(t, self:GetSpreadAmount())
+	self:DrawCrosshairFlash(t)
 	return true
 end
 

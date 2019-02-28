@@ -2,6 +2,7 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_shooter"
+SWEP.FlashDuration = .25
 
 function SWEP:GetLerp(frac, min, max, full)
 	return frac < 1 and Lerp(frac, min, max) or full or max
@@ -89,6 +90,7 @@ function SWEP:PlayChargeSound()
 		if prog == 1 and not self.FullChargeFlag then
 			ss.EmitSound(self.Owner, ss.ChargerBeep)
 			self.FullChargeFlag = true
+			if CLIENT then self.CrosshairFlashTime = CurTime() end
 		end
 	end
 end

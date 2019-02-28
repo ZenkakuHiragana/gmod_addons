@@ -2,6 +2,7 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_shooter"
+SWEP.FlashDuration = .25
 
 function SWEP:GetChargeProgress(ping)
 	local timescale = ss.GetTimeScale(self.Owner)
@@ -14,7 +15,7 @@ function SWEP:GetInitVelocity()
 	local p = self.Primary
 	local prog = self:GetFireInk() > 0 and self:GetFireAt() or self:GetChargeProgress(CLIENT)
 	if prog < self.MediumCharge then
-		return Lerp(prog, p.MinVelocity, p.MediumVelocity)
+		return Lerp(prog / self.MediumCharge, p.MinVelocity, p.MediumVelocity)
 	else
 		return Lerp(prog - self.MediumCharge, p.MediumVelocity, p.InitVelocity)
 	end
@@ -81,6 +82,7 @@ function SWEP:PlayChargeSound()
 		if (CLIENT or ss.sp) and self.FullChargeFlag then
 			self:EmitSound(ss.ChargerBeep, 75, 115)
 			self.FullChargeFlag = false
+			self.CrosshairFlashTime = CurTime()
 		end
 	elseif prog > 0 then
 		self.AimSound:PlayEx(.75, math.max(self.AimSound:GetPitch(), prog * 90 + 1))
@@ -97,6 +99,7 @@ function SWEP:PlayChargeSound()
 			if (CLIENT or ss.sp) and not self.FullChargeFlag then
 				self:EmitSound(ss.ChargerBeep)
 				self.FullChargeFlag = true
+				self.CrosshairFlashTime = CurTime() - .1
 			end
 		end
 	end

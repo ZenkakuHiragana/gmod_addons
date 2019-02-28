@@ -14,6 +14,7 @@ SWEP.Crosshair = {
 }
 
 function SWEP:ClientInit()
+	self.CrosshairFlashTime = CurTime()
 	self.MinChargeDeg = self.Primary.MinChargeTime / self.Primary.MaxChargeTime * 360
 	self.IronSightsPos[6] = self.ScopePos
 	self.IronSightsAng[6] = self.ScopeAng
@@ -131,6 +132,14 @@ function SWEP:DrawCenterDot(t) -- Center circle
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s)
 end
 
+function SWEP:DrawCrosshairFlash(t)
+	if not self.FullChargeFlag or CurTime() > self.CrosshairFlashTime + self.FlashDuration then return end
+	local s = t.Size.Outer * self:GetScopedSize() * 2
+	surface.SetMaterial(ss.Materials.Crosshair.Flash)
+	surface.SetDrawColor(ColorAlpha(self.Color, (self.CrosshairFlashTime + self.FlashDuration - CurTime()) / self.FlashDuration * 255))
+	surface.DrawTexturedRect(t.HitPosScreen.x - s / 2, t.HitPosScreen.y - s / 2, s, s)
+end
+
 local MatScope = Material "gmod/scope"
 local MatRefScope = Material "gmod/scope-refract"
 local DebugRefract = Material "dev/reflectivity_10"
@@ -172,6 +181,7 @@ function SWEP:DrawCrosshair(x, y, t)
 	self:DrawOuterCircle(t)
 	self:DrawHitCrossBG(t)
 	self:DrawHitCross(t)
+	self:DrawCrosshairFlash(t)
 	return true
 end
 
