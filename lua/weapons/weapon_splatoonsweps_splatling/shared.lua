@@ -73,7 +73,7 @@ end
 
 function SWEP:PlayChargeSound()
 	if ss.mp and CLIENT and not IsFirstTimePredicted() then return end
-	local prog = self:GetChargeProgress()
+	local prog = self:GetChargeProgress(CLIENT)
 	if prog == 1 then
 		self.AimSound:Stop()
 		self.SpinupSound[1]:Stop()
@@ -125,20 +125,30 @@ end
 function SWEP:SharedPrimaryAttack()
 	if not IsValid(self.Owner) then return end
 	if self:GetCharge() < math.huge then
-		local prog = self:GetChargeProgress()
+		local prog = self:GetChargeProgress(CLIENT)
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
-		self:PlayChargeSound()
-		if prog == 0 then return end
-		local EnoughInk = self:GetInk() >= prog * self.Primary.MaxTakeAmmo
-		if not self.Owner:OnGround() or not EnoughInk then
-			self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
-			if (ss.sp or CLIENT) and not (self.NotEnoughInk or EnoughInk) then
-				self.NotEnoughInk = true
-				ss.EmitSound(self.Owner, ss.TankEmpty)
+		if prog > 0 then
+			local EnoughInk = self:GetInk() >= prog * self.Primary.MaxTakeAmmo
+			if not self.Owner:OnGround() or not EnoughInk then
+				if self:GetNWBool "canreloadstand" then
+					self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
+				else
+					local timescale = ss.GetTimeScale(self.Owner)
+					local elapsed = prog * self.Primary.MaxChargeTime[2] / timescale
+					local min = self.Primary.MinChargeTime / timescale
+					local ping = CLIENT and self:Ping() or 0
+					self:SetCharge(CurTime() + FrameTime() - elapsed - min + ping)
+				end
+
+				if (ss.sp or CLIENT) and not (self.NotEnoughInk or EnoughInk) then
+					self.NotEnoughInk = true
+					ss.EmitSound(self.Owner, ss.TankEmpty)
+				end
 			end
 		end
 		
+		self:PlayChargeSound()
 		return
 	end
 	
@@ -206,7 +216,7 @@ function SWEP:Move(ply, mv)
 		self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / timescale)
 		self:SetAimTimer(CurTime() + p.AimDuration)
 		self:SetFireInk(self:GetFireInk() - 1)
-		self:SetInk(math.max(0, self:GetInk() - p.TakeAmmo))
+		self:SetInk(math.max(0, self:GetInk() - self.TakeAmmo))
 		self:SetCooldown(math.max(self:GetCooldown(),
 		CurTime() + math.min(p.Delay, p.CrouchDelay) / timescale))
 		self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
@@ -287,6 +297,7 @@ function SWEP:Move(ply, mv)
 		self:SetFireAt(prog)
 		self:ResetCharge()
 		self:SetFireInk(math.floor(Duration / self.Primary.Delay) + 1)
+		self.TakeAmmo = p.MaxTakeAmmo * prog / self:GetFireInk()
 	end
 end
 

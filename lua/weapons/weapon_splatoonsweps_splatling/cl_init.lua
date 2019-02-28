@@ -150,9 +150,9 @@ function SWEP:DrawChargeCircle(t)
 			math.min(prog / self.MediumCharge, 1) * (360 - self.MinChargeDeg),
 			math.Clamp((prog - self.MediumCharge) / (1 - self.MediumCharge), 0, 1) * 360,
 		}
-		if prog[1] == 0 then
-			prog[1] = math.Clamp(math.max(CurTime() - self:GetCharge() + self:Ping(), 0)
-			/ self.Primary.MaxChargeTime[1] * timescale, 0, 1) * 360
+		if prog[1] <= 0 then
+			local frac = math.max(CurTime() - self:GetCharge() + self:Ping(), 0) / self.Primary.MaxChargeTime[1] * timescale
+			prog[1] = math.Clamp(frac, 0, 1) * 360
 		else
 			prog[1] = prog[1] + self.MinChargeDeg
 		end
