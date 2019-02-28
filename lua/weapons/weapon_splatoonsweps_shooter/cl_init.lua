@@ -122,13 +122,12 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 	local frac = t.Trace.Fraction
 	local basecolor = t.IsSplatoon2 and t.Trace.Hit and self.Crosshair.color_nohit or color_white
 	local pos, dir = t.pos, t.dir
-	local lx, ly = t.HitPosScreen.x, t.HitPosScreen.y
 	local w = t.Size.FourLine
 	local h = t.Size.FourLineWidth
 	local pitch = EyeAngles():Right()
 	local yaw = pitch:Cross(dir)
 	if t.IsSplatoon2 then
-		frac, lx, ly = 1, self.Cursor.x, self.Cursor.y
+		frac = 1
 		if t.Trace.Hit then
 			dir = self.Owner:GetAimVector()
 			pos = self.Owner:GetShootPos()

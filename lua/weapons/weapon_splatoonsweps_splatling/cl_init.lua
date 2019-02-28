@@ -70,13 +70,13 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 	local frac = t.Trace.Fraction
 	local basecolor = t.IsSplatoon2 and t.Trace.Hit and self.Crosshair.color_nohit or color_white
 	local pos, dir = t.pos, t.dir
-	local lx, ly = t.HitPosScreen.x, t.HitPosScreen.y
 	local w = t.Size.FourLine
 	local h = t.Size.FourLineWidth
+	local range = self:GetRange()
 	local pitch = EyeAngles():Right()
 	local yaw = pitch:Cross(dir)
 	if t.IsSplatoon2 then
-		frac, lx, ly = 1, self.Cursor.x, self.Cursor.y
+		frac, range = 1, self.Primary.Range
 		if t.Trace.Hit then
 			dir = self.Owner:GetAimVector()
 			pos = self.Owner:GetShootPos()
@@ -90,7 +90,7 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 		rot:RotateAroundAxis(yaw, spreadx * sgnx)
 		rot:RotateAroundAxis(pitch, spready * sgny)
 		
-		local endpos = pos + rot:Forward() * self:GetRange() * frac
+		local endpos = pos + rot:Forward() * range * frac
 		local hit = endpos:ToScreen()
 		if not hit.visible then continue end
 		hit.x = hit.x - linesize * sgnx * (t.HitEntity and .8 or 1)
