@@ -14,6 +14,7 @@ return {Options = {
     LeftHand = "Left hand mode",
     MoveViewmodel = "Move viewmodel to avoid walls",
     NewStyleCrosshair = "Use new style crosshair",
+    NoRefract = "Suppress ink refraction",
     ToggleADS = "Toggle ADS instead of holding",
     weapon_splatoonsweps_charger = {
         UseRTScope = "Use realistic scope",

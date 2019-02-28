@@ -14,6 +14,7 @@ return {Options = {
     LeftHand = "左利き",
     MoveViewmodel = "壁を避けて狙うとき、ビューモデルを動かす",
     NewStyleCrosshair = "Splatoon 2風の照準",
+    NoRefract = "インクの屈折を描画しない",
     ToggleADS = "アイアンサイト切り替え",
     weapon_splatoonsweps_charger = {
         UseRTScope = "リアルなスコープを使う",

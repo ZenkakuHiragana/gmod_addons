@@ -15,6 +15,7 @@ return {
 	LeftHand = false,
 	MoveViewmodel = true,
 	NewStyleCrosshair = false,
+	NoRefract = {false, order = 1, clientside = true},
 	Playermodel = {1, hidden = true},
 	RTResolution = {1, hidden = true},
 	ToggleADS = false,

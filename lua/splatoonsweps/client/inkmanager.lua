@@ -27,9 +27,11 @@ local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
 	render.OverrideDepthEnable(false) -- Back to default
 	render.SetToneMappingScaleLinear(hdrscale) -- Back to default
 	
-	render.UpdateRefractTexture() -- Make the ink watery
-	render.SetMaterial(rt.WaterMaterial) -- Set water texture for ink
-	for i, m in ipairs(ss.IMesh) do m:Draw() end -- Draw ink again
+	if not ss.GetConVar "norefract":GetBool() then
+		render.UpdateRefractTexture() -- Make the ink watery
+		render.SetMaterial(rt.WaterMaterial) -- Set water texture for ink
+		for i, m in ipairs(ss.IMesh) do m:Draw() end -- Draw ink again
+	end
 	
 	if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then return end
 	render.PushFlashlightMode(true) -- Ink lit by player's flashlight or projected texture
