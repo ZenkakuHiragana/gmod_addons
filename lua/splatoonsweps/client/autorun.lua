@@ -458,9 +458,16 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	)
 	
 	file.Delete(crashpath)
-	local path = string.format("splatoonsweps/%s.txt", game.GetMap())
+	local path, data
 	local pathbsp = string.format("maps/%s.bsp", game.GetMap())
-	local data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, "rb", "GAME")
+	if ss.mp then
+		path = string.format("splatoonsweps/mp/%s.txt", game.GetMap())
+		data = file.Open(path, "rb", "DATA")
+	else
+		path = string.format("splatoonsweps/%s.txt", game.GetMap())
+		data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, "rb", "GAME")
+	end
+
 	if not data or data:Size() < 4 or data:ReadULong() ~= tonumber(util.CRC(file.Read(pathbsp, true) or "")) then
 		if data then data:Close() end
 		net.Start "SplatoonSWEPs: Redownload ink data"
@@ -502,15 +509,17 @@ end
 
 function ss.PostRender(w)
 	if not IsValid(w.Owner) then return end
+	if not w.Scoped then return end
 	if not w.RTScope then return end
-	if not w:GetNWBool "usertscope" then return end
 	local vm = w.Owner:GetViewModel()
 	if not IsValid(vm) then return end
+	if not w:GetNWBool "usertscope" then vm:SetSubMaterial(w.RTScopeNum - 1) return end
 
 	w.RTName = w.RTName or vm:GetMaterials()[w.RTScopeNum] .. "rt"
 	w.RTMaterial = w.RTMaterial or Material(w.RTName)
 	w.RTMaterial:SetTexture("$basetexture", w.RTScope)
 	w.RTAttachment = w.RTAttachment or vm:LookupAttachment "scope_end"
+	vm:SetSubMaterial(w.RTScopeNum - 1, w.RTName)
 	ss.RenderingRTScope = ss.sp
 	local alpha = 1 - w:GetScopedProgress(true)
 	render.PushRenderTarget(w.RTScope)

@@ -163,8 +163,7 @@ end
 
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	ss.ProtectedCall(self:GetBase().PreViewModelDrawn, self, vm, weapon, ply)
-	if self:GetNWBool "usertscope" then vm:SetSubMaterial(self.RTScopeNum - 1, self.RTName) return end
-	vm:SetSubMaterial(self.RTScopeNum - 1)
+	if not self.Scoped or self:GetNWBool "usertscope" then return end
 	render.SetBlend((1 - self:GetScopedProgress(true))^2)
 end
 
