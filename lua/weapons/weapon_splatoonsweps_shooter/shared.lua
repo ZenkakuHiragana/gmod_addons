@@ -76,7 +76,7 @@ end
 function SWEP:GetSpreadAmount()
 	return Lerp(self:GetSpreadJumpFraction(),
 	self.Primary.SpreadJump, self.Primary.Spread),
-	(self.Primary.Spread + ss.mDegRandomY) / 2
+	ss.mDegRandomY
 end
 
 function SWEP:GenerateSplashInitTable()

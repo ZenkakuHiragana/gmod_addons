@@ -26,13 +26,9 @@ function SWEP:GetRange()
 end
 
 local randsplash = "SplatoonSWEPs: SplashNum"
-function SWEP:GenerateSplashInitTable()
-	local n, t = self.Primary.SplashPatterns, self.SplashInitTable
-	for i = 0, n - 1 do t[i + 1] = (i * (self.Primary.TripleShotDelay and 3 or 1)) % n end
-	for i = 1, n do
-		local k = math.floor(util.SharedRandom(randsplash, i, n))
-		t[i], t[k] = t[k], t[i]
-	end
+function SWEP:GetSpreadAmount()
+	local sx, sy = self:GetBase().GetSpreadAmount(self)
+	return sx, (self.Primary.Spread + sy) / 2
 end
 
 function SWEP:ResetSkin()

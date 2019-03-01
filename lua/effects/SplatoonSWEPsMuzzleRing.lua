@@ -6,7 +6,6 @@ local MinRadius = 3
 local Division = 16
 local DegStep = 90 / Division
 local mat = Material "splatoonsweps/effects/ring"
-local ref = Material "effects/water_warp01"
 function EFFECT:Init(e)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
@@ -57,7 +56,7 @@ function EFFECT:Render()
 	pos:Add(norm * self.tmax * f + g / 2 * LifeTime^2)
 	self:SetPos(pos)
 	
-	render.SetMaterial(self.UseRefract and ref or mat)
+	render.SetMaterial(self.UseRefract and ss.GetWaterMaterial() or mat)
 	local alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
 	local t = Lerp(f, self.tmax, self.tmin)
 	local r = Lerp(f, MinRadius, self.rad) * mul

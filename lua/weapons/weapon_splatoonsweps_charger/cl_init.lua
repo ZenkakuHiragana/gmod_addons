@@ -142,9 +142,7 @@ end
 
 local MatScope = Material "gmod/scope"
 local MatRefScope = Material "gmod/scope-refract"
-local DebugRefract = Material "dev/reflectivity_10"
-local DebugRefDefault = DebugRefract:GetFloat "$refractamount"
-local MatRefDefault = MatRefScope:GetFloat "$refractamount"
+local MatRefDefault = MatRefScope:GetFloat "$refractamount" or 0 -- Null in DXLevel 80
 function SWEP:RenderScreenspaceEffects()
 	if not self.Scoped or self:GetNWBool "usertscope" then return end
 	local prog = self:GetScopedProgress(true)

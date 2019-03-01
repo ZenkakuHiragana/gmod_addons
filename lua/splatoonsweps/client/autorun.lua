@@ -473,6 +473,12 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	ss.PrepareInkSurface(file.Read("data/" .. path, true))
 end)
 
+local Water80 = Material "effects/flicker_128"
+local Water90 = Material "effects/water_warp01"
+function ss.GetWaterMaterial()
+	return render.GetDXLevel() < 90 and Water80 or Water90
+end
+
 function ss.PostPlayerDraw(w, ply) render.SetBlend(1) end
 function ss.PrePlayerDraw(w, ply)
 	local ShouldNoDraw = Either(w:GetNWBool "becomesquid" and IsValid(w.Squid), ply:Crouching(), w:GetInInk())
@@ -488,7 +494,7 @@ function ss.RenderScreenspaceEffects(w)
 	ss.ProtectedCall(w.RenderScreenspaceEffects, w)
 	if not w:GetInInk() or LocalPlayer():ShouldDrawLocalPlayer() or not ss.GetOption "drawinkoverlay" then return end
 	local color = w:GetInkColorProxy()
-	DrawMaterialOverlay("effects/water_warp01", .1)
+	DrawMaterialOverlay(render.GetDXLevel() < 90 and "effects/flicker_128" or "effects/water_warp01", .1)
 	surface.SetDrawColor(ColorAlpha(color:ToColor(),
 	48 * (1.1 - math.sqrt(ss.GrayScaleFactor:Dot(color))) / ss.GrayScaleFactor:Dot(render.GetToneMappingScaleLinear())))
 	surface.DrawRect(0, 0, ScrW(), ScrH())
