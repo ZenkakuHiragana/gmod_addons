@@ -500,8 +500,27 @@ function ss.RenderScreenspaceEffects(w)
 	surface.DrawRect(0, 0, ScrW(), ScrH())
 end
 
+function ss.PostRender(w)
+	if not w.RTScope then return end
+	local vm = LocalPlayer():GetViewModel()
+	if not IsValid(vm) then return end
+	ss.RenderingRTScope = ss.sp
+	local alpha = 1 - w:GetScopedProgress(true)
+	render.PushRenderTarget(w.RTScope)
+	render.RenderView {
+		origin = w.ScopeOrigin or vm:GetAttachment(w.RTAttachment).Pos,
+		x = 0, y = 0, w = 512, h = 512, aspectratio = 1,
+		fov = w.Primary.Scope.FOV / 2,
+		drawviewmodel = false,
+	}
+	ss.ProtectedCall(w.HideRTScope, w, alpha)
+	render.PopRenderTarget()
+	ss.RenderingRTScope = nil
+end
+
 hook.Add("PostPlayerDraw", "SplatoonSWEPs: Thirdperson player fadeout", ss.hook "PostPlayerDraw")
 hook.Add("PrePlayerDraw", "SplatoonSWEPs: Hide players on crouch", ss.hook "PrePlayerDraw")
+hook.Add("PostRender", "SplatoonSWEPs: Render a RT scope", ss.hook "PostRender")
 hook.Add("RenderScreenspaceEffects", "SplatoonSWEPs: First person ink overlay", ss.hook "RenderScreenspaceEffects")
 hook.Add("OnCleanup", "SplatoonSWEPs: Cleanup all ink", function(t)
 	if LocalPlayer():IsAdmin() and (t == "all" or t == ss.CleanupTypeInk) then

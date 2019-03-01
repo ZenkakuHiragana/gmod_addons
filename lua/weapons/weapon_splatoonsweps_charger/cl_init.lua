@@ -24,33 +24,6 @@ function SWEP:ClientInit()
 	if not self.Scoped then return end
 	self.RTScope = GetRenderTarget(ss.RenderTarget.Name.RTScope, 512, 512)
 	self:AddSchedule(0, function(self, sched)
-		local vm = self.Owner:GetViewModel()
-		if not IsValid(vm) then return end
-		if self.RTScope and self:GetNWBool "usertscope" then
-			self.RTName = self.RTName or vm:GetMaterials()[self.RTScopeNum] .. "rt"
-			self.RTMaterial = self.RTMaterial or Material(self.RTName)
-			self.RTMaterial:SetTexture("$basetexture", self.RTScope)
-			self.RTAttachment = self.RTAttachment or vm:LookupAttachment "scope_end"
-			vm:SetSubMaterial(self.RTScopeNum - 1, self.RTName)
-			
-			ss.RenderingRTScope = ss.sp
-			local alpha = 1 - self:GetScopedProgress(true)
-			render.PushRenderTarget(self.RTScope)
-			render.RenderView {
-				origin = self.ScopeOrigin or vm:GetAttachment(self.RTAttachment).Pos,
-				x = 0, y = 0, w = 512, h = 512, aspectratio = 1,
-				fov = self.Primary.Scope.FOV / 2,
-				drawviewmodel = false,
-			}
-			ss.ProtectedCall(self.HideRTScope, self, alpha)
-			render.PopRenderTarget()
-			ss.RenderingRTScope = nil
-		else
-			vm:SetSubMaterial(self.RTScopeNum - 1)
-		end
-	end)
-	
-	self:AddSchedule(0, function(self, sched)
 		if not (self.Scoped and IsValid(self.Owner)) then return end
 		self.Owner:SetNoDraw(
 			self:IsMine() and
@@ -190,7 +163,17 @@ end
 
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	ss.ProtectedCall(self:GetBase().PreViewModelDrawn, self, vm, weapon, ply)
-	if self:GetNWBool "usertscope" then return end
+	if self:GetNWBool "usertscope" then
+		if not self.RTScope then return end
+		self.RTName = self.RTName or vm:GetMaterials()[self.RTScopeNum] .. "rt"
+		self.RTMaterial = self.RTMaterial or Material(self.RTName)
+		self.RTMaterial:SetTexture("$basetexture", self.RTScope)
+		self.RTAttachment = self.RTAttachment or vm:LookupAttachment "scope_end"
+		vm:SetSubMaterial(self.RTScopeNum - 1, self.RTName)
+		return
+	end
+
+	vm:SetSubMaterial(self.RTScopeNum - 1)
 	render.SetBlend((1 - self:GetScopedProgress(true))^2)
 end
 
