@@ -111,7 +111,7 @@ function SWEP:SharedPrimaryAttack()
 		if prog > 0 then
 			local EnoughInk = self:GetInk() >= prog * self.Primary.TakeAmmo
 			if not self.Owner:OnGround() or not EnoughInk then
-				if self:GetNWBool "canreloadstand" then
+				if EnoughInk or self:GetNWBool "canreloadstand" then
 					self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
 				else
 					local timescale = ss.GetTimeScale(self.Owner)
@@ -154,7 +154,7 @@ function SWEP:SharedPrimaryAttack()
 	
 	if not self:IsFirstTimePredicted() then return end
 	local e = EffectData() e:SetEntity(self)
-	util.Effect("SplatoonSWEPsChargerLaser", e)
+	util.Effect("SplatoonSWEPsChargerLaser", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 	self:EmitSound "SplatoonSWEPs.ChargerPreFire"
 end
 
@@ -164,35 +164,40 @@ function SWEP:KeyPress(ply, key)
 	self:SetCooldown(CurTime())
 end
 
-function SWEP:Move(ply, mv)
+function SWEP:Move(ply)
 	local p = self.Primary
 	local prog = self:GetChargeProgress(CLIENT)
-	if self:GetNWBool "toggleads" then
-		if ply:KeyPressed(IN_USE) then
-			self:SetADS(not self:GetADS())
+	if ply:IsPlayer() then
+		if self:GetNWBool "toggleads" then
+			if ply:KeyPressed(IN_USE) then
+				self:SetADS(not self:GetADS())
+			end
+		else
+			self:SetADS(ply:KeyDown(IN_USE))
 		end
-	else
-		self:SetADS(ply:KeyDown(IN_USE))
+	elseif self:ShouldChargeWeapon() then
+		self:PlayChargeSound()
 	end
 	
 	if CurTime() > self:GetAimTimer() then
-		local f = self.Owner:GetFlexIDByName "Blink_R"
-		if self.Owner:GetSkin() == ss.ChargingEyeSkin[self.Owner:GetModel()]
-		or ss.TwilightPlayermodels[self.Owner:GetModel()]
-		and f and self.Owner:GetFlexWeight(f) == 1 then
+		local f = ply:GetFlexIDByName "Blink_R"
+		if ply:GetSkin() == ss.ChargingEyeSkin[ply:GetModel()]
+		or ss.TwilightPlayermodels[ply:GetModel()]
+		and f and ply:GetFlexWeight(f) == 1 then
 			self:ResetSkin()
 		end
 	end
 	
-	if ply:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end
+	if self:GetCharge() == math.huge then return end
+	if ply:IsPlayer() and ply:KeyDown(IN_ATTACK) then return end
+	if not ply:IsPlayer() and self:ShouldChargeWeapon() then return end
 	if CurTime() - self:GetCharge() < p.MinChargeTime then return end
-	if SERVER and ss.mp then SuppressHostEvents(ply) end
+	if ply:IsPlayer() and SERVER and ss.mp then SuppressHostEvents(ply) end
 	local inkprog = math.max(p.MinChargeTime / p.MaxChargeTime, prog)
 	local ShootSound = prog > .75 and self.ShootSound2 or self.ShootSound
 	local pitch = 100 + (prog > .75 and 15 or 0) - prog * 20
 	local pos, dir = self:GetFirePosition()
 	local ang = dir:Angle()
-	ang.yaw = self.Owner:GetAimVector():Angle().yaw
 	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns * (1 - prog)
 	self.Range = self:GetRange()
 	self.InitVelocity = dir * self:GetInkVelocity()
@@ -226,6 +231,8 @@ function SWEP:Move(ply, mv)
 	self:ResetCharge()
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self:ResetSequence "fire"
+
+	if not ply:IsPlayer() then return end
 	ply:SetAnimation(PLAYER_ATTACK1)
 	if SERVER and ss.mp then SuppressHostEvents() end
 end

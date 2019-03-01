@@ -163,16 +163,7 @@ end
 
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	ss.ProtectedCall(self:GetBase().PreViewModelDrawn, self, vm, weapon, ply)
-	if self:GetNWBool "usertscope" then
-		if not self.RTScope then return end
-		self.RTName = self.RTName or vm:GetMaterials()[self.RTScopeNum] .. "rt"
-		self.RTMaterial = self.RTMaterial or Material(self.RTName)
-		self.RTMaterial:SetTexture("$basetexture", self.RTScope)
-		self.RTAttachment = self.RTAttachment or vm:LookupAttachment "scope_end"
-		vm:SetSubMaterial(self.RTScopeNum - 1, self.RTName)
-		return
-	end
-
+	if self:GetNWBool "usertscope" then vm:SetSubMaterial(self.RTScopeNum - 1, self.RTName) return end
 	vm:SetSubMaterial(self.RTScopeNum - 1)
 	render.SetBlend((1 - self:GetScopedProgress(true))^2)
 end

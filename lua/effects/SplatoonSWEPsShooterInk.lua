@@ -279,9 +279,8 @@ function EFFECT:Think()
 	local TrueAng, AppAng, TrailAng = Angle(), Angle(), Angle()
 	
 	if not (self.IsDrop or self.IsCharger) and CurTime() < self.TrailInitTime then
-		local aim = ss.ProtectedCall(w.Owner.GetAimVector, w.Owner) or w.Owner:GetForward()
 		self.TrailPos, self.TrailAng = w:GetMuzzlePosition()
-		self.TrailVelocity = aim * self.Speed
+		self.TrailVelocity = w:GetAimVector() * self.Speed
 	end
 	
 	for to, from in pairs {

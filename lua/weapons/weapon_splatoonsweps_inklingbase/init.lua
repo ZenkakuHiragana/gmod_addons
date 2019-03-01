@@ -56,13 +56,22 @@ function SWEP:Initialize()
 		self:SetNPCMinRest(self.Primary.Delay)
 		self:SetNPCMaxRest(self.Primary.Delay * 3)
 		self:Deploy()
-		local timername = "SplatoonSWEPs: NPC Think function" .. self:EntIndex()
-		timer.Create(timername, 0, 0, function()
-			if not (IsValid(self) and IsValid(self.Owner)) or self.Owner:IsPlayer() then
-				return timer.Remove(timername)
+		local think = "SplatoonSWEPs: NPC Think function" .. self:EntIndex()
+		timer.Create(think, 0, 0, function()
+			if not (IsValid(self) and IsValid(self.Owner) and not self.Owner:IsPlayer()) then
+				return timer.Remove(think)
 			end
 			
 			self:Think()
+		end)
+
+		local move = "SplatoonSWEPs: NPC Move function" .. self:EntIndex()
+		timer.Create(move, 0, 0, function()
+			if not (IsValid(self) and IsValid(self.Owner) and not self.Owner:IsPlayer()) then
+				return timer.Remove(move)
+			end
+
+			ss.ProtectedCall(self.Move, self, self.Owner)
 		end)
 	end
 	
@@ -82,7 +91,7 @@ function SWEP:Deploy()
 	end
 
 	self:GetOptions()
-	self.Color = ss.GetColor(self:GetNWInt "inkcolor")
+	self.Color = ss.GetColor(self:GetNWInt "inkcolor") or ss.GetColor(ss.GetNPCInkColor(self.Owner))
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
@@ -182,9 +191,19 @@ function SWEP:Think()
 	self:ProcessSchedules()
 	self:UpdateInkState()
 	self:SharedThinkBase()
+	self:SetAimVector(ss.ProtectedCall(self.Owner.GetAimVector, self.Owner) or self.Owner:GetForward())
 	ss.ProtectedCall(self.ServerThink, self)
 	
-	if not self.Owner:IsPlayer() then return end
+	if not self.Owner:IsPlayer() then
+		if self.Owner:IsNPC() then
+			local target = self.Owner:GetTarget()
+			if not IsValid(target) then target = self.Owner:GetEnemy() end
+			if IsValid(target) then self:SetNPCTarget(target) end
+		end
+
+		return
+	end
+
 	local PMPath = ss.Playermodel[self:GetNWInt "playermodel"]
 	if PMPath then
 		if file.Exists(PMPath, "GAME") then

@@ -11,7 +11,7 @@ function SWEP:GetRange() return self.Primary.Range end
 function SWEP:GetFirePosition(aim, ang, shootpos)
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
 	if not aim then
-		local aimvector = ss.ProtectedCall(self.Owner.GetAimVector, self.Owner) or self.Owner:GetForward()
+		local aimvector = self:GetAimVector()
 		aim = self:GetRange() * aimvector
 		ang = aimvector:Angle()
 		shootpos = ss.ProtectedCall(self.Owner.GetShootPos, self.Owner) or self.Owner:WorldSpaceCenter()
@@ -208,7 +208,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		e:SetOrigin(pos)
 		e:SetScale(self.SplashNum)
 		e:SetStart(self.InitVelocity)
-		util.Effect("SplatoonSWEPsShooterInk", e)
+		util.Effect("SplatoonSWEPsShooterInk", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 		ss.AddInk(self.Owner, pos, util.SharedRandom("SplatoonSWEPs: Shooter ink type", 4, 9))
 	end
 	
@@ -263,13 +263,15 @@ function SWEP:CustomMoveSpeed()
 	return CurTime() < self:GetAimTimer() and self.Primary.MoveSpeed or nil
 end
 
-function SWEP:Move(ply, mv)
-	if self:GetNWBool "toggleads" then
-		if ply:KeyPressed(IN_USE) then
-			self:SetADS(not self:GetADS())
+function SWEP:Move(ply)
+	if ply:IsPlayer() then
+		if self:GetNWBool "toggleads" then
+			if ply:KeyPressed(IN_USE) then
+				self:SetADS(not self:GetADS())
+			end
+		else
+			self:SetADS(ply:KeyDown(IN_USE))
 		end
-	else
-		self:SetADS(ply:KeyDown(IN_USE))
 	end
 	
 	if not ply:OnGround() then return end

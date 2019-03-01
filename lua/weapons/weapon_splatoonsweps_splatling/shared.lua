@@ -127,7 +127,7 @@ function SWEP:SharedPrimaryAttack()
 		if prog > 0 then
 			local EnoughInk = self:GetInk() >= prog * self.Primary.MaxTakeAmmo
 			if not self.Owner:OnGround() or not EnoughInk then
-				if self:GetNWBool "canreloadstand" then
+				if EnoughInk or self:GetNWBool "canreloadstand" then
 					self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
 				else
 					local timescale = ss.GetTimeScale(self.Owner)
@@ -174,13 +174,17 @@ function SWEP:KeyPress(ply, key)
 end
 
 local rand = "SplatoonSWEPs: Spread"
-function SWEP:Move(ply, mv)
-	if self:GetNWBool "toggleads" then
-		if ply:KeyPressed(IN_USE) then
-			self:SetADS(not self:GetADS())
+function SWEP:Move(ply)
+	if ply:IsPlayer() then
+		if self:GetNWBool "toggleads" then
+			if ply:KeyPressed(IN_USE) then
+				self:SetADS(not self:GetADS())
+			end
+		else
+			self:SetADS(ply:KeyDown(IN_USE))
 		end
-	else
-		self:SetADS(ply:KeyDown(IN_USE))
+	elseif self:ShouldChargeWeapon() then
+		self:PlayChargeSound()
 	end
 	
 	if ply:OnGround() then
@@ -190,10 +194,10 @@ function SWEP:Move(ply, mv)
 	end
 	
 	if CurTime() > self:GetAimTimer() then
-		local f = self.Owner:GetFlexIDByName "Blink_R"
-		if self.Owner:GetSkin() == ss.ChargingEyeSkin[self.Owner:GetModel()]
-		or ss.TwilightPlayermodels[self.Owner:GetModel()]
-		and f and self.Owner:GetFlexWeight(f) == 1 then
+		local f = ply:GetFlexIDByName "Blink_R"
+		if ply:GetSkin() == ss.ChargingEyeSkin[ply:GetModel()]
+		or ss.TwilightPlayermodels[ply:GetModel()]
+		and f and ply:GetFlexWeight(f) == 1 then
 			self:ResetSkin()
 		end
 	end
@@ -203,10 +207,10 @@ function SWEP:Move(ply, mv)
 		if self:GetThrowing() then return end
 		if CLIENT and (ss.sp or not self:IsMine()) then return end
 		if self:GetNextPrimaryFire() > CurTime() then return end
-		if SERVER and ss.mp then SuppressHostEvents(self.Owner) end
+		if ply:IsPlayer() and SERVER and ss.mp then SuppressHostEvents(ply) end
 		
 		local p = self.Primary
-		local timescale = ss.GetTimeScale(self.Owner)
+		local timescale = ss.GetTimeScale(ply)
 		local AlreadyAiming = CurTime() < self:GetAimTimer()
 		local reloadtime = self.Primary.ReloadDelay / timescale
 		self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / timescale)
@@ -219,7 +223,7 @@ function SWEP:Move(ply, mv)
 		self.ReloadSchedule:SetLastCalled(CurTime() + reloadtime)
 		
 		local pos, dir = self:GetFirePosition()
-		local right = self.Owner:GetRight()
+		local right = ply:GetRight()
 		local ang = dir:Angle()
 		local angle_initvelocity = Angle(ang)
 		local rx, ry = self:GetSpread()
@@ -242,7 +246,7 @@ function SWEP:Move(ply, mv)
 			SelectIntervalV and self:GetBias() or 0,
 			SelectIntervalV and 1 or self:GetBiasVelocity(), CurTime() * 9)
 		
-		ang:RotateAroundAxis(self.Owner:EyeAngles():Up(), 90)
+		ang:RotateAroundAxis(ply:EyeAngles():Up(), 90)
 		angle_initvelocity:RotateAroundAxis(right:Cross(dir), rx)
 		angle_initvelocity:RotateAroundAxis(right, ry)
 		InitVelocity = InitVelocity + sgnv * fracv * p.SpreadVelocity * p.InitVelocity
@@ -253,7 +257,6 @@ function SWEP:Move(ply, mv)
 		self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 		self:ResetSequence "fire"
 		self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
-		self.Owner:SetAnimation(PLAYER_ATTACK1)
 		self:EmitSound(self.ShootSound)
 		if self:GetSplashInitMul() > p.SplashPatterns then
 			self:SetSplashInitMul(1)
@@ -274,14 +277,18 @@ function SWEP:Move(ply, mv)
 			e:SetOrigin(pos)
 			e:SetScale(self.SplashNum)
 			e:SetStart(self.InitVelocity)
-			util.Effect("SplatoonSWEPsShooterInk", e)
-			ss.AddInk(self.Owner, pos, util.SharedRandom("SplatoonSWEPs: Shooter ink type", 4, 9))
+			util.Effect("SplatoonSWEPsShooterInk", e, true, not ply:IsPlayer() and SERVER and ss.mp or nil)
+			ss.AddInk(ply, pos, util.SharedRandom("SplatoonSWEPs: Shooter ink type", 4, 9))
 		end
 		
+		if not ply:IsPlayer() then return end
+		ply:SetAnimation(PLAYER_ATTACK1)
 		if SERVER and ss.mp then SuppressHostEvents() end
 	else
 		local p = self.Primary
-		if ply:KeyDown(IN_ATTACK) or self:GetCharge() == math.huge then return end
+		if self:GetCharge() == math.huge then return end
+		if ply:IsPlayer() and ply:KeyDown(IN_ATTACK) then return end
+		if not ply:IsPlayer() and self:ShouldChargeWeapon() then return end
 		if CurTime() - self:GetCharge() < p.MinChargeTime then return end
 		local prog, Duration = self:GetChargeProgress()
 		if prog < self.MediumCharge then

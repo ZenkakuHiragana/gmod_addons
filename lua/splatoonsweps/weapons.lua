@@ -201,7 +201,7 @@ sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
 	e:SetFlags(tpslag) -- Splash mode
 	e:SetScale(s) -- Splash length
 	e:SetRadius(r) -- Splash radius
-	util.Effect("SplatoonSWEPsMuzzleSplash", e)
+	util.Effect("SplatoonSWEPsMuzzleSplash", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 end
 
 sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
@@ -225,12 +225,12 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 		e:SetFlags(tpslag + 1) -- 1: Refract effect
 		e:SetRadius(r1)
 		e:SetScale(i * 72 + da)
-		util.Effect("SplatoonSWEPsMuzzleRing", e)
+		util.Effect("SplatoonSWEPsMuzzleRing", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 		if i > numpieces then continue end
 		e:SetAttachment(t2)
 		e:SetFlags(tpslag) -- 0: Splash effect
 		e:SetRadius(r2)
-		util.Effect("SplatoonSWEPsMuzzleRing", e)
+		util.Effect("SplatoonSWEPsMuzzleRing", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 	end
 end
 

@@ -85,6 +85,16 @@ function ss.SendError(msg, user, icon, duration)
 	end
 end
 
+-- Gets an ink color for the given NPC, considering its faction.
+-- Argument:
+--   Entity n			| The NPC
+-- Returnings:
+--   number color		| The ink color for the given NPC.
+function ss.GetNPCInkColor(n)
+	if not IsValid(n) then return 1 end
+	return 1
+end
+
 -- Parse the map and store the result to txt, then send it to the client.
 hook.Add("PostCleanupMap", "SplatoonSWEPs: Cleanup all ink", ss.ClearAllInk)
 hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function()

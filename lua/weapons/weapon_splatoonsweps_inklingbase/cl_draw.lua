@@ -316,7 +316,7 @@ function SWEP:DrawWorldModel()
 				else
 					a.r = a.p
 				end
-				a.p, a.y, a.r = a.p - 90, self.Owner:GetAimVector():Angle().yaw, 180
+				a.p, a.y, a.r = a.p - 90, self:GetAimVector():Angle().yaw, 180
 				self.Squid:SetAngles(a)
 				self.Squid:SetPos(self.Owner:GetPos())
 				self.Squid:DrawModel()

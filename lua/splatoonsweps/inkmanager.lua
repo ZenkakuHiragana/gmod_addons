@@ -32,7 +32,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 		polys[i] = ss.To3D(v * radius, pos, ang)
 	end
 	
-	if ss.mp and SERVER then SuppressHostEvents(ply) end
+	if ply:IsPlayer() and ss.mp and SERVER then SuppressHostEvents(ply) end
 	
 	local mins, maxs = ss.GetBoundingBox(polys, MIN_BOUND)
 	for node in ss.BSPPairs(polys) do
@@ -50,14 +50,15 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			e:SetOrigin(pos)
 			e:SetScale(SERVER and index or i * (ss.Displacements[i] and -1 or 1))
 			e:SetStart(Vector(radius, localang, ratio))
-			util.Effect("SplatoonSWEPsDrawInk", e)
+			util.Effect("SplatoonSWEPsDrawInk", e, true, not ply:IsPlayer() and SERVER and ss.mp or nil)
 			
 			ss.AddInkRectangle(color, i, inktype, localang, pos, radius, ratio, surf)
 		end
 	end
 	
-	if ss.mp and SERVER then SuppressHostEvents() end
-	
+	if ply:IsPlayer() and ss.mp and SERVER then SuppressHostEvents() end
+	if not ply:IsPlayer() then return end
+
 	ss.WeaponRecord[ply].Inked[classname]
 	= (ss.WeaponRecord[ply].Inked[classname] or 0)
 	- radius^2 * math.pi * ratio

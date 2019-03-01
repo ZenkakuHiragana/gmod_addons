@@ -501,9 +501,16 @@ function ss.RenderScreenspaceEffects(w)
 end
 
 function ss.PostRender(w)
+	if not IsValid(w.Owner) then return end
 	if not w.RTScope then return end
-	local vm = LocalPlayer():GetViewModel()
+	if not w:GetNWBool "usertscope" then return end
+	local vm = w.Owner:GetViewModel()
 	if not IsValid(vm) then return end
+
+	w.RTName = w.RTName or vm:GetMaterials()[w.RTScopeNum] .. "rt"
+	w.RTMaterial = w.RTMaterial or Material(w.RTName)
+	w.RTMaterial:SetTexture("$basetexture", w.RTScope)
+	w.RTAttachment = w.RTAttachment or vm:LookupAttachment "scope_end"
 	ss.RenderingRTScope = ss.sp
 	local alpha = 1 - w:GetScopedProgress(true)
 	render.PushRenderTarget(w.RTScope)

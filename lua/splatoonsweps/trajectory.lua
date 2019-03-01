@@ -93,8 +93,7 @@ end
 function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	local ratio = 1
 	local radius = ink.InkRadius
-	if not ink.IsDrop and ink.Base ~= "weapon_splatoonsweps_charger"
-	and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
+	if not ink.IsDrop and ink.Base ~= "weapon_splatoonsweps_charger" and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
 		local actual = (t.HitPos - ink.InitPos):Length2D()
 		local min = SplashDistance + ink.PaintNearDistance
 		if actual > min then
@@ -128,8 +127,8 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
 		if not (ent and ss.IsAlly(ent, ink.Color)) then
 			if ss.mp then
 				surface.PlaySound(ink.IsCritical and ss.DealDamageCritical or ss.DealDamage)
-			elseif SERVER then
-				ink.filter:SendLua("surface.PlaySound(SplatoonSWEPs.DealDamage"
+			elseif o:IsPlayer() and SERVER then
+				o:SendLua("surface.PlaySound(SplatoonSWEPs.DealDamage"
 				.. (ink.IsCritical and "Critical" or "") .. ")")
 			end
 		end
@@ -267,8 +266,8 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 		if not (ent and ss.IsAlly(ent, ink.Color)) then
 			if ss.mp then
 				surface.PlaySound(ink.Damage >= 100 and ss.DealDamageCritical or ss.DealDamage)
-			elseif SERVER then
-				ink.filter:SendLua("surface.PlaySound(SplatoonSWEPs.DealDamage"
+			elseif o:IsPlayer() and SERVER then
+				o:SendLua("surface.PlaySound(SplatoonSWEPs.DealDamage"
 				.. (ink.Damage >= 100 and "Critical" or "") .. ")")
 			end
 		end
@@ -295,7 +294,7 @@ local function ProcessInkQueue(ply)
 	while true do
 		for ink in pairs(ss.InkQueue) do
 			if not IsValid(ink.filter) then ss.InkQueue[ink] = nil continue end
-			if ink.filter ~= ply then continue end
+			if ink.filter:IsPlayer() and ink.filter ~= ply then continue end
 			
 			ss.ProtectedCall(Simulate[ink.Base], ink)
 			if not (ink.start and ink.endpos) then

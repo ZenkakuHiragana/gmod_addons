@@ -21,6 +21,7 @@ end
 function EFFECT:Render()
 	if ss.RenderingRTScope then return end
 	if not IsValid(self.Weapon) then return end
+	if not IsValid(self.Weapon.Owner) then return end
 	self:SetPos(GetViewEntity():GetPos())
 	
 	local self = self.Weapon
@@ -37,6 +38,11 @@ function EFFECT:Render()
 	local col = ss.vector_one * self:GetColRadius()
 	local range = self:GetRange()
 	local tb = ss.SquidTrace
+	if self.Owner:IsNPC() then
+		local target = self:GetNPCTarget()
+		if IsValid(target) then dir = (target:WorldSpaceCenter() - shootpos):GetNormalized() end
+	end
+
 	tb.start, tb.endpos, tb.mins, tb.maxs, tb.filter
 	= pos, shootpos + dir * range, -col, col, {self, self.Owner}
 	if util.TraceHull(tb).StartSolid then return end
@@ -45,7 +51,6 @@ function EFFECT:Render()
 	local tr = util.TraceHull(tb)
 	local texpos, dp = prog * tr.Fraction * 2 / interp, CurTime() / 5
 	local length = tr.HitPos:Distance(pos)
-	local aimang = self.Owner:EyeAngles() aimang:Normalize()
 	
 	ang = ang:Forward() * length / 5
 	dir = dir * length
@@ -82,5 +87,7 @@ function EFFECT:Render()
 end
 
 function EFFECT:Think()
-	return IsValid(self.Weapon) and self.Weapon:GetCharge() < math.huge
+	return IsValid(self.Weapon)
+	and IsValid(self.Weapon.Owner)
+	and self.Weapon:GetCharge() < math.huge
 end

@@ -87,6 +87,9 @@ function SWEP:GetOptions(opt, getopt)
 		if isbool(value) and self:GetNWBool(name) ~= value then self:SetNWBool(name, value) end
 		if isnumber(value) and self:GetNWInt(name) ~= value then self:SetNWInt(name, value) end
 	end
+
+	if self.Owner:IsPlayer() then return end
+	self:SetNWInt("inkcolor", ss.GetNPCInkColor(self.Owner))
 end
 
 -- When NPC weapon is picked up by player.
@@ -126,7 +129,7 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 	self:SetOnEnemyInk(onink and not onourink)
 	
 	self:GetOptions()
-	self.Color = ss.GetColor(c)
+	self.Color = ss.GetColor(c) or ss.GetColor(ss.GetNPCInkColor(self.Owner))
 	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
 end
 
@@ -246,7 +249,7 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if self:GetThrowing() then return end
 	if auto and ss.sp and CLIENT then return end
 	if not auto and CurTime() < self:GetCooldown() then return end
-	if not auto and self:GetKey() ~= IN_ATTACK then return end
+	if not auto and self.Owner:IsPlayer() and self:GetKey() ~= IN_ATTACK then return end
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self.CannotStandup
 	local timescale = ss.GetTimeScale(self.Owner)
@@ -293,7 +296,7 @@ function SWEP:ChangeInInk(name, old, new)
 		e:SetOrigin(t.HitPos)
 		e:SetRadius(Lerp(f, 25, 50))
 		e:SetScale(.5)
-		util.Effect("SplatoonSWEPsMuzzleSplash", e)
+		util.Effect("SplatoonSWEPsMuzzleSplash", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 	elseif outofink and self.Owner:IsPlayer() then
 		self.Owner:SetDSP(1)
 	end
@@ -348,13 +351,15 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Bool", "OnEnemyInk") -- If owner is on enemy ink.
 	self:AddNetworkVar("Bool", "Holstering") -- The weapon is being holstered.
 	self:AddNetworkVar("Bool", "Throwing") -- Is about to use sub weapon.
+	self:AddNetworkVar("Entity", "NPCTarget") -- Target entity for NPC.
 	self:AddNetworkVar("Float", "Cooldown") -- Cannot crouch, fire, or use sub weapon.
 	self:AddNetworkVar("Float", "Ink") -- Ink remainig. 0 to ss.MaxInkAmount
-	self:AddNetworkVar("Float", "Key") -- A valid key input.
 	self:AddNetworkVar("Float", "OldSpeed") -- Old Z-velocity of the player.
 	self:AddNetworkVar("Float", "ThrowAnimTime") -- Time to adjust throw anim. speed.
 	self:AddNetworkVar("Int", "GroundColor") -- Surface ink color.
+	self:AddNetworkVar("Int", "Key") -- A valid key input.
 	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
+	self:AddNetworkVar("Vector", "AimVector") -- NPC:GetAimVector() doesn't exist in clientside.
 	self.HealSchedule = self:AddNetworkSchedule(HealingDelay, function(self, schedule)
 		local canheal = self:GetNWBool "canhealink" and self:GetInInk() -- Gradually heals the owner
 		local timescale = ss.GetTimeScale(self.Owner)
