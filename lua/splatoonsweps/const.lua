@@ -116,6 +116,8 @@ do -- Ink distribution map
 end
 
 ss.Particles = {
+	ChargerFlash = "splatoonsweps_charger_flash",
+	ChargerMuzzleFlash = "splatoonsweps_explosion_impact",
 	Explosion = "splatoonsweps_explosion",
 	MuzzleMist = "splatoonsweps_muzzlemist",
 }

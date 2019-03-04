@@ -179,6 +179,15 @@ end
 local SplatoonSWEPsMuzzleSplash = 0
 local SplatoonSWEPsMuzzleRing = 1
 local SplatoonSWEPsMuzzleMist = 2
+local SplatoonSWEPsMuzzleFlash = 3
+
+local function GenerateParticleEffect(self, name, offset)
+	local mdl = self:IsTPS() and self or self.Owner:GetViewModel()
+	local pos, ang = self:GetMuzzlePosition()
+	pos = self:TranslateViewmodelPos(pos)
+	self.MuzzleAttachment = self.MuzzleAttachment or self:LookupAttachment "muzzle"
+	return CreateParticleSystem(mdl, name, PATTACH_POINT_FOLLOW, self.MuzzleAttachment, offset or vector_origin)
+end
 
 ss.DispatchEffect = {}
 local sd, e = ss.DispatchEffect, EffectData()
@@ -235,13 +244,14 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 end
 
 sd[SplatoonSWEPsMuzzleMist] = function(self, options, pos, ang)
-	local scale = self:IsTPS() and 6 or 3
-	local mdl = self:IsTPS() and self or self.Owner:GetViewModel()
-	local pos, ang = self:GetMuzzlePosition()
-	pos = self:TranslateViewmodelPos(pos)
-	self.MuzzleAttachment = self.MuzzleAttachment or self:LookupAttachment "muzzle"
-	local p = CreateParticleSystem(mdl, ss.Particles.MuzzleMist, PATTACH_POINT_FOLLOW, self.MuzzleAttachment, vector_origin)
+	local p = GenerateParticleEffect(self, ss.Particles.MuzzleMist)
 	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, self:GetInkColorProxy())
-	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ss.vector_one * scale)
+	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * (self:IsTPS() and 6 or 3))
 	p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, pos + ang:Right() * 100)
+end
+
+sd[SplatoonSWEPsMuzzleFlash] = function(self, options, pos, ang)
+	local p = GenerateParticleEffect(self, ss.Particles.ChargerMuzzleFlash)
+	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, (self:GetInkColorProxy() + ss.vector_one) / 2)
+	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * 15 * (self:GetFireAt() + 1))
 end

@@ -90,7 +90,13 @@ function SWEP:PlayChargeSound()
 		if prog == 1 and not self.FullChargeFlag then
 			ss.EmitSound(self.Owner, ss.ChargerBeep)
 			self.FullChargeFlag = true
-			if CLIENT then self.CrosshairFlashTime = CurTime() end
+			if SERVER then return end
+			self.CrosshairFlashTime = CurTime()
+			if self.Scoped and not (self:IsTPS() and self:GetNWBool "usertscope") then return end
+			local ent = self:IsTPS() and self or self.Owner:GetViewModel()
+			self.FlashOnTPS = self:IsTPS()
+			self.Flash = CreateParticleSystem(ent, ss.Particles.ChargerFlash, PATTACH_POINT_FOLLOW, ent:LookupAttachment "muzzle")
+			self.Flash:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, (self:GetInkColorProxy() + ss.vector_one) / 2)
 		end
 	end
 end

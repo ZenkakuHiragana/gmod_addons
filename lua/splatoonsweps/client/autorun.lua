@@ -508,6 +508,7 @@ function ss.RenderScreenspaceEffects(w)
 end
 
 function ss.PostRender(w)
+	if ss.RenderingRTScope then return end
 	if not IsValid(w.Owner) then return end
 	if not w.Scoped then return end
 	if not w.RTScope then return end
@@ -522,9 +523,10 @@ function ss.PostRender(w)
 	vm:SetSubMaterial(w.RTScopeNum - 1, w.RTName)
 	ss.RenderingRTScope = ss.sp
 	local alpha = 1 - w:GetScopedProgress(true)
+	local a = vm:GetAttachment(w.RTAttachment)
 	render.PushRenderTarget(w.RTScope)
 	render.RenderView {
-		origin = w.ScopeOrigin or vm:GetAttachment(w.RTAttachment).Pos,
+		origin = w.ScopeOrigin or a.Pos, angle = a.Ang,
 		x = 0, y = 0, w = 512, h = 512, aspectratio = 1,
 		fov = w.Primary.Scope.FOV / 2,
 		drawviewmodel = false,

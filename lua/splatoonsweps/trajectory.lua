@@ -115,13 +115,6 @@ function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	
 	ss.Paint(t.HitPos, t.HitNormal, radius, ink.Color,
 	ink.Angle, ink.InkType, ratio, ink.filter, ink.ClassName)
-	
-	if SERVER or ink.IsDrop then return end
-	local d = radius * 2
-	local c = ss.GetColor(ink.Color)
-	local p = CreateParticleSystem(game.GetWorld(), ss.Particles.Explosion, PATTACH_WORLDORIGIN, 0, t.HitPos + t.HitNormal * d / 8)
-	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, Vector(c.r, c.g, c.b) / 255)
-	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ss.vector_one * d)
 end
 
 function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
@@ -228,13 +221,23 @@ function Simulate.weapon_splatoonsweps_charger(ink)
 end
 
 function HitPaint.weapon_splatoonsweps_charger(ink, t)
-	if t.HitNormal.z > ss.MAX_COS_DEG_DIFF then return end
-	
 	local wallfrac = math.Remap(ink.Charge, 0, ink.Info.WallPaintCharge, 0, 1)
 	local radius = ink.SplashRadius / ink.Info.SplashRadiusMul
 	local SplashNum = math.Round(Lerp(wallfrac, ink.Info.MinWallPaintNum, ink.Info.MaxWallPaintNum))
 	ink.InkRadius, ink.Ratio = ink.SplashRadius * ((1 + 1 / ink.Ratio) / 2), 1
-	HitPaint.weapon_splatoonsweps_shooter(ink, t)
+
+	if t.HitNormal.z < ss.MAX_COS_DEG_DIFF or not ink.ClassName:find "bamboozler" then
+		HitPaint.weapon_splatoonsweps_shooter(ink, t)
+		if t.HitWorld and CurTime() - ink.InitTime <= ink.Straight and CLIENT then
+			local c = ss.GetColor(ink.Color)
+			local p = CreateParticleSystem(game.GetWorld(), ss.Particles.MuzzleMist, PATTACH_WORLDORIGIN, 0, t.HitPos + t.HitNormal * 10)
+			p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, Vector(c.r, c.g, c.b) / 255)
+			p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * 6)
+			p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ink.InitPos)
+		end
+	end
+
+	if t.HitNormal.z > ss.MAX_COS_DEG_DIFF then return end
 	for i = 1, SplashNum do
 		local pos = t.HitPos - vector_up * i * radius * Lerp(wallfrac, 1, 1.25)
 		local tr = util.TraceLine {
