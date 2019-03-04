@@ -413,10 +413,7 @@ end
 --   number scale  | The game timescale.
 local host_timescale = GetConVar "host_timescale"
 function ss.GetTimeScale(ply)
-	return host_timescale:GetFloat()
-	* game.GetTimeScale()
-	* (IsValid(ply) and ply:IsPlayer()
-	and ply:GetLaggedMovementValue() or 1)
+	return IsValid(ply) and ply:IsPlayer() and ply:GetLaggedMovementValue() or 1
 end
 
 -- Play a sound that can be heard only one player.
@@ -466,7 +463,7 @@ function ss.UpdateAnimation(w, ply, velocity, maxseqspeed)
 	if 0 <= f and f <= 1 then
 		ply:AddVCDSequenceToGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD,
 		ply:SelectWeightedSequence(ACT_HL2MP_GESTURE_RANGE_ATTACK_GRENADE),
-		Lerp(f, 0, .55), true)
+		f * .55, true)
 	end
 end
 

@@ -240,7 +240,6 @@ sd[SplatoonSWEPsMuzzleMist] = function(self, options, pos, ang)
 	local pos, ang = self:GetMuzzlePosition()
 	pos = self:TranslateViewmodelPos(pos)
 	self.MuzzleAttachment = self.MuzzleAttachment or self:LookupAttachment "muzzle"
-	local localpos = WorldToLocal(pos, angle_zero, self:GetPos(), angle_zero)
 	local p = CreateParticleSystem(mdl, ss.Particles.MuzzleMist, PATTACH_POINT_FOLLOW, self.MuzzleAttachment, vector_origin)
 	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, self:GetInkColorProxy())
 	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ss.vector_one * scale)

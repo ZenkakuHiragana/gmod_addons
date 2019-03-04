@@ -109,7 +109,7 @@ function SWEP:DrawCrosshairFlash(t)
 	if not self.FullChargeFlag or CurTime() > self.CrosshairFlashTime + self.FlashDuration then return end
 	local s = t.Size.Outer * self:GetScopedSize() * 2
 	surface.SetMaterial(ss.Materials.Crosshair.Flash)
-	surface.SetDrawColor(ColorAlpha(self.Color, (self.CrosshairFlashTime + self.FlashDuration - CurTime()) / self.FlashDuration * 255))
+	surface.SetDrawColor(ColorAlpha(self.Color, (self.CrosshairFlashTime + self.FlashDuration - CurTime()) / self.FlashDuration * 128))
 	surface.DrawTexturedRect(t.HitPosScreen.x - s / 2, t.HitPosScreen.y - s / 2, s, s)
 end
 

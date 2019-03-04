@@ -115,7 +115,10 @@ do -- Ink distribution map
 	end
 end
 
-ss.Particles = {MuzzleMist = "splatoonsweps_muzzlemist"}
+ss.Particles = {
+	Explosion = "splatoonsweps_explosion",
+	MuzzleMist = "splatoonsweps_muzzlemist",
+}
 game.AddParticles "particles/splatoonsweps.pcf"
 for _, p in pairs(ss.Particles) do PrecacheParticleSystem(p) end
 

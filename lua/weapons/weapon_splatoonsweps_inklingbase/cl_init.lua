@@ -98,6 +98,7 @@ function SWEP:Initialize()
 	-- Our initialize code
 	self.EnoughSubWeapon = true
 	self.PreviousInk = true
+	self.Cursor = {x = ScrW() / 2, y = ScrH() / 2}
 	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:MakeSquidModel()
 	self.JustUsableTime = CurTime() - 1 -- For animation of ink tank light

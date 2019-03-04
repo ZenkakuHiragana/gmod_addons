@@ -12,6 +12,10 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
 	if not aim then
 		local aimvector = self:GetAimVector()
+		if CLIENT and self.Owner == LocalPlayer() then
+			aimvector = self.Owner:GetAimVector()
+		end
+		
 		aim = self:GetRange() * aimvector
 		ang = aimvector:Angle()
 		shootpos = ss.ProtectedCall(self.Owner.GetShootPos, self.Owner) or self.Owner:WorldSpaceCenter()

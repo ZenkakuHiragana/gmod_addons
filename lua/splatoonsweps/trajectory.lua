@@ -115,6 +115,13 @@ function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	
 	ss.Paint(t.HitPos, t.HitNormal, radius, ink.Color,
 	ink.Angle, ink.InkType, ratio, ink.filter, ink.ClassName)
+	
+	if SERVER or ink.IsDrop then return end
+	local d = radius * 2
+	local c = ss.GetColor(ink.Color)
+	local p = CreateParticleSystem(game.GetWorld(), ss.Particles.Explosion, PATTACH_WORLDORIGIN, 0, t.HitPos + t.HitNormal * d / 8)
+	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, Vector(c.r, c.g, c.b) / 255)
+	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ss.vector_one * d)
 end
 
 function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
