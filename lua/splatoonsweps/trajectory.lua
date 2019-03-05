@@ -299,6 +299,18 @@ end
 Simulate.weapon_splatoonsweps_splatling = Simulate.weapon_splatoonsweps_shooter
 HitPaint.weapon_splatoonsweps_splatling = HitPaint.weapon_splatoonsweps_shooter
 HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shooter
+function Simulate.weapon_splatoonsweps_blaster_base(ink)
+	Simulate.weapon_splatoonsweps_shooter(ink)
+	if SERVER or ink.Time < ink.Info.Straight + ss.ShooterDecreaseFrame then return end
+	if ink.Exploded then return end
+	local c = ss.GetColor(ink.Color) c = Vector(c.r, c.g, c.b) / 255
+	local p = CreateParticleSystem(game.GetWorld(), ss.Particles.Explosion, PATTACH_WORLDORIGIN, 0, ink.endpos)
+	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, c)
+	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * 200)
+	ink.Exploded = true
+end
+HitPaint.weapon_splatoonsweps_blaster_base = HitPaint.weapon_splatoonsweps_shooter
+HitEntity.weapon_splatoonsweps_blaster_base = HitEntity.weapon_splatoonsweps_shooter
 
 local function ProcessInkQueue(ply)
 	while true do

@@ -130,6 +130,10 @@ function ss.CustomPrimary.weapon_splatoonsweps_splatling(p, info)
 	p.PaintNearDistance = info.PaintNearDistance * ss.ToHammerUnits
 end
 
+function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(p, info)
+	ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
+end
+
 function ss.SetViewModelMods(weapon, mods)
 	weapon.ViewModelBoneMods = weapon.ViewModelBoneMods or {}
 	for bone, mod in pairs(mods) do

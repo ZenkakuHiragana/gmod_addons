@@ -119,6 +119,7 @@ function SWEP:GetCrosshairTrace(t)
 end
 
 function SWEP:DrawFourLines(t, spreadx, spready)
+	spreadx = math.max(spreadx, spready) -- Stupid workaround for Blasters' crosshair
 	local frac = t.Trace.Fraction
 	local basecolor = t.IsSplatoon2 and t.Trace.Hit and self.Crosshair.color_nohit or color_white
 	local pos, dir = t.pos, t.dir
