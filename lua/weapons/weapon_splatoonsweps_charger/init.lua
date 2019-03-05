@@ -5,5 +5,5 @@ AddCSLuaFile "shared.lua"
 include "shared.lua"
 
 function SWEP:ShouldChargeWeapon()
-    return self:GetChargeProgress() < 1
+    return CurTime() - self:GetCharge() < self.Primary.MaxChargeTime * 2
 end

@@ -59,6 +59,7 @@ ss.SetPrimary(SWEP, {
 
 local function SetViewModel(self)
 	if not IsValid(self.Owner) then return end
+	if not self.Owner:IsPlayer() then return end
 	local vm = self.Owner:GetViewModel()
 	if not IsValid(vm) then return end
 	local pistol = self:GetNWBool "pistolstyle"

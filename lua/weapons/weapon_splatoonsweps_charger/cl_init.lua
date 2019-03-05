@@ -163,7 +163,6 @@ end
 
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	ss.ProtectedCall(self:GetBase().PreViewModelDrawn, self, vm, weapon, ply)
-	if self.Flash and self.FlashOnTPS then self.Flash:StopEmissionAndDestroyImmediately() end
 	if not self.Scoped or self:GetNWBool "usertscope" then return end
 	render.SetBlend((1 - self:GetScopedProgress(true))^2)
 end
@@ -182,7 +181,6 @@ function SWEP:PostDrawViewModel(vm, weapon, ply)
 end
 
 function SWEP:PreDrawWorldModel()
-	if self.Flash and not self.FlashOnTPS then self.Flash:StopEmissionAndDestroyImmediately() end
 	if not self.Scoped or self:GetNWBool "usertscope" then return end
 	return self:GetScopedProgress(true) == 1
 end

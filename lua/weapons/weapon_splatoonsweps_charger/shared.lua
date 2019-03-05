@@ -82,7 +82,7 @@ function SWEP:AddPlaylist(p) table.insert(p, self.AimSound) end
 function SWEP:PlayChargeSound()
 	if ss.mp and (SERVER or not IsFirstTimePredicted()) then return end
 	local prog = self:GetChargeProgress(CLIENT)
-	if 0 < prog and prog < 1 then
+	if not (ss.sp and SERVER and not self.Owner:IsPlayer()) and 0 < prog and prog < 1 then
 		self.AimSound:PlayEx(1, math.max(self.AimSound:GetPitch(), prog * 99 + 1))
 	else
 		self.AimSound:Stop()
@@ -90,13 +90,12 @@ function SWEP:PlayChargeSound()
 		if prog == 1 and not self.FullChargeFlag then
 			ss.EmitSound(self.Owner, ss.ChargerBeep)
 			self.FullChargeFlag = true
-			if SERVER then return end
-			self.CrosshairFlashTime = CurTime()
-			if self.Scoped and not (self:IsTPS() and self:GetNWBool "usertscope") then return end
-			local ent = self:IsTPS() and self or self.Owner:GetViewModel()
-			self.FlashOnTPS = self:IsTPS()
-			self.Flash = CreateParticleSystem(ent, ss.Particles.ChargerFlash, PATTACH_POINT_FOLLOW, ent:LookupAttachment "muzzle")
-			self.Flash:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, (self:GetInkColorProxy() + ss.vector_one) / 2)
+			if CLIENT then self.CrosshairFlashTime = CurTime() end
+			if self.Scoped and not (CLIENT and self:IsTPS() and self:GetNWBool "usertscope") then return end
+			local e = EffectData()
+			e:SetEntity(self)
+			e:SetFlags(0)
+			util.Effect("SplatoonSWEPsMuzzleFlash", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 		end
 	end
 end

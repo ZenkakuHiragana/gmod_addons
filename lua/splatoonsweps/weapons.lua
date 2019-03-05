@@ -245,13 +245,17 @@ end
 
 sd[SplatoonSWEPsMuzzleMist] = function(self, options, pos, ang)
 	local p = GenerateParticleEffect(self, ss.Particles.MuzzleMist)
+	local dir = ang:Right()
+	if self:GetNWBool "lefthand" then dir = -dir end
+	if self:GetADS() then dir = ang:Forward() end
 	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, self:GetInkColorProxy())
 	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * (self:IsTPS() and 6 or 3))
-	p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, pos + ang:Right() * 100)
+	p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, pos + dir * 100)
 end
 
 sd[SplatoonSWEPsMuzzleFlash] = function(self, options, pos, ang)
-	local p = GenerateParticleEffect(self, ss.Particles.ChargerMuzzleFlash)
-	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, (self:GetInkColorProxy() + ss.vector_one) / 2)
-	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * 15 * (self:GetFireAt() + 1))
+	local e = EffectData()
+	e:SetEntity(self)
+	e:SetFlags(1)
+	util.Effect("SplatoonSWEPsMuzzleFlash", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 end

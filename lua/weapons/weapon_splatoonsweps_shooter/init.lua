@@ -21,7 +21,7 @@ end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
 	self:PrimaryAttack()
-	self:AddSchedule(self.Primary.Delay, 1, function(self, schedule)
+	self:AddSchedule(self.Primary.Delay, 2, function(self, schedule)
 		self:PrimaryAttack()
 	end)
 end
