@@ -26,13 +26,16 @@ The aim of this rework is the following:
 
 ## Currently working on
 * Optimization  
+* **Make Blasters**
+    * [ ] Make the base
+    * [ ] Weapon models (Remaining: Luna Blaster (+Neo), Rapid Blaster (+Deco, +Elite))
+    * [ ] Set weapon parameters
 * Explosive ink for bombs and Blasters  
     * [ ] Make effects  
     * [ ] Set up properties, damage system, etc
 
 ## Upcoming features
 * Sub weapons
-* Blasters
 * Rollers and Inkbrushes
 * Sloshers
 
@@ -56,6 +59,7 @@ Playermodels are optional, but I recommend to install them, too.
 * [Inkling Playermodels][6]
 * [Octoling Playermodels][7]
 * [Callie & Marie Playermodels][8]
+* [Splatoon 2 - Octolings [PM/RAG/VOX]][9]
 
 [1]:https://steamcommunity.com/sharedfiles/filedetails/?id=746789974
 [2]:https://steamcommunity.com/workshop/filedetails/?id=688236142
@@ -65,3 +69,4 @@ Playermodels are optional, but I recommend to install them, too.
 [6]:https://steamcommunity.com/sharedfiles/filedetails/?id=479265317
 [7]:https://steamcommunity.com/sharedfiles/filedetails/?id=478059724
 [8]:https://steamcommunity.com/sharedfiles/filedetails/?id=476149543
+[9]:https://steamcommunity.com/sharedfiles/filedetails/?id=1544841933
