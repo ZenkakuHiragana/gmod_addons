@@ -1,4 +1,7 @@
 
+-- When: in singleplayer, the owner is player, and third person view,
+-- Particle effect doesn't attach to the muzzle.
+
 local ss = SplatoonSWEPs
 if not ss then return end
 
@@ -30,7 +33,7 @@ function EFFECT:Init(e)
 			p:SetNextThink(CurTime())
 		end
 		
-		if self.Weapon.Owner:IsPlayer() and self.FlashOnTPS then
+		if ss.sp and self.Weapon.Owner:IsPlayer() and self.FlashOnTPS then
 			c:Mul(255)
 			self.Emitter = ParticleEmitter(pos)
 			self.Flash = self.Emitter:Add("splatoonsweps/effects/blaster_explosion_impact", pos)
@@ -44,7 +47,7 @@ function EFFECT:Init(e)
 			self.Flash:SetNextThink(CurTime())
 			self.Flash:SetThinkFunction(SetPos)
 		else
-			ent = self.Weapon.Owner:IsPlayer() and self.Weapon.Owner:GetViewModel() or ent
+			ent = not self.FlashOnTPS and self.Weapon.Owner:IsPlayer() and self.Weapon.Owner:GetViewModel() or ent
 			self.Flash = CreateParticleSystem(ent, ss.Particles.ChargerMuzzleFlash, PATTACH_POINT_FOLLOW, ent:LookupAttachment "muzzle")
 			self.Flash:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, c)
 			self.Flash:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * scale)
@@ -54,7 +57,7 @@ function EFFECT:Init(e)
 		return
 	end
 
-	if self.Weapon.Owner:IsPlayer() and self.FlashOnTPS then
+	if ss.sp and self.Weapon.Owner:IsPlayer() and self.FlashOnTPS then
 		local function SetPos(p)
 			local a = ent:GetAttachment(a) 
 			p:SetPos(a.Pos + a.Ang:Forward() * 2)
@@ -84,7 +87,7 @@ function EFFECT:Init(e)
 		self.Ring:SetThinkFunction(SetPos)
 		self.Think = ThinkTPS
 	else
-		ent = self.Weapon.Owner:IsPlayer() and self.Weapon.Owner:GetViewModel() or ent
+		ent = not self.FlashOnTPS and self.Weapon.Owner:IsPlayer() and self.Weapon.Owner:GetViewModel() or ent
 		self.Flash = CreateParticleSystem(ent, ss.Particles.ChargerFlash, PATTACH_POINT_FOLLOW, ent:LookupAttachment "muzzle")
 		self.Flash:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, c)
 		self.Think = ThinkFPS
