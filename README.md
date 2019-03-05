@@ -31,7 +31,7 @@ The aim of this rework is the following:
     * [ ] Weapon models (Remaining: Luna Blaster (+Neo), Rapid Blaster (+Deco, +Elite))
     * [ ] Set weapon parameters
 * Explosive ink for bombs and Blasters  
-    * [ ] Make effects  
+    * [x] Make effects  
     * [ ] Set up properties, damage system, etc
 
 ## Upcoming features
