@@ -19,6 +19,7 @@ function ss.hook(func)
 end
 
 include "text.lua"
+include "ballistic.lua"
 include "convars.lua"
 include "inkmanager.lua"
 include "movement.lua"
@@ -202,14 +203,14 @@ function ss.AddNetworkVar(ent)
 		String = -1, Bool = -1, Float = -1, Int = -1,
 		Vector = -1, Angle = -1, Entity = -1,
 	}
-	
+
 	-- Returns how many network slots the entity uses.
 	-- Argument:
 	--   string typeof	| The type to inspect.
 	-- Returning:
 	--   number			| The number of slots the entity uses.
 	function ent:GetLastSlot(typeof) return self.NetworkSlot[typeof] end
-	
+
 	-- Adds a new network variable to the entity.
 	-- Arguments:
 	--   string typeof	| The variable type.  Same as Entity:NetworkVar().
@@ -230,10 +231,10 @@ end
 --   Entity ent	| The entity to be able to use timer library.
 function ss.AddTimerFramework(ent)
 	if ent.FunctionQueue then return end
-	
+
 	ss.AddNetworkVar(ent) -- Required to use Entity:AddNetworkSchedule()
 	ent.FunctionQueue = {}
-	
+
 	-- Sets how many this schedule has done.
 	-- Argument:
 	--   number done | The new counter.
@@ -246,12 +247,12 @@ function ss.AddTimerFramework(ent)
 			self.done = done
 		end
 	end
-	
+
 	-- Returns the current counter value.
 	function ScheduleFunc:GetDone()
 		return isstring(self.done) and self.weapon["Get" .. self.done](self.weapon) or self.done
 	end
-	
+
 	-- Resets the interval of the schedule.
 	-- Argument:
 	--   number newdelay	| The new interval.
@@ -261,25 +262,25 @@ function ss.AddTimerFramework(ent)
 		else
 			self.delay = newdelay
 		end
-		
+
 		if isstring(self.prevtime) then
 			self.weapon["Set" .. self.prevtime](self.weapon, CurTime())
 		else
 			self.prevtime = CurTime()
 		end
-		
+
 		if isstring(self.time) then
 			self.weapon["Set" .. self.time](self.weapon, CurTime() + newdelay)
 		else
 			self.time = CurTime() + newdelay
 		end
 	end
-	
+
 	-- Returns the current interval of the schedule.
 	function ScheduleFunc:GetDelay()
 		return isstring(self.delay) and self.weapon["Get" .. self.delay](self.weapon) or self.delay
 	end
-	
+
 	-- Sets a time for SinceLastCalled()
 	-- Argument:
 	--   number newtime	| Relative to CurTime()
@@ -290,13 +291,13 @@ function ss.AddTimerFramework(ent)
 			self.prevtime = CurTime() + newtime
 		end
 	end
-	
+
 	-- Returns the time since the schedule has been last called.
 	function ScheduleFunc:SinceLastCalled()
 		return CurTime() - (isstring(self.prevtime) and
 		self.weapon["Get" .. self.prevtime](self.weapon) or self.prevtime)
 	end
-	
+
 	-- Adds an syncronized schedule.
 	-- Arguments:
 	--   number delay	| How long the function should be ran in seconds.
@@ -324,7 +325,7 @@ function ss.AddTimerFramework(ent)
 		table.insert(self.FunctionQueue, schedule)
 		return schedule
 	end
-	
+
 	-- Adds an schedule.
 	-- Arguments:
 	--   number delay	| How long the function should be ran in seconds.
@@ -346,7 +347,7 @@ function ss.AddTimerFramework(ent)
 		table.insert(self.FunctionQueue, schedule)
 		return schedule
 	end
-	
+
 	-- Makes the registered functions run.  Put it in ENT:Think() for desired use.
 	function ent:ProcessSchedules()
 		for i, s in pairs(self.FunctionQueue) do
@@ -366,7 +367,7 @@ function ss.AddTimerFramework(ent)
 					s.done = s.done + 1
 					remove = remove or s.done >= s.numcall
 				end
-				
+
 				if remove then self.FunctionQueue[i] = nil end
 			end
 		end
@@ -443,23 +444,23 @@ function ss.PlayerFootstep(w, ply, pos, foot, soundName, volume, filter)
 		ply:EmitSound "SplatoonSWEPs_Player.InkFootstep"
 		return true
 	end
-	
+
 	if not ply:Crouching() then return end
 	return soundName:find "chainlink" and true or nil
 end
 
 function ss.UpdateAnimation(w, ply, velocity, maxseqspeed)
 	ss.ProtectedCall(w.UpdateAnimation, w, ply, velocity, maxseqspeed)
-	
+
 	if not w:GetThrowing() then return end
-	
+
 	ply:AnimSetGestureWeight(GESTURE_SLOT_ATTACK_AND_RELOAD, 1)
-	
+
 	local f = (CurTime() - w:GetThrowAnimTime()) / ss.SubWeaponThrowTime
 	if CLIENT and w:IsCarriedByLocalPlayer() then
 		f = f + LocalPlayer():Ping() / 1000 / ss.SubWeaponThrowTime
 	end
-	
+
 	if 0 <= f and f <= 1 then
 		ply:AddVCDSequenceToGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD,
 		ply:SelectWeightedSequence(ACT_HL2MP_GESTURE_RANGE_ATTACK_GRENADE),
@@ -475,7 +476,7 @@ function ss.KeyPress(self, ply, key)
 			self:SetThrowing(self:GetThrowing() and key == IN_ATTACK2)
 		end
 	end
-	
+
 	ss.ProtectedCall(self.KeyPress, self, ply, key)
 end
 
@@ -487,21 +488,21 @@ function ss.KeyRelease(self, ply, key)
 		if self.Owner:KeyDown(k) then table.insert(keytime, t) end
 		keytable[t] = k -- [Last time key down] = key
 	end
-	
+
 	self:SetKey(keytable[math.max(unpack(keytime))] or 0)
 	ss.ProtectedCall(self.KeyRelease, self, ply, key)
-	
+
 	if not ss.KeyMaskFind[key] then return end
 	if not (self:GetThrowing() and key == IN_ATTACK2) then return end
 	self:AddSchedule(ss.SubWeaponThrowTime, 1, function() self:SetThrowing(false) end)
-	
+
 	local time = CurTime() + ss.SubWeaponThrowTime
 	self:SetCooldown(time)
 	self:SetThrowAnimTime(CurTime())
 	self:SetNextPrimaryFire(time)
 	self:SetNextSecondaryFire(time)
 	self:SendWeaponAnim(ss.ViewModel.Throw)
-	
+
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self:CheckCannotStandup()
 	ss.ProtectedCall(self.SharedSecondaryAttack, self, able)
@@ -527,17 +528,17 @@ local function SetupIcons(SWEP)
 	if not file.Exists(string.format("materials/%s.vmt", icon), "GAME") then
 		icon = "weapons/swep"
 	end
-	
+
 	if not killicon.Exists(SWEP.ClassName) then
 		killicon.Add(SWEP.ClassName, icon, color_white) -- Weapon killicon
 	end
-	
+
 	SWEP.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
 end
 
 local function RegisterWeapons()
 	if not ss.GetOption "Enabled" then return end
-	
+
 	local oldSWEP = SWEP
 	local WeaponList = list.GetForEdit "Weapon"
 	for base in pairs(weaponslot) do
@@ -545,14 +546,14 @@ local function RegisterWeapons()
 		for i, LuaFilePath in ipairs(file.Find(LuaFolderPath .. "/weapon_*.lua", "LUA")) do
 			local ClassName = "weapon_splatoonsweps_" .. LuaFilePath:StripExtension():sub(8)
 			LuaFilePath = string.format("%s/%s", LuaFolderPath, LuaFilePath)
-			
+
 			if SERVER then AddCSLuaFile(LuaFilePath) end
 			SWEP = {
 				Base = base,
 				ClassName = ClassName,
 				Folder = LuaFolderPath,
 			}
-			
+
 			include(LuaFilePath)
 			SetupIcons(SWEP)
 			local modelpath = "models/splatoonsweps/%s/"
@@ -563,7 +564,7 @@ local function RegisterWeapons()
 			SWEP.PrintName = ss.Text.PrintNames[SWEP.ClassName]
 			SWEP.Slot = weaponslot[SWEP.Base]
 			SWEP.SlotPos = i
-			
+
 			for _, v in ipairs(SWEP.Variations or {}) do
 				v.ClassName = v.ClassName and "weapon_splatoonsweps_" .. v.ClassName
 				or string.format("%s_%s", SWEP.ClassName, v.Suffix)
@@ -583,7 +584,7 @@ local function RegisterWeapons()
 					class = v.ClassName,
 					title = ss.Text.PrintNames[v.ClassName],
 				})
-				
+
 				table.Merge(WeaponList[v.ClassName], {
 					Base = base,
 					ClassID = table.KeyFromValue(ss.WeaponClassNames, v.ClassName),
@@ -594,18 +595,18 @@ local function RegisterWeapons()
 					SubWeapon = v.Sub,
 				})
 			end
-			
+
 			if not SWEP.Slot then
 				local BaseTable = weapons.Get(SWEP.Base)
 				SWEP.Slot = BaseTable and BaseTable.Slot or 0
 			end
-			
+
 			weapons.Register(SWEP, SWEP.ClassName)
 			list.Add("NPCUsableWeapons", {
 				class = SWEP.ClassName,
 				title = SWEP.PrintName,
 			})
-			
+
 			table.Merge(WeaponList[SWEP.ClassName], {
 				Base = base,
 				ClassID = table.KeyFromValue(ss.WeaponClassNames, SWEP.ClassName),
@@ -617,7 +618,7 @@ local function RegisterWeapons()
 			})
 		end
 	end
-	
+
 	SWEP = oldSWEP
 end
 

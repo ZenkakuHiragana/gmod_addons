@@ -37,7 +37,7 @@ if not ss.GetOption "Enabled" then
 			end
 		end
 	end
-	
+
 	table.Empty(SplatoonSWEPs)
 	SplatoonSWEPs = nil
 	return
@@ -54,14 +54,14 @@ end, nil, ss.Text.CVars.Clear, FCVAR_SERVER_CAN_EXECUTE)
 function ss.ClearAllInk()
 	net.Start "SplatoonSWEPs: Send ink cleanup"
 	net.Send(ss.PlayersReady)
-	
+
 	ss.InkQueue, ss.PaintSchedule = {}, {}
 	for node in ss.BSPPairsAll() do
 		for i = 1, #node.Surfaces.InkCircles do
 			node.Surfaces.InkCircles[i] = {}
 		end
 	end
-	
+
 	collectgarbage "collect"
 end
 
@@ -140,10 +140,10 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 				end
 			end
 		end
-		
+
 		for i, disp in pairs(ss.Displacements) do
 			local power = math.log(math.sqrt(#disp + 1) - 1, 2) - 1 --1, 2, 3
-			
+
 			data:WriteUShort(i)
 			data:WriteByte(power)
 			data:WriteUShort(#disp)
@@ -158,7 +158,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 				data:WriteFloat(v.dist)
 			end
 		end
-		
+
 		data:Close() --data = map info converted into binary data
 		local write = util.Compress(file.Read(path)) --write = compressed data
 		file.Delete(path) --Remove the file temporarily
@@ -197,7 +197,7 @@ local function SavePlayerData(ply)
 		file.CreateDir "splatoonsweps/record"
 	end
 	file.Write(record, util.TableToJSON(ss.WeaponRecord[ply], true))
-	
+
 	ss.PlayerID[ply] = nil
 	ss.WeaponRecord[ply] = nil
 end

@@ -2,6 +2,7 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
+local Simulate, HitPaint, HitEntity = {}, {}, {}
 local MAX_INK_SIM_AT_ONCE = 60 -- Calculating ink trajectory at once
 local SplashDistance = 50 * ss.ToHammerUnits -- Transition between drop and splash
 local dropdata = {
@@ -28,45 +29,15 @@ end
 -- Physics simulation for ink trajectory.
 -- The first some frames(1/60 sec.) ink flies without gravity.
 -- After that, ink decelerates horizontally and is affected by gravity.
-local Simulate, HitPaint, HitEntity = {}, {}, {}
 function Simulate.weapon_splatoonsweps_shooter(ink)
-	local g = physenv.GetGravity() * ss.InkGravityMul
-	local LifeTime = math.max(0, CurTime() - ink.InitTime)
-	local PrevTime = ink.Time
-	if PrevTime > LifeTime then return end
-	
-	local Straight = ink.IsDrop and 0 or ink.Info.Straight
-	local MaxFrame = Straight + ss.ShooterDecreaseFrame
-	local MaxPos = ink.InitPos + ink.Velocity * (MaxFrame - ss.ShooterDecreaseFrame / 2)
-	for Pos, Time in pairs {[ink.endpos] = LifeTime, [ink.start] = PrevTime} do
-		if not ink.IsDrop and Time < Straight then -- Goes Straight
-			Pos:Set(ink.InitPos + ink.Velocity * math.Clamp(Time, 0, Straight))
-		elseif Time > Straight + ss.ShooterDecreaseFrame then -- Falls Straight
-			local FallTime = math.max(Time - Straight - ss.ShooterDecreaseFrame, 0)
-			if FallTime > ss.ShooterTermTime then
-				local v = g * ss.ShooterTermTime
-				Pos:Set(MaxPos - v * ss.ShooterTermTime / 2 + v * FallTime)
-			else
-				Pos:Set(MaxPos + g * FallTime * FallTime / 2)
-			end
-		else
-			Pos:Set(ink.InitPos + ink.Velocity * (Straight + Time) / 2)
-		end
-	end
-	
-	ink.Time = LifeTime
-	if PrevTime < MaxFrame and MaxFrame < LifeTime then
-		ink.endpos = MaxPos
-		ink.Time = MaxFrame + ss.FrameToSec
-	end
-	
+	ss.Simulate.Shooter(ink)
 	if not IsFirstTimePredicted() then return end
 	if ink.SplashCount <= ink.SplashNum then -- Creates ink drops
 		dropdata.InkRadius = ink.SplashRadius
 		dropdata.MinRadius = ink.SplashRadius
 		dropdata.InitTime = CurTime() - ss.ShooterDecreaseFrame
 		local Length = (ink.endpos - ink.InitPos):Length2D()
-		local NextLength = ink.SplashCount * ink.Info.SplashInterval + ink.SplashInit
+		local NextLength = ink.SplashCount * ink.SplashInterval + ink.SplashInit
 		while Length >= NextLength and ink.SplashCount <= ink.SplashNum do
 			ss.AddInk(ink.filter, ink.InitPos + ink.InitDirection * NextLength, ss.GetDropType(), {
 				Angle = ink.Angle,
@@ -77,14 +48,14 @@ function Simulate.weapon_splatoonsweps_shooter(ink)
 			local start = ink.InitPos + ink.InitDirection * NextLength
 			if util.TraceLine {
 				start = start,
-				endpos = start + ink.InitDirection * ink.Info.SplashInterval,
+				endpos = start + ink.InitDirection * ink.SplashInterval,
 				filter = ink.filter,
 				mask = ss.SquidSolidMask,
 			}.Hit then
 				break
 			end
-			
-			NextLength = NextLength + ink.Info.SplashInterval
+
+			NextLength = NextLength + ink.SplashInterval
 			ink.SplashCount = ink.SplashCount + 1
 		end
 	end
@@ -107,12 +78,12 @@ function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 		ink.InkType = ss.GetDropType()
 		ratio = ink.Ratio or ratio
 	end
-	
+
 	if (ss.sp or CLIENT and IsFirstTimePredicted())
 	and t.Hit and (not ink.IsDrop or ink.PlayHitSound) then
 		sound.Play("SplatoonSWEPs_Ink.HitWorld", t.HitPos)
 	end
-	
+
 	ss.Paint(t.HitPos, t.HitNormal, radius, ink.Color,
 	ink.Angle, ink.InkType, ratio, ink.filter, ink.ClassName)
 end
@@ -120,7 +91,7 @@ end
 function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
 	local d, e, o = DamageInfo(), t.Entity, ink.filter
 	local frac = (math.max(0, CurTime() - ink.InitTime)
-	- ink.Info.DecreaseDamage) / ink.Info.MinDamageTime
+	- ink.DecreaseDamage) / ink.MinDamageTime
 	if (ss.sp or CLIENT and IsFirstTimePredicted())
 	and not ink.IsDrop and ink.IsCarriedByLocalPlayer and e:Health() > 0 then
 		local ent = ss.IsValidInkling(e) -- Entity hit effect here
@@ -132,15 +103,15 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
 				.. (ink.IsCritical and "Critical" or "") .. ")")
 			end
 		end
-		
+
 		if ss.mp then return end
 	end
-	
-	d:SetDamage(Lerp(1 - frac, ink.Info.MinDamage, ink.Info.Damage))
+
+	d:SetDamage(Lerp(1 - frac, ink.MinDamage, ink.Damage))
 	d:SetDamageForce(-t.HitNormal)
 	d:SetDamagePosition(t.HitPos)
 	d:SetDamageType(DMG_GENERIC)
-	d:SetMaxDamage(ink.Info.Damage)
+	d:SetMaxDamage(ink.Damage)
 	d:SetReportedPosition(t.HitPos)
 	d:SetAttacker(IsValid(o) and o or game.GetWorld())
 	d:SetInflictor(ss.IsValidInkling(o) or game.GetWorld())
@@ -148,31 +119,11 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
 end
 
 function Simulate.weapon_splatoonsweps_charger(ink)
-	local g = physenv.GetGravity() * ss.InkGravityMul
-	local dir = ink.InitDirection
-	local LifeTime = math.max(0, CurTime() - ink.InitTime)
-	local PrevTime = ink.Time
-	if PrevTime > LifeTime then return end
-	
-	local Length = math.Clamp(ink.Speed * LifeTime, 0, ink.Range)
-	for Pos, Time in pairs {[ink.endpos] = LifeTime, [ink.start] = PrevTime} do
-		if Time <= ink.Straight then -- Goes Straight
-			Pos:Set(ink.InitPos + dir * math.Clamp(ink.Speed * Time, 0, ink.Range))
-		else -- Falls Straight
-			local FallTime = math.max(Time - ink.Straight, 0)
-			if FallTime > ss.ShooterTermTime then
-				local v = g * ss.ShooterTermTime
-				Pos:Set(ink.StraightPos - v * ss.ShooterTermTime / 2 + v * FallTime)
-			else
-				Pos:Set(ink.StraightPos + g * FallTime * FallTime / 2)
-			end
-		end
-	end
-	
+	ss.Simulate.Charger(ink)
 	if not IsFirstTimePredicted() then return end
-	ink.Time = LifeTime
 	dropdata.PlayHitSound = true
 	dropdata.InitTime = CurTime() - ss.ShooterDecreaseFrame
+	local Length = math.Clamp(ink.Speed * math.max(0, CurTime() - ink.InitTime), 0, ink.Range)
 	local NextLength = ink.SplashCount * ink.SplashInterval + ink.SplashInit
 	while Length >= NextLength do -- Create ink drops
 		dropdata.InkRadius = ink.SplashRadius / ink.Ratio
@@ -184,7 +135,7 @@ function Simulate.weapon_splatoonsweps_charger(ink)
 		}
 		local hull = {
 			collisiongroup = ink.collisiongroup,
-			endpos = ink.InitPos + dir * NextLength,
+			endpos = ink.InitPos + ink.InitDirection * NextLength,
 			filter = ink.filter,
 			mask = ss.SquidSolidMask,
 			maxs = ink.maxs,
@@ -194,49 +145,50 @@ function Simulate.weapon_splatoonsweps_charger(ink)
 		local t = util.TraceHull(hull)
 		t = ss.AddInk(ink.filter, t.HitPos + t.HitNormal, ss.GetDropType(), droptable)
 		t.Ratio = ink.Ratio
-		
-		hull.start, hull.endpos = hull.endpos, hull.endpos + dir * ink.SplashInterval
+
+		hull.start, hull.endpos = hull.endpos, hull.endpos + ink.InitDirection * ink.SplashInterval
 		if util.TraceHull(hull).Hit then break end
-		
+
 		NextLength = NextLength + ink.SplashInterval
 		ink.SplashCount = ink.SplashCount + 1
 		if NextLength >= ink.Range then
-			dropdata.InkRadius = dropdata.InkRadius * ink.Info.SplashRadiusMul
+			dropdata.InkRadius = dropdata.InkRadius * ink.SplashRadiusMul
 			t = nil
 			t = ss.AddInk(ink.filter, ink.StraightPos, ss.GetDropType(), droptable)
 			t.Ratio = ink.Ratio
-			
+
 			HitPaint.weapon_splatoonsweps_charger(ink, {
 				FractionPaintWall = .8,
-				HitPos = ink.InitPos + dir * ink.Range,
-				HitNormal = -dir,
+				HitPos = ink.InitPos + ink.InitDirection * ink.Range,
+				HitNormal = -ink.InitDirection,
 			})
 		elseif ink.SplashCount == 1 and ink.Charge > ink.FootpaintCharge then
 			dropdata.InkRadius = ink.FootpaintRadius
 			ss.AddInk(ink.filter, ink.InitPos, ss.GetDropType(), droptable)
 		end
 	end
-	
+
 	dropdata.PlayHitSound = nil
 end
 
-function HitPaint.weapon_splatoonsweps_charger(ink, t)
-	local wallfrac = math.Remap(ink.Charge, 0, ink.Info.WallPaintCharge, 0, 1)
-	local radius = ink.SplashRadius / ink.Info.SplashRadiusMul
-	local SplashNum = math.Round(Lerp(wallfrac, ink.Info.MinWallPaintNum, ink.Info.MaxWallPaintNum))
-	ink.InkRadius, ink.Ratio = ink.SplashRadius * ((1 + 1 / ink.Ratio) / 2), 1
-
-	if t.HitNormal.z < ss.MAX_COS_DEG_DIFF or not ink.ClassName:find "bamboozler" then
-		HitPaint.weapon_splatoonsweps_shooter(ink, t)
-		if t.HitWorld and CurTime() - ink.InitTime <= ink.Straight and CLIENT then
-			local c = ss.GetColor(ink.Color)
-			local p = CreateParticleSystem(game.GetWorld(), ss.Particles.MuzzleMist, PATTACH_WORLDORIGIN, 0, t.HitPos + t.HitNormal * 10)
-			p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, Vector(c.r, c.g, c.b) / 255)
-			p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * 6)
-			p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ink.InitPos)
-		end
+local function HitSmoke(ink, t)
+	if ink.ClassName:find "bamboozler" then return end
+	if t.HitWorld and CurTime() - ink.InitTime <= ink.Straight and CLIENT then
+		local c = ss.GetColor(ink.Color)
+		local p = CreateParticleSystem(game.GetWorld(), ss.Particles.MuzzleMist, PATTACH_WORLDORIGIN, 0, t.HitPos + t.HitNormal * 10)
+		p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, Vector(c.r, c.g, c.b) / 255)
+		p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * 6)
+		p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ink.InitPos)
 	end
+end
 
+function HitPaint.weapon_splatoonsweps_charger(ink, t)
+	local wallfrac = math.Remap(ink.Charge, 0, ink.WallPaintCharge, 0, 1)
+	local radius = ink.SplashRadius / ink.SplashRadiusMul
+	local SplashNum = math.Round(Lerp(wallfrac, ink.MinWallPaintNum, ink.MaxWallPaintNum))
+	ink.InkRadius, ink.Ratio = ink.SplashRadius * ((1 + 1 / ink.Ratio) / 2), 1
+	HitPaint.weapon_splatoonsweps_shooter(ink, t)
+	HitSmoke(ink, t)
 	if t.HitNormal.z > ss.MAX_COS_DEG_DIFF then return end
 	for i = 1, SplashNum do
 		local pos = t.HitPos - vector_up * i * radius * Lerp(wallfrac, 1, 1.25)
@@ -247,7 +199,7 @@ function HitPaint.weapon_splatoonsweps_charger(ink, t)
 			mask = ss.SquidSolidMask,
 			start = ink.InitPos,
 		}
-		
+
 		if math.abs(tr.HitNormal.z) > ss.MAX_COS_DEG_DIFF then continue end
 		if (t.FractionPaintWall or 0) > tr.Fraction then continue end
 		if tr.StartSolid or not tr.HitWorld then continue end
@@ -268,8 +220,9 @@ end
 
 function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 	local LifeTime = math.max(0, CurTime() - FrameTime() - ink.InitTime)
-	if LifeTime > ink.Straight then return end
 	local d, e, o = DamageInfo(), t.Entity, ink.filter
+	HitSmoke(ink, t)
+	if LifeTime > ink.Straight then return end
 	if (ss.sp or CLIENT and IsFirstTimePredicted())
 	and ink.IsCarriedByLocalPlayer and e:Health() > 0 then
 		local ent = ss.IsValidInkling(e) -- Entity hit effect here
@@ -281,10 +234,10 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 				.. (ink.Damage >= 100 and "Critical" or "") .. ")")
 			end
 		end
-		
+
 		if ss.mp then return end
 	end
-	
+
 	d:SetDamage(ink.Damage)
 	d:SetDamageForce(-t.HitNormal)
 	d:SetDamagePosition(t.HitPos)
@@ -301,7 +254,7 @@ HitPaint.weapon_splatoonsweps_splatling = HitPaint.weapon_splatoonsweps_shooter
 HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shooter
 function Simulate.weapon_splatoonsweps_blaster_base(ink)
 	Simulate.weapon_splatoonsweps_shooter(ink)
-	if SERVER or ink.Time < ink.Info.Straight + ss.ShooterDecreaseFrame then return end
+	if SERVER or ink.Time < ink.Straight + ss.ShooterDecreaseFrame then return end
 	if ink.Exploded then return end
 	local c = ss.GetColor(ink.Color) c = Vector(c.r, c.g, c.b) / 255
 	local p = CreateParticleSystem(game.GetWorld(), ss.Particles.Explosion, PATTACH_WORLDORIGIN, 0, ink.endpos)
@@ -317,7 +270,7 @@ local function ProcessInkQueue(ply)
 		for ink in pairs(ss.InkQueue) do
 			if not IsValid(ink.filter) then ss.InkQueue[ink] = nil continue end
 			if ink.filter:IsPlayer() and ink.filter ~= ply then continue end
-			
+
 			ss.ProtectedCall(Simulate[ink.Base], ink)
 			if not (ink.start and ink.endpos) then
 				ss.InkQueue[ink] = nil
@@ -329,11 +282,11 @@ local function ProcessInkQueue(ply)
 			if not (t.Hit or ss.IsInWorld(t.HitPos)) then
 				ss.InkQueue[ink] = nil
 			elseif t.HitWorld then
-				ink.endpos = t.HitPos - t.HitNormal * ink.Info.ColRadius * 2
+				ink.endpos = t.HitPos - t.HitNormal * ink.ColRadius * 2
 				t = util.TraceLine(ink)
 				ss.ProtectedCall(HitPaint[ink.Base], ink, t)
 				ss.InkQueue[ink] = nil
-			elseif IsValid(t.Entity) and ink.Info.Damage > 0 then -- If ink hits an NPC or something
+			elseif IsValid(t.Entity) and ink.Damage > 0 then -- If ink hits an NPC or something
 				local w = ss.IsValidInkling(t.Entity)
 				if not (w and ss.IsAlly(w, ink.Color)) then
 					ss.ProtectedCall(HitEntity[ink.Base], ink, t, w)
@@ -341,7 +294,7 @@ local function ProcessInkQueue(ply)
 				ss.InkQueue[ink] = nil
 			end
 		end
-		
+
 		for ink in pairs(ss.PaintSchedule) do
 			if CurTime() > ink.Time then
 				ss.Paint(ink.pos, ink.normal, ink.radius, ink.color,
@@ -349,7 +302,7 @@ local function ProcessInkQueue(ply)
 				ss.PaintSchedule[ink] = nil
 			end
 		end
-		
+
 		repeat
 			ply = coroutine.yield()
 		until IsFirstTimePredicted()
@@ -376,13 +329,19 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		Base = base,
 		ClassName = w.ClassName,
 		Color = isdrop and isdrop.Color or w:GetNWInt "inkcolor",
-		Info = info,
+		ColRadius = info.ColRadius,
+		Damage = info.Damage,
+		DecreaseDamage = info.DecreaseDamage,
 		InitDirection = isdrop and -vector_up or w.InitVelocity:GetNormalized(),
 		InitPos = pos,
 		InitTime = info.InitTime or CurTime(),
 		InkType = math.floor(inktype),
 		IsCarriedByLocalPlayer = IsLP,
 		IsDrop = isdrop,
+		MinDamage = info.MinDamage,
+		MinDamageTime = info.MinDamageTime,
+		SplashInterval = info.SplashInterval,
+		Straight = info.Straight,
 		Time = 0,
 		Velocity = isdrop and vector_origin or w.InitVelocity,
 		WeaponSplashInit = w.SplashInit,
@@ -394,7 +353,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		mins = -ss.vector_one * info.ColRadius,
 		start = pos,
 	}
-	
+
 	if base == "weapon_splatoonsweps_charger" then
 		local prog = w:GetChargeProgress()
 		local Speed = w:GetInkVelocity()
@@ -407,6 +366,8 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 			Damage = w:GetDamage(),
 			FootpaintCharge = info.FootpaintCharge,
 			FootpaintRadius = SplashRadius / info.SplashRadiusMul,
+			MaxWallPaintNum = info.MaxWallPaintNum,
+			MinWallPaintNum = info.MinWallPaintNum,
 			Range = w.Range,
 			Ratio = 1 / SplashRatio,
 			Speed = Speed,
@@ -415,8 +376,10 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 			SplashInitMul = w.SplashInit,
 			SplashInterval = SplashInterval,
 			SplashRadius = SplashRadius,
+			SplashRadiusMul = info.SplashRadiusMul,
 			Straight = w.Range / Speed,
 			StraightPos = pos + t.InitDirection * w.Range,
+			WallPaintCharge = info.WallPaintCharge,
 		})
 	else
 		table.Merge(t, {
@@ -433,7 +396,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 			SplashRadius = info.SplashRadius,
 		})
 	end
-	
+
 	ss.InkQueue[t] = true
 	return t
 end

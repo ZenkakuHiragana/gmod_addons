@@ -73,18 +73,6 @@ ss.TwilightPlayermodels = {
 	[OctoBoy] = true, -- Can't apply flex manipulation with Octoling boy.
 }
 
-function ss.GetSquidmodel(pmid)
-	if pmid == ss.PLAYER.NOCHANGE then return end
-	local squid = ss.Squidmodel[ss.SquidmodelIndex[pmid] or ss.SQUID.INKLING]
-	return file.Exists(squid, "GAME") and squid or nil
-end
-
-for i, t in ipairs(include "splatoonsweps/constants/inkcolors.lua") do
-	local c = HSVToColor(t[1], t[2], t[3])
-	ss.InkColors[i] = ColorAlpha(c, c.a)
-	ss.CrosshairColors[i] = t[4]
-end
-
 ss.Materials = {
 	Crosshair = {
 		Dot = Material "splatoonsweps/crosshair/dot.vmt",
@@ -94,26 +82,11 @@ ss.Materials = {
 		LineColor = Material "splatoonsweps/crosshair/linecolor.vmt",
 		Outer = Material "splatoonsweps/crosshair/outer.vmt",
 	},
+	Effects = {
+		Ink = Material "splatoonsweps/inkeffect",
+		Invisible = Material "splatoonsweps/weapons/primaries/shared/weapon_hider",
+	},
 }
-
-do -- Ink distribution map
-	local one = string.byte "1"
-	local path = "splatoonsweps/constants/inkdistributions/shot%d.lua"
-	for i = 1, 9 do
-		local f, mask = path:format(i), {}
-		local w, h, data = include(f)
-		mask.width, mask.height = w, h
-		data = string.Explode("\n", data)
-		for y = 1, h do
-			for x, d in ipairs {data[y]:byte(1, #data[y])} do
-				mask[x] = mask[x] or {}
-				mask[x][y] = d == one
-			end
-		end
-
-		ss.InkShotMaterials[i] = mask
-	end
-end
 
 ss.Particles = {
 	ChargerFlash = "splatoonsweps_charger_flash",
@@ -121,8 +94,6 @@ ss.Particles = {
 	Explosion = "splatoonsweps_explosion",
 	MuzzleMist = "splatoonsweps_muzzlemist",
 }
-game.AddParticles "particles/splatoonsweps.pcf"
-for _, p in pairs(ss.Particles) do PrecacheParticleSystem(p) end
 
 ss.KeyMask = {IN_ATTACK, IN_DUCK, IN_ATTACK2}
 ss.KeyMaskFind = {[IN_ATTACK] = true, [IN_DUCK] = true, [IN_ATTACK2] = true}
@@ -143,6 +114,39 @@ ss.ViewModel = { -- Viewmodel animations
 	Throwing = ACT_VM_PULLPIN, -- About to throw sub weapon
 	Throw = ACT_VM_THROW, --Actual throw animation
 }
+
+function ss.GetSquidmodel(pmid)
+	if pmid == ss.PLAYER.NOCHANGE then return end
+	local squid = ss.Squidmodel[ss.SquidmodelIndex[pmid] or ss.SQUID.INKLING]
+	return file.Exists(squid, "GAME") and squid or nil
+end
+
+for i, t in ipairs(include "splatoonsweps/constants/inkcolors.lua") do
+	local c = HSVToColor(t[1], t[2], t[3])
+	ss.InkColors[i] = ColorAlpha(c, c.a)
+	ss.CrosshairColors[i] = t[4]
+end
+
+do -- Ink distribution map
+	local one = string.byte "1"
+	local path = "splatoonsweps/constants/inkdistributions/shot%d.lua"
+	for i = 1, 9 do
+		local f, mask = path:format(i), {}
+		local w, h, data = include(f)
+		mask.width, mask.height = w, h
+		data = string.Explode("\n", data)
+		for y = 1, h do
+			for x, d in ipairs {data[y]:byte(1, #data[y])} do
+				mask[x] = mask[x] or {}
+				mask[x][y] = d == one
+			end
+		end
+
+		ss.InkShotMaterials[i] = mask
+	end
+end
+game.AddParticles "particles/splatoonsweps.pcf"
+for _, p in pairs(ss.Particles) do PrecacheParticleSystem(p) end
 
 function ss.GetColor(colorid) return ss.InkColors[tonumber(colorid)] end
 

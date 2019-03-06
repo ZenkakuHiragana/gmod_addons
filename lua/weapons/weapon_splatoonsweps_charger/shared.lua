@@ -55,7 +55,7 @@ function SWEP:ResetSkin()
 			GetConVar "cl_playerskin":GetInt() or
 			self.BackupPlayerInfo.Playermodel.Skin
 		end
-		
+
 		if self.Owner:GetSkin() == skin then return end
 		self.Owner:SetSkin(skin)
 	elseif ss.TwilightPlayermodels[self.Owner:GetModel()] then
@@ -125,28 +125,28 @@ function SWEP:SharedPrimaryAttack()
 					local ping = CLIENT and self:Ping() or 0
 					self:SetCharge(CurTime() + FrameTime() - elapsed - min + ping)
 				end
-				
+
 				if (ss.sp or CLIENT) and not (self.NotEnoughInk or EnoughInk) then
 					self.NotEnoughInk = true
 					ss.EmitSound(self.Owner, ss.TankEmpty)
 				end
 			end
 		end
-		
+
 		self:PlayChargeSound()
 		return
 	end
-	
+
 	if CurTime() > self:GetAimTimer() then
 		self:SetSplashInitMul(0)
 	end
-	
+
 	self.FullChargeFlag = false
 	self.AimSound:PlayEx(0, 1)
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 	self:SetCharge(CurTime() + self.Primary.MinFreezeTime)
 	self:SendWeaponAnim(ACT_VM_IDLE)
-	
+
 	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
 	if skin and self.Owner:GetSkin() ~= skin then
 		self.Owner:SetSkin(skin)
@@ -156,7 +156,7 @@ function SWEP:SharedPrimaryAttack()
 		if l then self.Owner:SetFlexWeight(l, .3) end
 		if r then self.Owner:SetFlexWeight(r, 1) end
 	end
-	
+
 	if not self:IsFirstTimePredicted() then return end
 	local e = EffectData() e:SetEntity(self)
 	util.Effect("SplatoonSWEPsChargerLaser", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
@@ -183,7 +183,7 @@ function SWEP:Move(ply)
 	elseif self:ShouldChargeWeapon() then
 		self:PlayChargeSound()
 	end
-	
+
 	if CurTime() > self:GetAimTimer() then
 		local f = ply:GetFlexIDByName "Blink_R"
 		if ply:GetSkin() == ss.ChargingEyeSkin[ply:GetModel()]
@@ -192,7 +192,7 @@ function SWEP:Move(ply)
 			self:ResetSkin()
 		end
 	end
-	
+
 	if self:GetCharge() == math.huge then return end
 	if ply:IsPlayer() and ply:KeyDown(IN_ATTACK) then return end
 	if not ply:IsPlayer() and self:ShouldChargeWeapon() then return end
@@ -212,7 +212,7 @@ function SWEP:Move(ply)
 		local rndb = p.Recoil * math.Rand(-1, 1)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
 		self.ModifyWeaponSize = SysTime()
-		
+
 		local e = EffectData()
 		e:SetAttachment(self.SplashInit)
 		e:SetAngles(ang)
@@ -224,10 +224,10 @@ function SWEP:Move(ply)
 		e:SetStart(self.InitVelocity)
 		e:SetRadius(0)
 		e:SetMagnitude(prog)
-		util.Effect("SplatoonSWEPsShooterInk", e)
+		util.Effect("SplatoonSWEPsChargerInk", e)
 		ss.AddInk(ply, pos, ss.GetDropType())
 	end
-	
+
 	self:EmitSound(ShootSound, 80, pitch)
 	self:SetCooldown(CurTime() + p.MaxFreezeTime)
 	self:SetFireAt(prog)
