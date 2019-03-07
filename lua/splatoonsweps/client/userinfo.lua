@@ -21,7 +21,7 @@ local function GetPlayermodel(i)
 	if not exists and IsValid(LocalPlayer()) then
 		model = LocalPlayer():GetModel()
 	end
-	
+
 	return model, exists
 end
 
@@ -40,12 +40,12 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 	self.Entity:SetEyeTarget(vector_up * campos)
 	self.Entity.GetInfoNum = LocalPlayer().GetInfoNum
 	self.Entity:SetSubMaterial()
-	
+
 	function self:OnRemove()
 		if not IsValid(self.Weapon) then return end
 		self.Weapon:Remove()
 	end
-	
+
 	function self:DrawModel()
 		local ret = self:PreDrawModel(self.Entity)
 		if ret == false then return end
@@ -62,18 +62,18 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 			previous = curparent
 		end
 		render.SetScissorRect(leftx, topy, rightx, bottomy, true)
-		
+
 		self.Entity:DrawModel()
 		if IsValid(self.Weapon) and self.Weapon.Visible then
 			self.Weapon:SetNoDraw(false)
 			self.Weapon:DrawModel()
 			self.Weapon:SetNoDraw(true)
 		end
-		
+
 		self:PostDrawModel(self.Entity)
 		render.SetScissorRect(0, 0, 0, 0, false)
 	end
-	
+
 	function self:Think()
 		local model = GetPlayermodel()
 		if self:GetModel() ~= model then
@@ -96,23 +96,23 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 				self.Entity:SetBodygroup(i, 0)
 			end
 		end
-		
+
 		local w = ss.IsValidInkling(LocalPlayer())
 		if not w then
 			if SysTime() > self.AnimTime + .05 then
 				self.Entity:SetSequence "idle_fist"
 			end
-			
+
 			if IsValid(self.Weapon) then
 				self.ClassName = nil
 				self.Weapon.GetInkColorProxy = nil
 				self.Weapon:SetModel "models/error.mdl"
 				self.Weapon.Visible = false
 			end
-			
+
 			return
 		end
-		
+
 		if not IsValid(self.Weapon) then
 			self.Weapon = ClientsideModel "models/error.mdl"
 			self.Weapon:SetPos(-Vector(120))
@@ -120,7 +120,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 			self.Weapon:AddEffects(EF_BONEMERGE)
 			self.Weapon:Spawn()
 		end
-		
+
 		if self.ClassName ~= w.ClassName then
 			self.Entity:SetSequence(w.Base == "weapon_splatoonsweps_splatling" and "idle_crossbow" or "idle_passive")
 			self.Weapon.Visible = true
@@ -133,16 +133,16 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 			for i, v in pairs(w.Bodygroup or {}) do
 				self.Weapon:SetBodygroup(i, v)
 			end
-			
+
 			function self.Weapon:GetInkColorProxy()
 				return w:GetInkColorProxy()
 			end
 		end
-		
+
 		self.AnimTime = SysTime()
 		self.ClassName = w.ClassName
 	end
-	
+
 	if not issquid then return end
 	ss.ProtectedCall(LocalPlayer().SplatColors, self.Entity)
 end
@@ -156,7 +156,7 @@ local function GeneratePreview(tab)
 	tab.PreviewBase:SetPos(ScrW(), ScrH())
 	tab.PreviewBase:SetZPos(1)
 	tab.PreviewBase.InitialScreenLock = true
-	
+
 	tab.Preview = tab.PreviewBase:Add "DModelPanel"
 	tab.Preview:Dock(FILL)
 	tab.Preview:SetAnimated(true)
@@ -171,11 +171,11 @@ local function GeneratePreview(tab)
 		self.PressX, self.PressY = gui.MousePos()
 		self.Pressed = true
 	end
-	
+
 	function tab.Preview:DragMouseRelease()
 		self.Pressed = false
 	end
-	
+
 	function tab.Preview:LayoutEntity(ent)
 		if self.bAnimated then self:RunAnimation() end
 		if self.Pressed then
@@ -183,16 +183,16 @@ local function GeneratePreview(tab)
 			self.Angles = self.Angles - Angle(0, (self.PressX or mx) - mx)
 			self.PressX, self.PressY = gui.MousePos()
 		end
-		
+
 		ent:SetAngles(self.Angles)
 	end
-	
+
 	SetPlayerModel(tab.Preview)
 end
 
 local function GenerateWeaponIcons(tab)
 	tab.Weapon.List.IconList:Clear()
-	
+
 	local WeaponList = list.GetForEdit "Weapon"
 	local SpawnList = {}
 	for _, c in ipairs(ss.WeaponClassNames) do
@@ -203,24 +203,24 @@ local function GenerateWeaponIcons(tab)
 		if WeaponFilters.Type and WeaponFilters.Type ~= t.Base then continue end
 		if WeaponFilters.Variations == "Original" and (t.Customized or t.SheldonsPicks) then continue end
 		if WeaponFilters.Variations and WeaponFilters.Variations ~= "Original" and not t[WeaponFilters.Variations] then continue end
-		
+
 		local record = ss.WeaponRecord[LocalPlayer()]
 		if record then
 			t.Recent = record.Recent[t.ClassName] or 0
 			t.Duration = record.Duration[t.ClassName] or 0
 			t.Inked = record.Inked[t.ClassName] or 0
 		end
-		
+
 		table.insert(SpawnList, t)
 	end
-	
+
 	for _, t in SortedPairsByMemberValue(SpawnList, WeaponFilters.Sort or "PrintName") do
 		local icontest = spawnmenu.CreateContentIcon("weapon", nil, {
 			material = "entities/" .. t.ClassName .. ".png",
 			nicename = t.PrintName,
 			spawnname = t.ClassName,
 		})
-		
+
 		if not icontest then continue end
 		local icon = vgui.Create("ContentIcon", tab.Weapon.List)
 		icon:SetContentType "weapon"
@@ -236,7 +236,7 @@ local function GenerateWeaponIcons(tab)
 		if ss.ProtectedCall(LocalPlayer().HasWeapon, LocalPlayer(), t.ClassName) then
 			icon.Label:SetFont "DermaDefaultBold"
 		end
-		
+
 		function icon:DoClick()
 			if LocalPlayer():HasWeapon(self:GetSpawnName()) then
 				net.Start "SplatoonSWEPs: Strip weapon"
@@ -248,7 +248,7 @@ local function GenerateWeaponIcons(tab)
 				self.Label:SetFont "DermaDefaultBold"
 			end
 		end
-		
+
 		icon.BasePaint = icon.Paint
 		function icon:Paint(w, h)
 			icon:BasePaint(w, h)
@@ -258,7 +258,7 @@ local function GenerateWeaponIcons(tab)
 				surface.DrawTexturedRect(self.Border + 8, self.Border + 8, 16, 16)
 			end
 		end
-		
+
 		icontest:SetVisible(false)
 		icontest:Remove()
 		tab.Weapon.List:Add(icon)
@@ -266,7 +266,7 @@ local function GenerateWeaponIcons(tab)
 end
 
 local function GenerateWeaponTab(tab)
-	tab.Weapon = ss.IsValidInkling(LocalPlayer()) 
+	tab.Weapon = ss.IsValidInkling(LocalPlayer())
 	tab.Weapon = tab.Weapon and "entities/" .. tab.Weapon.ClassName .. ".png"
 	tab.Weapon = tab:AddSheet("", vgui.Create("DPanel", tab), tab.Weapon or configicon)
 	tab.Weapon.Panel:SetPaintBackground(false)
@@ -276,13 +276,13 @@ local function GenerateWeaponTab(tab)
 	tab.Weapon.List:SetTriggerSpawnlistChange(false)
 	tab.Weapon.List:Dock(FILL)
 	function tab.Weapon.Tab:Think()
-		local img = ss.IsValidInkling(LocalPlayer()) 
+		local img = ss.IsValidInkling(LocalPlayer())
 		img = img and "entities/" .. img.ClassName .. ".png" or configicon
 		if img and img ~= self.Image:GetImage() then
 			self.Image:SetImage(img)
 		end
 	end
-	
+
 	GenerateWeaponIcons(tab)
 end
 
@@ -290,14 +290,14 @@ local function GeneratePreferenceTab(tab)
 	tab.Preference = tab:AddSheet("", vgui.Create "DPanel", "icon64/tool.png")
 	tab.Preference.Panel:DockMargin(8, 8, 8, 8)
 	tab.Preference.Panel:DockPadding(8, 8, 8, 8)
-	
+
 	-- "Ink color:" Label
 	tab.Preference.LabelColor = tab.Preference.Panel:Add "DLabel"
 	tab.Preference.LabelColor:Dock(TOP)
 	tab.Preference.LabelColor:SetText(ss.Text.InkColor)
 	tab.Preference.LabelColor:SetTextColor(tab.Preference.LabelColor:GetSkin().Colours.Label.Dark)
 	tab.Preference.LabelColor:SizeToContents()
-	
+
 	-- Color picker
 	tab.Preference.ColorSelector = tab.Preference.Panel:Add "DColorPalette"
 	tab.Preference.ColorSelector:Dock(TOP)
@@ -321,14 +321,14 @@ local function GeneratePreferenceTab(tab)
 			end
 		end
 	end
-	
+
 	-- "Playermodel:" Label
 	tab.Preference.LabelModel = tab.Preference.Panel:Add "DLabel"
 	tab.Preference.LabelModel:Dock(TOP)
 	tab.Preference.LabelModel:SetText("\n\n" .. ss.Text.Playermodel)
 	tab.Preference.LabelModel:SetTextColor(tab.Preference.LabelModel:GetSkin().Colours.Label.Dark)
 	tab.Preference.LabelModel:SizeToContents()
-	
+
 	-- Playermodel selection box
 	tab.Preference.ModelSelector = tab.Preference.Panel:Add "DIconLayout"
 	tab.Preference.ModelSelector:Dock(TOP)
@@ -355,7 +355,7 @@ local function GeneratePreferenceTab(tab)
 				cvar:SetInt(i)
 			end
 		end
-		
+
 		function item:Think()
 			local new, exists = GetPlayermodel(self.ID)
 			if exists and self.Model ~= new then
@@ -364,7 +364,7 @@ local function GeneratePreferenceTab(tab)
 			end
 		end
 	end
-	
+
 	-- Ink resolution combo box
 	tab.Preference.ResolutionSelector = tab.Preference.Panel:Add "DComboBox"
 	tab.Preference.ResolutionSelector:SetSortItems(false)
@@ -375,7 +375,7 @@ local function GeneratePreferenceTab(tab)
 	for i = 1, #ss.Text.RTResolutions do
 		tab.Preference.ResolutionSelector:AddChoice(ss.Text.RTResolutions[i])
 	end
-	
+
 	-- "Ink buffer size:" Label
 	tab.Preference.LabelResolution = tab.Preference.Panel:Add "DLabel"
 	tab.Preference.LabelResolution:Dock(BOTTOM)
@@ -383,7 +383,7 @@ local function GeneratePreferenceTab(tab)
 	tab.Preference.LabelResolution:SetToolTip(ss.Text.DescRTResolution)
 	tab.Preference.LabelResolution:SetTextColor(tab.Preference.LabelResolution:GetSkin().Colours.Label.Dark)
 	tab.Preference.LabelResolution:SizeToContents()
-	
+
 	-- "Restart required" Label
 	tab.Preference.LabelResetRequired = tab.Preference.Panel:Add "DLabel"
 	tab.Preference.LabelResetRequired:SetFont "DermaDefaultBold"
@@ -393,7 +393,7 @@ local function GeneratePreferenceTab(tab)
 	tab.Preference.LabelResetRequired:SetToolTip(ss.Text.DescRTResolution)
 	tab.Preference.LabelResetRequired:SetVisible(false)
 	tab.Preference.LabelResetRequired:SizeToContents()
-	
+
 	local RTSize
 	function tab.Preference.Panel:Think()
 		local selected = tab.Preference.ResolutionSelector:GetSelectedID() or ss.GetOption "rtresolution" + 1
@@ -402,7 +402,7 @@ local function GeneratePreferenceTab(tab)
 		if RTSize or not ss.RenderTarget.BaseTexture then return end
 		RTSize = ss.RenderTarget.BaseTexture:Width()
 	end
-	
+
 	function tab.Preference.ResolutionSelector:OnSelect(index, value, data)
 		local cvar = ss.GetConVar "rtresolution"
 		if not cvar then return end
@@ -433,21 +433,20 @@ local function GenerateFilter(tab, side)
 		WeaponFilters.Equipped = checked
 		GenerateWeaponIcons(tab)
 	end
-	
+
 	local wt = side.Contents:Add "DComboBox"
 	local prefix = ss.Text.Sidemenu.WeaponTypePrefix
 	wt:SetSortItems()
 	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.All, nil, true)
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Shooters, "weapon_splatoonsweps_shooter")
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Chargers, "weapon_splatoonsweps_charger")
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Rollers, "weapon_splatoonsweps_roller")
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Splatlings, "weapon_splatoonsweps_splatling")
-	wt:AddChoice(prefix .. ss.Text.Sidemenu.WeaponType.Sloshers, "weapon_splatoonsweps_slosher")
+	for classname, categoryname in SortedPairs(ss.Text.CategoryNames) do
+		wt:AddChoice(prefix .. categoryname, classname)
+	end
+
 	function wt:OnSelect(index, value, data)
 		WeaponFilters.Type = data
 		GenerateWeaponIcons(tab)
 	end
-	
+
 	local var = side.Contents:Add "DComboBox"
 	prefix = ss.Text.Sidemenu.VariationsPrefix
 	var:SetSortItems()
@@ -459,7 +458,7 @@ local function GenerateFilter(tab, side)
 		WeaponFilters.Variations = data
 		GenerateWeaponIcons(tab)
 	end
-	
+
 	local sort = side.Contents:Add "DComboBox"
 	prefix = ss.Text.Sidemenu.SortPrefix
 	sort:SetSortItems()
@@ -482,11 +481,11 @@ local function GenerateWeaponContents(self)
 		if dragndrop.IsDragging() then return end
 		self.PropPanel:Remove()
 	end
-	
+
 	self.PropPanel = vgui.Create("DPanel", self.PanelContent)
 	self.PropPanel:SetPaintBackground(false)
 	self.PropPanel:SetVisible(false)
-	
+
 	local navbar = self.PanelContent.ContentNavBar
 	self.PropPanel.SideOption = vgui.Create("DCollapsibleCategory", navbar)
 	self.PropPanel.SideOption:Dock(TOP)
@@ -498,13 +497,13 @@ local function GenerateWeaponContents(self)
 			navbar.Tree:InvalidateLayout()
 		end
 	end
-	
+
 	local tab = vgui.Create("SplatoonSWEPs.DPropertySheetPlus")
 	self.PropPanel:Add(tab)
 	tab:Dock(FILL)
 	tab:SetMaxTabSize(math.max(48, ScrH() * .08))
 	tab:SetMinTabSize(math.max(48, ScrH() * .08))
-	
+
 	WeaponFilters = {}
 	GeneratePreview(tab)
 	GenerateWeaponTab(tab)
@@ -523,7 +522,7 @@ function(PanelContent, tree, node)
 		self:DoPopulate()
 		self.PanelContent:SwitchPanel(self.PropPanel)
 	end
-	
+
 	function node:Think()
 		ss.ProtectedCall(node.OriginalThink, node)
 		if ScrW() == self.ScrW and ScrH() == self.ScrH then return end
