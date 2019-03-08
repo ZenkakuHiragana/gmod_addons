@@ -17,12 +17,12 @@ local function ThinkTPS(self)
 	return false
 end
 
-function EFFECT:Render() end
 function EFFECT:Init(e)
+	self:SetNoDraw(true)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
 	self.FlashOnTPS = self.Weapon:IsTPS()
-	local ent = self.Weapon
+	local ent = not self.FlashOnTPS and self.Weapon.Owner:IsPlayer() and self.Weapon.Owner:GetViewModel() or self.Weapon
 	local c = (self.Weapon:GetInkColorProxy() + ss.vector_one) / 2
 	local a = ent:LookupAttachment "muzzle"
 	local pos = ent:GetAttachment(a).Pos
@@ -32,8 +32,8 @@ function EFFECT:Init(e)
 			p:SetPos(ent:GetAttachment(a).Pos)
 			p:SetNextThink(CurTime())
 		end
-		
-		if ss.sp and self.Weapon.Owner:IsPlayer() and self.FlashOnTPS then
+
+		if ss.sp and self.Weapon.Owner:IsPlayer() then
 			c:Mul(255)
 			self.Emitter = ParticleEmitter(pos)
 			self.Flash = self.Emitter:Add("splatoonsweps/effects/blaster_explosion_impact", pos)
@@ -57,13 +57,13 @@ function EFFECT:Init(e)
 		return
 	end
 
-	if ss.sp and self.Weapon.Owner:IsPlayer() and self.FlashOnTPS then
+	if ss.sp and self.Weapon.Owner:IsPlayer() then
 		local function SetPos(p)
-			local a = ent:GetAttachment(a) 
+			local a = ent:GetAttachment(a)
 			p:SetPos(a.Pos + a.Ang:Forward() * 2)
 			p:SetNextThink(CurTime())
 		end
-		
+
 		c:Mul(255)
 		self.Emitter = ParticleEmitter(pos)
 		self.Flash = self.Emitter:Add("splatoonsweps/effects/flash", pos)
@@ -87,7 +87,6 @@ function EFFECT:Init(e)
 		self.Ring:SetThinkFunction(SetPos)
 		self.Think = ThinkTPS
 	else
-		ent = not self.FlashOnTPS and self.Weapon.Owner:IsPlayer() and self.Weapon.Owner:GetViewModel() or ent
 		self.Flash = CreateParticleSystem(ent, ss.Particles.ChargerFlash, PATTACH_POINT_FOLLOW, ent:LookupAttachment "muzzle")
 		self.Flash:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, c)
 		self.Think = ThinkFPS

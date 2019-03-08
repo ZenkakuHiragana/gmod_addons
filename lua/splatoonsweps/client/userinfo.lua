@@ -10,8 +10,7 @@ local weaponlisticon = "splatoonsweps/icons/weaponlist.png"
 local equipped = Material "icon16/accept.png"
 local WeaponFilters = {}
 local function GetColor() -- Get current color for preview model
-	local color = ss.GetColor(ss.GetOption "inkcolor")
-	return Vector(color.r, color.g, color.b) / 255
+	return ss.GetColor(ss.GetOption "inkcolor"):ToVector()
 end
 
 local function GetPlayermodel(i)

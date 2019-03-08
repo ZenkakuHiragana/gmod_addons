@@ -141,57 +141,14 @@ function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(p, info)
 	p.ColRadiusMiddle = info.ColRadiusMiddle * ss.ToHammerUnits
 	p.ColRadiusFar = info.ColRadiusFar * ss.ToHammerUnits
 	p.ColRadiusWallMul = info.ColRadiusWallMul
+	p.InkRadiusGround = info.InkRadiusGround * ss.ToHammerUnits
 	p.InkRadiusWall = info.InkRadiusWall * ss.ToHammerUnits
+	p.InkRadiusBlastMax = info.InkRadiusBlastMax * ss.ToHammerUnits
+	p.InkRadiusBlastMin = info.InkRadiusBlastMin * ss.ToHammerUnits
 	p.ExplosionTime = info.Delay.Explosion * ss.FrameToSec
 	p.PreFireDelay = info.Delay.PreFire * ss.FrameToSec
 	p.PreFireDelaySquid = info.Delay.PreFireSquid * ss.FrameToSec
 	p.PostFireDelay = info.Delay.PostFire * ss.FrameToSec
-end
-
-function ss.SetViewModelMods(weapon, mods)
-	weapon.ViewModelBoneMods = weapon.ViewModelBoneMods or {}
-	for bone, mod in pairs(mods) do
-		weapon.ViewModelBoneMods[bone] = mod
-		mod.scale = mod.scale or ss.vector_one
-		mod.pos = mod.pos or vector_origin
-		mod.angle = mod.angle or angle_zero
-	end
-end
-
-function ss.SetViewModel(weapon, view)
-	weapon.VElements = weapon.VElements or {}
-	weapon.VElements.weapon = {
-		type = "Model",
-		model = Model(view.model or weapon.WeaponModelName),
-		bone = view.bone or "ValveBiped.Bip01_Spine4",
-		rel = view.rel or "",
-		pos = view.pos,
-		angle = view.angle,
-		size = view.size or ss.vector_one,
-		color = view.color or color_white,
-		surpresslightning = view.surpresslightning or false,
-		material = view.material or "",
-		skin = view.skin or 0,
-		bodygroup = view.bodygroup or {},
-	}
-end
-
-function ss.SetWorldModel(weapon, world)
-	weapon.WElements = weapon.WElements or {}
-	weapon.WElements.weapon = {
-		type = "Model",
-		model = Model(world.model or weapon.WeaponModelName),
-		bone = world.bone or "ValveBiped.Bip01_R_Hand",
-		rel = world.rel or "",
-		pos = world.pos,
-		angle = world.angle,
-		size = world.size or ss.vector_one,
-		color = world.color or color_white,
-		surpresslightning = world.surpresslightning or false,
-		material = world.material or "",
-		skin = world.skin or 0,
-		bodygroup = world.bodygroup or {},
-	}
 end
 
 local SplatoonSWEPsMuzzleSplash = 0

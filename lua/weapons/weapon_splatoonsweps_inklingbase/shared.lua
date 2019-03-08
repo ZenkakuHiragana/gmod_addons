@@ -44,7 +44,7 @@ function SWEP:GetBase(BaseClassName)
 	while base and base.Base ~= BaseClassName do
 		base = base.BaseClass
 	end
-	
+
 	return base
 end
 
@@ -118,19 +118,19 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 	self:SetGroundColor(ss.GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, filter)) or -1)
 	local onink = self:GetGroundColor() >= 0
 	local onourink = self:GetGroundColor() == c
-	
+
 	self:SetInWallInk(self:Crouching() and (
 	ss.GetSurfaceColor(util.QuickTrace(p, fw - right, filter)) == c or
 	ss.GetSurfaceColor(util.QuickTrace(p, fw + right, filter)) == c or
 	ss.GetSurfaceColor(util.QuickTrace(p,-fw - right, filter)) == c or
 	ss.GetSurfaceColor(util.QuickTrace(p,-fw + right, filter)) == c))
-	
+
 	self:SetInInk(self:Crouching() and (onink and onourink or self:GetInWallInk()))
 	self:SetOnEnemyInk(onink and not onourink)
-	
+
 	self:GetOptions()
 	self.Color = ss.GetColor(c) or ss.GetColor(ss.GetNPCInkColor(self.Owner))
-	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
+	self:SetInkColorProxy(self.Color:ToVector())
 end
 
 function SWEP:SharedInitBase()
@@ -141,7 +141,7 @@ function SWEP:SharedInitBase()
 	for _, k in ipairs(ss.KeyMask) do
 		self.LastKeyDown[k] = CurTime()
 	end
-	
+
 	local translate = {}
 	for _, t in ipairs {
 		"ar2",
@@ -157,11 +157,11 @@ function SWEP:SharedInitBase()
 		self:SetWeaponHoldType(t)
 		translate[t] = self.ActivityTranslate
 	end
-	
-	if ss.sp then 
+
+	if ss.sp then
 		self.Buttons, self.OldButtons = 0, 0
 	end
-	
+
 	self.Translate = translate
 	ss.ProtectedCall(self.SharedInit, self)
 end
@@ -187,7 +187,7 @@ function SWEP:SharedDeployBase()
 			ss.WeaponRecord[self.Owner].Recent[self.ClassName] = -os.time()
 		end
 	end
-	
+
 	ss.ProtectedCall(self.SharedDeploy, self)
 	return true
 end
@@ -196,13 +196,13 @@ function SWEP:SharedHolsterBase()
 	self:SetHolstering(true)
 	ss.ProtectedCall(self.SharedHolster, self)
 	StopLoopSound(self)
-	
+
 	if self.Owner:IsPlayer() and ss.WeaponRecord[self.Owner] then
 		ss.WeaponRecord[self.Owner].Duration[self.ClassName]
 		= (ss.WeaponRecord[self.Owner].Duration[self.ClassName] or 0)
 		- (os.time() + (ss.WeaponRecord[self.Owner].Recent[self.ClassName] or -os.time()))
 	end
-	
+
 	return true
 end
 
@@ -211,11 +211,11 @@ function SWEP:SharedThinkBase()
 	for k, v in pairs(self.Bodygroup or {}) do
 		self:SetBodygroup(k, v)
 	end
-	
+
 	local ShouldNoDraw = Either(self:GetNWBool "becomesquid", self:Crouching(), self:GetInInk())
 	self.Owner:DrawShadow(not ShouldNoDraw)
 	self:DrawShadow(not ShouldNoDraw)
-	
+
 	ss.ProtectedCall(self.SharedThink, self)
 end
 
@@ -239,7 +239,7 @@ function SWEP:CheckCannotStandup()
 		mask = MASK_PLAYERSOLID,
 		collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
 	} .Hit
-	
+
 	return self.CannotStandup
 end
 
@@ -313,7 +313,7 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 				self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
 			end)
 		end
-		
+
 		if CLIENT then return end
 		self:AddSchedule(200 / ss.ToHammerHealth * ss.FrameToSec, function(self, schedule)
 			if not self:GetOnEnemyInk() then return true end -- Enemy ink damage
@@ -333,7 +333,7 @@ function SWEP:ChangeThrowing(name, old, new)
 	local start, stop = not old and new, old and not new
 	if start == stop then return end
 	self.WorldModel = self.ModelPath .. (start and "w_left.mdl" or "w_right.mdl")
-	
+
 	if CLIENT then return end
 	net.Start "SplatoonSWEPs: Change throwing"
 	net.WriteEntity(self)
@@ -370,7 +370,7 @@ function SWEP:SetupDataTables()
 			if self.Owner:Health() ~= health then self.Owner:SetHealth(health) end
 		end
 	end)
-	
+
 	self.ReloadSchedule = self:AddNetworkSchedule(0, function(self, schedule)
 		local reloadamount = math.max(0, schedule:SinceLastCalled()) -- Recharging ink
 		local fastreload = self:GetNWBool "canreloadink" and self:GetInInk()
@@ -380,11 +380,11 @@ function SWEP:SetupDataTables()
 			local ink = math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.MaxInkAmount)
 			if self:GetInk() ~= ink then self:SetInk(ink) end
 		end
-		
+
 		if schedule:GetDelay() == 0 then return end
 		schedule:SetDelay(0)
 	end)
-	
+
 	self:NetworkVarNotify("InInk", self.ChangeInInk)
 	self:NetworkVarNotify("OnEnemyInk", self.ChangeOnEnemyInk)
 	self:NetworkVarNotify("Throwing", self.ChangeThrowing)

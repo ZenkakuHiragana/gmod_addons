@@ -21,13 +21,13 @@ function SWEP:ChangePlayermodel(data)
 			self.Owner:SetBodygroup(k, v)
 		end
 	end
-	
+
 	self.Owner:SetSubMaterial()
 	self.Owner:SetPlayerColor(data.PlayerColor)
 	if self:GetNWInt "playermodel" <= ss.PLAYER.BOY then
 		ss.ProtectedCall(self.Owner.SplatColors, self.Owner)
 	end
-	
+
 	local hands = self.Owner:GetHands()
 	if IsValid(hands) then
 		local info = player_manager.TranslatePlayerHands(player_manager.TranslateToPlayerModelName(data.Model))
@@ -61,7 +61,7 @@ function SWEP:Initialize()
 			if not (IsValid(self) and IsValid(self.Owner) and not self.Owner:IsPlayer()) then
 				return timer.Remove(think)
 			end
-			
+
 			self:Think()
 		end)
 
@@ -74,7 +74,7 @@ function SWEP:Initialize()
 			ss.ProtectedCall(self.Move, self, self.Owner)
 		end)
 	end
-	
+
 	ss.ProtectedCall(self.ServerInit, self)
 end
 
@@ -92,7 +92,7 @@ function SWEP:Deploy()
 
 	self:GetOptions()
 	self.Color = ss.GetColor(self:GetNWInt "inkcolor") or ss.GetColor(ss.GetNPCInkColor(self.Owner))
-	self:SetInkColorProxy(Vector(self.Color.r, self.Color.g, self.Color.b) / 255)
+	self:SetInkColorProxy(self.Color:ToVector())
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
 	if self.Owner:IsPlayer() then
@@ -124,13 +124,13 @@ function SWEP:Deploy()
 		for k, v in pairs(self.BackupPlayerInfo.Playermodel.BodyGroups) do
 			v.num = self.Owner:GetBodygroup(v.id)
 		end
-		
+
 		for i = 0, 31 do
 			local submat = self.Owner:GetSubMaterial(i)
 			if submat == "" then submat = nil end
 			self.BackupPlayerInfo.SubMaterial[i] = submat
 		end
-		
+
 		local PMPath = ss.Playermodel[self:GetNWInt "playermodel"]
 		if PMPath then
 			if file.Exists(PMPath, "GAME") then
@@ -148,10 +148,10 @@ function SWEP:Deploy()
 		else
 			self.Owner:SetPlayerColor(self:GetInkColorProxy())
 		end
-		
+
 		ss.ProtectedCall(self.Owner.SplatColors, self.Owner)
 	end
-	
+
 	return self:SharedDeployBase()
 end
 
@@ -182,7 +182,7 @@ function SWEP:Holster()
 			end
 		end
 	end
-	
+
 	return self:SharedHolsterBase()
 end
 
@@ -193,7 +193,7 @@ function SWEP:Think()
 	self:SharedThinkBase()
 	self:SetAimVector(ss.ProtectedCall(self.Owner.GetAimVector, self.Owner) or self.Owner:GetForward())
 	ss.ProtectedCall(self.ServerThink, self)
-	
+
 	if not self.Owner:IsPlayer() then
 		if self.Owner:IsNPC() then
 			local target = self.Owner:GetTarget()
@@ -215,7 +215,7 @@ function SWEP:Think()
 				PlayerColor = self:GetInkColorProxy(),
 			}
 		end
-		
+
 		if self.PMTable and self.PMTable.Model ~= self.Owner:GetModel() then
 			self:ChangePlayermodel(self.PMTable)
 		end
@@ -225,7 +225,7 @@ function SWEP:Think()
 			self:ChangePlayermodel(mdl)
 		end
 	end
-	
+
 	if self.Owner:GetPlayerColor() ~= self:GetInkColorProxy() then
 		self.Owner:SetPlayerColor(self:GetInkColorProxy())
 	end

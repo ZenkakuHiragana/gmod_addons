@@ -8,6 +8,7 @@ function EFFECT:Init(e)
 	if not IsValid(self.Weapon.Owner) then return end
 	local f = e:GetFlags()
 	local p = self.Weapon.Primary
+	local isblaster = bit.band(f, 2) > 0
 	local isdrop = bit.band(f, 1) > 0
 	local ping = bit.band(f, 128) > 0 and self.Weapon:Ping() or 0
 	local SplashInterval = isdrop and 0 or p.SplashInterval
@@ -46,14 +47,17 @@ function EFFECT:Init(e)
 		Velocity = Vector(self.Apparent.Velocity),
 	}
 
+	self.Color = c
 	self.ColorCode = cc
 	self.ColorTable = {c.r, c.g, c.b, 255}
+	self.ColorVector = c:ToVector()
 	self.Hit = false
+	self.IsBlaster = isblaster
 	self.IsCarriedByLocalPlayer = self.Weapon:IsCarriedByLocalPlayer()
 	self.IsDrop = isdrop
 	self.Render = ss.Simulate.EFFECT_ShooterRender
 	self.Simulate = ss.Simulate.Shooter
-	self.Size = ss.mColRadius * (self.IsDrop and .5 or 1)
+	self.Size = e:GetMagnitude() * (self.IsDrop and .5 or 1)
 	self.Speed = self.Real.Velocity:Length()
 	self.SplashCount = 0
 	self.SplashInit = e:GetAttachment() * SplashInterval / SplashPatterns
@@ -82,13 +86,18 @@ function EFFECT:CreateDrops(tr) -- Creates ink drops
 	local len = (tr.HitPos - self.Real.InitPos):Length2D()
 	local nextlen = self.SplashCount * SplashInterval + self.SplashInit
 	local e = EffectData()
+	local dir = self.Real.Ang:Forward()
+	dir.z = 0 dir:Normalize()
 	while len >= nextlen do -- Create drops
+		local frac = len == 0 and 0 or nextlen / len
+		local dz = Lerp(frac, self.Real.InitPos.z, tr.HitPos.z)
 		e:SetAttachment(0)
 		e:SetAngles(self.Real.Ang)
 		e:SetColor(self.ColorCode)
 		e:SetEntity(self.Weapon)
 		e:SetFlags(1)
-		e:SetOrigin(self.Real.InitPos + self.Real.Ang:Forward() * nextlen)
+		e:SetMagnitude(ss.mColRadius)
+		e:SetOrigin(self.Real.InitPos + dir * nextlen + vector_up * dz)
 		e:SetScale(0)
 		e:SetStart(vector_origin)
 		util.Effect("SplatoonSWEPsShooterInk", e)

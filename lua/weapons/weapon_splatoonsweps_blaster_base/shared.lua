@@ -2,6 +2,12 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_shooter"
+SWEP.IsBlaster = true
+
+function SWEP:SharedInit()
+    self:GetBase().SharedInit(self)
+    self.EffectRadius = self.Primary.ColRadiusMiddle / 2
+end
 
 function SWEP:SharedPrimaryAttack(able)
 	local p = self.Primary

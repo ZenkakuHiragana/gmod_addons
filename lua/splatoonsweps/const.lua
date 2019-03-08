@@ -89,6 +89,7 @@ ss.Materials = {
 }
 
 ss.Particles = {
+	BlasterTrail = "splatoonsweps_blaster_trail",
 	ChargerFlash = "splatoonsweps_charger_flash",
 	ChargerMuzzleFlash = "splatoonsweps_explosion_impact",
 	Explosion = "splatoonsweps_explosion",
@@ -100,7 +101,6 @@ ss.KeyMaskFind = {[IN_ATTACK] = true, [IN_DUCK] = true, [IN_ATTACK2] = true}
 ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
 ss.InkGravityMul = 15
-ss.MAX_COLORS = #ss.InkColors
 ss.COLOR_BITS = 5
 ss.PLAYER_BITS = 3
 ss.SQUID_BITS = 2
@@ -125,6 +125,7 @@ for i, t in ipairs(include "splatoonsweps/constants/inkcolors.lua") do
 	local c = HSVToColor(t[1], t[2], t[3])
 	ss.InkColors[i] = ColorAlpha(c, c.a)
 	ss.CrosshairColors[i] = t[4]
+	ss.MAX_COLORS = #ss.InkColors
 end
 
 do -- Ink distribution map

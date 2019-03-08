@@ -2,6 +2,10 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
+ss.Simulate = {}
+local TrailLagTime = 20 * ss.FrameToSec
+local InflateTime = 4 * ss.FrameToSec
+local Mat = ss.Materials.Effects.Ink
 local Simulate, HitPaint, HitEntity = {}, {}, {}
 local MAX_INK_SIM_AT_ONCE = 60 -- Calculating ink trajectory at once
 local SplashDistance = 50 * ss.ToHammerUnits -- Transition between drop and splash
@@ -15,7 +19,7 @@ local dropdata = {
 	MinRadius = 10,
 	ColRadius = ss.mColRadius,
 	SplashRadius = 0,
-	SplashPatterns = 0,
+	SplashPatterns = 1,
 	SplashNum = 0,
 	SplashInterval = 0,
 	Straight = 0,
@@ -47,26 +51,40 @@ end
 function Simulate.weapon_splatoonsweps_shooter(ink)
 	ss.Simulate.Shooter(ink)
 	if not IsFirstTimePredicted() then return end
-	if ink.SplashCount <= ink.SplashNum then -- Creates ink drops
+	if ink.SplashCount < ink.SplashNum then -- Creates ink drops
 		dropdata.InkRadius = ink.SplashRadius
 		dropdata.MinRadius = ink.SplashRadius
 		dropdata.InitTime = CurTime() - ss.ShooterDecreaseFrame
 		local Length = (ink.endpos - ink.InitPos):Length2D()
 		local NextLength = ink.SplashCount * ink.SplashInterval + ink.SplashInit
-		while Length >= NextLength and ink.SplashCount <= ink.SplashNum do
-			ss.AddInk(ink.filter, ink.InitPos + ink.InitDirection * NextLength, ss.GetDropType(), {
+		local DropDir = Vector(ink.InitDirection.x, ink.InitDirection.y, 0):GetNormalized()
+		while Length >= NextLength and ink.SplashCount < ink.SplashNum do
+			local start = ink.InitPos + DropDir * NextLength
+			start.z = Lerp(Length / NextLength, ink.InitPos.z, ink.endpos.z)
+			ss.AddInk(ink.filter, start, ss.GetDropType(), {
 				Angle = ink.Angle,
 				ClassName = ink.ClassName,
 				Color = ink.Color,
 				SplashInit = ink.WeaponSplashInit,
 			})
-			local start = ink.InitPos + ink.InitDirection * NextLength
+
+			if ink.IsBlaster then
+				if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents(ink.filter) end
+				local e = EffectData()
+				e:SetColor(ink.Color)
+				e:SetRadius(ink.ColRadiusMiddle / 2)
+				e:SetOrigin(start)
+				util.Effect("SplatoonSWEPsBlasterTrail", e)
+				if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents() end
+			end
+
 			if util.TraceLine {
+				collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 				start = start,
 				endpos = start + ink.InitDirection * ink.SplashInterval,
 				filter = ink.filter,
 				mask = ss.SquidSolidMask,
-			}.Hit then
+			} .Hit then
 				break
 			end
 
@@ -180,7 +198,7 @@ local function HitSmoke(ink, t)
 	if t.HitWorld and CurTime() - ink.InitTime <= ink.Straight and CLIENT then
 		local c = ss.GetColor(ink.Color)
 		local p = CreateParticleSystem(game.GetWorld(), ss.Particles.MuzzleMist, PATTACH_WORLDORIGIN, 0, t.HitPos + t.HitNormal * 10)
-		p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, Vector(c.r, c.g, c.b) / 255)
+		p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, c:ToVector())
 		p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * 6)
 		p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ink.InitPos)
 	end
@@ -250,20 +268,37 @@ HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shoote
 function Simulate.weapon_splatoonsweps_blaster_base(ink)
 	Simulate.weapon_splatoonsweps_shooter(ink)
 	if ink.Time < ink.ExplosionTime then return end
+	if ink.Exploded then return end
 	ss.MakeBlasterExplosion(ink)
-	ss.InkQueue[ink] = nil
+	ink.Exploded = true
 end
 
 function HitPaint.weapon_splatoonsweps_blaster_base(ink, t)
+	if not ink.Exploded then
+		if t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
+			ink.InkRadius = ink.InkRadiusGround
+			ink.MinRadius = ink.InkRadiusGround
+		else
+			ink.InkRadius = ink.InkRadiusWall
+			ink.MinRadius = ink.InkRadiusWall
+		end
+
+		ink.HitWall = true
+		ink.InitDirection = t.HitNormal
+		ink.endpos = t.HitPos
+		ink.DamageClose = ink.DamageClose * ink.DamageWallMul
+		ink.DamageMiddle = ink.DamageMiddle * ink.DamageWallMul
+		ink.DamageFar = ink.DamageFar * ink.DamageWallMul
+		ink.ColRadiusFar = ink.ColRadiusFar * ink.ColRadiusWallMul
+		ink.ColRadiusMiddle = ink.ColRadiusMiddle * ink.ColRadiusWallMul
+		ink.ColRadiusClose = ink.ColRadiusClose * ink.ColRadiusWallMul
+		ink.InkRadiusBlastMax = ink.InkRadiusBlastMax * ink.ColRadiusWallMul
+		ink.InkRadiusBlastMin = ink.InkRadiusBlastMin * ink.ColRadiusWallMul
+		ss.MakeBlasterExplosion(ink)
+	end
+
+	ink.IsDrop = true
 	HitPaint.weapon_splatoonsweps_shooter(ink, t)
-	ink.HitWall = true
-	ink.DamageClose = ink.DamageClose * ink.DamageWallMul
-	ink.DamageMiddle = ink.DamageMiddle * ink.DamageWallMul
-	ink.DamageFar = ink.DamageFar * ink.DamageWallMul
-	ink.ColRadiusFar = ink.ColRadiusFar * ink.ColRadiusWallMul
-	ink.ColRadiusMiddle = ink.ColRadiusMiddle * ink.ColRadiusWallMul
-	ink.ColRadiusClose = ink.ColRadiusClose * ink.ColRadiusWallMul
-	ss.MakeBlasterExplosion(ink)
 end
 
 function HitEntity.weapon_splatoonsweps_blaster_base(ink, t, w)
@@ -286,16 +321,16 @@ local function ProcessInkQueue(ply)
 			ink.start = t.HitPos
 			if not (t.Hit or ss.IsInWorld(t.HitPos)) then
 				ss.InkQueue[ink] = nil
-			elseif t.HitWorld then
-				ink.endpos = t.HitPos - t.HitNormal * ink.ColRadius * 2
-				t = util.TraceLine(ink)
-				ss.ProtectedCall(HitPaint[ink.Base], ink, t)
-				ss.InkQueue[ink] = nil
-			elseif IsValid(t.Entity) and ink.Damage > 0 then -- If ink hits an NPC or something
+			elseif IsValid(t.Entity) and t.Entity:Health() > 0 and ink.Damage > 0 then -- If ink hits an NPC or something
 				local w = ss.IsValidInkling(t.Entity)
 				if not (w and ss.IsAlly(w, ink.Color)) then
 					ss.ProtectedCall(HitEntity[ink.Base], ink, t, w)
 				end
+				ss.InkQueue[ink] = nil
+			elseif t.Hit then
+				ink.endpos = t.HitPos - t.HitNormal * ink.ColRadius * 2
+				t = util.TraceLine(ink)
+				ss.ProtectedCall(HitPaint[ink.Base], ink, t)
 				ss.InkQueue[ink] = nil
 			end
 		end
@@ -342,6 +377,9 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		InitTime = info.InitTime or CurTime(),
 		InkType = math.floor(inktype),
 		IsCarriedByLocalPlayer = IsLP,
+		IsBlaster = base == "weapon_splatoonsweps_blaster_base",
+		IsCharger = base == "weapon_splatoonsweps_charger",
+		IsShooter = not isdrop and base == "weapon_splatoonsweps_shooter",
 		IsDrop = isdrop,
 		MinDamage = info.MinDamage,
 		MinDamageTime = info.MinDamageTime,
@@ -359,7 +397,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		start = pos,
 	}
 
-	if base == "weapon_splatoonsweps_charger" then
+	if t.IsCharger then
 		local prog = w:GetChargeProgress()
 		local Speed = w:GetInkVelocity()
 		local SplashRadius = Lerp(prog, info.MinSplashRadius, info.MaxSplashRadius)
@@ -401,7 +439,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 			SplashRadius = info.SplashRadius,
 		})
 
-		if base == "weapon_splatoonsweps_blaster_base" then
+		if t.IsBlaster then
 			table.Merge(t, {
 				ColRadiusClose = info.ColRadiusClose,
 				ColRadiusMiddle = info.ColRadiusMiddle,
@@ -413,7 +451,13 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 				DamageWallMul = info.DamageWallMul,
 				ExplosionTime = info.ExplosionTime,
 				HitWall = false,
+				InkRadiusBlastMax = info.InkRadiusBlastMax,
+				InkRadiusBlastMin = info.InkRadiusBlastMin,
+				InkRadiusGround = info.InkRadiusGround,
+				InkRadiusWall = info.InkRadiusWall,
+				InkType = ss.GetDropType(),
 				IsCritical = true,
+				Ratio = 1,
 			})
 		end
 	end
@@ -430,3 +474,296 @@ hook.Add("Move", "SplatoonSWEPs: Simulate ink", function(ply, mv)
 	ply:LagCompensation(false)
 	if not ok then ErrorNoHalt(msg) end
 end)
+
+local function AdvanceVertex(color, pos, normal, u, v, alpha)
+	mesh.Color(unpack(color))
+	mesh.Normal(normal)
+	mesh.Position(pos)
+	mesh.TexCoord(0, u, v)
+	mesh.AdvanceVertex()
+end
+
+local function DrawMesh(MeshTable, color)
+	mesh.Begin(MATERIAL_TRIANGLES, 12)
+	for _, tri in pairs(MeshTable) do
+		local n = (tri[3] - tri[1]):Cross(tri[2] - tri[1]):GetNormalized()
+		AdvanceVertex(color, tri[1], n, .5, 0)
+		AdvanceVertex(color, tri[2], n, 0, 1)
+		AdvanceVertex(color, tri[3], n, 1, 1)
+	end
+	mesh.End()
+end
+
+function ss.Simulate.EFFECT_ShooterRender(self)
+	if not IsValid(self.Weapon) then return end
+	if not IsValid(self.Weapon.Owner) then return end
+	if not isvector(self.ColorVector) then return end
+	if self.IsBlaster then
+		if self.Real.Time > self.Straight then
+			self.IsBlaster = nil
+			self.Render = ss.Simulate.EFFECT_ShooterRender
+			self.Size = ss.mColRadius * 2
+		end
+
+		render.SetMaterial(Mat)
+		Mat:SetVector("$color", self.ColorVector)
+		render.DrawSphere(self.Apparent.Pos, self.Size, 8, 8, self.Color)
+		if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then
+			Mat:SetVector("$color", ss.vector_one)
+			return
+		end
+
+		render.PushFlashlightMode(true) -- Ink lit by player's flashlight or a projected texture
+		render.DrawSphere(self.Apparent.Pos, self.Size, 8, 8, self.Color)
+		render.PopFlashlightMode()
+		Mat:SetVector("$color", ss.vector_one)
+		return
+	end
+
+	local LifeTime = math.max(CurTime() - self.Real.InitTime, 0)
+	local sizeinflate = self.IsDrop and 1 or math.Clamp(LifeTime / InflateTime, 0, 1)
+	local sizef = self.Size * sizeinflate
+	local sizeb = sizef * .75
+	local AppPos, AppAng = self:GetPos(), self:GetAngles()
+    local TailPos, TailAng = self.Tail.Pos, self.Tail.Ang
+    AppAng = LerpAngle(0.4, AppAng, (AppPos - TailPos):Angle())
+    TailAng = LerpAngle(0.4, TailAng, (AppPos - TailPos):Angle())
+	local fore = AppPos + AppAng:Forward() * sizef
+	local back = TailPos - TailAng:Forward() * sizeb
+	local foreup, foreleft, foreright = Angle(AppAng), Angle(AppAng), Angle(AppAng)
+	local backdown, backleft, backright = Angle(TailAng), Angle(TailAng), Angle(TailAng)
+	local deg = CurTime() * self.Speed / 10
+	foreup:RotateAroundAxis(AppAng:Forward(), deg)
+	foreleft:RotateAroundAxis(AppAng:Forward(), deg + 120)
+	foreright:RotateAroundAxis(AppAng:Forward(), deg - 120)
+	backdown:RotateAroundAxis(TailAng:Forward(), deg)
+	backleft:RotateAroundAxis(TailAng:Forward(), deg - 120)
+	backright:RotateAroundAxis(TailAng:Forward(), deg + 120)
+	foreup = AppPos + foreup:Up() * sizef
+	foreleft = AppPos + foreleft:Up() * sizef
+	foreright = AppPos + foreright:Up() * sizef
+	backdown = TailPos - backdown:Up() * sizeb
+	backleft = TailPos - backleft:Up() * sizeb
+	backright = TailPos - backright:Up() * sizeb
+	local MeshTable = {
+		{fore, foreleft, foreup},
+		{fore, foreup, foreright},
+		{fore, foreright, foreleft},
+		{foreup, backleft, backright},
+		{backleft, foreup, foreleft},
+		{foreleft, backdown, backleft},
+		{backdown, foreleft, foreright},
+		{foreright, backright, backdown},
+		{backright, foreright, foreup},
+		{back, backleft, backdown},
+		{back, backdown, backright},
+		{back, backright, backleft},
+	}
+
+	render.SetMaterial(Mat)
+	Mat:SetVector("$color", self.ColorVector)
+	DrawMesh(MeshTable, self.ColorTable)
+	if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then
+		Mat:SetVector("$color", ss.vector_one)
+		return
+	end
+
+	render.PushFlashlightMode(true) -- Ink lit by player's flashlight or a projected texture
+	DrawMesh(MeshTable, self.ColorTable)
+	render.PopFlashlightMode()
+	Mat:SetVector("$color", ss.vector_one)
+end
+
+-- Called when the effect should think, return false to kill the effect.
+function ss.Simulate.EFFECT_ShooterThink(self)
+	local valid = IsValid(self.Weapon)
+	and IsValid(self.Weapon.Owner)
+	and isnumber(self.ColorCode)
+	and not self.Hit
+	and ss.IsInWorld(self.Real.Pos)
+	if not valid then return end
+	if not (self.IsDrop or self.IsCharger) and CurTime() < self.Tail.InitTime then
+		local pos, ang = self.Weapon:GetMuzzlePosition()
+		self.Tail.Pos:Set(pos)
+		self.Tail.Ang:Set(ang)
+		self.Tail.Velocity:Set(self.Weapon:GetAimVector() * self.Speed)
+	end
+
+	for _, t in ipairs(self.Table) do self.Simulate(t) end
+	local tr = util.TraceHull {
+		collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
+		filter = {self.Weapon, self.Weapon.Owner},
+		mask = ss.SquidSolidMask,
+		maxs = ss.vector_one * ss.mColRadius,
+		mins = -ss.vector_one * ss.mColRadius,
+		start = self.Real.start,
+		endpos = self.Real.endpos,
+    }
+
+	self:HitEffect(tr)
+	self:SetPos(self.Apparent.Pos)
+	self:SetAngles(self.Apparent.Ang)
+	self:DrawModel()
+	self:CreateDrops(tr)
+	self.Apparent.Ang:Set(LerpAngle(math.Clamp((self.Apparent.Time - self.Straight) /
+	(ss.ShooterDecreaseFrame + ss.ShooterTermTime) / 2, 0, 1), self.Apparent.Velocity:Angle(), physenv.GetGravity():Angle()))
+
+	if self.IsCharger then return true end
+	self.Tail.Pos:Set(LerpVector(math.Clamp((self.Tail.Time - self.Straight) / TrailLagTime, 0, 0.825), self.Tail.Pos, self.Apparent.Pos))
+	return true
+end
+
+-- table ink | A table containing these fields:
+--   Vector endpos   | Former position
+--   number InitTime | A creation time related to CurTime()
+--   Vector InitPos  | Initial position
+--   bool   IsDrop   | Is the ink a drop or not
+--   Vector start    | Latter position
+--   number Straight | Duration of going straight
+--   number Time     | The living time
+--   Vector Velocity | Initial velocity
+function ss.Simulate.Shooter(ink)
+	local g = physenv.GetGravity() * ss.InkGravityMul
+	local LifeTime = math.max(0, CurTime() - ink.InitTime)
+	if ink.Time > LifeTime then return end
+
+	local Straight = ink.IsDrop and 0 or ink.Straight
+	local MaxFrame = Straight + ss.ShooterDecreaseFrame
+	local MaxPos = ink.InitPos + ink.Velocity * (MaxFrame - ss.ShooterDecreaseFrame / 2)
+	for Pos, Time in pairs {[ink.endpos] = LifeTime, [ink.start] = ink.Time} do
+        if not ink.IsDrop and Time < Straight then -- Goes Straight
+			Pos:Set(ink.InitPos + ink.Velocity * math.Clamp(Time, 0, Straight))
+		elseif Time > MaxFrame then -- Falls Straight
+			local FallTime = math.max(Time - Straight - ss.ShooterDecreaseFrame, 0)
+			if FallTime > ss.ShooterTermTime then
+				local v = g * ss.ShooterTermTime
+				Pos:Set(MaxPos - v * ss.ShooterTermTime / 2 + v * FallTime)
+			else
+				Pos:Set(MaxPos + g * FallTime * FallTime / 2)
+			end
+		else
+			Pos:Set(ink.InitPos + ink.Velocity * (Straight + Time) / 2)
+        end
+    end
+
+    if ink.Time < MaxFrame and MaxFrame < LifeTime then
+        ink.endpos:Set(MaxPos)
+        ink.Time = MaxFrame
+        return
+    end
+
+    ink.Time = LifeTime
+end
+
+-- table ink | A table containing these fields:
+--   Vector endpos        | Former position
+--   Vector InitDirection | Initial movement direction
+--   number InitTime      | A creation time related to CurTime()
+--   number Range         | Maximum distance that can be reached
+--   number Speed         | Speed of the ink
+--   number Straight      | Duration of going straight
+--   Vector StraightPos   | A position to start falling ink
+--   Vector start         | Latter position
+--   number Time          | The living time
+function ss.Simulate.Charger(ink)
+	local g = physenv.GetGravity() * ss.InkGravityMul
+	local dir = ink.InitDirection
+	local LifeTime = math.max(0, CurTime() - ink.InitTime)
+	if ink.Time > LifeTime then return end
+
+	local Length = math.Clamp(ink.Speed * LifeTime, 0, ink.Range)
+	for Pos, Time in pairs {[ink.endpos] = LifeTime, [ink.start] = ink.Time} do
+		if Time <= ink.Straight then -- Goes Straight
+			Pos:Set(ink.InitPos + dir * math.Clamp(ink.Speed * Time, 0, ink.Range))
+		else -- Falls Straight
+			local FallTime = math.max(Time - ink.Straight, 0)
+			if FallTime > ss.ShooterTermTime then
+				local v = g * ss.ShooterTermTime
+				Pos:Set(ink.StraightPos - v * ss.ShooterTermTime / 2 + v * FallTime)
+			else
+				Pos:Set(ink.StraightPos + g * FallTime * FallTime / 2)
+			end
+		end
+    end
+
+    ink.Time = LifeTime
+end
+
+-- table ink | A table containing these fields:
+--   Angle Angle                    | The orientation
+--   Color Color                    | Ink color (r, g, b)
+--   number ColRadiusClose          | Collision radius of close range
+--   number ColRadiusMiddle         | Collision radius of middle range
+--   number ColRadiusFar            | Collision radius of far range
+--   number DamageClose             | Dealing damage of close range
+--   number DamageMiddle            | Dealing damage of middle range
+--   number DamageFar               | Dealing damage of far range
+--   Vector endpos                  | Former position
+--   Entity filter                  | The owner of the ink
+--   boolean HitWall                | The explosion is on the wall or not
+--   boolean IsCarriedByLocalPlayer | The owner is local player or not
+function ss.MakeBlasterExplosion(ink)
+	local exceptions = {}
+	local d = DamageInfo()
+	local attacker = IsValid(ink.filter) and ink.filter or game.GetWorld()
+	local inflictor = ss.IsValidInkling(ink.filter) or game.GetWorld()
+	local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
+	local victims = {
+		{r = ink.ColRadiusClose, d = ink.DamageClose},
+		{r = ink.ColRadiusMiddle, d = ink.DamageMiddle},
+		{r = ink.ColRadiusFar, d = ink.DamageFar},
+	}
+	for _, v in ipairs(victims) do
+		for _, e in ipairs(ents.FindInSphere(ink.endpos, v.r)) do
+			if not IsValid(e) or ss.IsAlly(e) or e:Health() <= 0 then continue end
+			if not hurtowner and e == ink.filter then continue end
+			if exceptions[e] then continue end
+			exceptions[e] = true
+			d:SetDamage(v.d)
+			d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * v.d)
+			d:SetDamagePosition(ink.endpos)
+			d:SetDamageType(DMG_GENERIC)
+			d:SetMaxDamage(v.d)
+			d:SetReportedPosition(ink.endpos)
+			d:SetAttacker(attacker)
+			d:SetInflictor(inflictor)
+			ss.ProtectedCall(e.TakeDamageInfo, e, d)
+		end
+	end
+
+	if ink.IsCarriedByLocalPlayer and next(exceptions) then ss.PlayHitSound(false, attacker) end
+	if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents(ink.filter) end
+	local e = EffectData()
+	e:SetOrigin(ink.endpos)
+	e:SetColor(ink.Color)
+	e:SetFlags(ink.HitWall and 1 or 0)
+	e:SetRadius(ink.ColRadiusFar)
+	util.Effect("SplatoonSWEPsBlasterExplosion", e, true, not ink.filter:IsPlayer() and SERVER and ss.mp or nil)
+	if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents() end
+
+	local a = ink.InitDirection:Angle()
+	if ink.HitWall then a:RotateAroundAxis(a:Right(), -90) end
+	local a2, a3 = Angle(a), Angle(a)
+	a2:RotateAroundAxis(a:Right(), 45)
+	a2:RotateAroundAxis(a:Up(), 45)
+	a3:RotateAroundAxis(a:Right(), 45)
+	a3:RotateAroundAxis(a:Up(), -45)
+	for _, d in ipairs {
+		a:Forward(), -a:Forward(), a:Right(), -a:Right(), a:Up(),
+		a2:Forward(), a2:Right(), -a2:Right(), a2:Up(),
+		a3:Forward(), a3:Right(), -a3:Right(), a3:Up(),
+	} do
+		local t = util.TraceLine {
+			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
+			start = ink.endpos,
+			endpos = ink.endpos + d * ink.ColRadiusFar,
+			filter = ink.filter,
+			mask = ss.SquidSolidMaskBrushOnly,
+		}
+
+		if not t.Hit or t.StartSolid then continue end
+		local frac = t.HitPos:Distance(t.StartPos) / ink.ColRadiusFar
+		local radius = Lerp(frac, ink.InkRadiusBlastMax, ink.InkRadiusBlastMin)
+		ss.Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ss.GetDropType(), 1, ink.filter, ink.ClassName)
+	end
+end
