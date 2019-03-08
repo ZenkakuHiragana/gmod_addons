@@ -2,7 +2,7 @@
 -- Config menu
 
 local ss = SplatoonSWEPs
-if not (ss and ss.GetOption "Enabled") then return end
+if not (ss and ss.GetOption "enabled") then return end
 local dividerratio = 1 / 4
 local previewratio = .69
 local configicon = "splatoonsweps/icons/config.png"

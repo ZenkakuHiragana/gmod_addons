@@ -19,6 +19,9 @@ return {
 	Playermodel = {1, hidden = true},
 	RTResolution = {1, hidden = true},
 	ToggleADS = false,
+	weapon_splatoonsweps_blaster_base = {
+		HurtOwner = {false, order = 1, serverside = true},
+	},
 	weapon_splatoonsweps_charger = {
 		UseRTScope = false,
 		weapon_splatoonsweps_herocharger = {Level = {0, min = 0, max = 3}, __subcategory = true},

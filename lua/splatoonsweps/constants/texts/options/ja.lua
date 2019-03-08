@@ -16,6 +16,9 @@ return {Options = {
     NewStyleCrosshair = "Splatoon 2風の照準",
     NoRefract = "インクの屈折を描画しない",
     ToggleADS = "アイアンサイト切り替え",
+	weapon_splatoonsweps_blaster_base = {
+		HurtOwner = "自爆を有効化",
+	},
     weapon_splatoonsweps_charger = {
         UseRTScope = "リアルなスコープを使う",
         weapon_splatoonsweps_herocharger = {

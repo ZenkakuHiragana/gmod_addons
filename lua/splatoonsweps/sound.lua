@@ -4,16 +4,20 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
--- SplatoonSWEPs.BombAvailable
+-- SplatoonSWEPs.BlasterExplosion
+-- SplatoonSWEPs.BlasterHitWall
+-- SplatoonSWEPs.EmptyShot
 -- SplatoonSWEPs_Ink.HitWorld
 -- SplatoonSWEPs_Player.InkDiveDeep
 -- SplatoonSWEPs_Player.InkDiveShallow
 -- SplatoonSWEPs_Player.InkFootstep
 -- SplatoonSWEPs_Player.ToHuman
 -- SplatoonSWEPs_Player.ToSquid
--- SplatoonSWEPs_Player.SquidJump
 -- SplatoonSWEPs_Player.Swim
 
+local WeaponSoundLevel = 80
+local WeaponSoundVolume = 1
+local WeaponSoundPitch = {90, 110}
 ss.EnemyInkSound = Sound "splatoonsweps/player/onenemyink.wav"
 ss.SwimSound = Sound "splatoonsweps/player/swimloop.wav"
 ss.TankEmpty = Sound "splatoonsweps/player/tankempty.wav"
@@ -78,6 +82,24 @@ sound.Add {
 	pitch = 100,
 }
 
+sound.Add {
+	channel = CHAN_AUTO,
+	name = "SplatoonSWEPs.BlasterExplosion",
+	level = 85,
+	sound = "splatoonsweps/explosion/blaster.wav",
+	volume = 1,
+	pitch = WeaponSoundPitch,
+}
+
+sound.Add {
+	channel = CHAN_AUTO,
+	name = "SplatoonSWEPs.BlasterHitWall",
+	level = 85,
+	sound = "splatoonsweps/explosion/blasterwall.mp3",
+	volume = 1,
+	pitch = WeaponSoundPitch,
+}
+
 for _, soundData in ipairs {
 	{
 		channel = CHAN_BODY,
@@ -95,14 +117,6 @@ for _, soundData in ipairs {
 		volume = 1,
 		pitch = 80,
 	},
-	{
-		channel = CHAN_BODY,
-		name = "SplatoonSWEPs_Player.SquidJump",
-		level = 75,
-		sound = "splatoonsweps/player/squidjump",
-		volume = 1,
-		pitch = {95, 105},
-	},
 } do
 	local soundtable = {}
 	local i, str = 1, soundData.sound .. "0.wav"
@@ -111,14 +125,11 @@ for _, soundData in ipairs {
 		str = soundData.sound .. tostring(i) .. ".wav"
 		i = i + 1
 	end
-	
+
 	soundData.sound = soundtable
 	sound.Add(soundData)
 end
 
-local WeaponSoundLevel = 80
-local WeaponSoundVolume = 1
-local WeaponSoundPitch = {90, 110}
 sound.Add { -- .52 Gallon / Deco
 	channel = CHAN_WEAPON,
 	name = "SplatoonSWEPs.52",
@@ -270,7 +281,7 @@ sound.Add { -- Splat Charger / Kelp / Bento
 	channel = CHAN_WEAPON,
 	name = "SplatoonSWEPs.SplatCharger",
 	level = WeakShotLevel,
-	sound = "splatoonsweps/weapons/charger/splatcharger0.wav",
+	sound = "splatoonsweps/weapons/charger/splatcharger.wav",
 	volume = WeaponSoundVolume,
 	pitch = 100,
 }
@@ -279,7 +290,7 @@ sound.Add { -- Splat Charger / Kelp / Bento, Fully charged
 	channel = CHAN_WEAPON,
 	name = "SplatoonSWEPs.SplatChargerFull",
 	level = WeaponSoundLevel,
-	sound = "splatoonsweps/weapons/charger/splatcharger1.wav",
+	sound = "splatoonsweps/weapons/charger/splatchargerfull.wav",
 	volume = WeaponSoundVolume,
 	pitch = 100,
 }
@@ -288,7 +299,7 @@ sound.Add { -- E-Liter 3K / Custom
 	channel = CHAN_WEAPON,
 	name = "SplatoonSWEPs.Eliter3K",
 	level = WeakShotLevel,
-	sound = "splatoonsweps/weapons/charger/eliter0.mp3",
+	sound = "splatoonsweps/weapons/charger/eliter.mp3",
 	volume = WeaponSoundVolume,
 	pitch = 100,
 }
@@ -297,7 +308,7 @@ sound.Add { -- E-Liter 3K / Custom, Fully charged
 	channel = CHAN_WEAPON,
 	name = "SplatoonSWEPs.Eliter3KFull",
 	level = WeaponSoundLevel,
-	sound = "splatoonsweps/weapons/charger/eliter1.mp3",
+	sound = "splatoonsweps/weapons/charger/eliterfull.mp3",
 	volume = WeaponSoundVolume,
 	pitch = 100,
 }
@@ -315,7 +326,7 @@ sound.Add { -- Bamboozler Mk.I / Mk.II / MK.III
 	channel = CHAN_WEAPON,
 	name = "SplatoonSWEPs.Bamboozler",
 	level = WeakShotLevel,
-	sound = "splatoonsweps/weapons/charger/bamboozler0.mp3",
+	sound = "splatoonsweps/weapons/charger/bamboozler.mp3",
 	volume = WeaponSoundVolume,
 	pitch = 100,
 }
@@ -324,7 +335,7 @@ sound.Add { -- Bamboozler Mk.I / Mk.II / MK.III, Fully charged
 	channel = CHAN_WEAPON,
 	name = "SplatoonSWEPs.BamboozlerFull",
 	level = WeaponSoundLevel,
-	sound = "splatoonsweps/weapons/charger/bamboozler1.mp3",
+	sound = "splatoonsweps/weapons/charger/bamboozlerfull.mp3",
 	volume = WeaponSoundVolume,
 	pitch = 100,
 }

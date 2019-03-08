@@ -8,6 +8,7 @@ local FirePosition = 10
 local rand = "SplatoonSWEPs: Spread"
 local randsplash = "SplatoonSWEPs: SplashNum"
 function SWEP:GetRange() return self.Primary.Range end
+function SWEP:GetInitVelocity() return self.Primary.InitVelocity end
 function SWEP:GetFirePosition(aim, ang, shootpos)
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
 	if not aim then
@@ -15,12 +16,12 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 		if CLIENT and self.Owner == LocalPlayer() then
 			aimvector = self.Owner:GetAimVector()
 		end
-		
+
 		aim = self:GetRange() * aimvector
 		ang = aimvector:Angle()
 		shootpos = ss.ProtectedCall(self.Owner.GetShootPos, self.Owner) or self.Owner:WorldSpaceCenter()
 	end
-	
+
 	local col = ss.vector_one * self.Primary.ColRadius
 	local dy = FirePosition * (self:GetNWBool "lefthand" and -1 or 1)
 	local dp = -Vector(0, dy, FirePosition) dp:Rotate(ang)
@@ -34,12 +35,12 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 		table.insert(t.filter, e)
 		table.insert(t.filter, w)
 	end
-	
+
 	local tr = util.TraceLine(t)
 	local trhull = util.TraceHull(t)
 	local pos = shootpos + dp
 	local min = {dir = 1, dist = math.huge, pos = pos}
-	
+
 	t.start, t.endpos = pos, tr.HitPos
 	local trtest = util.TraceHull(t)
 	if self:GetNWBool "avoidwalls" and tr.HitPos:DistToSqr(shootpos) > trtest.HitPos:DistToSqr(pos) * 9 then
@@ -57,17 +58,17 @@ function SWEP:GetFirePosition(aim, ang, shootpos)
 					dp:Rotate(ang)
 					pos = shootpos + dp
 				end
-				
+
 				t.start = pos
 				trtest = util.TraceHull(t)
 			end
-			
+
 			if trtest.StartSolid then continue end
 			local dist = math.floor(trtest.HitPos:DistToSqr(tr.HitPos))
 			if dist < min.dist then min.dir, min.dist, min.pos = dir, dist, pos end
 		end
 	end
-	
+
 	return min.pos, (tr.HitPos - min.pos):GetNormalized(), min.dir
 end
 
@@ -136,58 +137,31 @@ function SWEP:GetSpread()
 		SelectIntervalY and 1 or self:GetBias(), CurTime() * 6)
 	local rx = sgnx * fracx * DegRandX
 	local ry = sgny * fracy * DegRandY
-	
+
 	return rx, ry
 end
 
-function SWEP:SharedPrimaryAttack(able, auto)
-	if not IsValid(self.Owner) then return end
+function SWEP:CreateInk()
 	local p = self.Primary
-	local timescale = ss.GetTimeScale(self.Owner)
-	local AlreadyAiming = CurTime() < self:GetAimTimer()
-	self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / timescale)
-	self:SetAimTimer(CurTime() + p.AimDuration)
-	self:SetInk(math.max(0, self:GetInk() - p.TakeAmmo))
-	self:SetCooldown(math.max(self:GetCooldown(),
-	CurTime() + math.min(p.Delay, p.CrouchDelay) / timescale))
-	
-	if not able then
-		if p.TripleShotDelay then self:SetCooldown(CurTime()) end
-		if self:GetPreviousHasInk() then
-			if CLIENT and IsFirstTimePredicted() or ss.sp then
-				self.Owner:EmitSound(ss.TankEmpty)
-			end
-
-			self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
-			self:SetPreviousHasInk(false)
-			self.PreviousHasInk = false
-		elseif CurTime() > self:GetNextPlayEmpty() then
-			self:EmitSound "SplatoonSWEPs.EmptyShot"
-			self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
-		end
-		
-		return
-	end
-	
 	local pos, dir = self:GetFirePosition()
 	local right = self.Owner:GetRight()
 	local ang = dir:Angle()
 	local rx, ry = self:GetSpread()
-	if self:GetAimTimer() < 1 then
+	local AlreadyAiming = CurTime() < self:GetAimTimer()
+	if CurTime() - self:GetJump() < p.SpreadJumpDelay then
 		self:SetBias(p.SpreadBiasJump)
 	else
 		if not AlreadyAiming then self:SetBias(0) end
 		self:SetBias(math.min(self:GetBias() + p.SpreadBiasStep, p.SpreadBias))
 	end
-	
+
 	ang:RotateAroundAxis(right:Cross(dir), rx)
 	ang:RotateAroundAxis(right, ry)
-	self.InitVelocity = ang:Forward() * p.InitVelocity
+	self.InitVelocity = ang:Forward() * self:GetInitVelocity()
 	self.InitAngle = ang.yaw
 	self.SplashInit = self.SplashInitTable[self:GetSplashInitMul()]
 	self.SplashNum = math.floor(p.SplashNum) + (util.SharedRandom(randsplash, 0, 1) < p.SplashNum % 1 and 1 or 0)
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
-	self:SetPreviousHasInk(true)
 	self:ResetSequence "fire"
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
@@ -201,8 +175,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		local rnda = p.Recoil * -1
 		local rndb = p.Recoil * math.Rand(-1, 1)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
-		self.ModifyWeaponSize = SysTime()
-		
+
 		local e = EffectData()
 		e:SetAttachment(self.SplashInit)
 		e:SetAngles(ang)
@@ -215,7 +188,45 @@ function SWEP:SharedPrimaryAttack(able, auto)
 		util.Effect("SplatoonSWEPsShooterInk", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 		ss.AddInk(self.Owner, pos, util.SharedRandom("SplatoonSWEPs: Shooter ink type", 4, 9))
 	end
-	
+end
+
+function SWEP:PlayEmptySound()
+	local p = self.Primary
+	local timescale = ss.GetTimeScale(self.Owner)
+	if p.TripleShotDelay then self:SetCooldown(CurTime()) end
+	if self:GetPreviousHasInk() then
+		if CLIENT and IsFirstTimePredicted() or ss.sp then
+			self.Owner:EmitSound(ss.TankEmpty)
+		end
+
+		self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
+		self:SetPreviousHasInk(false)
+		self.PreviousHasInk = false
+	elseif CurTime() > self:GetNextPlayEmpty() then
+		self:EmitSound "SplatoonSWEPs.EmptyShot"
+		self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
+	end
+end
+
+function SWEP:SharedPrimaryAttack(able, auto)
+	if not IsValid(self.Owner) then return end
+	local p = self.Primary
+	local timescale = ss.GetTimeScale(self.Owner)
+	self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / timescale)
+	self:SetInk(math.max(0, self:GetInk() - p.TakeAmmo))
+	self:SetCooldown(math.max(self:GetCooldown(),
+	CurTime() + math.min(p.Delay, p.CrouchDelay) / timescale))
+
+	if not able then
+		self:SetAimTimer(CurTime() + p.AimDuration)
+		self:PlayEmptySound()
+		return
+	end
+
+	self:CreateInk()
+	self:SetPreviousHasInk(true)
+	self:SetAimTimer(CurTime() + p.AimDuration)
+	if self:IsFirstTimePredicted() then self.ModifyWeaponSize = SysTime() end
 	if not p.TripleShotDelay then return end
 	local d = self.TripleSchedule:GetDone()
 	if d == 1 or d == 2 then return end
@@ -232,7 +243,7 @@ function SWEP:CustomDataTables()
 	self:AddNetworkVar("Float", "Jump")
 	self:AddNetworkVar("Float", "NextPlayEmpty")
 	self:AddNetworkVar("Int", "SplashInitMul")
-	
+
 	if not self.Primary.TripleShotDelay then return end
 	self.TripleSchedule = self:AddNetworkSchedule(0, function(self, schedule)
 		if schedule:GetDone() == 1 or schedule:GetDone() == 2 then
@@ -241,10 +252,10 @@ function SWEP:CustomDataTables()
 			else
 				self:PrimaryAttack(true)
 			end
-			
+
 			return
 		end
-		
+
 		schedule:SetDone(3)
 	end)
 	self.TripleSchedule:SetDone(3)
@@ -254,13 +265,13 @@ function SWEP:CustomActivity()
 	local at = self:GetAimTimer()
 	if CLIENT and self:IsCarriedByLocalPlayer() then at = at - self:Ping() end
 	if CurTime() > at then return end
+
 	local aimpos = select(3, self:GetFirePosition())
 	aimpos = (aimpos == 3 or aimpos == 4) and "rpg" or "crossbow"
-	return (self:GetADS() or self.Scoped
-	and self:GetChargeProgress(CLIENT) > self.Primary.Scope.StartMove)
-	and not (ss.DrLilRobotPlayermodels[self.Owner:GetModel()]
-	or ss.TwilightPlayermodels[self.Owner:GetModel()])
-	and "ar2" or aimpos
+
+	local m = self.Owner:GetModel()
+	local aim = self:GetADS() and not (ss.DrLilRobotPlayermodels[m] or ss.TwilightPlayermodels[m])
+	return aim and "ar2" or aimpos
 end
 
 function SWEP:CustomMoveSpeed()
@@ -277,7 +288,7 @@ function SWEP:Move(ply)
 			self:SetADS(ply:KeyDown(IN_USE))
 		end
 	end
-	
+
 	if not ply:OnGround() then return end
 	if CurTime() - self:GetJump() < self.Primary.SpreadJumpDelay then
 		self:SetJump(self:GetJump() - FrameTime() / 2)

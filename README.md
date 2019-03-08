@@ -1,5 +1,5 @@
 # gmod_addons / SplatoonSWEPs!
-This is the huge rework of my existing addon, [SplatoonSWEPs][1].  
+This is the huge rework of my existing addon, [SplatoonSWEPs][1].
 Commit messages are all Japanese.
 
 The aim of this rework is the following:
@@ -13,25 +13,24 @@ The aim of this rework is the following:
     * Aim down sight
     * And so on...
 
-***  
+***
 ## Done
-* A new ink system  
-* Inkling base system.  
+* A new ink system
+* Inkling base system.
     You can become inkling as well.
-* Basic GUI to change playermodel, ink color, and other settings.  
+* Basic GUI to change playermodel, ink color, and other settings.
     GUI menu is in the weapon tab.
 * All Shooters in Splatoon(WiiU).
 * All Chargers in Splatoon.
 * All Splatlings in Splatoon.
 
 ## Currently working on
-* Optimization  
 * **Make Blasters**
-    * [ ] Make the base
-    * [ ] Weapon models (Remaining: Luna Blaster (+Neo), Rapid Blaster (+Deco, +Elite))
-    * [ ] Set weapon parameters
-* Explosive ink for bombs and Blasters  
-    * [x] Make effects  
+    * [x] Make the base
+    * [x] Weapon models (Remaining: Luna Blaster (+Neo), Rapid Blaster (+Deco, +Elite))
+    * [x] Set weapon parameters
+* Explosive ink for bombs and Blasters
+    * [x] Make effects
     * [ ] Set up properties, damage system, etc
 
 ## Upcoming features
@@ -45,7 +44,7 @@ The aim of this rework is the following:
 * Gears and gear abilities
 
 ## How to install this project
-Though this is still work in progress, you can download and test it.  
+Though this is still work in progress, you can download and test it.
 If you test it in multiplayer game, all players have to do as well.
 * Click **Clone or download** on the top-right, then **Download ZIP**.
 * Extract the zip into garrysmod/addons/.

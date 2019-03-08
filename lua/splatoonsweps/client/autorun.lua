@@ -2,37 +2,37 @@
 -- Clientside SplatoonSWEPs structure
 
 SplatoonSWEPs = SplatoonSWEPs or {
-	AmbientColor = color_white,	-- 
-	AreaBound = 0,				-- 
-	AspectSum = 0,				-- 
-	AspectSumX = 0,				-- 
-	AspectSumY = 0,				-- 
+	AmbientColor = color_white,	--
+	AreaBound = 0,				--
+	AspectSum = 0,				--
+	AspectSumX = 0,				--
+	AspectSumY = 0,				--
 	CrosshairColors = {},		--
-	Displacements = {},			-- 
-	IMesh = {},					-- 
+	Displacements = {},			--
+	IMesh = {},					--
 	InkColors = {},				--
-	InkShotMaterials = {},		-- 
-	InkQueue = {},				-- 
-	Models = {},				-- 
-	PaintQueue = {},			-- 
-	PaintSchedule = {},			-- 
-	PlayerHullChanged = {},		-- 
-	RenderTarget = {},			-- 
-	SequentialSurfaces = {		-- 
-		Angles = {},			-- 
-		Areas = {},				-- 
-		Bounds = {},			-- 
-		DefaultAngles = {},		-- 
-		InkCircles = {},		-- 
-		Maxs = {},				-- 
-		Mins = {},				-- 
-		Moved = {},				-- 
-		Normals = {},			-- 
-		Origins = {},			-- 
-		u = {}, v = {},			-- 
-		Vertices = {},			-- 
+	InkShotMaterials = {},		--
+	InkQueue = {},				--
+	Models = {},				--
+	PaintQueue = {},			--
+	PaintSchedule = {},			--
+	PlayerHullChanged = {},		--
+	RenderTarget = {},			--
+	SequentialSurfaces = {		--
+		Angles = {},			--
+		Areas = {},				--
+		Bounds = {},			--
+		DefaultAngles = {},		--
+		InkCircles = {},		--
+		Maxs = {},				--
+		Mins = {},				--
+		Moved = {},				--
+		Normals = {},			--
+		Origins = {},			--
+		u = {}, v = {},			--
+		Vertices = {},			--
 	},
-	WeaponRecord = {},			-- 
+	WeaponRecord = {},			--
 }
 
 include "splatoonsweps/const.lua"
@@ -43,7 +43,7 @@ include "splatoonsweps/shared.lua"
 include "userinfo.lua"
 
 local ss = SplatoonSWEPs
-if not ss.GetOption "Enabled" then
+if not ss.GetOption "enabled" then
 	for h, t in pairs(hook.GetTable()) do
 		for name, func in pairs(t) do
 			if ss.ProtectedCall(name.find, name, "SplatoonSWEPs") then
@@ -51,7 +51,7 @@ if not ss.GetOption "Enabled" then
 			end
 		end
 	end
-	
+
 	table.Empty(SplatoonSWEPs)
 	SplatoonSWEPs = nil
 	return
@@ -66,10 +66,10 @@ local PLANES, NODES, LEAFS, MODELS = 1, 5, 10, 14 -- Lump index
 local function GenerateBSPTree()
 	local mapfile = string.format("maps/%s.bsp", game.GetMap())
 	assert(file.Exists(mapfile, "GAME"), "SplatoonSWEPs: Attempt to load a non-existent map!")
-	
+
 	local bsp = file.Open(mapfile, "rb", "GAME")
 	local header = {lumps = {}}
-	
+
 	local size = 16
 	for _, i in ipairs {PLANES, NODES, LEAFS, MODELS} do
 		bsp:Seek(i * size + 8) -- Reading header
@@ -78,7 +78,7 @@ local function GenerateBSPTree()
 		header.lumps[i].offset = bsp:ReadLong()
 		header.lumps[i].length = bsp:ReadLong()
 	end
-	
+
 	local planes = header.lumps[PLANES]
 	size = 20
 	bsp:Seek(planes.offset)
@@ -92,7 +92,7 @@ local function GenerateBSPTree()
 		planes.data[i].distance = bsp:ReadFloat()
 		bsp:Skip(4) -- type
 	end
-	
+
 	local leafs = header.lumps[LEAFS]
 	local size = 32
 	bsp:Seek(leafs.offset)
@@ -101,7 +101,7 @@ local function GenerateBSPTree()
 		leafs.data[i] = {}
 		leafs.data[i].Surfaces = {}
 	end
-	
+
 	local children = {}
 	local nodes = header.lumps[NODES]
 	bsp:Seek(nodes.offset)
@@ -116,7 +116,7 @@ local function GenerateBSPTree()
 		children[i][2] = bsp:ReadLong()
 		bsp:Skip(20) -- mins, maxs, firstface, numfaces, area, padding
 	end
-	
+
 	for i = 0, nodes.num do
 		for k = 1, 2 do
 			local child = children[i][k]
@@ -128,7 +128,7 @@ local function GenerateBSPTree()
 			nodes.data[i].ChildNodes[k] = child
 		end
 	end
-	
+
 	local models = header.lumps[MODELS]
 	bsp:Seek(models.offset)
 	size = 4 * 12
@@ -138,13 +138,13 @@ local function GenerateBSPTree()
 		table.insert(ss.Models, nodes.data[bsp:ReadLong()])
 		bsp:Skip(8)
 	end
-	
+
 	bsp:Close()
 end
 
 function ss.PrepareInkSurface(write)
 	GenerateBSPTree()
-	
+
 	local path = string.format("splatoonsweps/%s_decompress.txt", game.GetMap())
 	file.Write(path, util.Decompress(write:sub(5))) -- First 4 bytes are map CRC.  Remove them.
 	local data = file.Open("data/" .. path, "rb", "GAME")
@@ -187,10 +187,10 @@ function ss.PrepareInkSurface(write)
 			surf.Mins[i] = ss.MinVector(surf.Mins[i], v)
 			surf.Maxs[i] = ss.MaxVector(surf.Maxs[i], v)
 		end
-		
+
 		ss.FindLeaf(surf.Vertices[i]).Surfaces[i] = true
 	end
-	
+
 	for _ = 1, numdisps do
 		local i = data:ReadUShort()
 		local positions = {}
@@ -211,21 +211,21 @@ function ss.PrepareInkSurface(write)
 			surf.Mins[i] = ss.MinVector(surf.Mins[i], v.pos)
 			surf.Maxs[i] = ss.MaxVector(surf.Maxs[i], v.pos)
 			table.insert(positions, v.pos)
-			
+
 			local invert = Either(k % 2 == 0, 1, 0) --Generate triangles from displacement mesh.
 			if k % power < power - 1 and math.floor(k / power) < power - 1 then
 				table.insert(disp.Triangles, {k + power + invert, k + 1, k})
 				table.insert(disp.Triangles, {k + 1 - invert, k + power, k + power + 1})
 			end
 		end
-		
+
 		ss.Displacements[i] = disp
 		ss.FindLeaf(positions).Surfaces[i] = true
 	end
-	
+
 	data:Close()
 	file.Delete(path)
-	
+
 	if ({ -- HACKHACK - These are Splatoon maps made by Lpower531. It has special decals that hides our ink.
 		gm_flounder_heights_day = true,
 		gm_flounder_heights_night = true,
@@ -247,21 +247,21 @@ function ss.PrepareInkSurface(write)
 	for k in SortedPairsByValue(surf.Areas, true) do -- Placement of map polygons by Next-Fit algorithm.
 		table.insert(sortedsurfs, k)
 		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2
-		
+
 		bu, bv = surf.Bounds[k].x / convertunit, surf.Bounds[k].y / convertunit
 		nv = math.max(nv, bv)
 		if u + bu > 1 then -- Creating a new shelf
 			if v + nv + rtmargin > 1 then table.insert(movesurfs, {id = bk, v = v}) end
 			u, v, nv = 0, v + nv + rtmargin, bv
 		end
-		
+
 		if u == 0 then bk = #sortedsurfs end -- Storing the first element of current shelf
 		for i, vt in ipairs(surf.Vertices[k]) do -- Get UV coordinates
 			local meshvert = vt + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL
 			local UV = ss.To2D(vt, surf.Origins[k], surf.Angles[k]) / convertunit
 			surf.Vertices[k][i] = {pos = meshvert, u = UV.x + u, v = UV.y + v}
 		end
-		
+
 		if ss.Displacements[k] then
 			NumMeshTriangles = NumMeshTriangles + #ss.Displacements[k].Triangles - 2
 			for i = 0, #ss.Displacements[k].Positions do
@@ -271,30 +271,30 @@ function ss.PrepareInkSurface(write)
 				vt.u, vt.v = UV.x + u, UV.y + v
 			end
 		end
-		
+
 		surf.u[k], surf.v[k] = u, v
 		u = u + bu + rtmargin -- Advance U-coordinate
 	end
-	
+
 	if v + nv > 1 and #movesurfs > 0 then -- RT could not store all polygons
 		local min, halfv = math.huge, movesurfs[#movesurfs].v / 2 + .5
 		for _, m in ipairs(movesurfs) do -- Then move the remainings to the left
 			local v = math.abs(m.v - halfv)
 			if v < min then min, half = v, m end
 		end
-		
+
 		dv = half.v - 1
 		divuv = math.max(half.v, v + nv - dv) -- Shrink RT
 		arearatio = arearatio * divuv
 		convertunit = convertunit * divuv
 	end
-	
+
 	print("SplatoonSWEPs: Total mesh triangles = ", NumMeshTriangles)
-	
+
 	for i = 1, math.ceil(NumMeshTriangles / MAX_TRIANGLES) do
 		table.insert(ss.IMesh, Mesh(ss.RenderTarget.Material))
 	end
-	
+
 	-- Building MeshVertex
 	if #ss.IMesh > 0 then
 		mesh.Begin(ss.IMesh[nummeshes], MATERIAL_TRIANGLES, math.min(NumMeshTriangles, MAX_TRIANGLES))
@@ -305,7 +305,7 @@ function ss.PrepareInkSurface(write)
 			math.min(NumMeshTriangles - MAX_TRIANGLES * nummeshes, MAX_TRIANGLES))
 			nummeshes = nummeshes + 1
 		end
-		
+
 		for sortedID, k in ipairs(sortedsurfs) do
 			if half and sortedID >= half.id then -- If current polygon is moved
 				surf.Angles[k]:RotateAroundAxis(surf.Normals[k], -90)
@@ -314,7 +314,7 @@ function ss.PrepareInkSurface(write)
 				for _, vertex in ipairs(surf.Vertices[k]) do
 					vertex.u, vertex.v = vertex.v - dv, vertex.u
 				end
-				
+
 				if ss.Displacements[k] then
 					for i = 0, #ss.Displacements[k].Positions do
 						local vertex = ss.Displacements[k].Positions[i]
@@ -322,18 +322,18 @@ function ss.PrepareInkSurface(write)
 					end
 				end
 			end
-			
+
 			surf.u[k], surf.v[k] = surf.u[k] / divuv, surf.v[k] / divuv
 			if ss.Displacements[k] then
 				local verts = ss.Displacements[k].Positions
 				for _, v in pairs(verts) do
 					v.u, v.v = v.u / divuv, v.v / divuv
 				end
-				
+
 				for _, v in ipairs(surf.Vertices[k]) do
 					v.u, v.v = v.u / divuv, v.v / divuv
 				end
-				
+
 				for _, t in ipairs(ss.Displacements[k].Triangles) do
 					local tv = {verts[t[1]], verts[t[2]], verts[t[3]]}
 					local n = (tv[1].pos - tv[2].pos):Cross(tv[3].pos - tv[2].pos):GetNormalized()
@@ -344,10 +344,10 @@ function ss.PrepareInkSurface(write)
 						mesh.TexCoord(1, p.u, p.v)
 						mesh.AdvanceVertex()
 					end
-					
+
 					ContinueMesh()
 				end
-				
+
 				ss.Displacements[k] = true
 			else
 				for t, v in ipairs(surf.Vertices[k]) do
@@ -361,7 +361,7 @@ function ss.PrepareInkSurface(write)
 						mesh.TexCoord(1, v.u, v.v)
 						mesh.AdvanceVertex()
 					end
-					
+
 					ContinueMesh()
 				end
 			end
@@ -369,7 +369,7 @@ function ss.PrepareInkSurface(write)
 		end
 		mesh.End()
 	end
-	
+
 	ss.ClearAllInk()
 	ss.InitializeMoveEmulation(LocalPlayer())
 	ss.PixelsToUnits = arearatio
@@ -400,10 +400,10 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 		if res then res:SetInt(rt.RESOLUTION.MINIMUM) end
 		notification.AddLegacy(ss.Text.Error.CrashDetected, NOTIFY_GENERIC, 15)
 	end
-	
+
 	file.Write(crashpath, "")
 	ss.AmbientColor = render.GetAmbientLightColor():ToColor()
-	
+
 	local rtsize = math.min(rt.Size[ss.GetOption "rtresolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
 	rt.BaseTexture = GetRenderTargetEx(
 		rt.Name.BaseTexture,
@@ -456,7 +456,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 			["$refracttint"] = "[1 1 1]",
 		}
 	)
-	
+
 	file.Delete(crashpath)
 	local path, data
 	local pathbsp = string.format("maps/%s.bsp", game.GetMap())
@@ -475,7 +475,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 		ss.Data = ""
 		return
 	end
-	
+
 	data:Close()
 	ss.PrepareInkSurface(file.Read("data/" .. path, true))
 end)
@@ -493,7 +493,7 @@ function ss.PrePlayerDraw(w, ply)
 	if w:IsCarriedByLocalPlayer() then
 		render.SetBlend(w:GetCameraFade())
 	end
-	
+
 	return ss.ProtectedCall(w.ManipulatePlayer, w, ply)
 end
 

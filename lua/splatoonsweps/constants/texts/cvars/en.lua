@@ -36,6 +36,9 @@ Make sure your graphics card has enough space of video memory.
 7: 32768x32768, 8GB.
 8: 2x32768x32768, 16GB.]],
     ToggleADS = "Aim down sight mode. (1: toggle, 0: hold)",
+	weapon_splatoonsweps_blaster_base = {
+		HurtOwner = "If enabled, inkling will be injured by his/her blaster's explosion. (1: enabled, 0: disabled)",
+	},
     weapon_splatoonsweps_charger = {
         UseRTScope = "For scoped chargers, use realistic scope instead of standard scope effect. (1: enabled, 0: disabled)",
         weapon_splatoonsweps_herocharger = {

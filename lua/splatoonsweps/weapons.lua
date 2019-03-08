@@ -6,6 +6,7 @@ if not ss then return end
 
 function ss.SetPrimary(weapon, info)
 	local p = istable(weapon.Primary) and weapon.Primary or {}
+	p.Info = info
 	p.ClipSize = ss.MaxInkAmount --Clip size only for displaying.
 	p.DefaultClip = ss.MaxInkAmount
 	p.Automatic = info.IsAutomatic or false
@@ -60,7 +61,7 @@ function ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
 	p.ColRadius = info.ColRadius or ss.mColRadius
 	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
 	p.Range = p.InitVelocity * (p.Straight + ss.ShooterDecreaseFrame / 2)
-	
+
 	if not info.Delay.TripleShot then return end
 	p.TripleShotDelay = info.Delay.TripleShot * ss.FrameToSec
 end
@@ -132,6 +133,19 @@ end
 
 function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(p, info)
 	ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
+	p.DamageClose = info.DamageClose * ss.ToHammerHealth
+	p.DamageMiddle = info.DamageMiddle * ss.ToHammerHealth
+	p.DamageFar = info.DamageFar * ss.ToHammerHealth
+	p.DamageWallMul = info.DamageWallMul
+	p.ColRadiusClose = info.ColRadiusClose * ss.ToHammerUnits
+	p.ColRadiusMiddle = info.ColRadiusMiddle * ss.ToHammerUnits
+	p.ColRadiusFar = info.ColRadiusFar * ss.ToHammerUnits
+	p.ColRadiusWallMul = info.ColRadiusWallMul
+	p.InkRadiusWall = info.InkRadiusWall * ss.ToHammerUnits
+	p.ExplosionTime = info.Delay.Explosion * ss.FrameToSec
+	p.PreFireDelay = info.Delay.PreFire * ss.FrameToSec
+	p.PreFireDelaySquid = info.Delay.PreFireSquid * ss.FrameToSec
+	p.PostFireDelay = info.Delay.PostFire * ss.FrameToSec
 end
 
 function ss.SetViewModelMods(weapon, mods)
@@ -206,7 +220,7 @@ sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
 			ang = -Angle(150)
 		end
 	end
-	
+
 	e:SetAngles(ang) -- Angle difference
 	e:SetAttachment(a) -- Effect duration
 	e:SetColor(self:GetNWInt "inkcolor") -- Splash color
@@ -224,7 +238,7 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 	and self.Owner:ShouldDrawLocalPlayer() and 128 or 0
 	e:SetColor(self:GetNWInt "inkcolor")
 	e:SetEntity(self)
-	
+
 	if options[2] == "CHARGER" then
 		r2 = Lerp(self:GetFireAt(), 20, 70)
 		r1 = r2 * 2
@@ -232,7 +246,7 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 		t1 = t2 * .75
 		if self:GetFireAt() < .3 then numpieces = numpieces - 1 end
 	end
-	
+
 	for i = 0, 4 do
 		e:SetAttachment(t1)
 		e:SetFlags(tpslag + 1) -- 1: Refract effect

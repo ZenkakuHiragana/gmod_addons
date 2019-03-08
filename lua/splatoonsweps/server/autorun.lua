@@ -29,7 +29,7 @@ include "network.lua"
 include "bsp.lua"
 
 local ss = SplatoonSWEPs
-if not ss.GetOption "Enabled" then
+if not ss.GetOption "enabled" then
 	for h, t in pairs(hook.GetTable()) do
 		for name, func in pairs(t) do
 			if ss.ProtectedCall(name.find, name, "SplatoonSWEPs") then

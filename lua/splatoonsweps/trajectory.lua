@@ -26,6 +26,21 @@ function ss.GetDropType() -- math.floor(1 <= x < 4) -> 1, 2, 3
 	return util.SharedRandom("SplatoonSWEPs: Drop ink type", 1, 4, CurTime())
 end
 
+function ss.PlayHitSound(iscritical, owner)
+	if ss.sp or CLIENT and IsFirstTimePredicted() then
+		local ent = ss.IsValidInkling(e) -- Entity hit effect here
+		if not (ent and ss.IsAlly(ent, ink.Color)) then
+			if ss.mp then
+				surface.PlaySound(iscritical and ss.DealDamageCritical or ss.DealDamage)
+			elseif owner:IsPlayer() and SERVER then
+				local s = "SplatoonSWEPs.DealDamage"
+				if iscritical then s = "SplatoonSWEPs.DealDamageCritical" end
+				owner:SendLua(string.format("surface.PlaySound(%s)", s))
+			end
+		end
+	end
+end
+
 -- Physics simulation for ink trajectory.
 -- The first some frames(1/60 sec.) ink flies without gravity.
 -- After that, ink decelerates horizontally and is affected by gravity.
@@ -79,8 +94,7 @@ function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 		ratio = ink.Ratio or ratio
 	end
 
-	if (ss.sp or CLIENT and IsFirstTimePredicted())
-	and t.Hit and (not ink.IsDrop or ink.PlayHitSound) then
+	if (ss.sp or CLIENT and IsFirstTimePredicted()) and t.Hit and (not ink.IsDrop or ink.PlayHitSound) then
 		sound.Play("SplatoonSWEPs_Ink.HitWorld", t.HitPos)
 	end
 
@@ -92,19 +106,9 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
 	local d, e, o = DamageInfo(), t.Entity, ink.filter
 	local frac = (math.max(0, CurTime() - ink.InitTime)
 	- ink.DecreaseDamage) / ink.MinDamageTime
-	if (ss.sp or CLIENT and IsFirstTimePredicted())
-	and not ink.IsDrop and ink.IsCarriedByLocalPlayer and e:Health() > 0 then
-		local ent = ss.IsValidInkling(e) -- Entity hit effect here
-		if not (ent and ss.IsAlly(ent, ink.Color)) then
-			if ss.mp then
-				surface.PlaySound(ink.IsCritical and ss.DealDamageCritical or ss.DealDamage)
-			elseif o:IsPlayer() and SERVER then
-				o:SendLua("surface.PlaySound(SplatoonSWEPs.DealDamage"
-				.. (ink.IsCritical and "Critical" or "") .. ")")
-			end
-		end
-
-		if ss.mp then return end
+	if ink.IsCarriedByLocalPlayer then
+		ss.PlayHitSound(ink.IsCritical, o)
+		if ss.mp and CLIENT then return end
 	end
 
 	d:SetDamage(Lerp(1 - frac, ink.MinDamage, ink.Damage))
@@ -221,21 +225,12 @@ end
 function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 	local LifeTime = math.max(0, CurTime() - FrameTime() - ink.InitTime)
 	local d, e, o = DamageInfo(), t.Entity, ink.filter
+
 	HitSmoke(ink, t)
 	if LifeTime > ink.Straight then return end
-	if (ss.sp or CLIENT and IsFirstTimePredicted())
-	and ink.IsCarriedByLocalPlayer and e:Health() > 0 then
-		local ent = ss.IsValidInkling(e) -- Entity hit effect here
-		if not (ent and ss.IsAlly(ent, ink.Color)) then
-			if ss.mp then
-				surface.PlaySound(ink.Damage >= 100 and ss.DealDamageCritical or ss.DealDamage)
-			elseif o:IsPlayer() and SERVER then
-				o:SendLua("surface.PlaySound(SplatoonSWEPs.DealDamage"
-				.. (ink.Damage >= 100 and "Critical" or "") .. ")")
-			end
-		end
-
-		if ss.mp then return end
+	if ink.IsCarriedByLocalPlayer then
+		ss.PlayHitSound(ink.Damage >= 100, o)
+		if ss.mp and CLIENT then return end
 	end
 
 	d:SetDamage(ink.Damage)
@@ -254,16 +249,26 @@ HitPaint.weapon_splatoonsweps_splatling = HitPaint.weapon_splatoonsweps_shooter
 HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shooter
 function Simulate.weapon_splatoonsweps_blaster_base(ink)
 	Simulate.weapon_splatoonsweps_shooter(ink)
-	if SERVER or ink.Time < ink.Straight + ss.ShooterDecreaseFrame then return end
-	if ink.Exploded then return end
-	local c = ss.GetColor(ink.Color) c = Vector(c.r, c.g, c.b) / 255
-	local p = CreateParticleSystem(game.GetWorld(), ss.Particles.Explosion, PATTACH_WORLDORIGIN, 0, ink.endpos)
-	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, c)
-	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * 200)
-	ink.Exploded = true
+	if ink.Time < ink.ExplosionTime then return end
+	ss.MakeBlasterExplosion(ink)
+	ss.InkQueue[ink] = nil
 end
-HitPaint.weapon_splatoonsweps_blaster_base = HitPaint.weapon_splatoonsweps_shooter
-HitEntity.weapon_splatoonsweps_blaster_base = HitEntity.weapon_splatoonsweps_shooter
+
+function HitPaint.weapon_splatoonsweps_blaster_base(ink, t)
+	HitPaint.weapon_splatoonsweps_shooter(ink, t)
+	ink.HitWall = true
+	ink.DamageClose = ink.DamageClose * ink.DamageWallMul
+	ink.DamageMiddle = ink.DamageMiddle * ink.DamageWallMul
+	ink.DamageFar = ink.DamageFar * ink.DamageWallMul
+	ink.ColRadiusFar = ink.ColRadiusFar * ink.ColRadiusWallMul
+	ink.ColRadiusMiddle = ink.ColRadiusMiddle * ink.ColRadiusWallMul
+	ink.ColRadiusClose = ink.ColRadiusClose * ink.ColRadiusWallMul
+	ss.MakeBlasterExplosion(ink)
+end
+
+function HitEntity.weapon_splatoonsweps_blaster_base(ink, t, w)
+	HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
+end
 
 local function ProcessInkQueue(ply)
 	while true do
@@ -395,6 +400,22 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 			SplashNum = isdrop and 0 or w.SplashNum,
 			SplashRadius = info.SplashRadius,
 		})
+
+		if base == "weapon_splatoonsweps_blaster_base" then
+			table.Merge(t, {
+				ColRadiusClose = info.ColRadiusClose,
+				ColRadiusMiddle = info.ColRadiusMiddle,
+				ColRadiusFar = info.ColRadiusFar,
+				ColRadiusWallMul = info.ColRadiusWallMul,
+				DamageClose = info.DamageClose,
+				DamageMiddle = info.DamageMiddle,
+				DamageFar = info.DamageFar,
+				DamageWallMul = info.DamageWallMul,
+				ExplosionTime = info.ExplosionTime,
+				HitWall = false,
+				IsCritical = true,
+			})
+		end
 	end
 
 	ss.InkQueue[t] = true

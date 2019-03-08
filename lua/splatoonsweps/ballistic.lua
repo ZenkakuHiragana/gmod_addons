@@ -198,3 +198,59 @@ function ss.Simulate.Charger(ink)
 
     ink.Time = LifeTime
 end
+
+-- table ink | A table containing these fields:
+--   Color Color                    | Ink color (r, g, b)
+--   number ColRadiusClose          | Collision radius of close range
+--   number ColRadiusMiddle         | Collision radius of middle range
+--   number ColRadiusFar            | Collision radius of far range
+--   number DamageClose             | Dealing damage of close range
+--   number DamageMiddle            | Dealing damage of middle range
+--   number DamageFar               | Dealing damage of far range
+--   Vector endpos                  | Former position
+--   Entity filter                  | The owner of the ink
+--   boolean HitWall                | The explosion is on the wall or not
+--   boolean IsCarriedByLocalPlayer | The owner is local player or not
+function ss.MakeBlasterExplosion(ink)
+	local exceptions = {}
+	local d = DamageInfo()
+	local attacker = IsValid(ink.filter) and ink.filter or game.GetWorld()
+	local inflictor = ss.IsValidInkling(ink.filter) or game.GetWorld()
+	local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
+	local victims = {
+		{r = ink.ColRadiusClose, d = ink.DamageClose},
+		{r = ink.ColRadiusMiddle, d = ink.DamageMiddle},
+		{r = ink.ColRadiusFar, d = ink.DamageFar},
+	}
+	for _, v in ipairs(victims) do
+		for _, e in ipairs(ents.FindInSphere(ink.endpos, v.r)) do
+			if not IsValid(e) or ss.IsAlly(e) or e:Health() <= 0 then continue end
+			if not hurtowner and e == ink.filter then continue end
+			if exceptions[e] then continue end
+			print(e, v.d)
+			exceptions[e] = true
+			d:SetDamage(v.d)
+			d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * v.d)
+			d:SetDamagePosition(ink.endpos)
+			d:SetDamageType(DMG_GENERIC)
+			d:SetMaxDamage(v.d)
+			d:SetReportedPosition(ink.endpos)
+			d:SetAttacker(attacker)
+			d:SetInflictor(inflictor)
+			ss.ProtectedCall(e.TakeDamageInfo, e, d)
+		end
+	end
+
+	if ink.IsCarriedByLocalPlayer and next(exceptions) then
+		ss.PlayHitSound(false, attacker)
+	end
+
+	if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents(ink.filter) end
+	local e = EffectData()
+	e:SetOrigin(ink.endpos)
+	e:SetColor(ink.Color)
+	e:SetFlags(ink.HitWall and 1 or 0)
+	e:SetRadius(ink.ColRadiusFar)
+	util.Effect("SplatoonSWEPsBlasterExplosion", e, true, not ink.filter:IsPlayer() and SERVER and ss.mp or nil)
+	if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents() end
+end

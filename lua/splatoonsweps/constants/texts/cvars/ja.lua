@@ -36,6 +36,9 @@ return {CVars = {
 7: 32768x32768、8GB。
 8: 2x32768x32768、16GB。]],
     ToggleADS = "アイアンサイト切り替え(1)/ホールド(0)",
+	weapon_splatoonsweps_blaster_base = {
+		HurtOwner = "ブラスターの爆風で自爆するかどうか。 (1: 有効, 0: 無効)",
+	},
     weapon_splatoonsweps_charger = {
         UseRTScope = "スコープ付きチャージャーで、リアルなスコープを使う。 (1: 有効, 0: 無効)",
         weapon_splatoonsweps_herocharger = {

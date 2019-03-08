@@ -16,6 +16,9 @@ return {Options = {
     NewStyleCrosshair = "Use new style crosshair",
     NoRefract = "Suppress ink refraction",
     ToggleADS = "Toggle ADS instead of holding",
+	weapon_splatoonsweps_blaster_base = {
+		HurtOwner = "Explosion hurts its owner",
+	},
     weapon_splatoonsweps_charger = {
         UseRTScope = "Use realistic scope",
         weapon_splatoonsweps_herocharger = {

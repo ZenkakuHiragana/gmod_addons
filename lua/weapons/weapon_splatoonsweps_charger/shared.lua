@@ -81,7 +81,7 @@ SWEP.SharedHolster = SWEP.ResetCharge
 function SWEP:AddPlaylist(p) table.insert(p, self.AimSound) end
 function SWEP:PlayChargeSound()
 	if ss.mp and (SERVER or not IsFirstTimePredicted()) then return end
-	local prog = self:GetChargeProgress(CLIENT)
+	local prog = self:GetChargeProgress()
 	if not (ss.sp and SERVER and not self.Owner:IsPlayer()) and 0 < prog and prog < 1 then
 		self.AimSound:PlayEx(1, math.max(self.AimSound:GetPitch(), prog * 99 + 1))
 	else
@@ -90,7 +90,7 @@ function SWEP:PlayChargeSound()
 		if prog == 1 and not self.FullChargeFlag then
 			ss.EmitSound(self.Owner, ss.ChargerBeep)
 			self.FullChargeFlag = true
-			if CLIENT then self.CrosshairFlashTime = CurTime() end
+			if CLIENT then self.CrosshairFlashTime = CurTime() - self:Ping() end
 			if self.Scoped and not (CLIENT and self:IsTPS() and self:GetNWBool "usertscope") then return end
 			local e = EffectData()
 			e:SetEntity(self)
@@ -248,6 +248,12 @@ function SWEP:CustomDataTables()
 	self:AddNetworkVar("Float", "Charge")
 	self:AddNetworkVar("Float", "FireAt")
 	self:AddNetworkVar("Int", "SplashInitMul")
+	if not self.Scoped then return end
+
+	local getads = self.GetADS
+	function self:GetADS()
+		return getads(self) or self:GetChargeProgress(CLIENT) > self.Primary.Scope.StartMove
+	end
 end
 
 function SWEP:CustomMoveSpeed()

@@ -51,7 +51,7 @@ function AddCVar(name, default, helptext, options)
 	options = options or {}
 	name = table.remove(nametable)
 	local n, placeholder = CreateCategory(nametable)
-	
+
 	if #n == 0 then return end
 	local cvartable = placeholder[name] or {}
 	if not (options and options.clientside) then
@@ -231,7 +231,7 @@ local function MakeElement(p, admin, pt)
 	if admin then
 		local onchange = GetDermaPanelOnChange(pt)
 		cvars.AddChangeCallback(pt[panel].CVarName, GetOnChange(pt))
-		
+
 		if not pt.options.serverside then
 			local checked = cvar:GetInt() ~= -1
 			EnablePanel(pt, checked)
@@ -305,6 +305,8 @@ local function MakeGUI(p, nametable, admin)
 		table.insert(nt, name)
 		MakeGUI(pt.panel, nt, admin)
 	end
+
+	if #p.Items == 0 then p:Remove() end
 end
 
 function AddGUI(name)

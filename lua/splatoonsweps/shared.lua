@@ -404,7 +404,7 @@ end
 function ss.IsAlly(c1, c2)
 	c1 = isentity(c1) and IsValid(c1) and c1:GetNWInt "inkcolor" or c1
 	c2 = isentity(c2) and IsValid(c2) and c2:GetNWInt "inkcolor" or c2
-	return not ss.GetOption "FF" and c1 == c2
+	return not ss.GetOption "ff" and c1 == c2
 end
 
 -- Get player timescale
@@ -537,7 +537,7 @@ local function SetupIcons(SWEP)
 end
 
 local function RegisterWeapons()
-	if not ss.GetOption "Enabled" then return end
+	if not ss.GetOption "enabled" then return end
 
 	local oldSWEP = SWEP
 	local WeaponList = list.GetForEdit "Weapon"
@@ -627,7 +627,7 @@ cvars.AddChangeCallback("gmod_language", function(convar, old, new)
 	CompileFile "splatoonsweps/text.lua" ()
 end, "SplatoonSWEPs: OnLanguageChanged")
 
-if ss.GetOption "Enabled" then
+if ss.GetOption "enabled" then
 	cleanup.Register(ss.CleanupTypeInk)
 end
 
