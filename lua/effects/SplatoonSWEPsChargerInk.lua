@@ -14,8 +14,10 @@ function EFFECT:Init(e)
 	local cc = e:GetColor()
 	local c = ss.GetColor(cc)
 	self.Charge = e:GetMagnitude()
+	self.Color = c
 	self.ColorCode = cc
 	self.ColorTable = {c.r, c.g, c.b, 255}
+	self.ColorVector = c:ToVector()
 	self.Damage = self.Weapon:GetLerp(self.Charge, p.MinDamage, p.MaxDamage, p.Damage)
 	self.Hit = false
 	self.IsCharger = true

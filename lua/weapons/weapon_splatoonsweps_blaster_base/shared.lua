@@ -6,7 +6,7 @@ SWEP.IsBlaster = true
 
 function SWEP:SharedInit()
     self:GetBase().SharedInit(self)
-    self.EffectRadius = self.Primary.ColRadiusMiddle / 2
+    self.EffectRadius = (self.Primary.ColRadiusMiddle + self.Primary.ColRadiusClose) / 4
 end
 
 function SWEP:SharedPrimaryAttack(able)

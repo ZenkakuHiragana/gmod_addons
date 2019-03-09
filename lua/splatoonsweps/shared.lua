@@ -19,7 +19,6 @@ function ss.hook(func)
 end
 
 include "text.lua"
-include "ballistic.lua"
 include "convars.lua"
 include "inkmanager.lua"
 include "movement.lua"
@@ -188,9 +187,7 @@ end
 -- Returning:
 --   bool			| The given vector is in world or not.
 function ss.IsInWorld(pos)
-	return math.abs(pos.x) < 16384
-		and math.abs(pos.y) < 16384
-		and math.abs(pos.z) < 16384
+	return math.abs(pos.x) < 16384 and math.abs(pos.y) < 16384 and math.abs(pos.z) < 16384
 end
 
 -- Short for Entity:NetworkVar().

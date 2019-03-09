@@ -72,7 +72,7 @@ function Simulate.weapon_splatoonsweps_shooter(ink)
 				if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents(ink.filter) end
 				local e = EffectData()
 				e:SetColor(ink.Color)
-				e:SetRadius(ink.ColRadiusMiddle / 2)
+				e:SetRadius((ink.ColRadiusMiddle + ink.ColRadiusClose) / 4)
 				e:SetOrigin(start)
 				util.Effect("SplatoonSWEPsBlasterTrail", e)
 				if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents() end
@@ -268,7 +268,7 @@ HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shoote
 function Simulate.weapon_splatoonsweps_blaster_base(ink)
 	Simulate.weapon_splatoonsweps_shooter(ink)
 	if ink.Time < ink.ExplosionTime then return end
-	if ink.Exploded then return end
+	if ink.Hit or ink.Exploded then return end
 	ss.MakeBlasterExplosion(ink)
 	ink.Exploded = true
 end
@@ -500,9 +500,7 @@ function ss.Simulate.EFFECT_ShooterRender(self)
 	if not isvector(self.ColorVector) then return end
 	if self.IsBlaster then
 		if self.Real.Time > self.Straight then
-			self.IsBlaster = nil
-			self.Render = ss.Simulate.EFFECT_ShooterRender
-			self.Size = ss.mColRadius * 2
+			self.Size, self.IsBlaster = ss.mColRadius * 2
 		end
 
 		render.SetMaterial(Mat)
@@ -702,28 +700,44 @@ end
 --   Entity filter                  | The owner of the ink
 --   boolean HitWall                | The explosion is on the wall or not
 --   boolean IsCarriedByLocalPlayer | The owner is local player or not
+local components = {"x", "y", "z"}
+local directions = {"GetForward", "GetRight", "GetUp"}
 function ss.MakeBlasterExplosion(ink)
-	local exceptions = {}
-	local d = DamageInfo()
-	local attacker = IsValid(ink.filter) and ink.filter or game.GetWorld()
-	local inflictor = ss.IsValidInkling(ink.filter) or game.GetWorld()
-	local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
-	local victims = {
-		{r = ink.ColRadiusClose, d = ink.DamageClose},
-		{r = ink.ColRadiusMiddle, d = ink.DamageMiddle},
-		{r = ink.ColRadiusFar, d = ink.DamageFar},
-	}
-	for _, v in ipairs(victims) do
-		for _, e in ipairs(ents.FindInSphere(ink.endpos, v.r)) do
+	if SERVER then
+		local d = DamageInfo()
+		local attacker = IsValid(ink.filter) and ink.filter or game.GetWorld()
+		local inflictor = ss.IsValidInkling(ink.filter) or game.GetWorld()
+		local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
+		local damagedealed = false
+		for _, e in ipairs(ents.FindInSphere(ink.endpos, ink.ColRadiusFar)) do
 			if not IsValid(e) or ss.IsAlly(e) or e:Health() <= 0 then continue end
 			if not hurtowner and e == ink.filter then continue end
-			if exceptions[e] then continue end
-			exceptions[e] = true
-			d:SetDamage(v.d)
-			d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * v.d)
+			local dmg = ink.DamageClose
+			local dist = Vector()
+			local maxs, mins = e:OBBMaxs(), e:OBBMins()
+			local size = maxs - mins
+			for i, dir in pairs {x = e:GetForward(), y = e:GetRight(), z = e:GetUp()} do
+				local length = size[i]
+				if length <= 0 then continue end
+				local segment = math.abs(dir:Dot(ink.endpos - e:GetPos()))
+				if segment <= 1 then continue end
+				dist = dist + (length - segment) * dir
+			end
+
+			damagedealed = true
+			dist = dist:Length()
+			if dist > ink.ColRadiusMiddle then
+				dmg = math.Remap(dist, ink.ColRadiusMiddle, ink.ColRadiusFar, ink.DamageMiddle, ink.DamageFar)
+			elseif dist > ink.ColRadiusClose then
+				dmg = math.Remap(dist, ink.ColRadiusClose, ink.ColRadiusMiddle, ink.DamageClose, ink.DamageMiddle)
+			end
+
+			print(e, dist, dmg)
+			d:SetDamage(dmg)
+			d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * dmg)
 			d:SetDamagePosition(ink.endpos)
 			d:SetDamageType(DMG_GENERIC)
-			d:SetMaxDamage(v.d)
+			d:SetMaxDamage(dmg)
 			d:SetReportedPosition(ink.endpos)
 			d:SetAttacker(attacker)
 			d:SetInflictor(inflictor)
@@ -731,7 +745,7 @@ function ss.MakeBlasterExplosion(ink)
 		end
 	end
 
-	if ink.IsCarriedByLocalPlayer and next(exceptions) then ss.PlayHitSound(false, attacker) end
+	if ink.IsCarriedByLocalPlayer and damagedealed then ss.PlayHitSound(false, attacker) end
 	if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents(ink.filter) end
 	local e = EffectData()
 	e:SetOrigin(ink.endpos)
