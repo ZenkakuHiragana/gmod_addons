@@ -221,9 +221,5 @@ pip-log.txt
 *.ico
 *.zip
 *.lnk
-lua/memo.txt
-lua/entities/ent_test.lua
-lua/weapons/weapon_sandbox.lua
+lua/debug.lua
 lua/do.lua
-lua/autorun/debug.lua
-lua/autorun/debug.lua
