@@ -267,10 +267,10 @@ HitPaint.weapon_splatoonsweps_splatling = HitPaint.weapon_splatoonsweps_shooter
 HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shooter
 function Simulate.weapon_splatoonsweps_blaster_base(ink)
 	Simulate.weapon_splatoonsweps_shooter(ink)
-	if ink.Time < ink.ExplosionTime then return end
+	if ink.Time <= ink.ExplosionTime then return end
 	if ink.Hit or ink.Exploded then return end
+	ink.Exploded, ink.IsDrop = true, true
 	ss.MakeBlasterExplosion(ink)
-	ink.Exploded = true
 end
 
 function HitPaint.weapon_splatoonsweps_blaster_base(ink, t)
@@ -297,11 +297,11 @@ function HitPaint.weapon_splatoonsweps_blaster_base(ink, t)
 		ss.MakeBlasterExplosion(ink)
 	end
 
-	ink.IsDrop = true
 	HitPaint.weapon_splatoonsweps_shooter(ink, t)
 end
 
 function HitEntity.weapon_splatoonsweps_blaster_base(ink, t, w)
+	-- if ink.Exploded then return end
 	HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
 end
 
@@ -640,7 +640,7 @@ function ss.Simulate.Shooter(ink)
 				Pos:Set(MaxPos + g * FallTime * FallTime / 2)
 			end
 		else
-			Pos:Set(ink.InitPos + ink.Velocity * (Straight + Time) / 2)
+			Pos:Set(ink.InitPos + ink.Velocity * math.Clamp((Straight + Time) / 2, Straight, MaxFrame))
         end
     end
 
@@ -703,46 +703,45 @@ end
 local components = {"x", "y", "z"}
 local directions = {"GetForward", "GetRight", "GetUp"}
 function ss.MakeBlasterExplosion(ink)
-	if SERVER then
-		local d = DamageInfo()
-		local attacker = IsValid(ink.filter) and ink.filter or game.GetWorld()
-		local inflictor = ss.IsValidInkling(ink.filter) or game.GetWorld()
-		local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
-		local damagedealed = false
-		for _, e in ipairs(ents.FindInSphere(ink.endpos, ink.ColRadiusFar)) do
-			if not IsValid(e) or ss.IsAlly(e) or e:Health() <= 0 then continue end
-			if not hurtowner and e == ink.filter then continue end
-			local dmg = ink.DamageClose
-			local dist = Vector()
-			local maxs, mins = e:OBBMaxs(), e:OBBMins()
-			local size = maxs - mins
-			for i, dir in pairs {x = e:GetForward(), y = e:GetRight(), z = e:GetUp()} do
-				local length = size[i]
-				if length <= 0 then continue end
-				local segment = math.abs(dir:Dot(ink.endpos - e:GetPos()))
-				if segment <= 1 then continue end
-				dist = dist + (length - segment) * dir
-			end
-
-			damagedealed = true
-			dist = dist:Length()
-			if dist > ink.ColRadiusMiddle then
-				dmg = math.Remap(dist, ink.ColRadiusMiddle, ink.ColRadiusFar, ink.DamageMiddle, ink.DamageFar)
-			elseif dist > ink.ColRadiusClose then
-				dmg = math.Remap(dist, ink.ColRadiusClose, ink.ColRadiusMiddle, ink.DamageClose, ink.DamageMiddle)
-			end
-
-			print(e, dist, dmg)
-			d:SetDamage(dmg)
-			d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * dmg)
-			d:SetDamagePosition(ink.endpos)
-			d:SetDamageType(DMG_GENERIC)
-			d:SetMaxDamage(dmg)
-			d:SetReportedPosition(ink.endpos)
-			d:SetAttacker(attacker)
-			d:SetInflictor(inflictor)
-			ss.ProtectedCall(e.TakeDamageInfo, e, d)
+	local d = DamageInfo()
+	local attacker = IsValid(ink.filter) and ink.filter or game.GetWorld()
+	local inflictor = ss.IsValidInkling(ink.filter) or game.GetWorld()
+	local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
+	local damagedealed = false
+	for _, e in ipairs(ents.FindInSphere(ink.endpos, ink.ColRadiusFar)) do
+		if not IsValid(e) or ss.IsAlly(e) or e:Health() <= 0 then continue end
+		if not hurtowner and e == ink.filter then continue end
+		if CLIENT then damagedealed = true break end
+		local dmg = ink.DamageClose
+		local dist = Vector()
+		local maxs, mins = e:OBBMaxs(), e:OBBMins()
+		local origin = e:LocalToWorld(e:OBBCenter())
+		local size = (maxs - mins) / 2
+		for i, dir in pairs {x = e:GetForward(), y = e:GetRight(), z = e:GetUp()} do
+			local segment = dir:Dot(ink.endpos - origin)
+			local sign = segment == 0 and 0 or segment > 0 and 1 or -1
+			segment = math.abs(segment)
+			if segment <= size[i] then continue end
+			dist = dist + sign * (size[i] - segment) * dir
 		end
+
+		damagedealed = true
+		dist = dist:Length()
+		if dist > ink.ColRadiusMiddle then
+			dmg = math.Remap(dist, ink.ColRadiusMiddle, ink.ColRadiusFar, ink.DamageMiddle, ink.DamageFar)
+		elseif dist > ink.ColRadiusClose then
+			dmg = math.Remap(dist, ink.ColRadiusClose, ink.ColRadiusMiddle, ink.DamageClose, ink.DamageMiddle)
+		end
+
+		d:SetDamage(dmg)
+		d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * dmg)
+		d:SetDamagePosition(ink.endpos)
+		d:SetDamageType(DMG_GENERIC)
+		d:SetMaxDamage(dmg)
+		d:SetReportedPosition(ink.endpos)
+		d:SetAttacker(attacker)
+		d:SetInflictor(inflictor)
+		ss.ProtectedCall(e.TakeDamageInfo, e, d)
 	end
 
 	if ink.IsCarriedByLocalPlayer and damagedealed then ss.PlayHitSound(false, attacker) end

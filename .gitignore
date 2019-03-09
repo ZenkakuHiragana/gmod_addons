@@ -221,5 +221,5 @@ pip-log.txt
 *.ico
 *.zip
 *.lnk
-lua/debug.lua
 lua/do.lua
+lua/autorun/debug.lua
