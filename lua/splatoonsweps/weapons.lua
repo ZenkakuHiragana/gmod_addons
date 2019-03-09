@@ -7,15 +7,15 @@ if not ss then return end
 function ss.SetPrimary(weapon, info)
 	local p = istable(weapon.Primary) and weapon.Primary or {}
 	p.Info = info
-	p.ClipSize = ss.MaxInkAmount --Clip size only for displaying.
-	p.DefaultClip = ss.MaxInkAmount
+	p.ClipSize = ss.GetMaxInkAmount() --Clip size only for displaying.
+	p.DefaultClip = ss.GetMaxInkAmount()
 	p.Automatic = info.IsAutomatic or false
 	p.Ammo = "Ink"
 	p.Delay = (info.Delay.Fire or 0) * ss.FrameToSec
 	p.FirePosition = info.FirePosition
 	p.Recoil = info.Recoil or .2
 	p.ReloadDelay = info.Delay.Reload * ss.FrameToSec
-	p.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
+	p.TakeAmmo = info.TakeAmmo
 	p.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
 	ss.ProtectedCall(ss.CustomPrimary[weapon.Base], p, info)
 	weapon.Primary = p
@@ -30,7 +30,7 @@ function ss.SetSecondary(weapon, info)
 	s.Delay = info.Delay.Fire * ss.FrameToSec
 	s.Recoil = info.Recoil or .2
 	s.ReloadDelay = info.Delay.Reload * ss.FrameToSec
-	s.TakeAmmo = info.TakeAmmo * ss.MaxInkAmount
+	s.TakeAmmo = info.TakeAmmo
 	s.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
 	ss.ProtectedCall(ss.CustomSecondary[weapon.Base], s, info)
 	weapon.Secondary = s
@@ -40,8 +40,8 @@ ss.CustomPrimary = {}
 ss.CustomSecondary = {}
 function ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
 	p.Straight = info.Delay.Straight * ss.FrameToSec
-	p.Damage = info.Damage * ss.ToHammerHealth
-	p.MinDamage = info.MinDamage * ss.ToHammerHealth
+	p.Damage = info.Damage
+	p.MinDamage = info.MinDamage
 	p.InkRadius = info.InkRadius * ss.ToHammerUnits
 	p.MinRadius = info.MinRadius * ss.ToHammerUnits
 	p.SplashRadius = info.SplashRadius * ss.ToHammerUnits
@@ -76,9 +76,9 @@ function ss.CustomPrimary.weapon_splatoonsweps_charger(p, info)
 	p.MinVelocity = info.MinVelocity * ss.ToHammerUnitsPerSec
 	p.MaxVelocity = info.MaxVelocity * ss.ToHammerUnitsPerSec
 	p.InitVelocity = (info.FullVelocity or info.MaxVelocity) * ss.ToHammerUnitsPerSec
-	p.MinDamage = info.MinDamage * ss.ToHammerHealth
-	p.MaxDamage = info.MaxDamage * ss.ToHammerHealth
-	p.Damage = (info.FullDamage or info.MaxDamage) * ss.ToHammerHealth
+	p.MinDamage = info.MinDamage
+	p.MaxDamage = info.MaxDamage
+	p.Damage = info.FullDamage or info.MaxDamage
 	p.MinChargeTime = info.Delay.MinCharge * ss.FrameToSec
 	p.MaxChargeTime = info.Delay.MaxCharge * ss.FrameToSec
 	p.MinColRadius = info.MinColRadius or ss.mColRadius
@@ -133,9 +133,9 @@ end
 
 function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(p, info)
 	ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
-	p.DamageClose = info.DamageClose * ss.ToHammerHealth
-	p.DamageMiddle = info.DamageMiddle * ss.ToHammerHealth
-	p.DamageFar = info.DamageFar * ss.ToHammerHealth
+	p.DamageClose = info.DamageClose
+	p.DamageMiddle = info.DamageMiddle
+	p.DamageFar = info.DamageFar
 	p.DamageWallMul = info.DamageWallMul
 	p.ColRadiusClose = info.ColRadiusClose * ss.ToHammerUnits
 	p.ColRadiusMiddle = info.ColRadiusMiddle * ss.ToHammerUnits

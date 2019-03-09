@@ -19,7 +19,8 @@ local function RegisterConVars(opt, helptext, guitext)
 		else
 			gc.AddCVarPrefix(cvarname, {
 				subcategory = cvartable.__subcategory,
-				printname = ss.Text.CategoryNames[cvarname] or ss.Text.PrintNames[cvarname],
+				printname = ss.Text.CategoryNames[cvarname]
+				or ss.Text.PrintNames[cvarname] or guitext[cvarname].__printname,
 			})
 
 			RegisterConVars(cvartable, helptext[cvarname], guitext[cvarname])

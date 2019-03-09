@@ -12,6 +12,10 @@ return {CVars = {
     DrawInkOverlay = "Draw ink overlay in firstperson. (1: enabled, 0: disabled)",
     Enabled = "Enable or disable Splatoon SWEPs. (1: enabled, 0: disabled)",
     FF = "Enable friendly fire. (1: enabled, 0: disabled)",
+    Gain = {
+        MaxHealth = "Maximum health of inkling.",
+        InkAmount = "The amount ink tank can hold up to.",
+    },
     InkColor = "Your ink color.  Available values are:\n",
     LeftHand = "Use left hand to hold weapons. (1: enabled, 0: disabled)",
     MoveViewmodel = "Move viewmodel when avoid setting is enabled. (1: enabled, 0: disabled)",

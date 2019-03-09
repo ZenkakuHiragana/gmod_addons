@@ -45,7 +45,7 @@ end
 -- Does not copy entities of course, only copies their reference.
 local function FullCopy(t)
 	if not istable(t) then return t end
-	
+
 	local res = {}
 	for k, v in pairs(t) do
 		if istable(v) then
@@ -62,7 +62,7 @@ local function FullCopy(t)
 			res[k] = v
 		end
 	end
-	
+
 	return res
 end
 
@@ -74,7 +74,7 @@ function SWEP:Initialize()
 	self.WElements = self.WElements or {}
 	self.WElements.inktank = inktank
 	self.WElements.subweaponusable = subweaponusable
-	
+
 	for e, r in pairs {
 		[self.VElements] = self.vRenderOrder,
 		[self.WElements] = self.wRenderOrder,
@@ -87,19 +87,19 @@ function SWEP:Initialize()
 			end
 		end
 	end
-	
+
 	-- Create a new table for every weapon instance
 	self.VElements = FullCopy(self.VElements)
 	self.WElements = FullCopy(self.WElements)
 	self.ViewModelBoneMods = FullCopy(self.ViewModelBoneMods)
 	self:CreateModels(self.VElements) -- create viewmodels
 	self:CreateModels(self.WElements) -- create worldmodels
-	
+
 	-- Our initialize code
 	self.EnoughSubWeapon = true
 	self.PreviousInk = true
 	self.Cursor = {x = ScrW() / 2, y = ScrH() / 2}
-	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
+	self:GetBombMeterPosition(self:GetTakeAmmo(true))
 	self:MakeSquidModel()
 	self.JustUsableTime = CurTime() - 1 -- For animation of ink tank light
 	self:SharedInitBase()
@@ -115,7 +115,7 @@ function SWEP:Deploy()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
 		self:UpdateBonePositions(self.Owner:GetViewModel())
 	end
-	
+
 	self:GetOptions()
 	return self:SharedDeployBase()
 end
@@ -132,7 +132,7 @@ function SWEP:Holster()
 			self.Owner:SetViewOffsetDucked(self.ViewOffsetDucked)
 		end
 	end
-	
+
 	return self:SharedHolsterBase()
 end
 
@@ -144,7 +144,7 @@ function SWEP:OnRemove()
 	for k, v in pairs(self.WElements) do
 		if IsValid(v.modelEnt) then v.modelEnt:Remove() end
 	end
-	
+
 	if IsValid(self.Squid) then self.Squid:Remove() end
 	return self:Holster()
 end
@@ -153,7 +153,7 @@ function SWEP:Think()
 	if not IsValid(self.Owner) or self:GetHolstering() then return end
 	if self.Owner:IsPlayer() then self:SetAimVector(self.Owner:GetAimVector()) end
 	if self:IsFirstTimePredicted() then
-		local enough = self:GetInk() > self.Secondary.TakeAmmo
+		local enough = self:GetInk() > self:GetTakeAmmo(true)
 		if not self.EnoughSubWeapon and enough then
 			self.JustUsableTime = CurTime() - LocalPlayer():Ping() / 1000
 			if self:IsCarriedByLocalPlayer() then
@@ -162,7 +162,7 @@ function SWEP:Think()
 		end
 		self.EnoughSubWeapon = enough
 	end
-	
+
 	if IsValid(self.Squid) then
 		if ss.SquidmodelIndex[self:GetNWInt "playermodel"] == ss.SQUID.OCTO then
 			if self.SquidModelNumber ~= ss.SQUID.OCTO then
@@ -172,11 +172,11 @@ function SWEP:Think()
 		elseif self.SquidModelNumber ~= ss.SQUID.INKLING then
 			self.Squid:SetModel(ss.Squidmodel[ss.SQUID.INKLING])
 			self.SquidModelNumber = ss.SQUID.INKLING
-		end 
+		end
 	else
 		self:MakeSquidModel()
 	end
-	
+
 	self:ProcessSchedules()
 	self:SharedThinkBase()
 	ss.ProtectedCall(self.ClientThink, self)

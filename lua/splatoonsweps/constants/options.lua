@@ -11,6 +11,10 @@ return {
 	DrawInkOverlay = true,
 	Enabled = {true, order = 1, serverside = true},
 	FF = {false, order = 2, serverside = true},
+	Gain = {
+		InkAmount = {100, min = 1, max = 500, decimals = 0, order = 2, serverside = true},
+		MaxHealth = {100, min = 1, max = 500, decimals = 0, order = 1, serverside = true},
+	},
 	InkColor = {1, hidden = true},
 	LeftHand = false,
 	MoveViewmodel = true,

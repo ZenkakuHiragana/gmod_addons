@@ -215,14 +215,14 @@ end)
 
 hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, dmg)
 	if ent:Health() <= 0 then return end
-	local entweapon = ss.IsValidInkling(ent)
-	if not entweapon then return end
-	entweapon.HealSchedule:SetDelay(ss.HealDelay)
+	local w = ss.IsValidInkling(ent)
+	local a = dmg:GetAttacker()
 	local i = dmg:GetInflictor()
-	if not (IsValid(dmg:GetAttacker()) and i.IsSplatoonWeapon) then return end
-	if ss.IsAlly(entweapon, i) then return true end
-	if ent:IsPlayer() then
-		net.Start "SplatoonSWEPs: Play damage sound"
-		net.Send(ent)
-	end
+	if w then w.HealSchedule:SetDelay(ss.HealDelay) end
+	if not (IsValid(a) and i.IsSplatoonWeapon) then return end
+	if ss.IsAlly(w, i) then return true end
+	dmg:ScaleDamage(ss.ToHammerHealth)
+	if not ent:IsPlayer() then return end
+	net.Start "SplatoonSWEPs: Play damage sound"
+	net.Send(ent)
 end)

@@ -404,7 +404,7 @@ function ss.IsAlly(c1, c2)
 	return not ss.GetOption "ff" and c1 == c2
 end
 
--- Get player timescale
+-- Get player timescale.
 -- Argument:
 --   Entity ply    | Optional.
 -- Returning:
@@ -413,6 +413,12 @@ local host_timescale = GetConVar "host_timescale"
 function ss.GetTimeScale(ply)
 	return IsValid(ply) and ply:IsPlayer() and ply:GetLaggedMovementValue() or 1
 end
+
+-- Get inkling's desired maximum health
+-- Get the maximum amount of an ink tank.
+local gain = ss.GetOption "gain"
+function ss.GetMaxHealth() return gain "maxhealth" end
+function ss.GetMaxInkAmount() return gain "inkamount" end
 
 -- Play a sound that can be heard only one player.
 -- Arguments:

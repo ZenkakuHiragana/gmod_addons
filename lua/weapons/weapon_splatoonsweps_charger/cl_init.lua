@@ -7,7 +7,7 @@ local crosshairalpha = 64
 SWEP.Crosshair = {
 	color_circle = ColorAlpha(color_black, crosshairalpha),
 	color_nohit = ColorAlpha(color_white, crosshairalpha),
-	color_hit = ColorAlpha(color_white, 192), 
+	color_hit = ColorAlpha(color_white, 192),
 	Dot = 5, HitLine = 20, HitWidth = 2, -- in pixel
 	Inner = 26, Middle = 34, Outer = 38, -- in pixel
 	HitLineSize = 114,
@@ -20,7 +20,7 @@ function SWEP:ClientInit()
 	self.IronSightsAng[6] = self.ScopeAng
 	self.IronSightsFlip[6] = false
 	self:GetBase().ClientInit(self)
-	
+
 	if not self.Scoped then return end
 	self.RTScope = GetRenderTarget(ss.RenderTarget.Name.RTScope, 512, 512)
 	self:AddSchedule(0, function(self, sched)
@@ -63,7 +63,7 @@ function SWEP:DrawOuterCircle(t)
 	else
 		prog = prog * (360 - self.MinChargeDeg) + self.MinChargeDeg
 	end
-	
+
 	draw.NoTexture()
 	surface.SetDrawColor(ColorAlpha(color_black, 192))
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - ri, 90, 450 - prog, 5)
@@ -71,7 +71,7 @@ function SWEP:DrawOuterCircle(t)
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - rm, 90, 450 - prog, 5)
 	surface.SetDrawColor(self.Crosshair.color_hit)
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - ri, 90 - prog, 90, 5)
-	
+
 	if not t.Trace.Hit then return end
 	surface.SetDrawColor(t.CrosshairColor)
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r + 1, r - rm)
@@ -97,7 +97,7 @@ function SWEP:DrawCenterDot(t) -- Center circle
 		surface.SetDrawColor(self.Crosshair.color_nohit)
 		ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s)
 	end
-	
+
 	if not t.Trace.Hit then return end
 	surface.SetDrawColor(t.CrosshairDarkColor)
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s + innerwidth)
@@ -126,7 +126,7 @@ function SWEP:RenderScreenspaceEffects()
 	local sx, sy = math.ceil(ScrH() * 4 / 3), ScrH()
 	local ex, ey = math.ceil(x + sx / 2), math.ceil(y + sy / 2) -- End position of x, y
 	x, y = math.floor(x - sx / 2), math.floor(y - sy / 2)
-	
+
 	MatRefScope:SetFloat("$refractamount", prog * prog * MatRefDefault)
 	for _, material in ipairs {MatRefScope, MatScope} do
 		surface.SetDrawColor(ColorAlpha(color_black, prog * 255))
@@ -137,7 +137,7 @@ function SWEP:RenderScreenspaceEffects()
 		if y > 0 then padding(x, -1, sx, y + 1, 0, 0, u, v) end
 		if ey < ScrH() then padding(x, ey - 1, ScrW(), ScrH() - ey + 1, 0, 0, u, v) end
 	end
-	
+
 	MatRefScope:SetFloat("$refractamount", MatRefDefault)
 end
 
@@ -171,7 +171,7 @@ function SWEP:PostDrawViewModel(vm, weapon, ply)
 	ss.ProtectedCall(self:GetBase().PostDrawViewModel, self, vm, weapon, ply)
 	if not self.Scoped then return end
 	render.SetBlend(1)
-	
+
 	-- Entity:GetAttachment() for viewmodel returns incorrect value in singleplayer.
 	if ss.mp then return end
 	self.RTAttachment = self.RTAttachment or vm:LookupAttachment "scope_end"
@@ -204,13 +204,13 @@ function SWEP:GetArmPos()
 	if prog > scope.StartMove then
 		if not self.TransitFlip then
 			self.SwayTime = scope.SwayTime
-			if not self.Owner:OnGround() or self:GetInk() < prog * self.Primary.TakeAmmo then
+			if not self.Owner:OnGround() or self:GetInk() < prog * self:GetTakeAmmo() then
 				self.SwayTime = scope.SwayTime * self.Primary.EmptyChargeMul
 			end
 		elseif not self:GetNWBool "usertscope" then
 			self.SwayTime = self.SwayTime / 2
 		end
-		
+
 		self.ArmBegin = SysTime() - (SysTime() - self.ArmBegin) / SwayTime * self.SwayTime / timescale
 		return 6
 	end
@@ -243,7 +243,7 @@ function SWEP:ManipulatePlayer(ply)
 		end
 		table.remove(b, 1)
 	end
-	
+
 	b = {ply:LookupBone "ValveBiped.Bip01_L_Forearm"}
 	while #b > 0 do
 		if ply:GetBoneName(b[1]) == "ValveBiped.Bip01_L_Forearm" then
@@ -253,7 +253,7 @@ function SWEP:ManipulatePlayer(ply)
 			ba[b[1]]:RotateAroundAxis(Vector(0, 1), (deltahand[self.HoldType] or vector_origin).y)
 			ba[b[1]]:RotateAroundAxis(vector_up, (deltahand[self.HoldType] or vector_origin).z)
 		end
-		
+
 		local pi = ply:GetBoneParent(b[1])
 		local pm = ply:GetBoneMatrix(pi)
 		ply:SetBonePosition(b[1], LocalToWorld(bp[b[1]], ba[b[1]], pm:GetTranslation(), pm:GetAngles()))

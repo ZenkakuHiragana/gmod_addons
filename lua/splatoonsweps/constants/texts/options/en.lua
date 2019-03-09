@@ -11,6 +11,11 @@ return {Options = {
     DrawInkOverlay = "Draw ink overlay",
     Enabled = "Enable Splatoon SWEPs",
     FF = "Enable friendly fire",
+    Gain = {
+        __printname = "Parameters",
+        MaxHealth = "Maximum health",
+        InkAmount = "Amount of ink",
+    },
     LeftHand = "Left hand mode",
     MoveViewmodel = "Move viewmodel to avoid walls",
     NewStyleCrosshair = "Use new style crosshair",

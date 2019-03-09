@@ -73,6 +73,14 @@ function SWEP:GetFOV()
 	return self.Owner:GetFOV()
 end
 
+function SWEP:GetTakeAmmo(secondary)
+	if secondary then
+		return self.Secondary.TakeAmmo * ss.GetMaxInkAmount()
+	else
+		return self.Primary.TakeAmmo * ss.MaxInkAmount
+	end
+end
+
 function SWEP:GetOptions(opt, getopt)
 	if not self:IsMine() then return end
 	local gc = greatzenkakuman.cvartree
@@ -179,6 +187,7 @@ function SWEP:SharedDeployBase()
 	self.OnEnemyInkSpeed = ss.OnEnemyInkSpeed
 	self.JumpPower = ss.InklingJumpPower
 	self.OnEnemyInkJumpPower = ss.OnEnemyInkJumpPower
+	self.Owner:SetHealth(self.Owner:Health() * self:GetNWInt "MaxHealth" / self:GetNWInt "BackupMaxHealth")
 	if self.Owner:IsPlayer() then
 		self.Owner:SetJumpPower(self.JumpPower)
 		self.Owner:SetColor(color_white)
@@ -196,6 +205,7 @@ function SWEP:SharedHolsterBase()
 	self:SetHolstering(true)
 	ss.ProtectedCall(self.SharedHolster, self)
 	StopLoopSound(self)
+	self.Owner:SetHealth(self.Owner:Health() * self:GetNWInt "BackupMaxHealth" / self:GetNWInt "MaxHealth")
 
 	if self.Owner:IsPlayer() and ss.WeaponRecord[self.Owner] then
 		ss.WeaponRecord[self.Owner].Duration[self.ClassName]
@@ -315,7 +325,7 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 		end
 
 		if CLIENT then return end
-		self:AddSchedule(200 / ss.ToHammerHealth * ss.FrameToSec, function(self, schedule)
+		self:AddSchedule(200 / ss.GetMaxHealth() * ss.FrameToSec, function(self, schedule)
 			if not self:GetOnEnemyInk() then return true end -- Enemy ink damage
 			local d = DamageInfo()
 			d:SetAttacker(game.GetWorld())
@@ -341,8 +351,6 @@ function SWEP:ChangeThrowing(name, old, new)
 	net.Send(ss.PlayersReady)
 end
 
-local ReloadMultiply = ss.MaxInkAmount / 10 -- Reloading rate(inkling)
-local HealingDelay = 10 / ss.ToHammerHealth -- Healing rate(inkling)
 function SWEP:SetupDataTables()
 	self:AddNetworkVar("Bool", "InInk") -- If owner is in ink.
 	self:AddNetworkVar("Bool", "InFence") -- If owner is in fence.
@@ -353,17 +361,17 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Bool", "Throwing") -- Is about to use sub weapon.
 	self:AddNetworkVar("Entity", "NPCTarget") -- Target entity for NPC.
 	self:AddNetworkVar("Float", "Cooldown") -- Cannot crouch, fire, or use sub weapon.
-	self:AddNetworkVar("Float", "Ink") -- Ink remainig. 0 to ss.MaxInkAmount
+	self:AddNetworkVar("Float", "Ink") -- Ink remainig. 0 to ss.GetMaxInkAmount()
 	self:AddNetworkVar("Float", "OldSpeed") -- Old Z-velocity of the player.
 	self:AddNetworkVar("Float", "ThrowAnimTime") -- Time to adjust throw anim. speed.
 	self:AddNetworkVar("Int", "GroundColor") -- Surface ink color.
 	self:AddNetworkVar("Int", "Key") -- A valid key input.
 	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
 	self:AddNetworkVar("Vector", "AimVector") -- NPC:GetAimVector() doesn't exist in clientside.
-	self.HealSchedule = self:AddNetworkSchedule(HealingDelay, function(self, schedule)
+	self.HealSchedule = self:AddNetworkSchedule(10 / ss.GetMaxHealth(), function(self, schedule)
 		local canheal = self:GetNWBool "canhealink" and self:GetInInk() -- Gradually heals the owner
 		local timescale = ss.GetTimeScale(self.Owner)
-		local delay = HealingDelay / timescale / (canheal and 8 or 1)
+		local delay = 10 / ss.GetMaxHealth() / timescale / (canheal and 8 or 1)
 		if schedule:GetDelay() ~= delay then schedule:SetDelay(delay) end
 		if not self:GetOnEnemyInk() and (self:GetNWBool "canhealstand" or canheal) then
 			local health = math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth())
@@ -375,9 +383,9 @@ function SWEP:SetupDataTables()
 		local reloadamount = math.max(0, schedule:SinceLastCalled()) -- Recharging ink
 		local fastreload = self:GetNWBool "canreloadink" and self:GetInInk()
 		local timescale = ss.GetTimeScale(self.Owner)
-		local mul = ReloadMultiply * (fastreload and 10/3 or 1) * timescale
+		local mul = ss.GetMaxInkAmount() / 10 * (fastreload and 10/3 or 1) * timescale
 		if self:GetNWBool "canreloadstand" or fastreload then
-			local ink = math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.MaxInkAmount)
+			local ink = math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.GetMaxInkAmount())
 			if self:GetInk() ~= ink then self:SetInk(ink) end
 		end
 

@@ -12,6 +12,10 @@ return {CVars = {
     DrawInkOverlay = "一人称視点でインクのオーバーレイを描画する。 (1: 有効 0: 無効)",
     Enabled = "Splatoon SWEPsを有効化する。 (1: 有効 0: 無効)",
     FF = "同士討ちを有効にする。 (1: 有効 0: 無効)",
+    Gain = {
+        MaxHealth = "インクリングの最大ヘルス。",
+        InkAmount = "インクタンクの容量。",
+    },
     InkColor = "インクの色を設定する。使用可能な値は以下の通り。:\n",
     LeftHand = "左手でブキを構える。 (1: 有効, 0: 無効)",
     MoveViewmodel = "壁を避けて狙う時、ビューモデルを動かす。 (1: 有効 0: 無効)",

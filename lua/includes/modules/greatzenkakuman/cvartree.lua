@@ -171,6 +171,7 @@ local function EnablePanel(pt, e)
 	end
 end
 
+local waitafterchange = .1
 local function GetOnChange(pt)
 	if pt.options.type == "boolean" then
 		return function(convar, old, new)
@@ -181,8 +182,8 @@ local function GetOnChange(pt)
 	elseif pt.options.type == "number" then
 		return function(convar, old, new)
 			if not (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin()) then return end
-			if pt.panel then pt.panel:SetValue(tonumber(new)) end
-			if pt.paneladmin then pt.paneladmin:SetValue(tonumber(new)) end
+			if pt.panel and not pt.panel:IsEditing() then pt.panel:SetValue(tonumber(new)) end
+			if pt.paneladmin and not pt.paneladmin:IsEditing() then pt.paneladmin:SetValue(tonumber(new)) end
 		end
 	end
 end
@@ -191,21 +192,25 @@ local function GetDermaPanelOnChange(pt)
 	if not pt.paneladmin then return end
 	local name, getvalue
 	if pt.options.type == "boolean" then
-		name = "OnChange"
-		getvalue = function(value) return value and "1" or "0" end
+		function pt.paneladmin:OnChange(value)
+			net.Start "greatzenkakuman.cvartree.adminchange"
+			net.WriteString(self.CVarName)
+			net.WriteString(value and "1" or "0")
+			net.SendToServer()
+		end
+
+		return pt.paneladmin.OnChange
 	elseif pt.options.type == "number" then
-		name = "OnValueChanged"
-		getvalue = tostring
-	end
+		function pt.paneladmin:OnValueChanged(value)
+			value = math.Round(value, self:GetDecimals())
+			net.Start "greatzenkakuman.cvartree.adminchange"
+			net.WriteString(self.CVarName)
+			net.WriteString(tostring(value))
+			net.SendToServer()
+		end
 
-	pt.paneladmin[name] = function(self, value)
-		net.Start "greatzenkakuman.cvartree.adminchange"
-		net.WriteString(pt.paneladmin.CVarName)
-		net.WriteString(getvalue(value))
-		net.SendToServer()
+		return pt.paneladmin.OnValueChanged
 	end
-
-	return pt.paneladmin[name]
 end
 
 local function MakeElement(p, admin, pt)

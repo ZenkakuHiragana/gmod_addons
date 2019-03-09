@@ -42,7 +42,7 @@ end
 function SWEP:Initialize()
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
-	self:SetInk(ss.MaxInkAmount)
+	self:SetInk(ss.GetMaxInkAmount())
 	self:SetInkColorProxy(ss.vector_one)
 	self:SharedInitBase()
 	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
@@ -95,6 +95,9 @@ function SWEP:Deploy()
 	self:SetInkColorProxy(self.Color:ToVector())
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
+	self:SetNWInt("MaxHealth", ss.GetMaxHealth())
+	self:SetNWInt("BackupMaxHealth", self.Owner:GetMaxHealth())
+	self.Owner:SetMaxHealth(self:GetNWInt "MaxHealth") -- NPCs also have inkling's standard health.
 	if self.Owner:IsPlayer() then
 		self.BackupPlayerInfo = {
 			Color = self.Owner:GetColor(),
@@ -159,6 +162,7 @@ function SWEP:Holster()
 	if self:GetInFence() then return false end
 	if not IsValid(self.Owner) then return true end
 	self.PMTable = nil
+	self.Owner:SetMaxHealth(self:GetNWInt "BackupMaxHealth")
 	if self.Owner:IsPlayer() then
 		self.Owner:SetDSP(1)
 		if istable(self.BackupPlayerInfo) then -- Restores owner's information.

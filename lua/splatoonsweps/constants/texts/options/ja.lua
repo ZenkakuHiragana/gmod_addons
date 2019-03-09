@@ -11,6 +11,11 @@ return {Options = {
     DrawInkOverlay = "インクオーバーレイの描画",
     Enabled = "Splatoon SWEPsの有効化",
     FF = "同士討ちの有効化",
+    Gain = {
+        __printname = "各種パラメータ",
+        MaxHealth = "最大ヘルス",
+        InkAmount = "インクタンク容量",
+    },
     LeftHand = "左利き",
     MoveViewmodel = "壁を避けて狙うとき、ビューモデルを動かす",
     NewStyleCrosshair = "Splatoon 2風の照準",

@@ -112,7 +112,7 @@ ss.ViewModel = { -- Viewmodel animations
 	Standing = ACT_VM_IDLE, -- Humanoid form
 	Squid = ACT_VM_IDLE_LOWERED, -- Squid form
 	Throwing = ACT_VM_PULLPIN, -- About to throw sub weapon
-	Throw = ACT_VM_THROW, --Actual throw animation
+	Throw = ACT_VM_THROW, -- Actual throw animation
 }
 
 function ss.GetSquidmodel(pmid)
@@ -170,22 +170,20 @@ ss.SquidViewOffset = vector_up * 24
 ss.InklingJumpPower = 250
 ss.DisruptoredSpeed = .45 -- Disruptor's debuff factor
 ss.OnEnemyInkJumpPower = ss.InklingJumpPower * .75
-ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) -- = 3.53 Constants for unit conversion
-ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec --
-ss.ToHammerHealth = 100 --
-ss.FrameToSec = 1 / framepersec --
-ss.SecToFrame = framepersec --
+ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) -- = 3.53, Constants for unit conversion
+ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec -- = 212, Constants for unit conversion
+ss.ToHammerHealth = 100 -- Health is normalized in Splatoon (0--1)
+ss.FrameToSec = 1 / framepersec -- = 0.016667, Constants for time conversion
+ss.SecToFrame = framepersec -- = 60, Constants for time conversion
 ss.mDegRandomY = .5 -- Shooter spread angle, yaw (need to be validated)
 ss.HealDelay = 60 * ss.FrameToSec -- Time to heal again after taking damage.
-ss.ShooterTrailDelay = 2 * ss.FrameToSec -- Time to start moving shooter trail.
-ss.SpreadJumpMaxVelocity = 32 -- Shooter spread angle expansion by jumping.
-ss.SpreadJumpCoefficient = .25 --   Angle expansion : Player's Z-velocity
-ss.SpreadJumpFraction = ss.SpreadJumpCoefficient / ss.SpreadJumpMaxVelocity
-ss.SquidSpeedOutofInk = .45 -- Squid speed coefficient if it is out of ink.
+ss.ShooterTrailDelay = 2 * ss.FrameToSec -- Time to start to move the latter half of shooter's ink.
+ss.SpreadJumpMaxVelocity = 32 -- Player's Z-speed threshold for shooter's spread angle expansion by jumping.
+ss.SquidSpeedOutofInk = .45 -- Squid speed coefficient when it goes out of ink.
 ss.CameraFadeDistance = 100^2 -- Thirdperson model fade distance[units^2]
 ss.SubWeaponThrowTime = 25 * ss.FrameToSec -- Duration of TPS sub weapon throwing animation.
-ss.ShooterDecreaseFrame = 4 * ss.FrameToSec -- Shooters ink velocity deceleration time to fall.
-ss.ShooterTermTime = 10 * ss.FrameToSec -- Time to reach terminal velocity
+ss.ShooterDecreaseFrame = 4 * ss.FrameToSec -- Shooters ink velocity deceleration time to start falling.
+ss.ShooterTermTime = 10 * ss.FrameToSec -- Time to reach the terminal velocity
 ss.SquidTrace = {
 	start = vector_origin, endpos = vector_origin,
 	filter = {}, mask = ss.SquidSolidMask,

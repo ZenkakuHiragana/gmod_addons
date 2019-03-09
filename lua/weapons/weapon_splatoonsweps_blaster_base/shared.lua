@@ -31,7 +31,7 @@ function SWEP:Move(ply)
     self:SetFireDelay(math.huge)
 	self.ReloadSchedule:SetDelay(r) -- Stop reloading ink
 	self.ReloadSchedule:SetLastCalled(CurTime() + r)
-    if self:GetInk() < p.TakeAmmo then
+    if self:GetInk() < self:GetTakeAmmo() then
         d = p.PreFireDelay / timescale
         self:PlayEmptySound()
         self:SetCooldown(math.max(self:GetCooldown(), CurTime() + d))
@@ -40,7 +40,7 @@ function SWEP:Move(ply)
     end
 
     self:CreateInk()
-    self:SetInk(math.max(0, self:GetInk() - p.TakeAmmo))
+    self:SetInk(math.max(0, self:GetInk() - self:GetTakeAmmo()))
     self:SetCooldown(math.max(self:GetCooldown(), CurTime() + d))
     self:SetAimTimer(CurTime() + d)
 end

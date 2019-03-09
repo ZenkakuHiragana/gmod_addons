@@ -114,7 +114,7 @@ function SWEP:SharedPrimaryAttack()
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
 		if prog > 0 then
-			local EnoughInk = self:GetInk() >= prog * self.Primary.TakeAmmo
+			local EnoughInk = self:GetInk() >= prog * self:GetTakeAmmo()
 			if not self.Owner:OnGround() or not EnoughInk then
 				if EnoughInk or self:GetNWBool "canreloadstand" then
 					self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
@@ -231,7 +231,7 @@ function SWEP:Move(ply)
 	self:EmitSound(ShootSound, 80, pitch)
 	self:SetCooldown(CurTime() + p.MaxFreezeTime)
 	self:SetFireAt(prog)
-	self:SetInk(math.max(0, self:GetInk() - inkprog * p.TakeAmmo))
+	self:SetInk(math.max(0, self:GetInk() - inkprog * self:GetTakeAmmo()))
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:ResetCharge()
 	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)

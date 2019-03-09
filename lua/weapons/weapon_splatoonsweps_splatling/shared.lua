@@ -135,7 +135,7 @@ function SWEP:SharedPrimaryAttack()
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
 		if prog > 0 then
-			local EnoughInk = self:GetInk() >= prog * self.Primary.MaxTakeAmmo
+			local EnoughInk = self:GetInk() >= prog * self.Primary.MaxTakeAmmo * ss.MaxInkAmount
 			if not self.Owner:OnGround() or not EnoughInk then
 				if EnoughInk or self:GetNWBool "canreloadstand" then
 					self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
@@ -237,7 +237,6 @@ function SWEP:Move(ply)
 		end
 
 		self:CreateInk()
-		if SERVER then print(self:GetInitVelocity()) end
 		if SERVER and ss.mp then SuppressHostEvents() end
 	else
 		local p = self.Primary
@@ -255,7 +254,7 @@ function SWEP:Move(ply)
 		self:SetFireAt(prog)
 		self:ResetCharge()
 		self:SetFireInk(math.floor(Duration / self.Primary.Delay) + 1)
-		self.TakeAmmo = p.MaxTakeAmmo * prog / self:GetFireInk()
+		self.TakeAmmo = p.MaxTakeAmmo * ss.MaxInkAmount * prog / self:GetFireInk()
 	end
 end
 
