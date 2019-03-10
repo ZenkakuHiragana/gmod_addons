@@ -287,6 +287,24 @@ local function GenerateWeaponTab(tab)
 	GenerateWeaponIcons(tab)
 end
 
+local function SendValue(name, value)
+	if ss.sp then
+		net.Start "greatzenkakuman.cvartree.adminchange"
+		net.WriteString(ss.GetConVarName(name, true))
+		net.WriteString(tostring(value))
+		net.SendToServer()
+	elseif not game.IsDedicated() and LocalPlayer():IsAdmin() then
+		net.Start "greatzenkakuman.cvartree.sendchange"
+		net.WriteString(ss.GetConVarName(name, false))
+		net.WriteString(tostring(value))
+		net.SendToServer()
+	else
+		local cvar = ss.GetConVar(name)
+		if not cvar then return end
+		cvar:SetInt(value)
+	end
+end
+
 local function GeneratePreferenceTab(tab)
 	tab.Preference = tab:AddSheet("", vgui.Create "DPanel", "icon64/tool.png")
 	tab.Preference.Panel:DockMargin(8, 8, 8, 8)
@@ -309,18 +327,7 @@ local function GeneratePreferenceTab(tab)
 	for _, color in pairs(tab.Preference.ColorSelector:GetChildren()) do
 		local i = color:GetID()
 		color:SetToolTip(ss.Text.ColorNames[i])
-		function color:DoClick()
-			if ss.sp then
-				net.Start "greatzenkakuman.cvartree.adminchange"
-				net.WriteString(ss.GetConVarName("inkcolor", true))
-				net.WriteString(tostring(i))
-				net.SendToServer()
-			else
-				local cvar = ss.GetConVar "inkcolor"
-				if not cvar then return end
-				cvar:SetInt(i)
-			end
-		end
+		function color:DoClick() SendValue("inkcolor", i) end
 	end
 
 	-- "Playermodel:" Label
@@ -344,19 +351,7 @@ local function GeneratePreferenceTab(tab)
 		item:SetSize(size, size)
 		item:SetModel(model)
 		item:SetToolTip(c)
-		function item:DoClick()
-			if ss.sp then
-				net.Start "greatzenkakuman.cvartree.adminchange"
-				net.WriteString(ss.GetConVarName("playermodel", true))
-				net.WriteString(tostring(i))
-				net.SendToServer()
-			else
-				local cvar = ss.GetConVar "playermodel"
-				if not cvar then return end
-				cvar:SetInt(i)
-			end
-		end
-
+		function item:DoClick() SendValue("playermodel", i) end
 		function item:Think()
 			local new, exists = GetPlayermodel(self.ID)
 			if exists and self.Model ~= new then

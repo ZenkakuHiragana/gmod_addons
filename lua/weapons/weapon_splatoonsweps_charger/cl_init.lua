@@ -128,6 +128,7 @@ function SWEP:RenderScreenspaceEffects()
 	x, y = math.floor(x - sx / 2), math.floor(y - sy / 2)
 
 	MatRefScope:SetFloat("$refractamount", prog * prog * MatRefDefault)
+	render.UpdateRefractTexture()
 	for _, material in ipairs {MatRefScope, MatScope} do
 		surface.SetDrawColor(ColorAlpha(color_black, prog * 255))
 		surface.SetMaterial(material)

@@ -160,6 +160,7 @@ function SWEP:CreateInk()
 		local rndb = p.Recoil * math.Rand(-1, 1)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
 
+		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
 		local e = EffectData()
 		e:SetAttachment(self.SplashInit)
 		e:SetAngles(ang)
@@ -171,6 +172,7 @@ function SWEP:CreateInk()
 		e:SetScale(self.SplashNum)
 		e:SetStart(self.InitVelocity)
 		util.Effect("SplatoonSWEPsShooterInk", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
 		ss.AddInk(self.Owner, pos, util.SharedRandom("SplatoonSWEPs: Shooter ink type", 4, 9))
 	end
 end

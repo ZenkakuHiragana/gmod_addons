@@ -269,7 +269,8 @@ function Simulate.weapon_splatoonsweps_blaster_base(ink)
 	Simulate.weapon_splatoonsweps_shooter(ink)
 	if ink.Time <= ink.ExplosionTime then return end
 	if ink.Hit or ink.Exploded then return end
-	ink.Exploded, ink.IsDrop = true, true
+	ink.Exploded = true
+	ink.collisiongroup = COLLISION_GROUP_DEBRIS
 	ss.MakeBlasterExplosion(ink)
 end
 

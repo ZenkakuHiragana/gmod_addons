@@ -142,9 +142,18 @@ end
 
 if SERVER then
 	util.AddNetworkString "greatzenkakuman.cvartree.adminchange"
+	util.AddNetworkString "greatzenkakuman.cvartree.sendchange"
 	net.Receive("greatzenkakuman.cvartree.adminchange", function(_, ply)
 		if not ply:IsAdmin() then return end
 		local cvar = GetConVar(net.ReadString())
+		if not cvar then return end
+		cvar:SetString(net.ReadString())
+	end)
+
+	net.Receive("greatzenkakuman.cvartree.sendchange", function(_, ply)
+		local name = net.ReadString()
+		if not name:StartWith "cl_" then return end
+		local cvar = GetConVar(name)
 		if not cvar then return end
 		cvar:SetString(net.ReadString())
 	end)

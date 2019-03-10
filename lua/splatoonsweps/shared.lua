@@ -492,7 +492,7 @@ function ss.KeyRelease(self, ply, key)
 		keytable[t] = k -- [Last time key down] = key
 	end
 
-	self:SetKey(keytable[math.max(unpack(keytime))] or 0)
+	self:SetKey(keytable[math.max(0, unpack(keytime))] or 0)
 	ss.ProtectedCall(self.KeyRelease, self, ply, key)
 
 	if not ss.KeyMaskFind[key] then return end
