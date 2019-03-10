@@ -87,16 +87,6 @@ function SWEP:PlayChargeSound()
 	else
 		self.AimSound:Stop()
 		self.AimSound:ChangePitch(1)
-		if prog == 1 and not self.FullChargeFlag then
-			ss.EmitSound(self.Owner, ss.ChargerBeep)
-			self.FullChargeFlag = true
-			if CLIENT then self.CrosshairFlashTime = CurTime() - self:Ping() end
-			if self.Scoped and not (CLIENT and self:IsTPS() and self:GetNWBool "usertscope") then return end
-			local e = EffectData()
-			e:SetEntity(self)
-			e:SetFlags(0)
-			util.Effect("SplatoonSWEPsMuzzleFlash", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
-		end
 	end
 end
 
@@ -105,6 +95,28 @@ function SWEP:SharedInit()
 	self.AirTimeFraction = 1 - 1 / self.Primary.EmptyChargeMul
 	self:SetAimTimer(CurTime())
 	self:ResetCharge()
+	self:AddSchedule(0, function()
+		local prog = self:GetChargeProgress(CLIENT)
+		if prog == 1 and not self.FullChargeFlag then
+			if CLIENT then
+				self.CrosshairFlashTime = CurTime() - self:Ping()
+				ss.EmitSound(self.Owner, ss.ChargerBeep)
+			end
+
+			self.FullChargeFlag = true
+			if self.Scoped and self:IsMine() and not (CLIENT and self:IsTPS() and self:GetNWBool "usertscope") then return end
+			if SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
+			local e = EffectData()
+			e:SetEntity(self)
+			e:SetFlags(0)
+			util.Effect("SplatoonSWEPsMuzzleFlash", e)
+			if SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
+
+			return
+		end
+
+		self.FullChargeFlag = prog == 1
+	end)
 end
 
 function SWEP:SharedPrimaryAttack()
@@ -180,8 +192,6 @@ function SWEP:Move(ply)
 		else
 			self:SetADS(ply:KeyDown(IN_USE))
 		end
-	elseif self:ShouldChargeWeapon() then
-		self:PlayChargeSound()
 	end
 
 	if CurTime() > self:GetAimTimer() then

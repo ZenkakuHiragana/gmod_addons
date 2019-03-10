@@ -58,6 +58,10 @@ function SWEP:GetSquidSpeed()
 	return ss.SquidBaseSpeed
 end
 
+function SWEP:GetInkColor()
+	return ss.GetColor(self:GetNWInt "inkcolor") or ss.GetColor(ss.GetNPCInkColor(self.Owner))
+end
+
 -- Returns the owner ping in seconds.
 -- Returns 0 if the owner is invalid or an NPC.
 function SWEP:Ping()
@@ -137,8 +141,7 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 	self:SetOnEnemyInk(onink and not onourink)
 
 	self:GetOptions()
-	self.Color = ss.GetColor(c) or ss.GetColor(ss.GetNPCInkColor(self.Owner))
-	self:SetInkColorProxy(self.Color:ToVector())
+	self:SetInkColorProxy(self:GetInkColor():ToVector())
 end
 
 function SWEP:SharedInitBase()
@@ -190,7 +193,6 @@ function SWEP:SharedDeployBase()
 	self.Owner:SetHealth(self.Owner:Health() * self:GetNWInt "MaxHealth" / self:GetNWInt "BackupMaxHealth")
 	if self.Owner:IsPlayer() then
 		self.Owner:SetJumpPower(self.JumpPower)
-		self.Owner:SetColor(color_white)
 		self.Owner:SetCrouchedWalkSpeed(.5)
 		if ss.WeaponRecord[self.Owner] then
 			ss.WeaponRecord[self.Owner].Recent[self.ClassName] = -os.time()
@@ -352,6 +354,7 @@ function SWEP:ChangeThrowing(name, old, new)
 end
 
 function SWEP:SetupDataTables()
+	local gain = ss.GetOption "gain"
 	self:AddNetworkVar("Bool", "InInk") -- If owner is in ink.
 	self:AddNetworkVar("Bool", "InFence") -- If owner is in fence.
 	self:AddNetworkVar("Bool", "InWallInk") -- If owner is on wall.
@@ -368,12 +371,18 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Int", "Key") -- A valid key input.
 	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
 	self:AddNetworkVar("Vector", "AimVector") -- NPC:GetAimVector() doesn't exist in clientside.
-	self.HealSchedule = self:AddNetworkSchedule(10 / ss.GetMaxHealth(), function(self, schedule)
-		local canheal = self:GetNWBool "canhealink" and self:GetInInk() -- Gradually heals the owner
+	self.HealSchedule = self:AddNetworkSchedule(0, function(self, schedule)
+		local healink = self:GetNWBool "canhealink" and self:GetInInk() -- Gradually heals the owner
 		local timescale = ss.GetTimeScale(self.Owner)
-		local delay = 10 / ss.GetMaxHealth() / timescale / (canheal and 8 or 1)
+		local delay = 10 / ss.GetMaxHealth() / timescale
+		if healink then
+			delay = delay / 8 / gain "healspeedink" / 100
+		else
+			delay = delay / gain "healspeedstand" / 100
+		end
+
 		if schedule:GetDelay() ~= delay then schedule:SetDelay(delay) end
-		if not self:GetOnEnemyInk() and (self:GetNWBool "canhealstand" or canheal) then
+		if not self:GetOnEnemyInk() and (self:GetNWBool "canhealstand" or healink) then
 			local health = math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth())
 			if self.Owner:Health() ~= health then self.Owner:SetHealth(health) end
 		end
@@ -381,10 +390,16 @@ function SWEP:SetupDataTables()
 
 	self.ReloadSchedule = self:AddNetworkSchedule(0, function(self, schedule)
 		local reloadamount = math.max(0, schedule:SinceLastCalled()) -- Recharging ink
-		local fastreload = self:GetNWBool "canreloadink" and self:GetInInk()
+		local reloadink = self:GetNWBool "canreloadink" and self:GetInInk()
 		local timescale = ss.GetTimeScale(self.Owner)
-		local mul = ss.GetMaxInkAmount() / 10 * (fastreload and 10/3 or 1) * timescale
-		if self:GetNWBool "canreloadstand" or fastreload then
+		local mul = ss.GetMaxInkAmount() * timescale
+		if reloadink then
+			mul = mul / 3 * gain "reloadspeedink" / 100
+		else
+			mul = mul / 10 * gain "reloadspeedstand" / 100
+		end
+
+		if self:GetNWBool "canreloadstand" or reloadink then
 			local ink = math.Clamp(self:GetInk() + reloadamount * mul, 0, ss.GetMaxInkAmount())
 			if self:GetInk() ~= ink then self:SetInk(ink) end
 		end

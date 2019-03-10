@@ -12,8 +12,12 @@ return {
 	Enabled = {true, order = 1, serverside = true},
 	FF = {false, order = 2, serverside = true},
 	Gain = {
+		HealSpeedInk = {100, min = 1, max = 500, decimals = 0, order = 4, serverside = true},
+		HealSpeedStand = {100, min = 1, max = 500, decimals = 0, order = 3, serverside = true},
 		InkAmount = {100, min = 1, max = 500, decimals = 0, order = 2, serverside = true},
 		MaxHealth = {100, min = 1, max = 500, decimals = 0, order = 1, serverside = true},
+		ReloadSpeedInk = {100, min = 1, max = 500, decimals = 0, order = 6, serverside = true},
+		ReloadSpeedStand = {100, min = 1, max = 500, decimals = 0, order = 5, serverside = true},
 	},
 	InkColor = {1, hidden = true},
 	LeftHand = false,

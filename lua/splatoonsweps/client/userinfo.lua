@@ -114,6 +114,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 
 		if not IsValid(self.Weapon) then
 			self.Weapon = ClientsideModel "models/error.mdl"
+			self.Weapon:SetNoDraw(true)
 			self.Weapon:SetPos(-Vector(120))
 			self.Weapon:SetParent(self.Entity)
 			self.Weapon:AddEffects(EF_BONEMERGE)
@@ -152,6 +153,7 @@ local function GeneratePreview(tab)
 	tab.PreviewBase:SetTitle(ss.Text.PreviewTitle)
 	tab.PreviewBase:SetDraggable(true)
 	tab.PreviewBase:SetSizable(true)
+	tab.PreviewBase:SetPaintShadow(false)
 	tab.PreviewBase:SetPos(ScrW(), ScrH())
 	tab.PreviewBase:SetZPos(1)
 	tab.PreviewBase.InitialScreenLock = true

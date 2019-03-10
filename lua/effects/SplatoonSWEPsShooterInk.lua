@@ -86,22 +86,20 @@ function EFFECT:CreateDrops(tr) -- Creates ink drops
 	local len = (tr.HitPos - self.Real.InitPos):Length2D()
 	local nextlen = self.SplashCount * SplashInterval + self.SplashInit
 	local e = EffectData()
-	local dir = self.Real.Ang:Forward()
-	dir.z = 0 dir:Normalize()
+	local dir = Vector(self.Real.Velocity.x, self.Real.Velocity.y):GetNormalized()
 	while len >= nextlen do -- Create drops
 		local frac = len == 0 and 0 or nextlen / len
-		local dz = Lerp(frac, self.Real.InitPos.z, tr.HitPos.z)
+		local dz = tr.HitPos.z - self.Real.InitPos.z
 		e:SetAttachment(0)
 		e:SetAngles(self.Real.Ang)
 		e:SetColor(self.ColorCode)
 		e:SetEntity(self.Weapon)
 		e:SetFlags(1)
 		e:SetMagnitude(ss.mColRadius)
-		e:SetOrigin(self.Real.InitPos + dir * nextlen + vector_up * dz)
+		e:SetOrigin(self.Real.InitPos + dir * nextlen + vector_up * dz * frac)
 		e:SetScale(0)
 		e:SetStart(vector_origin)
 		util.Effect("SplatoonSWEPsShooterInk", e)
-
 		nextlen = nextlen + SplashInterval
 		self.SplashCount = self.SplashCount + 1
 	end

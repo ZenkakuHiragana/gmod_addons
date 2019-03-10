@@ -117,6 +117,7 @@ function SWEP:Deploy()
 	end
 
 	self:GetOptions()
+	ss.ProtectedCall(self.ClientDeploy, self)
 	return self:SharedDeployBase()
 end
 
@@ -133,6 +134,7 @@ function SWEP:Holster()
 		end
 	end
 
+	ss.ProtectedCall(self.ClientHolster, self)
 	return self:SharedHolsterBase()
 end
 

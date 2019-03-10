@@ -91,8 +91,7 @@ function SWEP:Deploy()
 	end
 
 	self:GetOptions()
-	self.Color = ss.GetColor(self:GetNWInt "inkcolor") or ss.GetColor(ss.GetNPCInkColor(self.Owner))
-	self:SetInkColorProxy(self.Color:ToVector())
+	self:SetInkColorProxy(self:GetInkColor():ToVector())
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
 	self:SetNWInt("MaxHealth", ss.GetMaxHealth())
@@ -155,6 +154,7 @@ function SWEP:Deploy()
 		ss.ProtectedCall(self.Owner.SplatColors, self.Owner)
 	end
 
+	ss.ProtectedCall(self.ServerDeploy, self)
 	return self:SharedDeployBase()
 end
 
@@ -187,6 +187,7 @@ function SWEP:Holster()
 		end
 	end
 
+	ss.ProtectedCall(self.ServerHolster, self)
 	return self:SharedHolsterBase()
 end
 

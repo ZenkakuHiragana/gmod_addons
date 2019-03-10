@@ -13,8 +13,12 @@ return {Options = {
     FF = "Enable friendly fire",
     Gain = {
         __printname = "Parameters",
+        HealSpeedInk = "Heal speed [%] (In ink)",
+        HealSpeedStand = "Heal speed [%] (Out of ink)",
         MaxHealth = "Maximum health",
         InkAmount = "Amount of ink",
+        ReloadSpeedInk = "Reload speed [%] (In ink)",
+        ReloadSpeedStand = "Reload speed [%] (Out of ink)",
     },
     LeftHand = "Left hand mode",
     MoveViewmodel = "Move viewmodel to avoid walls",

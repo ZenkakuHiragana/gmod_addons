@@ -14,7 +14,7 @@ local PaintFraction = 1 + PaintNearDistance / ss.mPaintFarDistance
 SWEP.Crosshair = {
 	color_circle = ColorAlpha(color_black, crosshairalpha),
 	color_nohit = ColorAlpha(color_white, crosshairalpha),
-	color_hit = ColorAlpha(color_white, 192), 
+	color_hit = ColorAlpha(color_white, 192),
 	Dot = 5, HitLine = 20, HitWidth = 2, -- in pixel
 	Inside1 = 40, Inside2 = 46, Outside1 = 56, Outside2 = 64,
 	InsideColored = 60, OutsideColored = 70,
@@ -37,12 +37,12 @@ local function Spin(self, vm, weapon, ply)
 		a.y = a.y + sgn * dy
 		vm:ManipulateBoneAngles(b, a)
 	end
-	
+
 	if not IsValid(vm) then return end
 	function vm.GetInkColorProxy()
 		return ss.ProtectedCall(self.GetInkColorProxy, self) or ss.vector_one
 	end
-	
+
 	-- local s = ss.vector_one
 	-- if self.ViewModelFlip then s = Vector(1, -1, 1) end
 	-- vm:ManipulateBoneScale(vm:LookupBone "root_1" or 0, s)
@@ -82,20 +82,20 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 			pos = self.Owner:GetShootPos()
 		end
 	end
-	
+
 	local linesize = t.Size.OutsideColored * (1.5 - frac)
 	for i = 1, 4 do
 		local rot = dir:Angle()
 		local sgnx, sgny = i > 2 and 1 or -1, bit.band(i, 3) > 1 and 1 or -1
 		rot:RotateAroundAxis(yaw, spreadx * sgnx)
 		rot:RotateAroundAxis(pitch, spready * sgny)
-		
+
 		local endpos = pos + rot:Forward() * range * frac
 		local hit = endpos:ToScreen()
 		if not hit.visible then continue end
 		hit.x = hit.x - linesize * sgnx * (t.HitEntity and .8 or 1)
 		hit.y = hit.y - linesize * sgny * (t.HitEntity and .8 or 1)
-		
+
 		local dy = w / (2 * math.sqrt(2)) - h
 		local dx = w / math.sqrt(2) - h
 		for _, info in ipairs {
@@ -140,7 +140,7 @@ function SWEP:DrawChargeCircle(t)
 			math.floor(self.Primary.FireDuration[1] / self.Primary.Delay) + 1,
 			math.floor(self.Primary.FireDuration[2] / self.Primary.Delay) + 1,
 		}
-		
+
 		prog = {
 			math.Clamp((self:GetFireInk() + frac) / max[1], 0, 1) * 360,
 			math.Clamp((self:GetFireInk() + frac - max[1]) / (max[2] - max[1]), 0, 1) * 360,
@@ -157,7 +157,7 @@ function SWEP:DrawChargeCircle(t)
 			prog[1] = prog[1] + self.MinChargeDeg
 		end
 	end
-	
+
 	draw.NoTexture()
 	surface.SetDrawColor(ColorAlpha(color_black, 192))
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r[1], r[1] - ri[1], 90, 450 - prog[1], 5)
@@ -185,7 +185,7 @@ function SWEP:DrawCenterDot(t) -- Center circle
 		ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s + centerwidth)
 		surface.SetDrawColor(self.Crosshair.color_nohit)
 		ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s)
-		
+
 		if math.abs(t.EndPosScreen.x - t.HitPosScreen.x)
 		+ math.abs(t.EndPosScreen.y - t.HitPosScreen.y) > 2 then
 			local s = t.Size.OutsideCenter / 2
@@ -193,7 +193,7 @@ function SWEP:DrawCenterDot(t) -- Center circle
 			ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s, s - t.Size.InsideCenter / 2)
 		end
 	end
-	
+
 	if not t.Trace.Hit then return end
 	surface.SetDrawColor(t.CrosshairDarkColor)
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s + centerwidth)
@@ -205,7 +205,7 @@ function SWEP:DrawCrosshairFlash(t)
 	if CurTime() > self.CrosshairFlashTime + self.FlashDuration then return end
 	local s = t.Size.OutsideColored * 2
 	surface.SetMaterial(ss.Materials.Crosshair.Flash)
-	surface.SetDrawColor(ColorAlpha(self.Color, (self.CrosshairFlashTime + self.FlashDuration - CurTime()) / self.FlashDuration * 255))
+	surface.SetDrawColor(ColorAlpha(self:GetInkColor(), (self.CrosshairFlashTime + self.FlashDuration - CurTime()) / self.FlashDuration * 255))
 	surface.DrawTexturedRect(t.HitPosScreen.x - s / 2, t.HitPosScreen.y - s / 2, s, s)
 end
 
@@ -244,7 +244,7 @@ function SWEP:SetupDrawCrosshair()
 	} do
 		t.Size[param] = math.ceil(size * res)
 	end
-	
+
 	for param, size in pairs {
 		HitLine = {texlinesize, self.Crosshair.HitLine, hitline},
 		HitWidth = {texlinewidth, self.Crosshair.HitWidth, hitwidth},
@@ -253,7 +253,7 @@ function SWEP:SetupDrawCrosshair()
 	} do
 		t.Size[param] = math.ceil(size[1] * res * size[2] / size[3])
 	end
-	
+
 	self:GetCrosshairTrace(t)
 	return t
 end

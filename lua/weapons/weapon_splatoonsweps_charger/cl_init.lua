@@ -109,7 +109,7 @@ function SWEP:DrawCrosshairFlash(t)
 	if not self.FullChargeFlag or CurTime() > self.CrosshairFlashTime + self.FlashDuration then return end
 	local s = t.Size.Outer * self:GetScopedSize() * 2
 	surface.SetMaterial(ss.Materials.Crosshair.Flash)
-	surface.SetDrawColor(ColorAlpha(self.Color, (self.CrosshairFlashTime + self.FlashDuration - CurTime()) / self.FlashDuration * 128))
+	surface.SetDrawColor(ColorAlpha(self:GetInkColor(), (self.CrosshairFlashTime + self.FlashDuration - CurTime()) / self.FlashDuration * 128))
 	surface.DrawTexturedRect(t.HitPosScreen.x - s / 2, t.HitPosScreen.y - s / 2, s, s)
 end
 
@@ -217,8 +217,9 @@ function SWEP:GetArmPos()
 end
 
 function SWEP:CustomCalcView(ply, pos, ang, fov)
+	if not self.Scoped then return end
 	if self:GetNWBool "usertscope" then return end
-	if not (self.Scoped and self:IsTPS() and self:IsMine()) then return end
+	if not (self:IsTPS() and self:IsMine()) then return end
 	local p, a = self:GetFirePosition()
 	local frac = self:GetScopedProgress(true)
 	pos:Set(LerpVector(frac, pos, p))

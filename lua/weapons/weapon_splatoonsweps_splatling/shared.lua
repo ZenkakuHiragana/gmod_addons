@@ -85,11 +85,6 @@ function SWEP:PlayChargeSound()
 		self.SpinupSound[1]:Stop()
 		self.SpinupSound[2]:Stop()
 		self.SpinupSound[3]:Play()
-		if (CLIENT or ss.sp) and self.FullChargeFlag then
-			self:EmitSound(ss.ChargerBeep, 75, 115)
-			self.FullChargeFlag = false
-			self.CrosshairFlashTime = CurTime() - self:Ping()
-		end
 	elseif prog > 0 then
 		self.AimSound:PlayEx(.75, math.max(self.AimSound:GetPitch(), prog * 90 + 1))
 		self.SpinupSound[3]:Stop()
@@ -102,11 +97,6 @@ function SWEP:PlayChargeSound()
 			self.SpinupSound[2]:PlayEx(1, math.max(self.SpinupSound[2]:GetPitch(), 80 + prog * 20))
 			self.SpinupSound[1]:Stop()
 			self.SpinupSound[1]:ChangePitch(1)
-			if (CLIENT or ss.sp) and not self.FullChargeFlag then
-				self:EmitSound(ss.ChargerBeep)
-				self.FullChargeFlag = true
-				self.CrosshairFlashTime = CurTime() - .1 - self:Ping()
-			end
 		end
 	end
 end
@@ -126,6 +116,19 @@ function SWEP:SharedInit()
 	self.MediumCharge = (self.Primary.MaxChargeTime[1] - self.Primary.MinChargeTime) / (self.Primary.MaxChargeTime[2] - self.Primary.MinChargeTime)
 	self:SetAimTimer(CurTime())
 	self:SharedDeploy()
+	self:AddSchedule(0, function()
+		if SERVER or not self:IsMine() then return end
+		local prog = self:GetChargeProgress()
+		if prog == 1 and self.FullChargeFlag then
+			self:EmitSound(ss.ChargerBeep, 75, 115)
+			self.FullChargeFlag = false
+			self.CrosshairFlashTime = CurTime() - self:Ping()
+		elseif self.MediumCharge < prog and prog < 1 and not self.FullChargeFlag then
+			self:EmitSound(ss.ChargerBeep)
+			self.FullChargeFlag = true
+			self.CrosshairFlashTime = CurTime() - .1 - self:Ping()
+		end
+	end)
 end
 
 function SWEP:SharedPrimaryAttack()
@@ -192,8 +195,6 @@ function SWEP:Move(ply)
 		else
 			self:SetADS(ply:KeyDown(IN_USE))
 		end
-	elseif self:ShouldChargeWeapon() then
-		self:PlayChargeSound()
 	end
 
 	if ply:OnGround() then

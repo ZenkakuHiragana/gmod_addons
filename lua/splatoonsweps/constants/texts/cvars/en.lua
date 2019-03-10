@@ -13,8 +13,12 @@ return {CVars = {
     Enabled = "Enable or disable Splatoon SWEPs. (1: enabled, 0: disabled)",
     FF = "Enable friendly fire. (1: enabled, 0: disabled)",
     Gain = {
+        HealSpeedInk = "A multiplier of healing speed when you're in ink.  200 means 200%, twice faster healing speed.",
+        HealSpeedStand = "A multiplier of healing speed when you're out of ink.  200 means 200%, twice faster healing speed.",
         MaxHealth = "Maximum health of inkling.",
         InkAmount = "The amount ink tank can hold up to.",
+        ReloadSpeedInk = "A multiplier of reloading speed when you're in ink.  200 means 200%, twice faster reloading speed.",
+        ReloadSpeedStand = "A multiplier of reloading speed when you're out of ink.  200 means 200%, twice faster reloading speed.",
     },
     InkColor = "Your ink color.  Available values are:\n",
     LeftHand = "Use left hand to hold weapons. (1: enabled, 0: disabled)",

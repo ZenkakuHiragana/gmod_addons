@@ -98,29 +98,13 @@ function SWEP:SharedInit()
 	self:SetAimTimer(CurTime())
 	self:SetNextPlayEmpty(CurTime())
 	self:SetSplashInitMul(1)
-	if CLIENT or not self.IsHeroShot then return end
-	-- self.Trail = util.SpriteTrail(self, self:LookupAttachment "trail",
-	-- self.HeroColor[self:GetNWInt "level" + 1], true, 3, 1, .5, .125, "sprites/physbeama")
 end
 
 function SWEP:SharedDeploy()
 	self:SetSplashInitMul(1)
 	self:GenerateSplashInitTable()
-	if SERVER and self.IsHeroShot and IsValid(self.Owner) and self.Owner:IsPlayer() then
-		local vm = self.Owner:GetViewModel()
-		if IsValid(vm) then
-			-- self.TrailViewmodel = util.SpriteTrail(vm, vm:LookupAttachment "trail",
-			-- self.HeroColor[self:GetNWInt "level" + 1], true, 3, 1, .5, .125, "sprites/physbeama")
-		end
-	end
-
 	if not self.Primary.TripleShotDelay then return end
 	self.TripleSchedule:SetDone(0)
-end
-
-function SWEP:SharedHolster()
-	if CLIENT or not self.IsHeroShot then return end
-	-- SafeRemoveEntity(self.TrailViewmodel)
 end
 
 function SWEP:GetSpread()

@@ -524,8 +524,7 @@ function ss.Simulate.EFFECT_ShooterRender(self)
 	local sizeb = sizef * .75
 	local AppPos, AppAng = self:GetPos(), self:GetAngles()
     local TailPos, TailAng = self.Tail.Pos, self.Tail.Ang
-    AppAng = LerpAngle(0.4, AppAng, (AppPos - TailPos):Angle())
-    TailAng = LerpAngle(0.4, TailAng, (AppPos - TailPos):Angle())
+    if self.IsCharger then AppAng, TailAng = (AppPos - TailPos):Angle(), (AppPos - TailPos):Angle() end
 	local fore = AppPos + AppAng:Forward() * sizef
 	local back = TailPos - TailAng:Forward() * sizeb
 	local foreup, foreleft, foreright = Angle(AppAng), Angle(AppAng), Angle(AppAng)

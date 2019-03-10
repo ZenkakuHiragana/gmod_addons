@@ -89,6 +89,11 @@ function SWEP:ClientThink()
 		self.Skin = self.Skin and 1 or 0
 	elseif self.IsHeroShot then
 		self.Skin = self:GetNWInt "level"
+		local t = self:GetNWEntity "Trail"
+		local tv = self:GetNWEntity "TrailVM"
+		local fps = self:IsMine() and not self:IsTPS()
+		if IsValid(t) then t:SetNoDraw(fps) end
+		if IsValid(tv) then tv:SetNoDraw(not fps) end
 	end
 end
 
@@ -104,7 +109,7 @@ function SWEP:GetCrosshairTrace(t)
 	tr.filter = {self, self.Owner}
 	tr.maxs = ss.vector_one * self.Primary.ColRadius
 	tr.mins = -tr.maxs
-	
+
 	t.Trace = util.TraceHull(tr)
 	t.EndPosScreen = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self:GetRange()):ToScreen()
 	t.HitPosScreen = t.Trace.HitPos:ToScreen()
@@ -134,14 +139,14 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 			pos = self.Owner:GetShootPos()
 		end
 	end
-	
+
 	local linesize = t.Size.Outer * (1.5 - frac)
 	for i = 1, 4 do
 		local rot = dir:Angle()
 		local sgnx, sgny = i > 2 and 1 or -1, bit.band(i, 3) > 1 and 1 or -1
 		rot:RotateAroundAxis(yaw, spreadx * sgnx)
 		rot:RotateAroundAxis(pitch, spready * sgny)
-		
+
 		local endpos = pos + rot:Forward() * self:GetRange() * frac
 		local hit = endpos:ToScreen()
 		if not hit.visible then continue end
@@ -150,7 +155,7 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 		surface.SetDrawColor(basecolor)
 		surface.SetMaterial(ss.Materials.Crosshair.Line)
 		surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
-		
+
 		if not t.HitEntity then continue end
 		surface.SetDrawColor(ss.GetColor(self:GetNWInt "inkcolor"))
 		surface.SetMaterial(ss.Materials.Crosshair.LineColor)
@@ -176,17 +181,17 @@ end
 function SWEP:DrawOuterCircle(t)
 	local r = t.Size.Outer / 2
 	local ri = t.Size.Inner / 2
-	
+
 	draw.NoTexture()
 	if t.HitEntity then
 		local rb = r + hitouterbg
 		surface.SetDrawColor(color_black)
 		ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, rb, rb - ri)
 	end
-	
+
 	surface.SetDrawColor(t.Trace.Hit and t.CrosshairColor or self.Crosshair.color_circle)
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, r, r - ri)
-	
+
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_circle)
 	ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, r, r - ri)
@@ -218,7 +223,7 @@ function SWEP:DrawInnerCircle(t)
 	draw.NoTexture()
 	surface.SetDrawColor(t.Trace.Hit and color_white or self.Crosshair.color_nohit)
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s, thickness)
-	
+
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_nohit)
 	ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s, thickness)
@@ -229,7 +234,7 @@ function SWEP:DrawCenterDot(t) -- Center circle
 	draw.NoTexture()
 	surface.SetDrawColor(color_white)
 	ss.DrawArc(t.HitPosScreen.x, t.HitPosScreen.y, s)
-	
+
 	if not (t.IsSplatoon2 and t.Trace.Hit) then return end
 	surface.SetDrawColor(self.Crosshair.color_nohit)
 	ss.DrawArc(t.EndPosScreen.x, t.EndPosScreen.y, s)
@@ -254,7 +259,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 		self.OldPos, self.OldAng = self.BasePos, self.BaseAng
 		return pos, ang
 	end
-	
+
 	local armpos = ss.ProtectedCall(self.GetArmPos, self)
 	if self:GetHolstering() or self:GetThrowing()
 	or vm:GetSequenceActivityName(vm:GetSequence()) == "ACT_VM_DRAW" then
@@ -270,21 +275,21 @@ function SWEP:GetViewModelPosition(pos, ang)
 			armpos = 1
 		end
 	end
-	
+
 	if self:GetNWBool "lefthand" then
 		armpos = LeftHandAlt[armpos] or armpos
 	end
-	
+
 	if not isangle(self.IronSightsAng[armpos]) then return pos, ang end
 	if not isvector(self.IronSightsPos[armpos]) then return pos, ang end
-	
+
 	local DesiredFlip = self.IronSightsFlip[armpos]
 	if armpos ~= self.ArmPos then
 		self.ArmPos, self.ArmBegin = armpos, SysTime()
 		self.BasePos, self.BaseAng = self.OldPos, self.OldAng
 		self.TransitFlip = self.ViewModelFlip ~= DesiredFlip
 	end
-	
+
 	local relpos, relang = LocalToWorld(vector_origin, angle_zero, pos, ang)
 	local SwayTime = self.SwayTime / ss.GetTimeScale(self.Owner)
 	local f = math.Clamp((SysTime() - self.ArmBegin) / SwayTime, 0, 1)
@@ -293,13 +298,13 @@ function SWEP:GetViewModelPosition(pos, ang)
 			f, self.ArmPos = .5, 5
 			self.ViewModelFlip = DesiredFlip
 		end
-		
+
 		f, armpos = f * 2, 5
 	end
-	
+
 	self.OldPos = LerpVector(f, self.BasePos, self.IronSightsPos[armpos])
 	self.OldAng = LerpAngle(f, self.BaseAng, self.IronSightsAng[armpos])
-	
+
 	return LocalToWorld(self.OldPos, self.OldAng, relpos, relang)
 end
 
@@ -318,7 +323,7 @@ function SWEP:SetupDrawCrosshair()
 	} do
 		t.Size[param] = math.ceil(size * res)
 	end
-	
+
 	for param, size in pairs {
 		HitLine = {texlinesize, self.Crosshair.HitLine, hitline},
 		HitWidth = {texlinewidth, self.Crosshair.HitWidth, hitwidth},
@@ -327,7 +332,7 @@ function SWEP:SetupDrawCrosshair()
 	} do
 		t.Size[param] = math.ceil(size[1] * res * size[2] / size[3])
 	end
-	
+
 	self:GetCrosshairTrace(t)
 	return t
 end
@@ -339,6 +344,6 @@ function SWEP:DrawCrosshair(x, y, t)
 	self:DrawHitCross(t)
 	self:DrawInnerCircle(t)
 	self:DrawCenterDot(t)
-	
+
 	return true
 end

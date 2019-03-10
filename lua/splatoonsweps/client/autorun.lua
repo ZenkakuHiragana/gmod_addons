@@ -490,10 +490,7 @@ function ss.PostPlayerDraw(w, ply) render.SetBlend(1) end
 function ss.PrePlayerDraw(w, ply)
 	local ShouldNoDraw = Either(w:GetNWBool "becomesquid" and IsValid(w.Squid), ply:Crouching(), w:GetInInk())
 	if ShouldNoDraw then return true end
-	if w:IsCarriedByLocalPlayer() then
-		render.SetBlend(w:GetCameraFade())
-	end
-
+	if w:IsCarriedByLocalPlayer() then render.SetBlend(w:GetCameraFade() * ply:GetColor().a / 255) end
 	return ss.ProtectedCall(w.ManipulatePlayer, w, ply)
 end
 

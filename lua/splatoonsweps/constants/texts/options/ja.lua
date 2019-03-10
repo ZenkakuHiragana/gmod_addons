@@ -13,8 +13,12 @@ return {Options = {
     FF = "同士討ちの有効化",
     Gain = {
         __printname = "各種パラメータ",
+        HealSpeedInk = "体力回復速度[%] (インク内)",
+        HealSpeedStand = "体力回復速度[%] (インク外)",
         MaxHealth = "最大ヘルス",
         InkAmount = "インクタンク容量",
+        ReloadSpeedInk = "インク回復速度[%] (インク内)",
+        ReloadSpeedStand = "インク回復速度[%] (インク外)",
     },
     LeftHand = "左利き",
     MoveViewmodel = "壁を避けて狙うとき、ビューモデルを動かす",

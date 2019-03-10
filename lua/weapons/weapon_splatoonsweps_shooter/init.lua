@@ -12,6 +12,25 @@ function SWEP:ServerInit()
 	self:SetNPCMaxRest(self.Primary.TripleShotDelay)
 end
 
+local TrailParams = {true, 3, 1, .5, .125, "sprites/physbeama"}
+function SWEP:ServerDeploy()
+	if not (self.IsHeroShot and IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
+	local a = self:LookupAttachment "trail"
+	local c = self.HeroColor[self:GetNWInt "level" + 1]
+	local vm = self.Owner:GetViewModel()
+	self:SetNWEntity("Trail", util.SpriteTrail(self, a,	c, unpack(TrailParams)))
+
+	if not IsValid(vm) then return end
+	a = vm:LookupAttachment "trail"
+	self:SetNWEntity("TrailVM", util.SpriteTrail(vm, a, c, unpack(TrailParams)))
+end
+
+function SWEP:ServerHolster()
+	if not self.IsHeroShot then return end
+	SafeRemoveEntity(self:GetNWEntity "Trail")
+	SafeRemoveEntity(self:GetNWEntity "TrailVM")
+end
+
 function SWEP:ServerThink()
 	local c = self.HeroColor[self:GetNWInt "level" + 1]
 	for _, t in ipairs {self.Trail, self.TrailViewmodel} do
