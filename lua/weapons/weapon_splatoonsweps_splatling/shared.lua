@@ -247,7 +247,7 @@ function SWEP:Move(ply)
 		if CurTime() - self:GetCharge() < p.MinChargeTime then return end
 		local prog, Duration = self:GetChargeProgress()
 		if prog < self.MediumCharge then
-			Duration = self.Primary.FireDuration[1] * prog
+			Duration = self.Primary.FireDuration[1] * prog / self.MediumCharge
 		else
 			Duration = Lerp((prog - self.MediumCharge) / (1 - self.MediumCharge), self.Primary.FireDuration[1], self.Primary.FireDuration[2])
 		end

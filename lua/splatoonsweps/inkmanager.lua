@@ -25,15 +25,15 @@ end
 function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classname)
 	inktype = math.floor(inktype)
 	angle = math.NormalizeAngle(angle)
-	
+
 	local ang, polys = normal:Angle(), {}
 	ang.roll = math.abs(normal.z) > ss.MAX_COS_DEG_DIFF and angle * normal.z or ang.yaw
 	for i, v in ipairs(reference_polys) do -- Scaling
 		polys[i] = ss.To3D(v * radius, pos, ang)
 	end
-	
+
 	if ply:IsPlayer() and ss.mp and SERVER then SuppressHostEvents(ply) end
-	
+
 	local mins, maxs = ss.GetBoundingBox(polys, MIN_BOUND)
 	for node in ss.BSPPairs(polys) do
 		local surf = SERVER and node.Surfaces or ss.SequentialSurfaces
@@ -42,7 +42,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			not ss.CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
 			local _, localang = WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle())
 			localang = ang.yaw - localang.roll + surf.DefaultAngles[i]
-			
+
 			local e = EffectData()
 			e:SetAttachment(color)
 			e:SetEntity(ply)
@@ -51,18 +51,18 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			e:SetScale(SERVER and index or i * (ss.Displacements[i] and -1 or 1))
 			e:SetStart(Vector(radius, localang, ratio))
 			util.Effect("SplatoonSWEPsDrawInk", e, true, not ply:IsPlayer() and SERVER and ss.mp or nil)
-			
+
 			ss.AddInkRectangle(color, i, inktype, localang, pos, radius, ratio, surf)
 		end
 	end
-	
+
 	if ply:IsPlayer() and ss.mp and SERVER then SuppressHostEvents() end
 	if not ply:IsPlayer() then return end
 
 	ss.WeaponRecord[ply].Inked[classname]
 	= (ss.WeaponRecord[ply].Inked[classname] or 0)
 	- radius^2 * math.pi * ratio
-	
+
 	if ss.sp and SERVER then
 		net.Start "SplatoonSWEPs: Send turf inked"
 		net.WriteDouble(ss.WeaponRecord[ply].Inked[classname])
@@ -85,12 +85,12 @@ function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, su
 		bounds[{p.x - boundsize, p.y - boundsize, p.x + boundsize, p.y + boundsize}] = true
 		t = t + radius * ratio
 	end
-	
+
 	if ratio < .75 then
 		t = pos2d + axis * radius * (1 - ratio)
 		bounds[{t.x - boundsize, t.y - boundsize, t.x + boundsize, t.y + boundsize}] = true
 	end
-	
+
 	local newink = {
 		angle = localang,
 		bounds = bounds,
@@ -100,7 +100,7 @@ function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, su
 		ratio = ratio,
 		texid = inktype,
 	}
-	
+
 	local ink = surf.InkCircles[id]
 	for i, r in ipairs(ink) do
 		if not next(r.bounds) then
@@ -132,7 +132,7 @@ function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, su
 			end
 		end
 	end
-	
+
 	ink[#ink + 1] = newink
 end
 

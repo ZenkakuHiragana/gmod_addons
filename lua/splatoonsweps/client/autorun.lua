@@ -235,7 +235,7 @@ function ss.PrepareInkSurface(write)
 		gm_new_albacore_hotel = true,
 	})[game.GetMap()] then INK_SURFACE_DELTA_NORMAL = 2 end
 
-	local rtsize = math.min(rt.Size[ss.GetOption "rtresolution"] or 1, render.MaxTextureWidth(), render.MaxTextureHeight())
+	local rtsize = rt.BaseTexture:Width()
 	local rtarea = rtsize^2
 	local rtmargin = 4 / rtsize -- Render Target margin
 	local arearatio = 41.3329546960896 / rtsize * -- arearatio[units/pixel], Found by Excel bulldozing
@@ -458,16 +458,9 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	)
 
 	file.Delete(crashpath)
-	local path, data
 	local pathbsp = string.format("maps/%s.bsp", game.GetMap())
-	if ss.mp then
-		path = string.format("splatoonsweps/mp/%s.txt", game.GetMap())
-		data = file.Open(path, "rb", "DATA")
-	else
-		path = string.format("splatoonsweps/%s.txt", game.GetMap())
-		data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, "rb", "GAME")
-	end
-
+	local path = string.format("splatoonsweps/%s.txt", game.GetMap())
+	local data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, "rb", "GAME")
 	if not data or data:Size() < 4 or data:ReadULong() ~= tonumber(util.CRC(file.Read(pathbsp, true) or "")) then
 		if data then data:Close() end
 		net.Start "SplatoonSWEPs: Redownload ink data"

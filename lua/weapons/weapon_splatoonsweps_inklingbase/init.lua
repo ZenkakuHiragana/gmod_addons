@@ -231,6 +231,7 @@ function SWEP:Think()
 		end
 	end
 
+	if not self.BackupPlayerInfo then self:Deploy() end
 	if self.Owner:GetPlayerColor() ~= self:GetInkColorProxy() then
 		self.Owner:SetPlayerColor(self:GetInkColorProxy())
 	end

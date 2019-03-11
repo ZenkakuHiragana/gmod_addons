@@ -19,7 +19,7 @@ function EFFECT:Init(e)
 	local c = ss.GetColor(cc)
 	self.Real = {
 		Ang = e:GetAngles(),
-		InitTime = CurTime() - ping - ss.ShooterDecreaseFrame,
+		InitTime = CurTime() - ping,
 		InitPos = e:GetOrigin(),
 		Pos = e:GetOrigin(),
 		Velocity = e:GetStart(),

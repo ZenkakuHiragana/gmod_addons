@@ -287,10 +287,10 @@ local function GenerateWeaponTab(tab)
 	GenerateWeaponIcons(tab)
 end
 
-local function SendValue(name, value)
+local function SendValue(name, value, clientside)
 	if ss.sp then
 		net.Start "greatzenkakuman.cvartree.adminchange"
-		net.WriteString(ss.GetConVarName(name, true))
+		net.WriteString(ss.GetConVarName(name, clientside == nil))
 		net.WriteString(tostring(value))
 		net.SendToServer()
 	elseif not game.IsDedicated() and LocalPlayer():IsAdmin() then
@@ -400,9 +400,7 @@ local function GeneratePreferenceTab(tab)
 	end
 
 	function tab.Preference.ResolutionSelector:OnSelect(index, value, data)
-		local cvar = ss.GetConVar "rtresolution"
-		if not cvar then return end
-		cvar:SetInt(index - 1)
+		SendValue("rtresolution", index - 1, true)
 	end
 end
 

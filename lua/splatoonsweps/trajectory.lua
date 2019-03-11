@@ -298,6 +298,7 @@ function HitPaint.weapon_splatoonsweps_blaster_base(ink, t)
 		ss.MakeBlasterExplosion(ink)
 	end
 
+	ink.IsDrop = true
 	HitPaint.weapon_splatoonsweps_shooter(ink, t)
 end
 
@@ -500,7 +501,7 @@ function ss.Simulate.EFFECT_ShooterRender(self)
 	if not IsValid(self.Weapon.Owner) then return end
 	if not isvector(self.ColorVector) then return end
 	if self.IsBlaster then
-		if self.Real.Time > self.Straight then
+		if self.Real.Time > self.Straight + ss.ShooterDecreaseFrame then
 			self.Size, self.IsBlaster = ss.mColRadius * 2
 		end
 

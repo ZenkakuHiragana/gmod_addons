@@ -23,7 +23,7 @@ net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 		Inked = {},
 		Recent = {},
 	}
-	
+
 	local id = ss.PlayerID[ply]
 	if not id then return end
 	local record = "data/splatoonsweps/record/" .. id .. ".txt"
