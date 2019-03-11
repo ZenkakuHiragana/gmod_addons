@@ -171,7 +171,8 @@ function SWEP:CreateInk()
 		e:SetOrigin(pos)
 		e:SetScale(self.SplashNum)
 		e:SetStart(self.InitVelocity)
-		util.Effect("SplatoonSWEPsShooterInk", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+		util.Effect("SplatoonSWEPsShooterInk", e, true,
+		not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
 		ss.AddInk(self.Owner, pos, util.SharedRandom("SplatoonSWEPs: Shooter ink type", 4, 9))
 	end

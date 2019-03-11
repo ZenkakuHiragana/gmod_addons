@@ -72,7 +72,7 @@ end
 --   number icon		| Notification icon.  Note that NOTIFY_Enums are only in clientside.
 --   number duration	| The number of seconds to display the notification for.
 function ss.SendError(msg, user, icon, duration)
-	if user and not user:IsPlayer() then return end
+	if IsValid(user) and not user:IsPlayer() then return end
 	if not user and player.GetCount() == 0 then return end
 	net.Start "SplatoonSWEPs: Send an error message"
 	net.WriteUInt(icon or 1, ss.SEND_ERROR_NOTIFY_BITS)
@@ -221,7 +221,6 @@ hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, 
 	if w then w.HealSchedule:SetDelay(ss.HealDelay) end
 	if not (IsValid(a) and i.IsSplatoonWeapon) then return end
 	if ss.IsAlly(w, i) then return true end
-	dmg:ScaleDamage(ss.ToHammerHealth)
 	if not ent:IsPlayer() then return end
 	net.Start "SplatoonSWEPs: Play damage sound"
 	net.Send(ent)

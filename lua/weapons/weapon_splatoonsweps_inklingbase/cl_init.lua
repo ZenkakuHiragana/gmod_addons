@@ -134,6 +134,7 @@ function SWEP:Holster()
 		end
 	end
 
+	self.Owner:SetHealth(self.Owner:Health() * self:GetNWInt "BackupMaxHealth" / self:GetNWInt "MaxHealth")
 	ss.ProtectedCall(self.ClientHolster, self)
 	return self:SharedHolsterBase()
 end
@@ -148,7 +149,6 @@ function SWEP:OnRemove()
 	end
 
 	if IsValid(self.Squid) then self.Squid:Remove() end
-	return self:Holster()
 end
 
 function SWEP:Think()

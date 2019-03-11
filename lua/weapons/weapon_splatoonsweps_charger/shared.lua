@@ -171,7 +171,8 @@ function SWEP:SharedPrimaryAttack()
 
 	if not self:IsFirstTimePredicted() then return end
 	local e = EffectData() e:SetEntity(self)
-	util.Effect("SplatoonSWEPsChargerLaser", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+	util.Effect("SplatoonSWEPsChargerLaser", e, true,
+	not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 	self:EmitSound "SplatoonSWEPs.ChargerPreFire"
 end
 

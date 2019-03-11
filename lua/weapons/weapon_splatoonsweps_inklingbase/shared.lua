@@ -207,7 +207,6 @@ function SWEP:SharedHolsterBase()
 	self:SetHolstering(true)
 	ss.ProtectedCall(self.SharedHolster, self)
 	StopLoopSound(self)
-	self.Owner:SetHealth(self.Owner:Health() * self:GetNWInt "BackupMaxHealth" / self:GetNWInt "MaxHealth")
 
 	if self.Owner:IsPlayer() and ss.WeaponRecord[self.Owner] then
 		ss.WeaponRecord[self.Owner].Duration[self.ClassName]
@@ -308,7 +307,8 @@ function SWEP:ChangeInInk(name, old, new)
 		e:SetOrigin(t.HitPos)
 		e:SetRadius(Lerp(f, 25, 50))
 		e:SetScale(.5)
-		util.Effect("SplatoonSWEPsMuzzleSplash", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+		util.Effect("SplatoonSWEPsMuzzleSplash", e, true,
+		not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 	elseif outofink and self.Owner:IsPlayer() then
 		self.Owner:SetDSP(1)
 	end

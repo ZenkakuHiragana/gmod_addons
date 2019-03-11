@@ -1,7 +1,6 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
-
 function EFFECT:Init(e)
 	self:SetNoDraw(true)
 	local c = ss.GetColor(e:GetColor())

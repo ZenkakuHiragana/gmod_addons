@@ -136,7 +136,8 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
 	d:SetMaxDamage(ink.Damage)
 	d:SetReportedPosition(t.HitPos)
 	d:SetAttacker(IsValid(o) and o or game.GetWorld())
-	d:SetInflictor(ss.IsValidInkling(o) or game.GetWorld())
+	d:SetInflictor(IsValid(ink.Inflictor) and ink.Inflictor or game.GetWorld())
+	d:ScaleDamage(ss.ToHammerHealth)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
@@ -195,13 +196,17 @@ end
 
 local function HitSmoke(ink, t)
 	if ink.ClassName:find "bamboozler" then return end
-	if t.HitWorld and CurTime() - ink.InitTime <= ink.Straight and CLIENT then
-		local c = ss.GetColor(ink.Color)
-		local p = CreateParticleSystem(game.GetWorld(), ss.Particles.MuzzleMist, PATTACH_WORLDORIGIN, 0, t.HitPos + t.HitNormal * 10)
-		p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, c:ToVector())
-		p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * 6)
-		p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, ink.InitPos)
-	end
+	if not t.HitWorld or CurTime() - ink.InitTime > ink.Straight then return end
+	local e = EffectData()
+	e:SetAttachment(0)
+	e:SetColor(ink.Color)
+	e:SetEntity(game.GetWorld())
+	e:SetFlags(PATTACH_ABSORIGIN)
+	e:SetOrigin(t.HitPos + t.HitNormal * 10)
+	e:SetScale(6)
+	e:SetStart(ink.InitPos)
+	util.Effect("SplatoonSWEPsMuzzleMist", e, true,
+	not ink.filter:IsPlayer() and SERVER and ss.mp or nil)
 end
 
 function HitPaint.weapon_splatoonsweps_charger(ink, t)
@@ -247,7 +252,7 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 	HitSmoke(ink, t)
 	if LifeTime > ink.Straight then return end
 	if ink.IsCarriedByLocalPlayer then
-		ss.PlayHitSound(ink.Damage >= 100, o)
+		ss.PlayHitSound(ink.Damage >= 1, o)
 		if ss.mp and CLIENT then return end
 	end
 
@@ -258,7 +263,8 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 	d:SetMaxDamage(ink.Damage)
 	d:SetReportedPosition(t.HitPos)
 	d:SetAttacker(IsValid(o) and o or game.GetWorld())
-	d:SetInflictor(ss.IsValidInkling(o) or game.GetWorld())
+	d:SetInflictor(IsValid(ink.Inflictor) and ink.Inflictor or game.GetWorld())
+	d:ScaleDamage(ss.ToHammerHealth)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
@@ -302,10 +308,7 @@ function HitPaint.weapon_splatoonsweps_blaster_base(ink, t)
 	HitPaint.weapon_splatoonsweps_shooter(ink, t)
 end
 
-function HitEntity.weapon_splatoonsweps_blaster_base(ink, t, w)
-	-- if ink.Exploded then return end
-	HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
-end
+HitEntity.weapon_splatoonsweps_blaster_base = HitEntity.weapon_splatoonsweps_shooter
 
 local function ProcessInkQueue(ply)
 	while true do
@@ -374,6 +377,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		ColRadius = info.ColRadius,
 		Damage = info.Damage,
 		DecreaseDamage = info.DecreaseDamage,
+		Inflictor = w,
 		InitDirection = isdrop and -vector_up or w.InitVelocity:GetNormalized(),
 		InitPos = pos,
 		InitTime = info.InitTime or CurTime(),
@@ -742,6 +746,7 @@ function ss.MakeBlasterExplosion(ink)
 		d:SetReportedPosition(ink.endpos)
 		d:SetAttacker(attacker)
 		d:SetInflictor(inflictor)
+		d:ScaleDamage(ss.ToHammerHealth)
 		ss.ProtectedCall(e.TakeDamageInfo, e, d)
 	end
 
@@ -752,7 +757,8 @@ function ss.MakeBlasterExplosion(ink)
 	e:SetColor(ink.Color)
 	e:SetFlags(ink.HitWall and 1 or 0)
 	e:SetRadius(ink.ColRadiusFar)
-	util.Effect("SplatoonSWEPsBlasterExplosion", e, true, not ink.filter:IsPlayer() and SERVER and ss.mp or nil)
+	util.Effect("SplatoonSWEPsBlasterExplosion", e, true,
+	not ink.filter:IsPlayer() and SERVER and ss.mp or nil)
 	if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents() end
 
 	local a = ink.InitDirection:Angle()

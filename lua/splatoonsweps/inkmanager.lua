@@ -38,9 +38,10 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	for node in ss.BSPPairs(polys) do
 		local surf = SERVER and node.Surfaces or ss.SequentialSurfaces
 		for i, index in pairs(SERVER and surf.Indices or node.Surfaces) do
-			if surf.Normals[i]:Dot(normal) <= ss.MAX_COS_DEG_DIFF * ((SERVER and index < 0 or CLIENT and ss.Displacements[i]) and .5 or 1) or
+			if surf.Normals[i]:Dot(normal) <= ss.MAX_COS_DEG_DIFF *
+			((SERVER and index < 0 or CLIENT and ss.Displacements[i]) and .5 or 1) or
 			not ss.CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
-			local _, localang = WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle())
+			local localang = select(2, WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle()))
 			localang = ang.yaw - localang.roll + surf.DefaultAngles[i]
 
 			local e = EffectData()
@@ -50,7 +51,8 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			e:SetOrigin(pos)
 			e:SetScale(SERVER and index or i * (ss.Displacements[i] and -1 or 1))
 			e:SetStart(Vector(radius, localang, ratio))
-			util.Effect("SplatoonSWEPsDrawInk", e, true, not ply:IsPlayer() and SERVER and ss.mp or nil)
+			util.Effect("SplatoonSWEPsDrawInk", e, true,
+			not ply:IsPlayer() and SERVER and ss.mp or nil)
 
 			ss.AddInkRectangle(color, i, inktype, localang, pos, radius, ratio, surf)
 		end

@@ -295,8 +295,8 @@ function SWEP:GetBombMeterPosition(ink)
 end
 
 function SWEP:DrawWorldModel()
-	if self:GetHolstering() then return end
 	if IsValid(self.Owner) then
+		if self:GetHolstering() then return end
 		if self:Crouching() then
 			if self:GetInInk() then
 				return
@@ -334,7 +334,7 @@ function SWEP:DrawWorldModel()
 end
 
 function SWEP:DrawWorldModelTranslucent()
-	if self:GetHolstering() then return end
+	if IsValid(self.Owner) and self:GetHolstering() then return end
 	if IsValid(self.Owner) and self:Crouching() and (self:GetInInk()
 	or self:GetNWBool "becomesquid" and IsValid(self.Squid)) then return end
 

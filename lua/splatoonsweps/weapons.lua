@@ -156,14 +156,6 @@ local SplatoonSWEPsMuzzleRing = 1
 local SplatoonSWEPsMuzzleMist = 2
 local SplatoonSWEPsMuzzleFlash = 3
 
-local function GenerateParticleEffect(self, name, offset)
-	local mdl = self:IsTPS() and self or self.Owner:GetViewModel()
-	local pos, ang = self:GetMuzzlePosition()
-	pos = self:TranslateViewmodelPos(pos)
-	self.MuzzleAttachment = self.MuzzleAttachment or self:LookupAttachment "muzzle"
-	return CreateParticleSystem(mdl, name, PATTACH_POINT_FOLLOW, self.MuzzleAttachment, offset or vector_origin)
-end
-
 ss.DispatchEffect = {}
 local sd, e = ss.DispatchEffect, EffectData()
 sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
@@ -185,7 +177,8 @@ sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
 	e:SetFlags(tpslag) -- Splash mode
 	e:SetScale(s) -- Splash length
 	e:SetRadius(r) -- Splash radius
-	util.Effect("SplatoonSWEPsMuzzleSplash", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+	util.Effect("SplatoonSWEPsMuzzleSplash", e, true,
+	not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 end
 
 sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
@@ -209,28 +202,42 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 		e:SetFlags(tpslag + 1) -- 1: Refract effect
 		e:SetRadius(r1)
 		e:SetScale(i * 72 + da)
-		util.Effect("SplatoonSWEPsMuzzleRing", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+		util.Effect("SplatoonSWEPsMuzzleRing", e, true,
+		not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 		if i > numpieces then continue end
 		e:SetAttachment(t2)
 		e:SetFlags(tpslag) -- 0: Splash effect
 		e:SetRadius(r2)
-		util.Effect("SplatoonSWEPsMuzzleRing", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+		util.Effect("SplatoonSWEPsMuzzleRing", e, true,
+		not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 	end
 end
 
 sd[SplatoonSWEPsMuzzleMist] = function(self, options, pos, ang)
-	local p = GenerateParticleEffect(self, ss.Particles.MuzzleMist)
+	local mdl = self:IsTPS() and self or self.Owner:GetViewModel()
+	local pos, ang = self:GetMuzzlePosition()
 	local dir = ang:Right()
-	if self:GetNWBool "lefthand" then dir = -dir end
-	if self:GetADS() then dir = ang:Forward() end
-	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, self:GetInkColorProxy())
-	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * (self:IsTPS() and 6 or 3))
-	p:AddControlPoint(3, game.GetWorld(), PATTACH_WORLDORIGIN, nil, pos + dir * 100)
+	if not self:IsTPS() then
+		if self:GetNWBool "lefthand" then dir = -dir end
+		if self:GetADS() then dir = ang:Forward() end
+	end
+
+	local e = EffectData()
+	e:SetAttachment(self:LookupAttachment "muzzle")
+	e:SetColor(self:GetNWInt "inkcolor")
+	e:SetEntity(mdl)
+	e:SetFlags(PATTACH_POINT_FOLLOW)
+	e:SetOrigin(vector_origin)
+	e:SetScale(self:IsTPS() and 6 or 3)
+	e:SetStart(self:TranslateViewmodelPos(pos) + dir * 100)
+	util.Effect("SplatoonSWEPsMuzzleMist", e, true,
+	not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 end
 
 sd[SplatoonSWEPsMuzzleFlash] = function(self, options, pos, ang)
 	local e = EffectData()
 	e:SetEntity(self)
 	e:SetFlags(1)
-	util.Effect("SplatoonSWEPsMuzzleFlash", e, true, not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+	util.Effect("SplatoonSWEPsMuzzleFlash", e, true,
+	not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 end

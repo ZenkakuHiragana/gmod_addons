@@ -1,7 +1,6 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
-
 function EFFECT:Init(e)
 	local c = ss.GetColor(e:GetColor())
 	local p = CreateParticleSystem(game.GetWorld(), ss.Particles.BlasterTrail, PATTACH_WORLDORIGIN, nil, e:GetOrigin())

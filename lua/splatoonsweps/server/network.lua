@@ -62,6 +62,6 @@ net.Receive("SplatoonSWEPs: Strip weapon", function(_, ply)
 	if not weaponClass then return end
 	local weapon = ply:GetWeapon(weaponClass)
 	if not IsValid(weapon) then return end
-	ss.ProtectedCall(weapon.Holster, weapon)
+	ss.ProtectedCall(weapon.RestoreInfo, weapon)
 	ply:StripWeapon(weaponClass)
 end)
