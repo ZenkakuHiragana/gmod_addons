@@ -504,7 +504,7 @@ function ss.KeyRelease(self, ply, key)
 	self:SetThrowAnimTime(CurTime())
 	self:SetNextPrimaryFire(time)
 	self:SetNextSecondaryFire(time)
-	self:SendWeaponAnim(ss.ViewModel.Throw)
+	self:SetWeaponAnim(ss.ViewModel.Throw)
 
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self:CheckCannotStandup()
@@ -562,6 +562,9 @@ local function RegisterWeapons()
 			local modelpath = "models/splatoonsweps/%s/"
 			SWEP.ModelPath = SWEP.ModelPath or string.format(modelpath, SWEP.ClassName)
 			SWEP.ViewModel = SWEP.ModelPath .. "c_viewmodel.mdl"
+			SWEP.ViewModel0 = SWEP.ModelPath .. "c_viewmodel.mdl"
+			SWEP.ViewModel1 = SWEP.ModelPath .. "c_viewmodel2.mdl"
+			SWEP.ViewModel2 = SWEP.ModelPath .. "c_viewmodel3.mdl"
 			SWEP.WorldModel = SWEP.ModelPath .. "w_right.mdl"
 			SWEP.Category = ss.Text.Category
 			SWEP.PrintName = ss.Text.PrintNames[SWEP.ClassName]
@@ -578,6 +581,9 @@ local function RegisterWeapons()
 				v.PrintName = ss.Text.PrintNames[v.ClassName]
 				v.ModelPath = v.ModelPath or file.Exists(UniqueModelPath, "GAME") and UniqueModelPath or SWEP.ModelPath
 				v.ViewModel = v.ModelPath .. "c_viewmodel.mdl"
+				v.ViewModel0 = v.ModelPath .. "c_viewmodel.mdl"
+				v.ViewModel1 = v.ModelPath .. "c_viewmodel2.mdl"
+				v.ViewModel2 = v.ModelPath .. "c_viewmodel3.mdl"
 				v.WorldModel = v.ModelPath .. "w_right.mdl"
 				v = table.Merge(table.Copy(SWEP), v)
 				SetupIcons(v)

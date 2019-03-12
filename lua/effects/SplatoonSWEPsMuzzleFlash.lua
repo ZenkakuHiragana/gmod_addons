@@ -22,7 +22,7 @@ function EFFECT:Init(e)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
 	self.FlashOnTPS = self.Weapon:IsTPS()
-	local ent = not self.FlashOnTPS and self.Weapon.Owner:IsPlayer() and self.Weapon.Owner:GetViewModel() or self.Weapon
+	local ent = self.FlashOnTPS and self.Weapon or self.Weapon:GetViewModel()
 	local c = (self.Weapon:GetInkColorProxy() + ss.vector_one) / 2
 	local a = ent:LookupAttachment "muzzle"
 	local pos = ent:GetAttachment(a).Pos
@@ -47,7 +47,6 @@ function EFFECT:Init(e)
 			self.Flash:SetNextThink(CurTime())
 			self.Flash:SetThinkFunction(SetPos)
 		else
-			ent = not self.FlashOnTPS and self.Weapon.Owner:IsPlayer() and self.Weapon.Owner:GetViewModel() or ent
 			self.Flash = CreateParticleSystem(ent, ss.Particles.ChargerMuzzleFlash, PATTACH_POINT_FOLLOW, ent:LookupAttachment "muzzle")
 			self.Flash:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, c)
 			self.Flash:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * scale)

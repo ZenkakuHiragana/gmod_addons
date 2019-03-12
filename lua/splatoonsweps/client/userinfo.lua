@@ -293,7 +293,7 @@ local function SendValue(name, value, clientside)
 		net.WriteString(ss.GetConVarName(name, clientside == nil))
 		net.WriteString(tostring(value))
 		net.SendToServer()
-	elseif not game.IsDedicated() and LocalPlayer():IsAdmin() then
+	elseif not GetGlobalBool "SplatoonSWEPs: IsDedicated" and LocalPlayer():IsAdmin() then
 		net.Start "greatzenkakuman.cvartree.sendchange"
 		net.WriteString(ss.GetConVarName(name, false))
 		net.WriteString(tostring(value))
@@ -343,9 +343,9 @@ local function GeneratePreferenceTab(tab)
 	tab.Preference.ModelSelector:SetSize(ScrW() * .16, ScrH() * .16)
 	local size = tab.Preference.ModelSelector:GetWide() / #ss.Text.PlayermodelNames * 2
 	for i, c in ipairs(ss.Text.PlayermodelNames) do
-		local item = tab.Preference.ModelSelector:Add "SpawnIcon"
 		local model, exists = GetPlayermodel(i)
-		if not exists then model = "models/error.mdl" end
+		if not exists then continue end
+		local item = tab.Preference.ModelSelector:Add "SpawnIcon"
 		item.ID = i
 		item.Model = model
 		item:SetSize(size, size)

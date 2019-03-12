@@ -35,20 +35,12 @@ return {Options = {
         },
     },
     weapon_splatoonsweps_shooter = {
+        NZAP_PistolStyle = "N-ZAP: Pistol-like",
         weapon_splatoonsweps_heroshot = {
             Level = "Hero Shot Level",
         },
         weapon_splatoonsweps_octoshot = {
             Advanced = "Elite Octoshot",
-        },
-        weapon_splatoonsweps_nzap85 = {
-            PistolStyle = "N-ZAP '85: Pistol-like",
-        },
-        weapon_splatoonsweps_nzap89 = {
-            PistolStyle = "N-ZAP '89: Pistol-like",
-        },
-        weapon_splatoonsweps_nzap83 = {
-            PistolStyle = "N-ZAP '83: Pistol-like",
         },
     },
 }}

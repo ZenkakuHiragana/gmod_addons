@@ -113,7 +113,7 @@ function SWEP:Deploy()
 		self.SurpressDrawingVM = nil
 		self.HullDuckMins, self.HullDuckMaxs = self.Owner:GetHullDuck()
 		self.ViewOffsetDucked = self.Owner:GetViewOffsetDucked()
-		self:UpdateBonePositions(self.Owner:GetViewModel())
+		self:UpdateBonePositions(self:GetViewModel())
 	end
 
 	self:GetOptions()
@@ -126,7 +126,7 @@ function SWEP:Holster()
 	if not IsValid(self.Owner) then return true end
 	if self.Owner:IsPlayer() then
 		self.SurpressDrawingVM = true
-		local vm = self.Owner:GetViewModel()
+		local vm = self:GetViewModel()
 		if IsValid(vm) then self:ResetBonePositions(vm) end
 		if self:GetNWBool "becomesquid" and self.HullDuckMins then
 			self.Owner:SetHullDuck(self.HullDuckMins, self.HullDuckMaxs)
@@ -149,6 +149,7 @@ function SWEP:OnRemove()
 	end
 
 	if IsValid(self.Squid) then self.Squid:Remove() end
+	self:StopLoopSound()
 end
 
 function SWEP:Think()

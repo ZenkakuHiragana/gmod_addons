@@ -44,7 +44,7 @@ ss.SetPrimary(SWEP, {
 	SpreadBiasStep		= .02,		-- Aim cone random bias initial value and step[-]
 	SpreadBiasJump		= .4,		-- Aim cone random bias while jumping[-]
 	MoveSpeed			= .72,		-- Walk speed while shooting[Splatoon units/frame]
-	InitVelocity		= 22,		-- Ink initial velocity[Splatoon units/frame]	
+	InitVelocity		= 22,		-- Ink initial velocity[Splatoon units/frame]
 	Delay = {
 		Aim				= 20,		-- Change hold type[frames]
 		Fire			= 5,		-- Fire rate[frames]
@@ -57,46 +57,46 @@ ss.SetPrimary(SWEP, {
 	},
 })
 
-local function SetViewModel(self)
-	if not IsValid(self.Owner) then return end
-	if not self.Owner:IsPlayer() then return end
-	local vm = self.Owner:GetViewModel()
-	if not IsValid(vm) then return end
-	local pistol = self:GetNWBool "pistolstyle"
-	self.ViewModel = string.format("%sc_viewmodel%s.mdl", self.ModelPath, pistol and "2" or "")
-	vm:SetWeaponModel(self.ViewModel, self)
-end
-
-function SWEP:SharedInit()
-	ss.ProtectedCall(self.BaseClass.SharedInit, self)
-	SetViewModel(self)
-	self:AddSchedule(0, function(self, schedule)
-		if tobool(self.ViewModel:find "2") ~= self:GetNWBool "pistolstyle" then
-			SetViewModel(self)
-		end
-	end)
+local function RefreshViewModel(self)
+	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
+	local ispistol = self:GetNWBool "nzap_pistolstyle"
+	local mdl = ispistol and self.ViewModel1 or self.ViewModel0
+	local vm = self:GetViewModel()
+    if not IsValid(vm) then return end
+    if vm:GetModel() == mdl then return end
+    if not self:IsFirstTimePredicted() then return end
+    local cycle = vm:GetCycle()
+    local rate = vm:GetPlaybackRate()
+    local seq = vm:GetSequence()
+    vm:SetWeaponModel(mdl, self)
+    vm:SendViewModelMatchingSequence(seq)
+    vm:SetPlaybackRate(rate)
+    vm:SetCycle(cycle)
+    self.ViewModel = mdl
 end
 
 function SWEP:SharedDeploy()
 	ss.ProtectedCall(self.BaseClass.SharedDeploy, self)
-	SetViewModel(self)
+	RefreshViewModel(self)
+end
+
+function SWEP:Move(ply)
+    ss.ProtectedCall(self.BaseClass.Move, self, ply)
+    RefreshViewModel(self)
 end
 
 function SWEP:CustomActivity()
 	local armpos = ss.ProtectedCall(self.BaseClass.CustomActivity, self)
 	if not armpos then return end
-	if self:GetNWBool "pistolstyle" then
-		return "revolver"
-	end
-	
+	if self:GetNWBool "nzap_pistolstyle" then return "revolver" end
 	return armpos
 end
 
 if SERVER then return end
 function SWEP:GetArmPos()
-	local armpos = self.BaseClass.GetArmPos(self)
+	local armpos = ss.ProtectedCall(self.BaseClass.GetArmPos, self)
 	if not armpos then return end
-	local pistol = self:GetNWBool "pistolstyle"
+	local pistol = self:GetNWBool "nzap_pistolstyle"
 	local offset = pistol and self.ADSOffset2 or self.ADSOffset
 	local ang = pistol and self.ADSAngOffset2 or self.ADSAngOffset
 	self.IronSightsPos[6] = self.IronSightsPos[5] + offset

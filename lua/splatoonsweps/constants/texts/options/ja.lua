@@ -35,20 +35,12 @@ return {Options = {
         },
     },
     weapon_splatoonsweps_shooter = {
+        NZAP_PistolStyle = "N-ZAP: ピストル風",
         weapon_splatoonsweps_heroshot = {
             Level = "ヒーローシューターのレベル",
         },
         weapon_splatoonsweps_octoshot = {
             Advanced = "オクタシューター: 上級タコゾネス仕様",
-        },
-        weapon_splatoonsweps_nzap85 = {
-            PistolStyle = "N-ZAP85: ピストル風",
-        },
-        weapon_splatoonsweps_nzap89 = {
-            PistolStyle = "N-ZAP89: ピストル風",
-        },
-        weapon_splatoonsweps_nzap83 = {
-            PistolStyle = "N-ZAP83: ピストル風",
         },
     },
 }}

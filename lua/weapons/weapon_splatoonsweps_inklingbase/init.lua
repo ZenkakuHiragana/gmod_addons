@@ -33,14 +33,13 @@ function SWEP:ChangePlayermodel(data)
 	end
 
 	local hands = self.Owner:GetHands()
-	if IsValid(hands) then
-		local info = player_manager.TranslatePlayerHands(player_manager.TranslateToPlayerModelName(data.Model))
-		if info then
-			hands:SetModel(info.model)
-			hands:SetSkin(info.skin)
-			hands:SetBodyGroups(info.body)
-		end
-	end
+	if not IsValid(hands) then return end
+	local mdl = player_manager.TranslateToPlayerModelName(data.Model)
+	local info = player_manager.TranslatePlayerHands(mdl)
+	if not info then return end
+	hands:SetModel(info.model)
+	hands:SetSkin(info.skin)
+	hands:SetBodyGroups(info.body)
 end
 
 function SWEP:Initialize()
@@ -198,6 +197,10 @@ function SWEP:Deploy()
 	return self:SharedDeployBase()
 end
 
+function SWEP:OnRemove()
+	self:StopLoopSound()
+end
+
 function SWEP:Holster()
 	if self:GetInFence() then return false end
 	if not IsValid(self.Owner) then return true end
@@ -252,9 +255,9 @@ function SWEP:Think()
 		self.Owner:SetPlayerColor(self:GetInkColorProxy())
 	end
 
-	local vm = self.Owner:GetViewModel()
+	local vm = self:GetViewModel()
 	if not IsValid(vm) then return end
 	if vm:GetSequenceActivityName(vm:GetSequence()) == "ACT_VM_DRAW" and vm:GetCycle() > 0.999 then
-		self:SendWeaponAnim(ACT_VM_IDLE)
+		self:SetWeaponAnim(ACT_VM_IDLE)
 	end
 end

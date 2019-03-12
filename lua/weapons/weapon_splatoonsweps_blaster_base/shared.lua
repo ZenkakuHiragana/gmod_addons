@@ -9,6 +9,11 @@ function SWEP:SharedInit()
     self.EffectRadius = (self.Primary.ColRadiusMiddle + self.Primary.ColRadiusClose) / 4
 end
 
+function SWEP:SharedDeploy()
+    self:GetBase().SharedDeploy(self)
+    self:SetFireDelay(math.huge)
+end
+
 function SWEP:SharedPrimaryAttack(able)
 	local p = self.Primary
 	local timescale = ss.GetTimeScale(self.Owner)

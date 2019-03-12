@@ -54,20 +54,12 @@ return {CVars = {
         },
     },
     weapon_splatoonsweps_shooter = {
+        NZAP_PistolStyle = "N-ZAP系統をピストルのように構える。 (1: 有効, 0: 無効)",
         weapon_splatoonsweps_heroshot = {
             Level = "ヒーローシューターレプリカのレベル。 (0, 1, 2, 3 → レベル 1, 2, 3, 4)",
         },
         weapon_splatoonsweps_octoshot = {
             Advanced = "オクタシューターレプリカのスキン。 (0: 通常タコゾネス, 1: ワカメ付きタコゾネス)",
-        },
-        weapon_splatoonsweps_nzap85 = {
-            PistolStyle = "N-ZAP 85をピストルのように構える。 (1: 有効, 0: 無効)",
-        },
-        weapon_splatoonsweps_nzap89 = {
-            PistolStyle = "N-ZAP 89をピストルのように構える。 (1: 有効, 0: 無効)",
-        },
-        weapon_splatoonsweps_nzap83 = {
-            PistolStyle = "N-ZAP 83をピストルのように構える。 (1: 有効, 0: 無効)",
         },
     },
 }}

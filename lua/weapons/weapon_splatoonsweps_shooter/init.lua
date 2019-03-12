@@ -17,7 +17,7 @@ function SWEP:ServerDeploy()
 	if not (self.IsHeroShot and IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
 	local a = self:LookupAttachment "trail"
 	local c = self.HeroColor[self:GetNWInt "level" + 1]
-	local vm = self.Owner:GetViewModel()
+	local vm = self:GetViewModel()
 	self:SetNWEntity("Trail", util.SpriteTrail(self, a,	c, unpack(TrailParams)))
 
 	if not IsValid(vm) then return end

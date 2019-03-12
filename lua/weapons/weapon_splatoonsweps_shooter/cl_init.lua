@@ -98,7 +98,7 @@ function SWEP:ClientThink()
 end
 
 function SWEP:GetMuzzlePosition()
-	local ent = self:IsTPS() and self or self.Owner:GetViewModel()
+	local ent = self:IsTPS() and self or self:GetViewModel()
 	local a = ent:GetAttachment(ent:LookupAttachment "muzzle")
 	return a.Pos, a.Ang
 end
@@ -250,8 +250,7 @@ end
 local SwayTime = 12 * ss.FrameToSec
 local LeftHandAlt = {2, 1, 4, 3, 5, 6}
 function SWEP:GetViewModelPosition(pos, ang)
-	if not IsValid(self.Owner) then return pos, ang end
-	local vm = self.Owner:GetViewModel()
+	local vm = self:GetViewModel()
 	if not IsValid(vm) then return pos, ang end
 	if not self.OldPos then
 		self.ArmPos, self.ArmBegin = 1, SysTime()
@@ -297,6 +296,8 @@ function SWEP:GetViewModelPosition(pos, ang)
 		if f > .5 then
 			f, self.ArmPos = .5, 5
 			self.ViewModelFlip = DesiredFlip
+			self.ViewModelFlip1 = DesiredFlip
+			self.ViewModelFlip2 = DesiredFlip
 		end
 
 		f, armpos = f * 2, 5

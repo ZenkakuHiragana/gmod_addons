@@ -54,20 +54,12 @@ Make sure your graphics card has enough space of video memory.
         },
     },
     weapon_splatoonsweps_shooter = {
+        NZAP_PistolStyle = "Hold N-ZAP series like a pistol. (1: enabled, 0: disabled)",
         weapon_splatoonsweps_heroshot = {
             Level = "The level of Hero Shot Replica. (0, 1, 2, 3 -> Level 1, 2, 3, 4)",
         },
         weapon_splatoonsweps_octoshot = {
             Advanced = "Skin color for Octoshot Replica. (set to 0 for standard octalian's weapon color, 1 for elite octalian's)",
-        },
-        weapon_splatoonsweps_nzap85 = {
-            PistolStyle = "Hold N-ZAP '85 like a pistol instead of a rifle. (1: enabled, 0: disabled)",
-        },
-        weapon_splatoonsweps_nzap89 = {
-            PistolStyle = "Hold N-ZAP '89 like a pistol instead of a rifle. (1: enabled, 0: disabled)",
-        },
-        weapon_splatoonsweps_nzap83 = {
-            PistolStyle = "Hold N-ZAP '83 like a pistol instead of a rifle. (1: enabled, 0: disabled)",
         },
     },
 }}

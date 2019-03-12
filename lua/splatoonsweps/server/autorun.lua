@@ -98,6 +98,9 @@ end
 -- Parse the map and store the result to txt, then send it to the client.
 hook.Add("PostCleanupMap", "SplatoonSWEPs: Cleanup all ink", ss.ClearAllInk)
 hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function()
+	-- This needs due to a really annoying bug (GitHub/garrysmod-issues #1495)
+	SetGlobalBool("SplatoonSWEPs: IsDedicated", game.IsDedicated())
+
 	ss.BSP:Init() --Parse the map
 	ss.BSP = nil
 	collectgarbage "collect"

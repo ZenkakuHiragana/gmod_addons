@@ -157,7 +157,7 @@ function SWEP:SharedPrimaryAttack()
 	self.AimSound:PlayEx(0, 1)
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 	self:SetCharge(CurTime() + self.Primary.MinFreezeTime)
-	self:SendWeaponAnim(ACT_VM_IDLE)
+	self:SetWeaponAnim(ACT_VM_IDLE)
 
 	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
 	if skin and self.Owner:GetSkin() ~= skin then
@@ -245,7 +245,7 @@ function SWEP:Move(ply)
 	self:SetInk(math.max(0, self:GetInk() - inkprog * self:GetTakeAmmo()))
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:ResetCharge()
-	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
+	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self:ResetSequence "fire"
 
 	if not ply:IsPlayer() then return end

@@ -35,10 +35,8 @@ return {
 		weapon_splatoonsweps_herocharger = {Level = {0, min = 0, max = 3}, __subcategory = true},
 	},
 	weapon_splatoonsweps_shooter = {
+		NZAP_PistolStyle = false,
 		weapon_splatoonsweps_heroshot = {Level = {0, min = 0, max = 3}, __subcategory = true},
 		weapon_splatoonsweps_octoshot = {Advanced = true, __subcategory = true},
-		weapon_splatoonsweps_nzap85 = {PistolStyle = false, __subcategory = true},
-		weapon_splatoonsweps_nzap89 = {PistolStyle = false, __subcategory = true},
-		weapon_splatoonsweps_nzap83 = {PistolStyle = false, __subcategory = true},
 	},
 }

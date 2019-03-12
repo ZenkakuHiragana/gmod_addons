@@ -147,7 +147,7 @@ function SWEP:CreateInk()
 	self.SplashNum = math.floor(p.SplashNum) + (util.SharedRandom(randsplash, 0, 1) < p.SplashNum % 1 and 1 or 0)
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:ResetSequence "fire"
-	self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
+	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 	self:EmitSound(self.ShootSound)
 	if self:GetSplashInitMul() > p.SplashPatterns then

@@ -166,7 +166,7 @@ function SWEP:SharedPrimaryAttack()
 	self.SpinupSound[1]:Play()
 	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 	self:SetCharge(CurTime())
-	self:SendWeaponAnim(ACT_VM_IDLE)
+	self:SetWeaponAnim(ACT_VM_IDLE)
 
 	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
 	if skin and self.Owner:GetSkin() ~= skin then

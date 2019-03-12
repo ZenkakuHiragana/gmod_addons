@@ -499,12 +499,13 @@ end
 
 function ss.PostRender(w)
 	if ss.RenderingRTScope then return end
-	if not IsValid(w.Owner) then return end
-	if not w.Scoped then return end
-	if not w.RTScope then return end
-	local vm = w.Owner:GetViewModel()
+	if not (w.Scoped and w.RTScope) then return end
+	local vm = w:GetViewModel()
 	if not IsValid(vm) then return end
-	if not w:GetNWBool "usertscope" then vm:SetSubMaterial(w.RTScopeNum - 1) return end
+	if not w:GetNWBool "usertscope" then
+		vm:SetSubMaterial(w.RTScopeNum - 1)
+		return
+	end
 
 	w.RTName = w.RTName or vm:GetMaterials()[w.RTScopeNum] .. "rt"
 	w.RTMaterial = w.RTMaterial or Material(w.RTName)

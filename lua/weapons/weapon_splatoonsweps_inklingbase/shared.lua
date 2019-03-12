@@ -5,21 +5,16 @@ local ss = SplatoonSWEPs
 if not ss then return end
 
 ss.AddTimerFramework(SWEP)
-local function PlayLoopSound(self)
+function SWEP:PlayLoopSound()
 	local playlist = {self.SwimSound, self.EnemyInkSound}
 	ss.ProtectedCall(self.AddPlaylist, self, playlist)
-	for _, s in ipairs(playlist) do
-		s:PlayEx(0, 100)
-	end
+	for _, s in ipairs(playlist) do s:PlayEx(0, 100) end
 end
 
-local function StopLoopSound(self)
+function SWEP:StopLoopSound()
 	local playlist = {self.SwimSound, self.EnemyInkSound}
 	ss.ProtectedCall(self.AddPlaylist, self, playlist)
-	for _, s in ipairs(playlist) do
-		s:ChangeVolume(0)
-		s:Stop()
-	end
+	for _, s in ipairs(playlist) do s:Stop() end
 end
 
 function SWEP:IsMine()
@@ -28,14 +23,6 @@ end
 
 function SWEP:IsFirstTimePredicted()
 	return SERVER or ss.sp or IsFirstTimePredicted() or not self:IsCarriedByLocalPlayer()
-end
-
-function SWEP:ChangeViewModel(act)
-	if not act then return end
-	if not self:IsFirstTimePredicted() then return end
-	if SERVER then SuppressHostEvents(self.Owner) end
-	self:SendWeaponAnim(act)
-	if SERVER then SuppressHostEvents() end
 end
 
 function SWEP:GetBase(BaseClassName)
@@ -113,9 +100,9 @@ function SWEP:OwnerChanged()
 				self:Remove()
 			end)
 		end
-		return StopLoopSound(self)
+		return self:StopLoopSound()
 	else
-		return PlayLoopSound(self)
+		return self:PlayLoopSound()
 	end
 end
 
@@ -142,6 +129,27 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 
 	self:GetOptions()
 	self:SetInkColorProxy(self:GetInkColor():ToVector())
+end
+
+function SWEP:GetViewModel(index)
+	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
+	return self.Owner:GetViewModel(index)
+end
+
+function SWEP:SetWeaponAnim(act, index)
+	if not index then self:SendWeaponAnim(act) end
+	if index == 0 then self:SendWeaponAnim(act) return end
+	if not self:IsFirstTimePredicted() then return end
+	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
+	for i = 1, 2 do
+		if index and i ~= index then continue end
+		local vm = self.Owner:GetViewModel(i)
+		if not IsValid(vm) then continue end
+		local seq = vm:SelectWeightedSequence(act)
+		if seq == -1 then continue end
+		vm:SendViewModelMatchingSequence(seq)
+		vm:SetPlaybackRate(rate or 1)
+	end
 end
 
 function SWEP:SharedInitBase()
@@ -179,7 +187,7 @@ end
 
 -- Predicted hooks
 function SWEP:SharedDeployBase()
-	PlayLoopSound(self)
+	self:PlayLoopSound()
 	self:SetHolstering(false)
 	self:SetThrowing(false)
 	self:SetCooldown(CurTime())
@@ -206,7 +214,7 @@ end
 function SWEP:SharedHolsterBase()
 	self:SetHolstering(true)
 	ss.ProtectedCall(self.SharedHolster, self)
-	StopLoopSound(self)
+	self:StopLoopSound()
 
 	if self.Owner:IsPlayer() and ss.WeaponRecord[self.Owner] then
 		ss.WeaponRecord[self.Owner].Duration[self.ClassName]
@@ -279,7 +287,7 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 	if CurTime() < self:GetCooldown() then return end
 	if self:GetKey() ~= IN_ATTACK2 then return end
 	self:SetThrowing(true)
-	self:SendWeaponAnim(ss.ViewModel.Throwing)
+	self:SetWeaponAnim(ss.ViewModel.Throwing)
 	if not self:IsFirstTimePredicted() then return end
 	if self.ThrowSchedule then return end
 	if self.HoldType ~= "grenade" then

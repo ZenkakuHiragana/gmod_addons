@@ -93,8 +93,7 @@ function SWEP:GetBoneOrientation(basetab, tab, ent, bone_override)
 		local m = ent:GetBoneMatrix(bone)
 		pos, ang = m and m:GetTranslation(), m and m:GetAngles()
 
-		if IsValid(self.Owner) and self.Owner:IsPlayer() and
-			ent == self.Owner:GetViewModel() and self.ViewModelFlip then
+		if ent == self:GetViewModel() and self.ViewModelFlip then
 			ang.r = -ang.r -- Fixes mirrored models
 		end
 	end

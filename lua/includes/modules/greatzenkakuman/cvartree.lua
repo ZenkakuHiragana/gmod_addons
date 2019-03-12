@@ -226,6 +226,7 @@ local function MakeElement(p, admin, pt)
 	local cvar = Either(admin, pt.sv, pt.cl)
 	local panel = admin and "paneladmin" or "panel"
 	if not cvar or Either(admin, pt.options.clientside, pt.options.serverside) then return end
+	if game.SinglePlayer() and admin and not pt.options.serverside then return end
 	if pt.options.type == "boolean" then
 		pt[panel] = vgui.Create("DCheckBoxLabel", p)
 		pt[panel]:SetTextColor(pt[panel]:GetSkin().Colours.Label.Dark)
@@ -261,7 +262,7 @@ local function MakeElement(p, admin, pt)
 
 			function override:OnChange(checked)
 				EnablePanel(pt, checked)
-				onchange(pt.cl:GetDefault())
+				onchange(pt.paneladmin, pt.cl:GetDefault())
 				net.Start "greatzenkakuman.cvartree.adminchange"
 				net.WriteString(pt[panel].CVarName)
 				net.WriteString(checked and pt.cl:GetDefault() or "-1")
@@ -320,7 +321,12 @@ local function MakeGUI(p, nametable, admin)
 		MakeGUI(pt.panel, nt, admin)
 	end
 
-	if #p.Items == 0 then p:Remove() end
+	for _, i in ipairs(p.Items) do
+		local c = i:GetChild(0)
+		if c and c:GetName() ~= "DLabel" then return end
+	end
+
+	p:Remove()
 end
 
 function AddGUI(name)

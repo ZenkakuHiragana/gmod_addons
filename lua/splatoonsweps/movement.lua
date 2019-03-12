@@ -1884,7 +1884,7 @@ function ss.MoveHook(w, p, m)
 		w.SwimSound:ChangeVolume(math.Clamp(mv:GetVelocity():Length() / w.SquidSpeed * (w:GetInInk() and 1 or 0), 0, 1))
 		if not w:GetOldCrouching() then
 			ply:RemoveAllDecals()
-			w:SendWeaponAnim(ss.ViewModel.Squid)
+			w:SetWeaponAnim(ss.ViewModel.Squid)
 			if IsFirstTimePredicted() then
 				w:EmitSound "SplatoonSWEPs_Player.ToSquid"
 			end
@@ -1899,7 +1899,7 @@ function ss.MoveHook(w, p, m)
 		mv:AddKey(IN_DUCK) -- it's not correct behavior though
 	elseif w:GetOldCrouching() then
 		w.SwimSound:ChangeVolume(0)
-		w:SendWeaponAnim(w:GetThrowing() and ss.ViewModel.Throwing or ss.ViewModel.Standing)
+		w:SetWeaponAnim(w:GetThrowing() and ss.ViewModel.Throwing or ss.ViewModel.Standing)
 		if IsFirstTimePredicted() then
 			w:EmitSound "SplatoonSWEPs_Player.ToHuman"
 		end

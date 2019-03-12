@@ -35,8 +35,7 @@ end
 function SWEP:Holster()
 	self:GetBase().Holster(self)
 	if not self.RTScope then return end
-	if not IsValid(self.Owner) then return end
-	local vm = self.Owner:GetViewModel()
+	local vm = self:GetViewModel()
 	if not IsValid(vm) then return end
 	vm:SetSubMaterial(self.RTScopeNum - 1)
 end

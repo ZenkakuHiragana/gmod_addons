@@ -214,7 +214,7 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 end
 
 sd[SplatoonSWEPsMuzzleMist] = function(self, options, pos, ang)
-	local mdl = self:IsTPS() and self or self.Owner:GetViewModel()
+	local mdl = self:IsTPS() and self or self:GetViewModel()
 	local pos, ang = self:GetMuzzlePosition()
 	local dir = ang:Right()
 	if not self:IsTPS() then
