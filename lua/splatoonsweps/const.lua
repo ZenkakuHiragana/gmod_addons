@@ -94,6 +94,7 @@ ss.Particles = {
 	ChargerMuzzleFlash = "splatoonsweps_explosion_impact",
 	Explosion = "splatoonsweps_explosion",
 	MuzzleMist = "splatoonsweps_muzzlemist",
+	SplatlingMuzzleFlash = "splatoonsweps_splatling_muzzleflash",
 }
 
 ss.KeyMask = {IN_ATTACK, IN_DUCK, IN_ATTACK2}

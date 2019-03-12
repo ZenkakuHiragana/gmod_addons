@@ -7,5 +7,4 @@ function EFFECT:Init(e)
 	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, (c:ToVector() + ss.vector_one) / 2)
 	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * e:GetRadius())
 	self:SetNoDraw(true)
-	self:SetPos(e:GetOrigin())
 end

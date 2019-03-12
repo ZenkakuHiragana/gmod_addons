@@ -750,6 +750,7 @@ function ss.MakeBlasterExplosion(ink)
 		ss.ProtectedCall(e.TakeDamageInfo, e, d)
 	end
 
+	if ss.mp and not IsFirstTimePredicted() then return end
 	if ink.IsCarriedByLocalPlayer and damagedealed then ss.PlayHitSound(false, attacker) end
 	if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents(ink.filter) end
 	local e = EffectData()

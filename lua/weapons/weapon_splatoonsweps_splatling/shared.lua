@@ -74,6 +74,7 @@ end
 SWEP.SharedHolster = SWEP.ResetCharge
 function SWEP:AddPlaylist(p)
 	table.insert(p, self.AimSound)
+	if not self.SpinupSound then return end
 	for _, s in ipairs(self.SpinupSound) do table.insert(p, s) end
 end
 
@@ -235,6 +236,13 @@ function SWEP:Move(ply)
 		if CurTime() - self:GetJump() > p.SpreadJumpDelay then
 			if not AlreadyAiming then self:SetBiasVelocity(0) end
 			self:SetBiasVelocity(math.min(self:GetBiasVelocity() + p.SpreadBiasStep, p.SpreadBiasVelocity))
+		end
+
+		if self:IsFirstTimePredicted() then
+			local e = EffectData()
+			e:SetEntity(self)
+			util.Effect("SplatoonSWEPsSplatlingMuzzleFlash", e,
+			not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
 		end
 
 		self:CreateInk()

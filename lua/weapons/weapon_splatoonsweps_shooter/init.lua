@@ -33,7 +33,7 @@ end
 
 function SWEP:ServerThink()
 	local c = self.HeroColor[self:GetNWInt "level" + 1]
-	for _, t in ipairs {self.Trail, self.TrailViewmodel} do
+	for _, t in ipairs {self:GetNWEntity "Trail", self:GetNWEntity "TrailVM"} do
 		if IsValid(t) then t:Fire("Color", tostring(c)) end
 	end
 end

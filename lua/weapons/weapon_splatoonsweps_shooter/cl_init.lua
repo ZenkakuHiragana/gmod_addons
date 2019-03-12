@@ -92,7 +92,8 @@ function SWEP:ClientThink()
 		local t = self:GetNWEntity "Trail"
 		local tv = self:GetNWEntity "TrailVM"
 		local fps = self:IsMine() and not self:IsTPS()
-		if IsValid(t) then t:SetNoDraw(fps) end
+		local hide = self:GetInInk() or (self:GetNWBool "becomesquid" and self:Crouching())
+		if IsValid(t) then t:SetNoDraw(hide or fps) end
 		if IsValid(tv) then tv:SetNoDraw(not fps) end
 	end
 end
