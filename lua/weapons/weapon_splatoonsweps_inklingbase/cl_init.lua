@@ -150,6 +150,7 @@ function SWEP:OnRemove()
 
 	if IsValid(self.Squid) then self.Squid:Remove() end
 	self:StopLoopSound()
+	self:EndRecording()
 end
 
 function SWEP:Think()

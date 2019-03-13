@@ -17,6 +17,22 @@ function SWEP:StopLoopSound()
 	for _, s in ipairs(playlist) do s:Stop() end
 end
 
+function SWEP:StartRecording()
+	local o = self.Owner
+	if not (o:IsPlayer() and ss.WeaponRecord[o]) then return end
+	self:SetNWEntity("Owner", o)
+	ss.WeaponRecord[o].Recent[self.ClassName] = -os.time()
+end
+
+function SWEP:EndRecording()
+	local o = IsValid(self.Owner) and self.Owner or self:GetNWEntity "Owner"
+	local r = ss.WeaponRecord[o]
+	local c = self.ClassName
+	local t = os.time()
+	if not (o:IsPlayer() and r) then return end
+	r.Duration[c] = (r.Duration[o] or 0) - (t + (r.Recent[c] or -t))
+end
+
 function SWEP:IsMine()
 	return SERVER or self:IsCarriedByLocalPlayer()
 end
@@ -191,8 +207,9 @@ function SWEP:SharedDeployBase()
 	self:SetHolstering(false)
 	self:SetThrowing(false)
 	self:SetCooldown(CurTime())
-	self.LastKeyDown = {}
+	self:StartRecording()
 	self:SetKey(0)
+	self.LastKeyDown = {}
 	self.InklingSpeed = self:GetInklingSpeed()
 	self.SquidSpeed = self:GetSquidSpeed()
 	self.OnEnemyInkSpeed = ss.OnEnemyInkSpeed
@@ -202,9 +219,6 @@ function SWEP:SharedDeployBase()
 	if self.Owner:IsPlayer() then
 		self.Owner:SetJumpPower(self.JumpPower)
 		self.Owner:SetCrouchedWalkSpeed(.5)
-		if ss.WeaponRecord[self.Owner] then
-			ss.WeaponRecord[self.Owner].Recent[self.ClassName] = -os.time()
-		end
 	end
 
 	ss.ProtectedCall(self.SharedDeploy, self)
@@ -215,13 +229,7 @@ function SWEP:SharedHolsterBase()
 	self:SetHolstering(true)
 	ss.ProtectedCall(self.SharedHolster, self)
 	self:StopLoopSound()
-
-	if self.Owner:IsPlayer() and ss.WeaponRecord[self.Owner] then
-		ss.WeaponRecord[self.Owner].Duration[self.ClassName]
-		= (ss.WeaponRecord[self.Owner].Duration[self.ClassName] or 0)
-		- (os.time() + (ss.WeaponRecord[self.Owner].Recent[self.ClassName] or -os.time()))
-	end
-
+	self:EndRecording()
 	return true
 end
 

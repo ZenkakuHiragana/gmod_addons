@@ -74,6 +74,7 @@ function SWEP:ClientInit()
 	self.ArmPos, self.ArmBegin = nil, nil
 	self.BasePos, self.BaseAng = nil, nil
 	self.OldPos, self.OldAng = nil, nil
+	self.OldArmPos = 1
 	self.TransitFlip = false
 	self.ModifyWeaponSize = SysTime() - 1
 	self.ViewPunch = Angle()
@@ -253,59 +254,67 @@ local LeftHandAlt = {2, 1, 4, 3, 5, 6}
 function SWEP:GetViewModelPosition(pos, ang)
 	local vm = self:GetViewModel()
 	if not IsValid(vm) then return pos, ang end
+
+	local ping = IsFirstTimePredicted() and self:Ping() or 0
+	local ct = CurTime() - ping
 	if not self.OldPos then
-		self.ArmPos, self.ArmBegin = 1, SysTime()
+		self.ArmPos, self.ArmBegin = 1, ct
 		self.BasePos, self.BaseAng = Vector(), Angle()
 		self.OldPos, self.OldAng = self.BasePos, self.BaseAng
 		return pos, ang
 	end
 
-	local armpos = ss.ProtectedCall(self.GetArmPos, self)
-	if self:GetHolstering() or self:GetThrowing()
-	or vm:GetSequenceActivityName(vm:GetSequence()) == "ACT_VM_DRAW" then
-		armpos = 1
-	elseif not armpos then
-		if ss.GetOption "doomstyle" then
-			armpos = 5
-		elseif ss.GetOption "moveviewmodel" and not self:Crouching() then
-			if not self.Cursor then return pos, ang end
-			local x, y = self.Cursor.x, self.Cursor.y
-			armpos = select(3, self:GetFirePosition())
-		else
-			armpos = 1
+	local armpos = self.OldArmPos
+	if IsFirstTimePredicted() then
+		self.OldArmPos = ss.ProtectedCall(self.GetArmPos, self)
+		if self:GetHolstering() or self:GetThrowing()
+		or vm:GetSequenceActivityName(vm:GetSequence()) == "ACT_VM_DRAW" then
+			self.OldArmPos = 1
+		elseif not self.OldArmPos then
+			if ss.GetOption "doomstyle" then
+				self.OldArmPos = 5
+			elseif ss.GetOption "moveviewmodel" and not self:Crouching() then
+				if not self.Cursor then return pos, ang end
+				local x, y = self.Cursor.x, self.Cursor.y
+				self.OldArmPos = select(3, self:GetFirePosition())
+			else
+				self.OldArmPos = 1
+			end
 		end
 	end
 
-	if self:GetNWBool "lefthand" then
-		armpos = LeftHandAlt[armpos] or armpos
-	end
-
+	if self:GetNWBool "lefthand" then armpos = LeftHandAlt[armpos] or armpos end
 	if not isangle(self.IronSightsAng[armpos]) then return pos, ang end
 	if not isvector(self.IronSightsPos[armpos]) then return pos, ang end
 
 	local DesiredFlip = self.IronSightsFlip[armpos]
-	if armpos ~= self.ArmPos then
-		self.ArmPos, self.ArmBegin = armpos, SysTime()
-		self.BasePos, self.BaseAng = self.OldPos, self.OldAng
-		self.TransitFlip = self.ViewModelFlip ~= DesiredFlip
-	end
-
 	local relpos, relang = LocalToWorld(vector_origin, angle_zero, pos, ang)
 	local SwayTime = self.SwayTime / ss.GetTimeScale(self.Owner)
-	local f = math.Clamp((SysTime() - self.ArmBegin) / SwayTime, 0, 1)
+	if IsFirstTimePredicted() and armpos ~= self.ArmPos then
+		self.ArmPos, self.ArmBegin = armpos, ct
+		self.BasePos, self.BaseAng = self.OldPos, self.OldAng
+		self.TransitFlip = self.ViewModelFlip ~= DesiredFlip
+	else
+		armpos = self.ArmPos
+	end
+
+	local dt = ct - self.ArmBegin
+	local f = math.Clamp(dt / SwayTime, 0, 1)
 	if self.TransitFlip then
-		if f > .5 then
-			f, self.ArmPos = .5, 5
+		f, armpos = f * 2, 5
+		if IsFirstTimePredicted() and f >= 1 then
+			f, self.ArmPos = 1, 5
 			self.ViewModelFlip = DesiredFlip
 			self.ViewModelFlip1 = DesiredFlip
 			self.ViewModelFlip2 = DesiredFlip
 		end
-
-		f, armpos = f * 2, 5
 	end
 
-	self.OldPos = LerpVector(f, self.BasePos, self.IronSightsPos[armpos])
-	self.OldAng = LerpAngle(f, self.BaseAng, self.IronSightsAng[armpos])
+	local pos = LerpVector(f, self.BasePos, self.IronSightsPos[armpos])
+	local ang = LerpAngle(f, self.BaseAng, self.IronSightsAng[armpos])
+	if IsFirstTimePredicted() then
+		self.OldPos, self.OldAng = pos, ang
+	end
 
 	return LocalToWorld(self.OldPos, self.OldAng, relpos, relang)
 end

@@ -399,6 +399,10 @@ end
 -- Returning:
 --   bool          | The colors are the same.
 function ss.IsAlly(c1, c2)
+	if isentity(c1) and IsValid(c1) and isentity(c2) and IsValid(c2) and c1 == c2 then
+		return not ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
+	end
+
 	c1 = isentity(c1) and IsValid(c1) and c1:GetNWInt "inkcolor" or c1
 	c2 = isentity(c2) and IsValid(c2) and c2:GetNWInt "inkcolor" or c2
 	return not ss.GetOption "ff" and c1 == c2

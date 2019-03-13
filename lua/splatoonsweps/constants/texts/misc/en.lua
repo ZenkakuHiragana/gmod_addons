@@ -11,8 +11,11 @@ Make sure your graphics card has enough space of video memory.]],
     LateReadyToSplat = "Splatoon SWEPs: You're now ready to paint the map, but re-joining the server is recommended.",
     OverrideHelpText = "Override this setting with serverside value",
     Sidemenu = {
+        AddFavorite = "Add to favorites",
         Equipped = "Equipped",
+        Favorites = "Favorites",
         FilterTitle = "Splatoon SWEPs: Weapons Filter",
+        RemoveFavorite = "Remove from favorites",
         SortPrefix = "Sort: ",
         Sort = {
             Name = "Name",

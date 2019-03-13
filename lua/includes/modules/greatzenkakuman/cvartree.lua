@@ -282,6 +282,9 @@ local function MakeElement(p, admin, pt)
 		pt[panel]:Dock(TOP)
 		pt[panel]:DockMargin(10, 0, 0, 0)
 	end
+
+	if not pt.options.helptext then return end
+	pt[panel]:SetTooltip(pt.options.helptext)
 end
 
 local function MakeGUI(p, nametable, admin)

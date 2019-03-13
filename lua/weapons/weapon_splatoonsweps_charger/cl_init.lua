@@ -188,32 +188,13 @@ end
 function SWEP:GetArmPos()
 	local scope = self.Primary.Scope
 	local prog = self:GetChargeProgress(true)
-	if self:GetADS() then
-		if not self.Scoped or prog < scope.StartMove then
-			self.SwayTime = self.TransitFlip and
-			12 * ss.FrameToSec or scope.SwayTime / 2
-		end
-
-		return 6
+	if not self:GetADS() then return end
+	if not self.Scoped or prog < scope.StartMove then
+		self.SwayTime = self.TransitFlip and
+		12 * ss.FrameToSec or scope.SwayTime / 2
 	end
 
-	if not self.Scoped then return end
-	local timescale = ss.GetTimeScale(self.Owner)
-	local SwayTime = self.SwayTime / timescale
-	self.SwayTime = 12 * ss.FrameToSec
-	if prog > scope.StartMove then
-		if not self.TransitFlip then
-			self.SwayTime = scope.SwayTime
-			if not self.Owner:OnGround() or self:GetInk() < prog * self:GetTakeAmmo() then
-				self.SwayTime = scope.SwayTime * self.Primary.EmptyChargeMul
-			end
-		elseif not self:GetNWBool "usertscope" then
-			self.SwayTime = self.SwayTime / 2
-		end
-
-		self.ArmBegin = SysTime() - (SysTime() - self.ArmBegin) / SwayTime * self.SwayTime / timescale
-		return 6
-	end
+	return 6
 end
 
 function SWEP:CustomCalcView(ply, pos, ang, fov)

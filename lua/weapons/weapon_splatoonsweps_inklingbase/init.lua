@@ -199,6 +199,7 @@ end
 
 function SWEP:OnRemove()
 	self:StopLoopSound()
+	self:EndRecording()
 end
 
 function SWEP:Holster()

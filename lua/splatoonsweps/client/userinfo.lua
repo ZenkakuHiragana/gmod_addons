@@ -3,12 +3,25 @@
 
 local ss = SplatoonSWEPs
 if not (ss and ss.GetOption "enabled") then return end
-local dividerratio = 1 / 4
-local previewratio = .69
-local configicon = "splatoonsweps/icons/config.png"
-local weaponlisticon = "splatoonsweps/icons/weaponlist.png"
-local equipped = Material "icon16/accept.png"
+local MatConfigIcon = "splatoonsweps/icons/config.png"
+local MatWeaponListIcon = "splatoonsweps/icons/weaponlist.png"
+local MatEquipped = Material "icon16/accept.png"
+local MatFavorites = Material "icon16/star.png"
+local PathFavorites = "splatoonsweps/record/favorites.txt"
+local PathStats = "splatoonsweps/record/stats.txt"
 local WeaponFilters = {}
+local Favorites = {}
+if file.Exists(PathFavorites, "DATA") then
+	local f = util.JSONToTable(util.Decompress(file.Read(PathFavorites) or "") or "")
+	for w in pairs(f or {}) do Favorites[w] = true end
+end
+
+hook.Add("ShutDown", "SplatoonSWEPs: Save player stats", function()
+	if not file.Exists("splatoonsweps/record", "DATA") then file.CreateDir "splatoonsweps/record" end
+	file.Write(PathFavorites, util.Compress(util.TableToJSON(Favorites)))
+	file.Write(PathStats, util.Compress(util.TableToJSON(ss.WeaponRecord[LocalPlayer()])))
+end)
+
 local function GetColor() -- Get current color for preview model
 	return ss.GetColor(ss.GetOption "inkcolor"):ToVector()
 end
@@ -201,6 +214,7 @@ local function GenerateWeaponIcons(tab)
 		if not t then continue end
 		t.Spawnable = true -- Write it here to be spawnable and not listed as normal weapon
 		if WeaponFilters.Equipped and not LocalPlayer():HasWeapon(t.ClassName) then continue end
+		if WeaponFilters.Favorites and not Favorites[t.ClassName] then continue end
 		if WeaponFilters.Type and WeaponFilters.Type ~= t.Base then continue end
 		if WeaponFilters.Variations == "Original" and (t.Customized or t.SheldonsPicks) then continue end
 		if WeaponFilters.Variations and WeaponFilters.Variations ~= "Original" and not t[WeaponFilters.Variations] then continue end
@@ -231,11 +245,38 @@ local function GenerateWeaponIcons(tab)
 		icon:SetAdminOnly(t.AdminOnly)
 		icon:SetColor(Color(135, 206, 250))
 		icon.DoMiddleClick = icontest.DoMiddleClick
-		icon.OpenMenu = icontest.OpenMenu
 		icon.Click = icontest.DoClick
 		icon.ClassID = t.ClassID or 0
 		if ss.ProtectedCall(LocalPlayer().HasWeapon, LocalPlayer(), t.ClassName) then
 			icon.Label:SetFont "DermaDefaultBold"
+		end
+
+		function icon:OpenMenu()
+			local menu = DermaMenu()
+			if Favorites[t.ClassName] then
+				menu:AddOption(ss.Text.Sidemenu.RemoveFavorite, function()
+					Favorites[t.ClassName] = nil
+				end):SetIcon "icon16/bullet_star.png"
+			else
+				menu:AddOption(ss.Text.Sidemenu.AddFavorite, function()
+					Favorites[t.ClassName] = true
+				end):SetIcon "icon16/star.png"
+			end
+
+			menu:AddOption("#spawnmenu.menu.copy", function()
+				SetClipboardText(t.ClassName)
+			end):SetIcon "icon16/page_copy.png"
+			menu:AddOption("#spawnmenu.menu.spawn_with_toolgun", function()
+				RunConsoleCommand("gmod_tool", "creator")
+				RunConsoleCommand("creator_type", "0")
+				RunConsoleCommand("creator_name", t.ClassName)
+			end):SetIcon "icon16/brick_add.png"
+			menu:AddSpacer()
+			menu:AddOption("#spawnmenu.menu.delete", function()
+				icon:Remove()
+				hook.Run("SpawnlistContentChanged", icon)
+			end):SetIcon "icon16/bin_closed.png"
+			menu:Open()
 		end
 
 		function icon:DoClick()
@@ -243,21 +284,29 @@ local function GenerateWeaponIcons(tab)
 				net.Start "SplatoonSWEPs: Strip weapon"
 				net.WriteUInt(self.ClassID, 8)
 				net.SendToServer()
-				self.Label:SetFont "DermaDefault"
 			else
 				self:Click()
-				self.Label:SetFont "DermaDefaultBold"
 			end
 		end
 
-		icon.BasePaint = icon.Paint
+		local Paint = icon.Paint
 		function icon:Paint(w, h)
-			icon:BasePaint(w, h)
-			if LocalPlayer():HasWeapon(self:GetSpawnName()) then
-				surface.SetDrawColor(color_white)
-				surface.SetMaterial(equipped)
-				surface.DrawTexturedRect(self.Border + 8, self.Border + 8, 16, 16)
+			Paint(self, w, h)
+			surface.SetDrawColor(color_white)
+			local c = self:GetSpawnName()
+			local x, y = self.Border + 8, self.Border + 8
+			if LocalPlayer():HasWeapon(c) then
+				surface.SetMaterial(MatEquipped)
+				surface.DrawTexturedRect(x, y, 16, 16)
+				x = x + 16 + 8
+				self.Label:SetFont "DermaDefaultBold"
+			else
+				self.Label:SetFont "DermaDefault"
 			end
+
+			if not Favorites[c] then return end
+			surface.SetMaterial(MatFavorites)
+			surface.DrawTexturedRect(x, y, 16, 16)
 		end
 
 		icontest:SetVisible(false)
@@ -269,7 +318,7 @@ end
 local function GenerateWeaponTab(tab)
 	tab.Weapon = ss.IsValidInkling(LocalPlayer())
 	tab.Weapon = tab.Weapon and "entities/" .. tab.Weapon.ClassName .. ".png"
-	tab.Weapon = tab:AddSheet("", vgui.Create("DPanel", tab), tab.Weapon or configicon)
+	tab.Weapon = tab:AddSheet("", vgui.Create("DPanel", tab), tab.Weapon or MatConfigIcon)
 	tab.Weapon.Panel:SetPaintBackground(false)
 	tab.Weapon.List = vgui.Create("ContentContainer", tab.Weapon.Panel)
 	tab.Weapon.List.IconList:MakeDroppable "SplatoonSWEPs"
@@ -278,7 +327,7 @@ local function GenerateWeaponTab(tab)
 	tab.Weapon.List:Dock(FILL)
 	function tab.Weapon.Tab:Think()
 		local img = ss.IsValidInkling(LocalPlayer())
-		img = img and "entities/" .. img.ClassName .. ".png" or configicon
+		img = img and "entities/" .. img.ClassName .. ".png" or MatConfigIcon
 		if img and img ~= self.Image:GetImage() then
 			self.Image:SetImage(img)
 		end
@@ -417,6 +466,8 @@ local function GenerateFilter(tab, side)
 	side:SetLabel(ss.Text.Sidemenu.FilterTitle)
 	side:SetContents(vgui.Create "DListLayout")
 	side.Contents:SetPaintBackground(true)
+
+	-- Filter: Equipment checkbox
 	local eq = side.Contents:Add "DCheckBoxLabel"
 	eq:SetText(ss.Text.Sidemenu.Equipped)
 	eq:SizeToContents()
@@ -428,6 +479,19 @@ local function GenerateFilter(tab, side)
 		GenerateWeaponIcons(tab)
 	end
 
+	-- Filter: Favorites
+	local fav = side.Contents:Add "DCheckBoxLabel"
+	fav:SetText(ss.Text.Sidemenu.Favorites)
+	fav:SizeToContents()
+	fav:SetTall(fav:GetTall() + 2)
+	fav:SetTextColor(fav:GetSkin().Colours.Label.Dark)
+	fav.PerformLayout = CheckBoxLabelPerformLayout
+	function fav:OnChange(checked)
+		WeaponFilters.Favorites = checked
+		GenerateWeaponIcons(tab)
+	end
+
+	-- Filter: Weapon categories
 	local wt = side.Contents:Add "DComboBox"
 	local prefix = ss.Text.Sidemenu.WeaponTypePrefix
 	wt:SetSortItems()
@@ -441,6 +505,7 @@ local function GenerateFilter(tab, side)
 		GenerateWeaponIcons(tab)
 	end
 
+	-- Filter: Attributes (Original, Customized, SheldonsPicks)
 	local var = side.Contents:Add "DComboBox"
 	prefix = ss.Text.Sidemenu.VariationsPrefix
 	var:SetSortItems()
@@ -453,6 +518,7 @@ local function GenerateFilter(tab, side)
 		GenerateWeaponIcons(tab)
 	end
 
+	-- Sort combobox
 	local sort = side.Contents:Add "DComboBox"
 	prefix = ss.Text.Sidemenu.SortPrefix
 	sort:SetSortItems()
@@ -507,7 +573,7 @@ end
 
 hook.Add("PopulateWeapons", "SplatoonSWEPs: Generate weapon list",
 function(PanelContent, tree, node)
-	local node = tree:AddNode("SplatoonSWEPs", weaponlisticon)
+	local node = tree:AddNode("SplatoonSWEPs", MatWeaponListIcon)
 	node.PanelContent = PanelContent
 	node.DoPopulate = GenerateWeaponContents
 	node.OriginalThink = node.Think

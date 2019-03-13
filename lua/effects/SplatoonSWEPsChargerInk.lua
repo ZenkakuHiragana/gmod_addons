@@ -13,6 +13,9 @@ function EFFECT:Init(e)
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	local cc = e:GetColor()
 	local c = ss.GetColor(cc)
+	local range = e:GetScale()
+	local destination = e:GetOrigin() + e:GetAngles():Forward() * range
+	local apparentrange = destination:Distance(pos)
 	self.Charge = e:GetMagnitude()
 	self.Color = c
 	self.ColorCode = cc
@@ -24,7 +27,7 @@ function EFFECT:Init(e)
 	self.IsDrop = isdrop
 	self.IsCarriedByLocalPlayer = self.Weapon:IsCarriedByLocalPlayer()
 	self.IsCritical = self.Damage >= 100
-	self.Range = e:GetScale()
+	self.Range = range
 	self.Render = ss.Simulate.EFFECT_ShooterRender
 	self.Simulate = ss.Simulate.Charger
 	self.Size = ss.mColRadius
@@ -35,48 +38,54 @@ function EFFECT:Init(e)
 	self.SplashRatio = Lerp(self.Charge, p.MinSplashRatio, p.MaxSplashRatio)
 	self.SplashInit = self.SplashInterval / p.SplashPatterns * e:GetAttachment() + self.SplashRadius * self.SplashRatio
 	self.SplashInterval = self.SplashInterval * self.SplashRadius * self.SplashRatio * .9
-	self.Straight = self.Range / self.Speed
+	self.Straight = range / self.Speed
 	self.Think = ss.Simulate.EFFECT_ShooterThink
 	self.Real = {
 		Ang = e:GetAngles(),
 		InitTime = CurTime() - ping - e:GetRadius(),
 		InitPos = e:GetOrigin(),
 		Pos = e:GetOrigin(),
-		Velocity = e:GetStart(),
+		Range = range,
+		Speed = self.Speed,
+		Velocity = e:GetAngles():Forward() * self.Speed,
 	}
 	self.Apparent = {
 		Ang = ang,
 		InitTime = self.Real.InitTime,
 		InitPos = Vector(pos),
 		Pos = pos,
-		Velocity = (self.Real.Pos + self.Real.Ang:Forward() * self.Range - pos):GetNormalized() * self.Speed
+		Range = apparentrange,
+		Speed = self.Speed * apparentrange / range,
+		Velocity = ang:Forward() * self.Speed * apparentrange / range,
 	}
 	self.Tail = {
 		Ang = self.Apparent.Ang,
 		InitTime = self.Real.InitTime + ss.ShooterTrailDelay,
 		InitPos = self.Apparent.InitPos,
 		Pos = Vector(self.Apparent.Pos),
-		Velocity = Vector(self.Apparent.Velocity),
+		Range = apparentrange,
+		Speed = self.Apparent.Speed,
+		Velocity = self.Apparent.Ang:Forward() * self.Apparent.Speed,
 	}
 
 	if isdrop then
 		self.Apparent.InitPos = Vector(self.Real.Pos)
 		self.Apparent.Pos = Vector(self.Real.Pos)
 		self.Apparent.Ang = Angle(self.Real.Ang)
+		self.Apparent.Speed = 0
 		self.Apparent.Velocity = vector_origin
 		self.Tail.InitPos = self.Apparent.Pos - self.Real.Ang:Forward() * self.SplashInterval
 		self.Tail.Pos = Vector(self.Tail.InitPos)
 		self.Tail.Ang = self.Apparent.Ang
+		self.Tail.Speed = 0
 		self.Tail.Velocity = vector_origin
 	end
 
 	self.Table = {self.Real, self.Apparent, self.Tail}
 	for _, t in ipairs(self.Table) do
 		t.endpos = t.Pos
-		t.InitDirection = t.Velocity:GetNormalized()
+		t.InitDirection = t.Ang:Forward()
 		t.IsDrop = self.IsDrop
-		t.Range = self.Range
-		t.Speed = self.Speed
 		t.Straight = self.Straight
 		t.StraightPos = t.InitPos + t.InitDirection * t.Range
 		t.start = Vector()

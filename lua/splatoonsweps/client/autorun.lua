@@ -384,7 +384,9 @@ function ss.PrepareInkSurface(write)
 	net.Start "SplatoonSWEPs: Ready to splat"
 	net.WriteString(LocalPlayer():SteamID64())
 	net.SendToServer()
-	ss.WeaponRecord[LocalPlayer()] = {
+	ss.WeaponRecord[LocalPlayer()] = util.JSONToTable(
+	util.Decompress(file.Read "splatoonsweps/record/stats.txt"
+	or "") or "") or {
 		Duration = {},
 		Inked = {},
 		Recent = {},

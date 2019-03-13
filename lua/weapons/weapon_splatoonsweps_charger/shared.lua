@@ -21,7 +21,7 @@ function SWEP:GetDamage()
 end
 
 function SWEP:GetRange()
-	return self:GetLerp(self:GetChargeProgress(CLIENT),
+	return self:GetLerp(self:GetChargeProgress(),
 	self.Primary.MinRange, self.Primary.MaxRange, self.Primary.Range)
 end
 
@@ -96,7 +96,7 @@ function SWEP:SharedInit()
 	self:SetAimTimer(CurTime())
 	self:ResetCharge()
 	self:AddSchedule(0, function()
-		local prog = self:GetChargeProgress(CLIENT)
+		local prog = self:GetChargeProgress()
 		if prog == 1 and not self.FullChargeFlag then
 			if CLIENT then
 				self.CrosshairFlashTime = CurTime() - self:Ping()
@@ -184,7 +184,7 @@ end
 
 function SWEP:Move(ply)
 	local p = self.Primary
-	local prog = self:GetChargeProgress(CLIENT)
+	local prog = self:GetChargeProgress()
 	if ply:IsPlayer() then
 		if self:GetNWBool "toggleads" then
 			if ply:KeyPressed(IN_USE) then
@@ -262,8 +262,10 @@ function SWEP:CustomDataTables()
 	if not self.Scoped then return end
 
 	local getads = self.GetADS
-	function self:GetADS()
-		return getads(self) or self:GetChargeProgress(CLIENT) > self.Primary.Scope.StartMove
+	local scope = self.Primary.Scope
+	function self:GetADS(org)
+		if org then return getads(self) end
+		return getads(self) or self:GetChargeProgress() > scope.StartMove
 	end
 end
 

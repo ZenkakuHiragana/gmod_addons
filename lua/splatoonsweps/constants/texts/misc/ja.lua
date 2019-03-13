@@ -10,8 +10,11 @@ return {
     LateReadyToSplat = "Splatoon SWEPs: マップを塗り替えす準備ができましたが、サーバーに参加し直すことを推奨します。",
     OverrideHelpText = "サーバー側の設定を優先する",
     Sidemenu = {
+        AddFavorite = "お気に入りに追加",
         Equipped = "装備中",
+        Favorites = "お気に入り",
         FilterTitle = "Splatoon SWEPs: ブキフィルタ",
+        RemoveFavorite = "お気に入りから削除",
         SortPrefix = "並べ替え: ",
         Sort = {
             Name = "名前",

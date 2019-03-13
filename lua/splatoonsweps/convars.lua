@@ -15,6 +15,7 @@ local function RegisterConVars(opt, helptext, guitext)
 		if cvartable[1] ~= nil then
 			local options = table.Copy(cvartable)
 			options.printname, options[1] = guitext[cvarname]
+			options.helptext = guitext[cvarname .. "_help"]
 			gc.AddCVar(cvarname, cvartable[1], prefix .. helptext[cvarname], options)
 		else
 			gc.AddCVarPrefix(cvarname, {

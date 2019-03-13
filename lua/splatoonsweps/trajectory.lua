@@ -716,7 +716,7 @@ function ss.MakeBlasterExplosion(ink)
 	for _, e in ipairs(ents.FindInSphere(ink.endpos, ink.ColRadiusFar)) do
 		if not IsValid(e) or ss.IsAlly(e) or e:Health() <= 0 then continue end
 		if not hurtowner and e == ink.filter then continue end
-		if CLIENT then damagedealed = true break end
+		if CLIENT and e ~= ink.filter then damagedealed = true break end
 		local dmg = ink.DamageClose
 		local dist = Vector()
 		local maxs, mins = e:OBBMaxs(), e:OBBMins()
@@ -730,7 +730,7 @@ function ss.MakeBlasterExplosion(ink)
 			dist = dist + sign * (size[i] - segment) * dir
 		end
 
-		damagedealed = true
+		damagedealed = damagedealed or e == ink.filter
 		dist = dist:Length()
 		if dist > ink.ColRadiusMiddle then
 			dmg = math.Remap(dist, ink.ColRadiusMiddle, ink.ColRadiusFar, ink.DamageMiddle, ink.DamageFar)

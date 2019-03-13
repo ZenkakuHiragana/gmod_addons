@@ -23,7 +23,7 @@ function EFFECT:Render()
 	if not IsValid(self.Weapon) then return end
 	if not IsValid(self.Weapon.Owner) then return end
 	self:SetPos(GetViewEntity():GetPos())
-	
+
 	local self = self.Weapon
 	local prog = self:GetChargeProgress(true)
 	if prog == 0 then return end
@@ -31,7 +31,7 @@ function EFFECT:Render()
 	if self:GetNWBool "usertscope" and self:IsMine() and self:IsTPS() then
 		scprog = 0
 	end
-	
+
 	local color = ColorAlpha(ss.GetColor(self:GetNWInt "inkcolor"), 255 - scprog)
 	local shootpos, dir = self:GetFirePosition()
 	local pos, ang = self:GetMuzzlePosition()
@@ -46,12 +46,12 @@ function EFFECT:Render()
 	tb.start, tb.endpos, tb.mins, tb.maxs, tb.filter
 	= pos, shootpos + dir * range, -col, col, {self, self.Owner}
 	if util.TraceHull(tb).StartSolid then return end
-	
+
 	tb.start = shootpos
 	local tr = util.TraceHull(tb)
 	local texpos, dp = prog * tr.Fraction * 2 / interp, CurTime() / 5
 	local length = tr.HitPos:Distance(pos)
-	
+
 	ang = ang:Forward() * length / 5
 	dir = dir * length
 	local p, q, mpos = pos, dp, Matrix {
@@ -60,7 +60,7 @@ function EFFECT:Render()
 		{ang.x, ang.y, ang.z, 0},
 		{dir.x, dir.y, dir.z, 0},
 	}
-	
+
 	local tpoints = {q}
 	local points = {p}
 	for t = 0, interp do
@@ -75,7 +75,7 @@ function EFFECT:Render()
 		table.insert(points, Vector(p:GetField(1, 1), p:GetField(2, 2), p:GetField(3, 3)))
 		table.insert(tpoints, q)
 	end
-	
+
 	for _, m in ipairs {beam, beamlight} do
 		render.SetMaterial(m)
 		render.StartBeam(interp + 2)
