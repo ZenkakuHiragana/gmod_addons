@@ -13,15 +13,15 @@ function SWEP:GetColRadius()
 	self.Primary.MinColRadius, self.Primary.ColRadius)
 end
 
-function SWEP:GetDamage()
+function SWEP:GetDamage(ping)
 	local p = self.Primary
 	local ChargeFrame = p.MaxChargeTime * ss.SecToFrame
-	local frac = math.floor(self:GetChargeProgress(CLIENT) * ChargeFrame) / ChargeFrame
+	local frac = math.floor(self:GetChargeProgress(ping) * ChargeFrame) / ChargeFrame
 	return self:GetLerp(frac, p.MinDamage, p.MaxDamage, p.Damage)
 end
 
-function SWEP:GetRange()
-	return self:GetLerp(self:GetChargeProgress(),
+function SWEP:GetRange(ping)
+	return self:GetLerp(self:GetChargeProgress(ping),
 	self.Primary.MinRange, self.Primary.MaxRange, self.Primary.Range)
 end
 
@@ -122,7 +122,7 @@ end
 function SWEP:SharedPrimaryAttack()
 	if not IsValid(self.Owner) then return end
 	if self:GetCharge() < math.huge then
-		local prog = self:GetChargeProgress(CLIENT)
+		local prog = self:GetChargeProgress()
 		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
 		if prog > 0 then
@@ -135,7 +135,7 @@ function SWEP:SharedPrimaryAttack()
 					local elapsed = prog * self.Primary.MaxChargeTime / timescale
 					local min = self.Primary.MinChargeTime / timescale
 					local ping = CLIENT and self:Ping() or 0
-					self:SetCharge(CurTime() + FrameTime() - elapsed - min + ping)
+					self:SetCharge(CurTime() + FrameTime() - elapsed - min)
 				end
 
 				if (ss.sp or CLIENT) and not (self.NotEnoughInk or EnoughInk) then

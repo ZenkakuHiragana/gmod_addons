@@ -33,23 +33,29 @@ function EFFECT:Render()
 	end
 
 	local color = ColorAlpha(ss.GetColor(self:GetNWInt "inkcolor"), 255 - scprog)
-	local shootpos, dir = self:GetFirePosition()
+	local shootpos, dir = self:GetFirePosition(true)
 	local pos, ang = self:GetMuzzlePosition()
-	local col = ss.vector_one * self:GetColRadius()
-	local range = self:GetRange()
+	local col = ss.vector_one * self:GetColRadius(true)
+	local range = self:GetRange(true)
 	local tb = ss.SquidTrace
 	if self.Owner:IsNPC() then
 		local target = self:GetNPCTarget()
 		if IsValid(target) then dir = (target:WorldSpaceCenter() - shootpos):GetNormalized() end
 	end
 
-	tb.start, tb.endpos, tb.mins, tb.maxs, tb.filter
-	= pos, shootpos + dir * range, -col, col, {self, self.Owner}
-	if util.TraceHull(tb).StartSolid then return end
+	tb.start = pos
+	tb.endpos = shootpos + dir * range
+	tb.mins = -col
+	tb.maxs = col
+	tb.filter = {self, self.Owner}
+	local tr = util.TraceHull(tb)
+	if tr.StartSolid then return end
 
 	tb.start = shootpos
 	local tr = util.TraceHull(tb)
+	local trlp = ss.TraceLocalPlayer(tb.start, tb.endpos - tb.start)
 	local texpos, dp = prog * tr.Fraction * 2 / interp, CurTime() / 5
+	tr.HitPos = trlp or tr.HitPos
 	local length = tr.HitPos:Distance(pos)
 
 	ang = ang:Forward() * length / 5

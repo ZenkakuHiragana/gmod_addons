@@ -195,7 +195,7 @@ function Simulate.weapon_splatoonsweps_charger(ink)
 end
 
 local function HitSmoke(ink, t)
-	if ink.ClassName:find "bamboozler" then return end
+	if ink.IsBamboozler then return end
 	if not t.HitWorld or CurTime() - ink.InitTime > ink.Straight then return end
 	local e = EffectData()
 	e:SetAttachment(0)
@@ -252,7 +252,7 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 	HitSmoke(ink, t)
 	if LifeTime > ink.Straight then return end
 	if ink.IsCarriedByLocalPlayer then
-		ss.PlayHitSound(ink.Damage >= 1, o)
+		ss.PlayHitSound(ink.IsCritical, o)
 		if ss.mp and CLIENT then return end
 	end
 
@@ -415,6 +415,8 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 			Damage = w:GetDamage(),
 			FootpaintCharge = info.FootpaintCharge,
 			FootpaintRadius = SplashRadius / info.SplashRadiusMul,
+			IsBamboozler = w.IsBamboozler,
+			IsCritical = prog == 1 and not w.IsBamboozler,
 			MaxWallPaintNum = info.MaxWallPaintNum,
 			MinWallPaintNum = info.MinWallPaintNum,
 			Range = w.Range,
@@ -601,13 +603,16 @@ function ss.Simulate.EFFECT_ShooterThink(self)
 		mins = -ss.vector_one * ss.mColRadius,
 		start = self.Real.start,
 		endpos = self.Real.endpos,
-    }
-
-	self:HitEffect(tr)
+	}
+	local lp = LocalPlayer()
+	local la = Angle(0, lp:GetAngles().yaw, 0)
+	local trlp = ss.TraceLocalPlayer(self.Real.start, self.Real.endpos - self.Real.start)
+	if tr.HitWorld then self:HitEffect(tr) end
 	self:SetPos(self.Apparent.Pos)
 	self:SetAngles(self.Apparent.Ang)
 	self:DrawModel()
 	self:CreateDrops(tr)
+	self.Hit = tr.Hit or trlp or not ss.IsInWorld(tr.HitPos)
 	self.Apparent.Ang:Set(LerpAngle(math.Clamp((self.Apparent.Time - self.Straight) /
 	(ss.ShooterDecreaseFrame + ss.ShooterTermTime) / 2, 0, 1), self.Apparent.Velocity:Angle(), physenv.GetGravity():Angle()))
 

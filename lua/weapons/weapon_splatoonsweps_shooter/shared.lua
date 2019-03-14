@@ -9,20 +9,11 @@ local rand = "SplatoonSWEPs: Spread"
 local randsplash = "SplatoonSWEPs: SplashNum"
 function SWEP:GetRange() return self.Primary.Range end
 function SWEP:GetInitVelocity() return self.Primary.InitVelocity end
-function SWEP:GetFirePosition(aim, ang, shootpos)
+function SWEP:GetFirePosition(ping)
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
-	if not aim then
-		local aimvector = self:GetAimVector()
-		if CLIENT and self:IsMine() then
-			aimvector = self.Owner:GetAimVector()
-		end
-
-		aim = self:GetRange() * aimvector
-	end
-
-	ang = ang or aim:Angle()
-	shootpos = shootpos or ss.ProtectedCall(self.Owner.GetShootPos, self.Owner) or self.Owner:WorldSpaceCenter()
-
+	local aim = self:GetAimVector() * self:GetRange(ping)
+	local ang = aim:Angle()
+	local shootpos = ss.ProtectedCall(self.Owner.GetShootPos, self.Owner) or self.Owner:WorldSpaceCenter()
 	local col = ss.vector_one * self.Primary.ColRadius
 	local dy = FirePosition * (self:GetNWBool "lefthand" and -1 or 1)
 	local dp = -Vector(0, dy, FirePosition) dp:Rotate(ang)

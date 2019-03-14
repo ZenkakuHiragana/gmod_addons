@@ -2,6 +2,7 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
+SWEP.IsBamboozler = true
 SWEP.ScopeAng = Angle(2, 0, 0)		-- Scoped viewmodel angles [deg]
 SWEP.ScopePos = Vector(-8.5, 6, 3)	-- Scoped viewmodel position [Hammer units]
 SWEP.ShootSound = "SplatoonSWEPs.Bamboozler"
@@ -60,7 +61,7 @@ ss.SetPrimary(SWEP, {
 		MinCharge				= 8,	-- Time between pressing MOUSE1 and beginning of charge[frames]
 		MaxCharge				= 20,	-- Time between pressing MOUSE1 and being fully charged[frames]
 		MinFreeze				= 1,	-- Delay time from ZR released to fire ink[frames]
-		MaxFreeze				= 1,	-- 
+		MaxFreeze				= 1,	--
 	},
 	Scope = {
 		StartMove				= 0,	-- Start moving camera position at specific charge[-].

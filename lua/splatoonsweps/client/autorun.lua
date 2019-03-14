@@ -475,6 +475,12 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	ss.PrepareInkSurface(file.Read("data/" .. path, true))
 end)
 
+-- Local player isn't considered by Trace.  This is a poor workaround.
+function ss.TraceLocalPlayer(start, dir)
+	local lp = LocalPlayer()
+	return util.IntersectRayWithOBB(start, dir, lp:GetPos(), lp:GetRenderAngles(), lp:OBBMins(), lp:OBBMaxs())
+end
+
 local Water80 = Material "effects/flicker_128"
 local Water90 = Material "effects/water_warp01"
 function ss.GetWaterMaterial()

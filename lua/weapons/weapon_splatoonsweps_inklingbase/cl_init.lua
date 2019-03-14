@@ -155,7 +155,6 @@ end
 
 function SWEP:Think()
 	if not IsValid(self.Owner) or self:GetHolstering() then return end
-	if self.Owner:IsPlayer() then self:SetAimVector(self.Owner:GetAimVector()) end
 	if self:IsFirstTimePredicted() then
 		local enough = self:GetInk() > self:GetTakeAmmo(true)
 		if not self.EnoughSubWeapon and enough then

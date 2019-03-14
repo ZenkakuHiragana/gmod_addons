@@ -122,8 +122,6 @@ function EFFECT:CreateDrops(tr)
 end
 
 function EFFECT:HitEffect(tr) -- World hit effect here
-	self.Hit = tr.Hit or not ss.IsInWorld(tr.HitPos)
-	if not tr.HitWorld then return end
 	local e = EffectData()
 	e:SetAngles(tr.HitNormal:Angle())
 	e:SetAttachment(6)

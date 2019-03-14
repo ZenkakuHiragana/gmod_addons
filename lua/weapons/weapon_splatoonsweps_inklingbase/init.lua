@@ -217,10 +217,10 @@ function SWEP:Think()
 	self:ProcessSchedules()
 	self:UpdateInkState()
 	self:SharedThinkBase()
-	self:SetAimVector(ss.ProtectedCall(self.Owner.GetAimVector, self.Owner) or self.Owner:GetForward())
 	ss.ProtectedCall(self.ServerThink, self)
 
 	if not self.Owner:IsPlayer() then
+		self:SetAimVector(ss.ProtectedCall(self.Owner.GetAimVector, self.Owner) or self.Owner:GetForward())
 		if self.Owner:IsNPC() then
 			local target = self.Owner:GetTarget()
 			if not IsValid(target) then target = self.Owner:GetEnemy() end

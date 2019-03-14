@@ -1816,6 +1816,7 @@ function ss.MoveHook(w, p, m)
 
 	ply, mv = p, m
 	ss.ProtectedCall(w.Move, w, p, m)
+	w:SetAimVector(ply:GetAimVector())
 	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and w:GetOnEnemyInk() and ply:KeyDown(IN_DUCK)
 	w.PreventCrouching = not w.CannotStandup and w:GetKey() ~= 0 and w:GetKey() ~= IN_DUCK or CurTime() < w:GetCooldown()
 	if w.PreventCrouching or w.EnemyInkPreventCrouching then

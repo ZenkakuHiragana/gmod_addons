@@ -106,14 +106,15 @@ function SWEP:GetMuzzlePosition()
 end
 
 function SWEP:GetCrosshairTrace(t)
+	local range = self:GetRange(true)
 	local tr = ss.SquidTrace
-	tr.start, tr.endpos = t.pos, t.pos + t.dir * self:GetRange()
+	tr.start, tr.endpos = t.pos, t.pos + t.dir * range
 	tr.filter = {self, self.Owner}
 	tr.maxs = ss.vector_one * self.Primary.ColRadius
 	tr.mins = -tr.maxs
 
 	t.Trace = util.TraceHull(tr)
-	t.EndPosScreen = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self:GetRange()):ToScreen()
+	t.EndPosScreen = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * range):ToScreen()
 	t.HitPosScreen = t.Trace.HitPos:ToScreen()
 	t.HitEntity = IsValid(t.Trace.Entity) and t.Trace.Entity:Health() > 0
 	t.Distance = t.Trace.HitPos:Distance(t.pos)
@@ -322,7 +323,7 @@ end
 function SWEP:SetupDrawCrosshair()
 	local t = {Size = {}}
 	t.CrosshairColor = ss.GetColor(ss.CrosshairColors[self:GetNWInt "inkcolor"])
-	t.pos, t.dir = self:GetFirePosition()
+	t.pos, t.dir = self:GetFirePosition(true)
 	t.IsSplatoon2 = ss.GetOption "newstylecrosshair"
 	local res = math.sqrt(ScrW() * ScrH() / originalres)
 	for param, size in pairs {
