@@ -24,7 +24,7 @@ SWEP.Crosshair = {
 
 local function Spin(self, vm, weapon, ply)
 	if self:GetCharge() < math.huge or self:GetFireInk() > 0 then
-		local sgn = self:GetNWBool "lefthand" and -1 or 1
+		local sgn = self:GetNWBool "lefthand" and 1 or -1
 		local prog = self:GetFireInk() > 0 and self:GetFireAt() or self:GetChargeProgress(true)
 		local b = self:LookupBone "rotate_1" or 0
 		local a = self:GetManipulateBoneAngles(b)
@@ -42,10 +42,6 @@ local function Spin(self, vm, weapon, ply)
 	function vm.GetInkColorProxy()
 		return ss.ProtectedCall(self.GetInkColorProxy, self) or ss.vector_one
 	end
-
-	-- local s = ss.vector_one
-	-- if self.ViewModelFlip then s = Vector(1, -1, 1) end
-	-- vm:ManipulateBoneScale(vm:LookupBone "root_1" or 0, s)
 end
 
 SWEP.PreViewModelDrawn = Spin

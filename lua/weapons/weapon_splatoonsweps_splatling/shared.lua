@@ -115,16 +115,49 @@ function SWEP:SharedInit()
 	for _, s in ipairs(self.ChargeSound) do table.insert(self.SpinupSound, CreateSound(self, s)) end
 	self.AirTimeFraction = 1 - 1 / self.Primary.EmptyChargeMul
 	self.MediumCharge = (self.Primary.MaxChargeTime[1] - self.Primary.MinChargeTime) / (self.Primary.MaxChargeTime[2] - self.Primary.MinChargeTime)
+	self.SpinupEffectTime = CurTime()
 	self:SetAimTimer(CurTime())
 	self:SharedDeploy()
 	self:AddSchedule(0, function()
-		if SERVER or not self:IsMine() then return end
+		if CLIENT and not self:IsMine() then return end
+		local e = EffectData()
 		local prog = self:GetChargeProgress()
-		if prog == 1 and self.FullChargeFlag then
+		e:SetEntity(self)
+		if prog == 1 then
+			if not self.FullChargeFlag then
+				if not self:IsFirstTimePredicted() then return end
+				if CurTime() < self.SpinupEffectTime then return end
+				self.SpinupEffectTime = CurTime() + .2
+				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
+				e:SetScale(8)
+				e:SetFlags(0)
+				util.Effect("SplatoonSWEPsSplatlingSpinup", e)
+				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
+				return
+			end
+
+			if self:IsFirstTimePredicted() then
+				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
+				e:SetScale(25)
+				e:SetFlags(1)
+				util.Effect("SplatoonSWEPsSplatlingSpinup", e)
+				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
+			end
+
+			if SERVER then return end
 			self:EmitSound(ss.ChargerBeep, 75, 115)
 			self.FullChargeFlag = false
 			self.CrosshairFlashTime = CurTime() - self:Ping()
 		elseif self.MediumCharge < prog and prog < 1 and not self.FullChargeFlag then
+			if self:IsFirstTimePredicted() then
+				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
+				e:SetScale(12)
+				e:SetFlags(0)
+				util.Effect("SplatoonSWEPsSplatlingSpinup", e)
+				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
+			end
+
+			if SERVER then return end
 			self:EmitSound(ss.ChargerBeep)
 			self.FullChargeFlag = true
 			self.CrosshairFlashTime = CurTime() - .1 - self:Ping()

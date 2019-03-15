@@ -72,8 +72,9 @@ function Simulate.weapon_splatoonsweps_shooter(ink)
 				if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents(ink.filter) end
 				local e = EffectData()
 				e:SetColor(ink.Color)
-				e:SetRadius((ink.ColRadiusMiddle + ink.ColRadiusClose) / 4)
+				e:SetNormal(ink.InitDirection)
 				e:SetOrigin(start)
+				e:SetRadius((ink.ColRadiusMiddle + ink.ColRadiusClose) / 4)
 				util.Effect("SplatoonSWEPsBlasterTrail", e)
 				if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents() end
 			end
