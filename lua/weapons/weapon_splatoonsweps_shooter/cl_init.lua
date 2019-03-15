@@ -114,7 +114,7 @@ function SWEP:GetCrosshairTrace(t)
 	tr.mins = -tr.maxs
 
 	t.Trace = util.TraceHull(tr)
-	t.EndPosScreen = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * range):ToScreen()
+	t.EndPosScreen = (self:GetShootPos() + self:GetAimVector() * range):ToScreen()
 	t.HitPosScreen = t.Trace.HitPos:ToScreen()
 	t.HitEntity = IsValid(t.Trace.Entity) and t.Trace.Entity:Health() > 0
 	t.Distance = t.Trace.HitPos:Distance(t.pos)
@@ -138,8 +138,8 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 	if t.IsSplatoon2 then
 		frac = 1
 		if t.Trace.Hit then
-			dir = self.Owner:GetAimVector()
-			pos = self.Owner:GetShootPos()
+			dir = self:GetAimVector()
+			pos = self:GetShootPos()
 		end
 	end
 

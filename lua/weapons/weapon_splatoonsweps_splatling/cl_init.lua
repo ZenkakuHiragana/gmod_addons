@@ -78,8 +78,8 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 	if t.IsSplatoon2 then
 		frac, range = 1, self.Primary.Range
 		if t.Trace.Hit then
-			dir = self.Owner:GetAimVector()
-			pos = self.Owner:GetShootPos()
+			dir = self:GetAimVector()
+			pos = self:GetShootPos()
 		end
 	end
 
@@ -135,7 +135,7 @@ function SWEP:DrawChargeCircle(t)
 	local ri = {t.Size.Inside1 / 2, t.Size.Inside2 / 2}
 	local prog = self:GetChargeProgress(true)
 	if self:GetFireInk() > 0 then
-		local frac = math.max(self:GetNextPrimaryFire() - CurTime(), 0) / self.Primary.Delay
+		local frac = math.max(self:GetNextPrimaryFire() - CurTime() - self:Ping(), 0) / self.Primary.Delay
 		local max = {
 			math.floor(self.Primary.FireDuration[1] / self.Primary.Delay) + 1,
 			math.floor(self.Primary.FireDuration[2] / self.Primary.Delay) + 1,
@@ -211,7 +211,7 @@ end
 
 function SWEP:DrawCrosshair(x, y, t)
 	if self:GetCharge() == math.huge and self:GetFireInk() == 0 then return end
-	t.EndPosScreen = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range):ToScreen()
+	t.EndPosScreen = (self:GetShootPos() + self:GetAimVector() * self.Primary.Range):ToScreen()
 	t.CrosshairDarkColor = ColorAlpha(t.CrosshairColor, 192)
 	t.CrosshairDarkColor.r, t.CrosshairDarkColor.g, t.CrosshairDarkColor.b
 	= t.CrosshairDarkColor.r / 2, t.CrosshairDarkColor.g / 2, t.CrosshairDarkColor.b / 2

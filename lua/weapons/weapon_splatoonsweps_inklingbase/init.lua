@@ -221,6 +221,7 @@ function SWEP:Think()
 
 	if not self.Owner:IsPlayer() then
 		self:SetAimVector(ss.ProtectedCall(self.Owner.GetAimVector, self.Owner) or self.Owner:GetForward())
+		self:SetShootPos(ss.ProtectedCall(self.Owner.GetShootPos, self.Owner) or self.Owner:WorldSpaceCenter())
 		if self.Owner:IsNPC() then
 			local target = self.Owner:GetTarget()
 			if not IsValid(target) then target = self.Owner:GetEnemy() end

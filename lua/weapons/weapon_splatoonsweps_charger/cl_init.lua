@@ -143,7 +143,7 @@ end
 
 function SWEP:DrawCrosshair(x, y, t)
 	if self:GetCharge() == math.huge then return end
-	t.EndPosScreen = (self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Primary.Range):ToScreen()
+	t.EndPosScreen = (self:GetShootPos() + self:GetAimVector() * self.Primary.Range):ToScreen()
 	t.CrosshairDarkColor = ColorAlpha(t.CrosshairColor, 192)
 	t.CrosshairDarkColor.r, t.CrosshairDarkColor.g, t.CrosshairDarkColor.b
 	= t.CrosshairDarkColor.r / 2, t.CrosshairDarkColor.g / 2, t.CrosshairDarkColor.b / 2

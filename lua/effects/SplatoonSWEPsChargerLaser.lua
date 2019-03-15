@@ -53,7 +53,7 @@ function EFFECT:Render()
 
 	tb.start = shootpos
 	local tr = util.TraceHull(tb)
-	local trlp = ss.TraceLocalPlayer(tb.start, tb.endpos - tb.start)
+	local trlp = self.Owner ~= LocalPlayer() and ss.TraceLocalPlayer(tb.start, tb.endpos - tb.start)
 	local texpos, dp = prog * tr.Fraction * 2 / interp, CurTime() / 5
 	tr.HitPos = trlp or tr.HitPos
 	local length = tr.HitPos:Distance(pos)

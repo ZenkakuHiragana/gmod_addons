@@ -317,6 +317,7 @@ local function ProcessInkQueue(ply)
 			if ink.filter:IsPlayer() and ink.filter ~= ply then continue end
 
 			ss.ProtectedCall(Simulate[ink.Base], ink)
+			if not ink.IsDrop then DTrace(ink) end
 			if not (ink.start and ink.endpos) then
 				ss.InkQueue[ink] = nil
 				continue
@@ -606,7 +607,7 @@ function ss.Simulate.EFFECT_ShooterThink(self)
 	}
 	local lp = LocalPlayer()
 	local la = Angle(0, lp:GetAngles().yaw, 0)
-	local trlp = ss.TraceLocalPlayer(self.Real.start, self.Real.endpos - self.Real.start)
+	local trlp = self.Weapon.Owner ~= LocalPlayer() and ss.TraceLocalPlayer(self.Real.start, self.Real.endpos - self.Real.start)
 	if tr.HitWorld then self:HitEffect(tr) end
 	self:SetPos(self.Apparent.Pos)
 	self:SetAngles(self.Apparent.Ang)

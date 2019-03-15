@@ -387,6 +387,21 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Int", "Key") -- A valid key input.
 	self:AddNetworkVar("Vector", "InkColorProxy") -- For material proxy.
 	self:AddNetworkVar("Vector", "AimVector") -- NPC:GetAimVector() doesn't exist in clientside.
+	self:AddNetworkVar("Vector", "ShootPos") -- NPC:GetShootPos() doesn't, either.
+	local getaimvector = self.GetAimVector
+	local getshootpos = self.GetShootPos
+	function self:GetAimVector()
+		if not IsValid(self.Owner) then return self:GetForward() end
+		if self.Owner:IsPlayer() then return self.Owner:GetAimVector() end
+		return getaimvector(self)
+	end
+
+	function self:GetShootPos()
+		if not IsValid(self.Owner) then return self:GetPos() end
+		if self.Owner:IsPlayer() then return self.Owner:GetShootPos() end
+		return getshootpos(self)
+	end
+
 	self.HealSchedule = self:AddNetworkSchedule(0, function(self, schedule)
 		local healink = self:GetNWBool "canhealink" and self:GetInInk() -- Gradually heals the owner
 		local timescale = ss.GetTimeScale(self.Owner)
