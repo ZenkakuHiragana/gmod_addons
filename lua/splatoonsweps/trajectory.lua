@@ -317,7 +317,6 @@ local function ProcessInkQueue(ply)
 			if ink.filter:IsPlayer() and ink.filter ~= ply then continue end
 
 			ss.ProtectedCall(Simulate[ink.Base], ink)
-			if not ink.IsDrop then DTrace(ink) end
 			if not (ink.start and ink.endpos) then
 				ss.InkQueue[ink] = nil
 				continue
