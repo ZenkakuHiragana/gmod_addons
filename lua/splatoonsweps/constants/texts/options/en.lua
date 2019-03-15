@@ -47,7 +47,7 @@ return {Options = {
     },
     weapon_splatoonsweps_shooter = {
         NZAP_PistolStyle = "N-ZAP: Pistol-like",
-        NZAP_PistolStyle_help = "For N-ZAP '85, N-ZAP '87, and N-ZAP '89, you can hold them like HL2 revolver.",
+        NZAP_PistolStyle_help = "For N-ZAP '83, N-ZAP '85, and N-ZAP '89, you can hold them like HL2 revolver.",
         weapon_splatoonsweps_heroshot = {
             Level = "Hero Shot Level",
         },

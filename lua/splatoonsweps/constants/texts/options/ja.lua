@@ -47,7 +47,7 @@ return {Options = {
     },
     weapon_splatoonsweps_shooter = {
         NZAP_PistolStyle = "N-ZAP: ピストル風",
-        NZAP_PistolStyle_help = "N-ZAP85、N-ZAP87、N-ZAP89において、一人称視点で拳銃の持ち方をする。",
+        NZAP_PistolStyle_help = "N-ZAP83、N-ZAP85、N-ZAP89において、一人称視点で拳銃の持ち方をする。",
         weapon_splatoonsweps_heroshot = {
             Level = "ヒーローシューターのレベル",
         },
