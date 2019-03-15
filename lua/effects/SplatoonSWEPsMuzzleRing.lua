@@ -6,6 +6,7 @@ local MinRadius = 3
 local Division = 16
 local DegStep = 90 / Division
 local mat = Material "splatoonsweps/effects/ring"
+local drawviewmodel = GetConVar "r_drawviewmodel"
 function EFFECT:Init(e)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
@@ -44,10 +45,11 @@ function EFFECT:Render()
 	if not isnumber(self.LifeTime) then return end
 	if not isnumber(self.tmax) then return end
 	if not isnumber(self.tmin) then return end
+	if not (self.Weapon:IsTPS() or drawviewmodel:GetBool()) then return end
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	if not isvector(pos) then return end
 	if not isangle(ang) then return end
-	
+
 	local g = physenv.GetGravity()
 	local norm = ang:Forward()
 	local mul = self.Weapon:IsTPS() and 1 or .5
@@ -55,7 +57,7 @@ function EFFECT:Render()
 	local f = LifeTime / self.LifeTime
 	pos:Add(norm * self.tmax * f + g / 2 * LifeTime^2)
 	self:SetPos(pos)
-	
+
 	render.SetMaterial(self.UseRefract and ss.GetWaterMaterial() or mat)
 	local alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
 	local t = Lerp(f, self.tmax, self.tmin)
@@ -94,4 +96,5 @@ function EFFECT:Think()
 	and isnumber(self.tmax)
 	and isnumber(self.tmin)
 	and CurTime() < self.InitTime + self.LifeTime
+	and (self.Weapon:IsTPS() or drawviewmodel:GetBool())
 end

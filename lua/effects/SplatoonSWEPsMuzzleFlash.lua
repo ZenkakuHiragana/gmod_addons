@@ -5,15 +5,25 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
+local drawviewmodel = GetConVar "r_drawviewmodel"
 local function ThinkFPS(self)
-	if IsValid(self.Weapon) and self.FlashOnTPS == self.Weapon:IsTPS() and self.Flash:IsValid() then return true end
+	if not self.Flash:IsValid() then return false end
+	local v = IsValid(self.Weapon)
+	local t = v and self.Weapon:IsTPS()
+	v = v and self.FlashOnTPS == t
+	if v then return true end
 	self.Flash:StopEmissionAndDestroyImmediately()
 	return false
 end
 
 local function ThinkTPS(self)
-	if IsValid(self.Weapon) and self.FlashOnTPS == self.Weapon:IsTPS() and self.Emitter:IsValid() and self.Emitter:GetNumActiveParticles() > 0 then return true end
-	if self.Emitter:IsValid() then self.Emitter:Finish() end
+	if not self.Emitter:IsValid() then return false end
+	local v = IsValid(self.Weapon)
+	local t = v and self.Weapon:IsTPS()
+	v = v and self.FlashOnTPS == t
+	v = v and self.Emitter:GetNumActiveParticles() > 0
+	if v then return true end
+	self.Emitter:Finish()
 	return false
 end
 
@@ -22,6 +32,7 @@ function EFFECT:Init(e)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
 	self.FlashOnTPS = self.Weapon:IsTPS()
+	if not (self.FlashOnTPS or drawviewmodel:GetBool()) then return end
 	local ent = self.FlashOnTPS and self.Weapon or self.Weapon:GetViewModel()
 	local c = (self.Weapon:GetInkColorProxy() + ss.vector_one) / 2
 	local a = ent:LookupAttachment "muzzle"

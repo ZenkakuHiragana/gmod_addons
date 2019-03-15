@@ -144,7 +144,7 @@ function SWEP:SharedInit()
 				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
 			end
 
-			if SERVER then return end
+			if ss.mp and SERVER then return end
 			self:EmitSound(ss.ChargerBeep, 75, 115)
 			self.FullChargeFlag = false
 			self.CrosshairFlashTime = CurTime() - self:Ping()
@@ -157,7 +157,7 @@ function SWEP:SharedInit()
 				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
 			end
 
-			if SERVER then return end
+			if ss.mp and SERVER then return end
 			self:EmitSound(ss.ChargerBeep)
 			self.FullChargeFlag = true
 			self.CrosshairFlashTime = CurTime() - .1 - self:Ping()

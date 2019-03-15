@@ -5,6 +5,7 @@ if not ss then return end
 local interp = 30
 local beam = Material "trails/smoke"
 local beamlight = Material "sprites/physbeama"
+local drawviewmodel = GetConVar "r_drawviewmodel"
 local cubic = Matrix {
 	{2, -2, 1, 1},
 	{-3, 3, -2, -1},
@@ -22,6 +23,7 @@ function EFFECT:Render()
 	if ss.RenderingRTScope then return end
 	if not IsValid(self.Weapon) then return end
 	if not IsValid(self.Weapon.Owner) then return end
+	if not (self.Weapon:IsTPS() or drawviewmodel:GetBool()) then return end
 	self:SetPos(GetViewEntity():GetPos())
 
 	local self = self.Weapon

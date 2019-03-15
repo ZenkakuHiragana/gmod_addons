@@ -8,6 +8,7 @@ local DegStep = 360 / Division
 local RadStep = math.rad(DegStep)
 local LifeTime = 7 * ss.FrameToSec
 local mat = Material "splatoonsweps/effects/muzzlesplash.vmt"
+local drawviewmodel = GetConVar "r_drawviewmodel"
 function EFFECT:GetMuzzlePosition()
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	ang:RotateAroundAxis(ang:Forward(), self.Angle.z)
@@ -36,11 +37,11 @@ function EFFECT:Init(e)
 	self.Pos, self.Angle = e:GetOrigin(), e:GetAngles()
 	if not (isvector(self.Pos) and isangle(self.Angle)) then return end
 	if bit.band(f, 1) == 0 then self.GetPosition = self.GetMuzzlePosition end
-	
+
 	local pos, ang = self:GetPosition()
 	self:SetPos(pos)
 	self:SetAngles(ang)
-	
+
 	if bit.band(f, 2) == 0 then return end
 	local track = "SplatoonSWEPs_Player.InkDive" .. (bit.band(f, 4) > 0 and "Deep" or "Shallow")
 	if self.Weapon:IsCarriedByLocalPlayer() then
@@ -72,11 +73,12 @@ function EFFECT:Render()
 	if not isnumber(self.tmin) then return end
 	if not isvector(self.Pos) then return end
 	if not isangle(self.Angle) then return end
+	if not (self.Weapon:IsTPS() or drawviewmodel:GetBool()) then return end
 	local pos, ang = self:GetPosition()
 	local norm = ang:Forward()
 	local mul = self.Weapon:IsTPS() and 1 or .5
 	self:SetPos(pos)
-	
+
 	render.SetMaterial(mat)
 	local f = (CurTime() - self.InitTime) / self.LifeTime
 	local alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
@@ -103,13 +105,13 @@ function EFFECT:Render()
 				u[n] = u[n] or q % 2 == 0 and (q == 2 and 0 or 1) or q == 1 and .5 - tan or .5 + tan
 				v[n] = v[n] or q % 2 > 0 and (q == 1 and 1 or 0) or q == 2 and .5 - tan or .5 + tan
 			end
-			
+
 			AdvanceVertex(self, pos, -norm, .5, .5, alpha)
 			AdvanceVertex(self, pos + p1, n, u[i], v[i], alpha)
 			AdvanceVertex(self, pos + p2, n2, u[i + 1], v[i + 1], alpha)
 		end
 		mesh.End()
-		
+
 		f = f * 2
 		alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
 		t = Lerp(f * .7, self.tmin, self.tmax)
@@ -132,4 +134,5 @@ function EFFECT:Think()
 	and isvector(self.Pos)
 	and isangle(self.Angle)
 	and CurTime() < self.InitTime + self.LifeTime
+	and (self.Weapon:IsTPS() or drawviewmodel:GetBool())
 end

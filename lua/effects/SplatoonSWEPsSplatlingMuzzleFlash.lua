@@ -1,10 +1,12 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
+local drawviewmodel = GetConVar "r_drawviewmodel"
 function EFFECT:Init(e)
 	local w = e:GetEntity()
 	if not IsValid(w) then return end
 	local t = w:IsTPS()
+	if not (t or drawviewmodel:GetBool()) then return end
 	local ent = t and w or w:GetViewModel()
 	local s = t and 30 or 15
 	local c = w:GetInkColorProxy() + ss.vector_one
