@@ -28,7 +28,7 @@ include "weapons.lua"
 
 -- Each surface should have these fields.
 function ss.CreateSurfaceStructure()
-	return {
+	return CLIENT and {} or {
 		Angles = {},
 		Areas = {},
 		Bounds = {},
