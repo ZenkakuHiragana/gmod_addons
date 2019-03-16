@@ -104,25 +104,25 @@ function bsp:Init()
 	assert(file.Exists(self.bspname, "GAME"), "SplatoonSWEPs: Attempt to load a non-existent map!")
 	self.bsp = file.Open(self.bspname, "rb", "GAME")
 	self.FaceIndex = 0 -- Every face has an individual number.
-	
+
 	self:ReadHeader()
 	self:Parse(LUMP.PLANES)
 	self:Parse(LUMP.VERTEXES)
 	self:Parse(LUMP.EDGES)
 	self:Parse(LUMP.SURFEDGES)
-	
+
 	self:Parse(LUMP.LIGHTING)
 	self:Parse(LUMP.TEXDATA)
 	self:Parse(LUMP.TEXINFO)
-	
+
 	self:Parse(LUMP.LEAFS)
 	self:Parse(LUMP.NODES)
-	
+
 	self:Parse(LUMP.MODELS)
 	self:Parse(LUMP.FACES)
 	self:Parse(LUMP.DISPINFO)
 	self:Parse(LUMP.GAME_LUMP)
-	
+
 	self.bsp:Close()
 	self.bsp = nil
 	ss.NumSurfaces = self.FaceIndex
@@ -152,7 +152,7 @@ local function GetRotatedAABB(v2d, angle, disp)
 		maxs.x = math.max(maxs.x, v.x)
 		maxs.y = math.max(maxs.y, v.y)
 	end
-	
+
 	if disp then
 		for k, v in ipairs(disp.Positions2D) do
 			v = Vector(v)
@@ -163,14 +163,14 @@ local function GetRotatedAABB(v2d, angle, disp)
 			maxs.y = math.max(maxs.y, v.y)
 		end
 	end
-	
+
 	return mins, maxs
 end
 
 -- TODO: if the face is underwater then return end
 local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	if #v3d < 3 or bsp.FaceIndex > 1247232 then return end
-	
+
 	local surf = ss.FindLeaf(disp or v3d).Surfaces
 	local area, bound, minangle, minmins = math.huge, nil, nil, nil
 	for i, v in ipairs(v2d) do -- Get minimum AABB with O(n^2)
@@ -185,13 +185,13 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 			else
 				minmins = mins
 			end
-			
+
 			minangle = ang
 			bound = maxs - minmins
 			area = bound.x * bound.y
 		end
 	end
-	
+
 	minmins:Rotate(minangle)
 	origin = ss.To3D(minmins, origin, angle)
 	angle:RotateAroundAxis(normal, minangle.yaw)
@@ -226,24 +226,8 @@ local function MakeTriangle(vert)
 		maxs = ss.MaxVector(maxs, v)
 		v2d[i] = ss.To2D(v, origin, angle)
 	end
-	
-	return MakeSurface(mins, maxs, normal, angle, origin, v2d, vert)
-end
 
-local function SurfaceStructure()
-	return {
-		Angles = {},
-		Areas = {},
-		Bounds = {},
-		DefaultAngles = {},
-		Indices = {},
-		InkCircles = {},
-		Maxs = {},
-		Mins = {},
-		Normals = {},
-		Origins = {},
-		Vertices = {},
-	}
+	return MakeSurface(mins, maxs, normal, angle, origin, v2d, vert)
 end
 
 local ParseFunction = {
@@ -343,7 +327,7 @@ end,
 	lump.num = math.floor(lump.length / size) - 1
 	for i = 0, lump.num do
 		lump.data[i] = {}
-		lump.data[i].Surfaces = SurfaceStructure()
+		lump.data[i].Surfaces = ss.CreateSurfaceStructure()
 	end
 end,
 
@@ -356,14 +340,14 @@ end,
 	for i = 0, lump.num do
 		lump.data[i] = {}
 		lump.data[i].ChildNodes = {}
-		lump.data[i].Surfaces = SurfaceStructure()
+		lump.data[i].Surfaces = ss.CreateSurfaceStructure()
 		lump.data[i].Separator = planes.data[read "Long"]
 		children[i] = {}
 		children[i][1] = read "Long"
 		children[i][2] = read "Long"
 		bsp.bsp:Skip(20) -- mins, maxs, firstface, numfaces, area, padding
 	end
-	
+
 	for i = 0, lump.num do
 		for k = 1, 2 do
 			local child = children[i][k]
@@ -413,30 +397,30 @@ end,
 		local TexInfoTable = texinfo.data[read "Short"]
 		local dispinfo = read "Short"
 		bsp.bsp:Skip(42)
-		
+
 		if not (bsp.FirstFace <= i and i < bsp.NumFaces) then continue end
-		
+
 		local texname = TexInfoTable.TexData.name
 		local texlow = texname:lower()
 		if texlow:find "tools/" or texlow:find "water" or
 			bit.band(TexInfoTable.flags, TextureFilterBits) ~= 0 then
 			continue
 		end
-		
+
 		materials[texname] = materials[texname] or Material(texname)
 		if materials[texname]:GetString "$surfaceprop" == "metalgrate" then continue end
-		
+
 		local fullverts, full2d, center = {}, {}, vector_origin
 		for k = 0, numedges do -- Fetch all vertices
 			fullverts[k] = surfedges.data[firstedge + k]
 			center = center + fullverts[k]
 		end
 		center = center / (#fullverts + 1)
-		
+
 		for k, v in pairs(fullverts) do
 			full2d[k] = ss.To2D(v, center, angle)
 		end
-		
+
 		local v3d, v2d = {}, {} -- Vector3D, 2D
 		local nf = #full2d + 1
 		local mins = Vector(math.huge, math.huge, math.huge)
@@ -450,7 +434,7 @@ end,
 			table.insert(v2d, v2)
 			table.insert(v3d, v3)
 		end
-		
+
 		local isdisp = dispinfo >= 0
 		if isdisp then
 			local here = bsp.bsp:Tell()
@@ -468,7 +452,7 @@ end,
 				dispverts[k].dist = read "Float"
 			end
 			bsp.bsp:Seek(here)
-			
+
 			-- DispInfo.startPosition isn't always equal to v3d[1] so find correct one
 			do local i, min, start = {}, math.huge, 0
 				for k, v in ipairs(v3d) do
@@ -478,11 +462,11 @@ end,
 					if dist > min then continue end
 					start, min = k, dist
 				end
-				
+
 				for k = 1, 4 do i[k] = (k + start - 2) % 4 + 1 end
 				v3d[1], v3d[2], v3d[3], v3d[4] = v3d[i[1]], v3d[i[2]], v3d[i[3]], v3d[i[4]]
 			end
-			
+
 			isdisp = {Positions2D = {}}
 			ss.Displacements[bsp.FaceIndex + 1] = dispverts
 			local div1, div2 -- vector_origin, vector_origin
@@ -501,9 +485,9 @@ end,
 				table.insert(isdisp, v.pos)
 				table.insert(isdisp.Positions2D, v.pos2d)
 			end
-			
+
 		end
-		
+
 		MakeSurface(mins, maxs, normal, angle, center, v2d, v3d, isdisp)
 	end
 end,
@@ -519,7 +503,7 @@ end,
 		headers[i].fileofs = read "Long"
 		headers[i].filelen = read "Long"
 	end
-	
+
 	local props = 0
 	for _, l in ipairs(headers) do -- id == "scrp", Static Prop Gamelump
 		if l.id ~= 1936749168 then continue end
@@ -534,7 +518,7 @@ end,
 				modelnames[e] = modelnames[e] .. (c ~= "\x00" and c or "")
 			end
 		end
-		
+
 		bsp.bsp:Skip(read "Long" * 2) -- Leaf Indices
 		entries = read "Long"
 		local here = bsp.bsp:Tell()
@@ -552,12 +536,12 @@ end,
 			p.Solid = read "Byte"
 			p.ModelName = Model(modelnames[p.PropType + 1])
 			if p.Solid ~= SOLID_VPHYSICS or not file.Exists(p.ModelName or "/", "GAME") then continue end
-			
+
 			local mdl = ents.Create "prop_physics"
 			if not (mdl and IsValid(mdl)) then continue end
 			mdl:SetModel(p.ModelName)
 			mdl:Spawn()
-			
+
 			if mdl:PhysicsInit(p.Solid) then
 				local ph = mdl:GetPhysicsObject()
 				local mat = ph:GetMaterial()
@@ -576,11 +560,11 @@ end,
 					end
 				end
 			end
-			
+
 			mdl:PhysicsDestroy()
 			mdl:Remove()
 		end
-		
+
 		break
 	end
 end,

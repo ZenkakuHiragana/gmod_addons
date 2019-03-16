@@ -98,18 +98,18 @@ end
 -- Parse the map and store the result to txt, then send it to the client.
 hook.Add("PostCleanupMap", "SplatoonSWEPs: Cleanup all ink", ss.ClearAllInk)
 hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function()
-	-- This needs due to a really annoying bug (GitHub/garrysmod-issues #1495)
+	-- This is needed due to a really annoying bug (GitHub/garrysmod-issues #1495)
 	SetGlobalBool("SplatoonSWEPs: IsDedicated", game.IsDedicated())
 
-	ss.BSP:Init() --Parse the map
-	ss.BSP = nil
-	collectgarbage "collect"
 	local path = string.format("splatoonsweps/%s.txt", game.GetMap())
 	local data = file.Open(path, "rb", "DATA")
 	local mapCRC = tonumber(util.CRC(file.Read(string.format("maps/%s.bsp", game.GetMap()), true) or "")) or 0
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
-	if not data or data:Size() < 4 or data:ReadULong() ~= mapCRC then --First 4 bytes are map CRC.
-		file.Write(path, "") --Create an empty file
+	if not data or data:Size() < 4 or data:ReadULong() ~= mapCRC then -- First 4 bytes are map CRC.
+		ss.BSP:Init() -- Parse the map
+		ss.BSP = nil
+		collectgarbage "collect"
+		file.Write(path, "") -- Create an empty file
 		if data then data:Close() end
 		data = file.Open(path, "wb", "DATA")
 		data:WriteULong(ss.NumSurfaces)
@@ -162,14 +162,17 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 			end
 		end
 
-		data:Close() --data = map info converted into binary data
-		local write = util.Compress(file.Read(path)) --write = compressed data
-		file.Delete(path) --Remove the file temporarily
-		file.Write(path, "") --Create an empty file again
+		data:Close() -- data = map info converted into binary data
+		local write = util.Compress(file.Read(path)) -- write = compressed data
+		file.Delete(path) -- Remove the file temporarily
+		file.Write(path, "") -- Create an empty file again
 		data = file.Open(path, "wb", "DATA")
 		data:WriteULong(mapCRC)
 		for c in write:gmatch "." do data:WriteByte(c:byte()) end
-		data:Close() --data = map CRC + compressed data
+		data:Close() -- data = map CRC + compressed data
+	else
+		if data then data:Close() end
+		ss.GenerateBSPTree(file.Read("data/" .. path, true))
 	end
 
 	resource.AddSingleFile("data/" .. path)

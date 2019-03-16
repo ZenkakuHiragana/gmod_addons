@@ -26,6 +26,211 @@ include "sound.lua"
 include "trajectory.lua"
 include "weapons.lua"
 
+-- Each surface should have these fields.
+function ss.CreateSurfaceStructure()
+	return {
+		Angles = {},
+		Areas = {},
+		Bounds = {},
+		DefaultAngles = {},
+		Indices = {},
+		InkCircles = {},
+		Maxs = {},
+		Mins = {},
+		Normals = {},
+		Origins = {},
+		Vertices = {},
+	}
+end
+
+-- Parses the BSP file and stores the BSP tree to SplatoonSWEPs.Models.
+function ss.GenerateBSPTree(write)
+	local mapfile = string.format("maps/%s.bsp", game.GetMap())
+	assert(file.Exists(mapfile, "GAME"), "SplatoonSWEPs: Attempt to load a non-existent map!")
+
+	local bsp = file.Open(mapfile, "rb", "GAME")
+	local header = {lumps = {}}
+
+	local size = 16
+	local PLANES, NODES, LEAFS, MODELS = 1, 5, 10, 14 -- Lump index
+	for _, i in ipairs {PLANES, NODES, LEAFS, MODELS} do
+		bsp:Seek(i * size + 8) -- Reading header
+		header.lumps[i] = {}
+		header.lumps[i].data = {}
+		header.lumps[i].offset = bsp:ReadLong()
+		header.lumps[i].length = bsp:ReadLong()
+	end
+
+	local planes = header.lumps[PLANES]
+	size = 20
+	bsp:Seek(planes.offset)
+	planes.num = math.min(math.floor(planes.length / size) - 1, 65536 - 1)
+	for i = 0, planes.num do
+		local x = bsp:ReadFloat()
+		local y = bsp:ReadFloat()
+		local z = bsp:ReadFloat()
+		planes.data[i] = {}
+		planes.data[i].normal = Vector(x, y, z)
+		planes.data[i].distance = bsp:ReadFloat()
+		bsp:Skip(4) -- type
+	end
+
+	local leafs = header.lumps[LEAFS]
+	local size = 32
+	bsp:Seek(leafs.offset)
+	leafs.num = math.floor(leafs.length / size) - 1
+	for i = 0, leafs.num do
+		leafs.data[i] = {}
+		leafs.data[i].Surfaces = ss.CreateSurfaceStructure()
+	end
+
+	local children = {}
+	local nodes = header.lumps[NODES]
+	bsp:Seek(nodes.offset)
+	nodes.num = math.min(math.floor(nodes.length / size) - 1, 65536 - 1)
+	for i = 0, nodes.num do
+		nodes.data[i] = {}
+		nodes.data[i].ChildNodes = {}
+		nodes.data[i].Surfaces = ss.CreateSurfaceStructure()
+		nodes.data[i].Separator = planes.data[bsp:ReadLong()]
+		children[i] = {}
+		children[i][1] = bsp:ReadLong()
+		children[i][2] = bsp:ReadLong()
+		bsp:Skip(20) -- mins, maxs, firstface, numfaces, area, padding
+	end
+
+	for i = 0, nodes.num do
+		for k = 1, 2 do
+			local child = children[i][k]
+			if child < 0 then
+				child, leafs.data[-child - 1] = leafs.data[-child - 1]
+			else
+				child = nodes.data[child]
+			end
+			nodes.data[i].ChildNodes[k] = child
+		end
+	end
+
+	local models = header.lumps[MODELS]
+	bsp:Seek(models.offset)
+	size = 4 * 12
+	models.num = math.floor(models.length / size) - 1
+	for i = 0, models.num do
+		bsp:Skip(12 * 3)
+		table.insert(ss.Models, nodes.data[bsp:ReadLong()])
+		bsp:Skip(8)
+	end
+
+	bsp:Close()
+
+	-- Generating surfaces...
+	local surf = CLIENT and ss.SequentialSurfaces
+	local path = string.format("splatoonsweps/%s_decompress.txt", game.GetMap())
+	file.Write(path, util.Decompress(write:sub(5))) -- First 4 bytes are map CRC.  Remove them.
+	local data = file.Open("data/" .. path, "rb", "GAME")
+	local numsurfs = data:ReadULong()
+	local numdisps = data:ReadUShort()
+	ss.AreaBound = data:ReadDouble()
+	ss.AspectSum = data:ReadDouble()
+	ss.AspectSumX = data:ReadDouble()
+	ss.AspectSumY = data:ReadDouble()
+	for _ = 1, numsurfs do
+		local i = data:ReadULong()
+		local p = data:ReadFloat()
+		local y = data:ReadFloat()
+		local r = data:ReadFloat()
+		local angle = Angle(p, y, r)
+		local area = data:ReadFloat()
+		local x = data:ReadFloat()
+		local y = data:ReadFloat()
+		local defaultangle = data:ReadFloat()
+		local bound = Vector(x, y)
+		x = data:ReadFloat()
+		y = data:ReadFloat()
+		z = data:ReadFloat()
+		local normal = Vector(x, y, z)
+		x = data:ReadFloat()
+		y = data:ReadFloat()
+		z = data:ReadFloat()
+		local origin = Vector(x, y, z)
+		local vertices = {}
+		local mins = Vector(math.huge, math.huge, math.huge)
+		local maxs = -mins
+		for __ = 1, data:ReadUShort() do
+			x = data:ReadFloat()
+			y = data:ReadFloat()
+			z = data:ReadFloat()
+			local v = Vector(x, y, z)
+			table.insert(vertices, v)
+			mins = ss.MinVector(mins, v)
+			maxs = ss.MaxVector(maxs, v)
+		end
+
+		local leaf = ss.FindLeaf(vertices)
+		if SERVER then
+			surf = leaf.Surfaces
+			surf.Indices[i] = i
+		else
+			leaf.Surfaces[i] = true
+		end
+
+		surf.Angles[i] = angle
+		surf.Areas[i] = area
+		surf.Bounds[i] = bound
+		surf.DefaultAngles[i] = defaultangle
+		surf.Normals[i] = normal
+		surf.Origins[i] = origin
+		surf.Vertices[i] = vertices
+		surf.InkCircles[i] = {}
+		surf.Mins[i] = mins
+		surf.Maxs[i] = maxs
+	end
+
+	for _ = 1, numdisps do
+		local i = data:ReadUShort()
+		local positions = {}
+		local power = 2^(data:ReadByte() + 1) + 1
+		local disp = {Positions = {}, Triangles = {}}
+		local mins = Vector(math.huge, math.huge, math.huge)
+		local maxs = -mins
+		for k = 0, data:ReadUShort() do
+			local v = {u = 0, v = 0}
+			local x = data:ReadFloat()
+			local y = data:ReadFloat()
+			local z = data:ReadFloat()
+			v.pos = Vector(x, y, z)
+			x = data:ReadFloat()
+			y = data:ReadFloat()
+			z = data:ReadFloat()
+			v.vec = Vector(x, y, z)
+			v.dist = data:ReadFloat()
+			disp.Positions[k] = v
+			mins = ss.MinVector(mins, v.pos)
+			maxs = ss.MaxVector(maxs, v.pos)
+			table.insert(positions, v.pos)
+
+			local invert = Either(k % 2 == 0, 1, 0) --Generate triangles from displacement mesh.
+			if k % power < power - 1 and math.floor(k / power) < power - 1 then
+				table.insert(disp.Triangles, {k + power + invert, k + 1, k})
+				table.insert(disp.Triangles, {k + 1 - invert, k + power, k + power + 1})
+			end
+		end
+
+		local leaf = ss.FindLeaf(positions)
+		if SERVER then
+			surf = leaf.Surfaces
+			surf.Mins[i] = ss.MinVector(surf.Mins[i] or mins, mins)
+			surf.Maxs[i] = ss.MaxVector(surf.Maxs[i] or maxs, maxs)
+		else
+			ss.Displacements[i] = disp
+			leaf.Surfaces[i] = true
+		end
+	end
+
+	data:Close()
+	file.Delete(path)
+end
+
 -- Returns which sides the polygon specified by given vertices is.
 -- Arguments:
 --   table vertices	| Vertices of the face

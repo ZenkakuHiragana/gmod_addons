@@ -58,6 +58,7 @@ function EFFECT:Render()
 	pos:Add(norm * self.tmax * f + g / 2 * LifeTime^2)
 	self:SetPos(pos)
 
+	if self.UseRefract then render.UpdateRefractTexture() end
 	render.SetMaterial(self.UseRefract and ss.GetWaterMaterial() or mat)
 	local alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
 	local t = Lerp(f, self.tmax, self.tmin)
