@@ -543,6 +543,14 @@ local function SetupIcons(SWEP)
 	SWEP.WepSelectIcon = surface.GetTextureID(icon) -- Weapon select icon
 end
 
+local function PrecacheModels(t)
+	for _, m in ipairs(t) do
+		if file.Exists(m, "GAME") then
+			util.PrecacheModel(m)
+		end
+	end
+end
+
 local function RegisterWeapons()
 	if not ss.GetOption "enabled" then return end
 
@@ -562,7 +570,6 @@ local function RegisterWeapons()
 			}
 
 			include(LuaFilePath)
-			SetupIcons(SWEP)
 			local modelpath = "models/splatoonsweps/%s/"
 			SWEP.ModelPath = SWEP.ModelPath or string.format(modelpath, SWEP.ClassName)
 			SWEP.ViewModel = SWEP.ModelPath .. "c_viewmodel.mdl"
@@ -574,6 +581,8 @@ local function RegisterWeapons()
 			SWEP.PrintName = ss.Text.PrintNames[SWEP.ClassName]
 			SWEP.Slot = weaponslot[SWEP.Base]
 			SWEP.SlotPos = i
+			SetupIcons(SWEP)
+			PrecacheModels {SWEP.ViewModel0, SWEP.ViewModel1, SWEP.ViewModel2, SWEP.WorldModel, SWEP.ModelPath .. "w_left.mdl"}
 
 			for _, v in ipairs(SWEP.Variations or {}) do
 				v.ClassName = v.ClassName and "weapon_splatoonsweps_" .. v.ClassName
@@ -591,6 +600,7 @@ local function RegisterWeapons()
 				v.WorldModel = v.ModelPath .. "w_right.mdl"
 				v = table.Merge(table.Copy(SWEP), v)
 				SetupIcons(v)
+				PrecacheModels {v.ViewModel0, v.ViewModel1, v.ViewModel2, v.WorldModel, v.ModelPath .. "w_left.mdl"}
 				setmetatable(v, {__index = SWEP})
 				weapons.Register(v, v.ClassName)
 				list.Add("NPCUsableWeapons", {

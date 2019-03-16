@@ -266,7 +266,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 	end
 
 	local armpos = self.OldArmPos
-	if IsFirstTimePredicted() then
+	if self:IsFirstTimePredicted() then
 		self.OldArmPos = ss.ProtectedCall(self.GetArmPos, self)
 		if self:GetHolstering() or self:GetThrowing()
 		or vm:GetSequenceActivityName(vm:GetSequence()) == "ACT_VM_DRAW" then
@@ -291,7 +291,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 	local DesiredFlip = self.IronSightsFlip[armpos]
 	local relpos, relang = LocalToWorld(vector_origin, angle_zero, pos, ang)
 	local SwayTime = self.SwayTime / ss.GetTimeScale(self.Owner)
-	if IsFirstTimePredicted() and armpos ~= self.ArmPos then
+	if self:IsFirstTimePredicted() and armpos ~= self.ArmPos then
 		self.ArmPos, self.ArmBegin = armpos, ct
 		self.BasePos, self.BaseAng = self.OldPos, self.OldAng
 		self.TransitFlip = self.ViewModelFlip ~= DesiredFlip
@@ -303,7 +303,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 	local f = math.Clamp(dt / SwayTime, 0, 1)
 	if self.TransitFlip then
 		f, armpos = f * 2, 5
-		if IsFirstTimePredicted() and f >= 1 then
+		if self:IsFirstTimePredicted() and f >= 1 then
 			f, self.ArmPos = 1, 5
 			self.ViewModelFlip = DesiredFlip
 			self.ViewModelFlip1 = DesiredFlip
@@ -313,7 +313,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 
 	local pos = LerpVector(f, self.BasePos, self.IronSightsPos[armpos])
 	local ang = LerpAngle(f, self.BaseAng, self.IronSightsAng[armpos])
-	if IsFirstTimePredicted() then
+	if self:IsFirstTimePredicted() then
 		self.OldPos, self.OldAng = pos, ang
 	end
 

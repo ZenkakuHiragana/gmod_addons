@@ -161,6 +161,8 @@ function SWEP:SetWeaponAnim(act, index)
 		if index and i ~= index then continue end
 		local vm = self.Owner:GetViewModel(i)
 		if not IsValid(vm) then continue end
+		-- Entity:GetSequenceCount() returns nil on an invalid model
+		if (vm:GetSequenceCount() or 0) < 1 then continue end
 		local seq = vm:SelectWeightedSequence(act)
 		if seq == -1 then continue end
 		vm:SendViewModelMatchingSequence(seq)
