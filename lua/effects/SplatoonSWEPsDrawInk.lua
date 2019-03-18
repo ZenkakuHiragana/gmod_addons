@@ -19,7 +19,7 @@ function EFFECT:Init(e)
 		ratio = info.z,
 		t = e:GetFlags(),
 	})
-	
+
 	if e:GetEntity() == LocalPlayer() then return end
 	ss.AddInkRectangle(e:GetAttachment(), i, e:GetFlags(), info.y, pos, info.x, info.z, surf)
 end

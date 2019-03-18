@@ -51,6 +51,42 @@ function SWEP:ClientInit()
 	self.CrosshairFlashTime = CurTime()
 	self.MinChargeDeg = self.Primary.MinChargeTime / self.Primary.MaxChargeTime[1] * 360
 	self:GetBase().ClientInit(self)
+	self:AddSchedule(0, function()
+		local e = EffectData()
+		local prog = self:GetChargeProgress()
+		e:SetEntity(self)
+		if prog == 1 and self.FullChargeFlag then
+			self.FullChargeFlag = false
+			self.CrosshairFlashTime = CurTime() - self:Ping()
+			if self:IsMine() then self:EmitSound(ss.ChargerBeep, 75, 115) end
+		elseif self.MediumCharge < prog and prog < 1 and not self.FullChargeFlag then
+			self.FullChargeFlag = true
+			self.CrosshairFlashTime = CurTime() - .1 - self:Ping()
+			if self:IsMine() then self:EmitSound(ss.ChargerBeep) end
+		end
+
+		if not self:IsFirstTimePredicted() then return end
+		local prog_predicted = self:GetChargeProgress(self:IsMine())
+		if prog_predicted == 1 then
+			if self.FullChargeFlagPredicted then
+				e:SetScale(30)
+				e:SetFlags(0)
+				util.Effect("SplatoonSWEPsSplatlingSpinup", e)
+				self.FullChargeFlagPredicted = false
+			elseif CurTime() > self.SpinupEffectTime then
+				self.SpinupEffectTime = CurTime() + .2
+				e:SetScale(9)
+				e:SetFlags(1)
+				util.Effect("SplatoonSWEPsSplatlingSpinup", e)
+			end
+		elseif self.MediumCharge < prog_predicted and prog_predicted < 1 then
+			if self.FullChargeFlagPredicted then return end
+			e:SetScale(17.5)
+			e:SetFlags(0)
+			util.Effect("SplatoonSWEPsSplatlingSpinup", e)
+			self.FullChargeFlagPredicted = true
+		end
+	end)
 end
 
 function SWEP:GetArmPos()

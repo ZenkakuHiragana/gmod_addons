@@ -118,51 +118,6 @@ function SWEP:SharedInit()
 	self.SpinupEffectTime = CurTime()
 	self:SetAimTimer(CurTime())
 	self:SharedDeploy()
-	self:AddSchedule(0, function()
-		if CLIENT and not self:IsMine() then return end
-		local e = EffectData()
-		local prog = self:GetChargeProgress()
-		e:SetEntity(self)
-		if prog == 1 then
-			if not self.FullChargeFlag then
-				if not self:IsFirstTimePredicted() then return end
-				if CurTime() < self.SpinupEffectTime then return end
-				self.SpinupEffectTime = CurTime() + .2
-				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
-				e:SetScale(8)
-				e:SetFlags(0)
-				util.Effect("SplatoonSWEPsSplatlingSpinup", e)
-				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
-				return
-			end
-
-			if self:IsFirstTimePredicted() then
-				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
-				e:SetScale(25)
-				e:SetFlags(1)
-				util.Effect("SplatoonSWEPsSplatlingSpinup", e)
-				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
-			end
-
-			if ss.mp and SERVER then return end
-			self:EmitSound(ss.ChargerBeep, 75, 115)
-			self.FullChargeFlag = false
-			self.CrosshairFlashTime = CurTime() - self:Ping()
-		elseif self.MediumCharge < prog and prog < 1 and not self.FullChargeFlag then
-			if self:IsFirstTimePredicted() then
-				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
-				e:SetScale(12)
-				e:SetFlags(0)
-				util.Effect("SplatoonSWEPsSplatlingSpinup", e)
-				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
-			end
-
-			if ss.mp and SERVER then return end
-			self:EmitSound(ss.ChargerBeep)
-			self.FullChargeFlag = true
-			self.CrosshairFlashTime = CurTime() - .1 - self:Ping()
-		end
-	end)
 end
 
 function SWEP:SharedPrimaryAttack()
