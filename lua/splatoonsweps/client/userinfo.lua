@@ -336,10 +336,10 @@ local function GenerateWeaponTab(tab)
 	GenerateWeaponIcons(tab)
 end
 
-local function SendValue(name, value, clientside)
+local function SendValue(name, value)
 	if ss.sp then
 		net.Start "greatzenkakuman.cvartree.adminchange"
-		net.WriteString(ss.GetConVarName(name, clientside == nil))
+		net.WriteString(ss.GetConVarName(name, false))
 		net.WriteString(tostring(value))
 		net.SendToServer()
 	elseif not GetGlobalBool "SplatoonSWEPs: IsDedicated" and LocalPlayer():IsAdmin() then
@@ -449,7 +449,7 @@ local function GeneratePreferenceTab(tab)
 	end
 
 	function tab.Preference.ResolutionSelector:OnSelect(index, value, data)
-		SendValue("rtresolution", index - 1, true)
+		SendValue("rtresolution", index - 1)
 	end
 end
 
