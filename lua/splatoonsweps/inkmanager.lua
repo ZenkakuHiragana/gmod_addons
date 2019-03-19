@@ -38,11 +38,13 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	for node in ss.BSPPairs(polys) do
 		local surf = SERVER and node.Surfaces or ss.SequentialSurfaces
 		for i, index in pairs(SERVER and surf.Indices or node.Surfaces) do
-			if surf.Normals[i]:Dot(normal) <= ss.MAX_COS_DEG_DIFF *
-			((SERVER and index < 0 or CLIENT and ss.Displacements[i]) and .5 or 1) or
-			not ss.CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
+			local angdiff = surf.Normals[i]:Dot(normal)
+			local threshold_halve = Either(SERVER, SERVER and index < 0, ss.Displacements[i])
+			if angdiff <= ss.MAX_COS_DEG_DIFF / (threshold_halve and 2 or 1) then continue end
+			if not ss.CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
 			local localang = select(2, WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle()))
 			localang = ang.yaw - localang.roll + surf.DefaultAngles[i]
+			if CLIENT and surf.Moved[i] then localang = localang + 90 end
 
 			local e = EffectData()
 			e:SetAttachment(color)
@@ -149,8 +151,11 @@ function ss.GetSurfaceColor(tr)
 	for node in ss.BSPPairs {tr.HitPos} do
 		local surf = SERVER and node.Surfaces or ss.SequentialSurfaces
 		for i, index in pairs(SERVER and surf.Indices or node.Surfaces) do
-			if surf.Normals[i]:Dot(tr.HitNormal) <= ss.MAX_COS_DEG_DIFF * ((SERVER and index < 0 or CLIENT and ss.Displacements[i]) and .5 or 1) or not
-			ss.CollisionAABB(tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then continue end
+			local angdiff = surf.Normals[i]:Dot(tr.HitNormal)
+			local threshold_halve = Either(SERVER, isnumber(index) and index < 0, ss.Displacements[i])
+			if angdiff <= ss.MAX_COS_DEG_DIFF / (threshold_halve and 2 or 1) then continue end
+			local mins, maxs = tr.HitPos - POINT_BOUND, tr.HitPos + POINT_BOUND
+			if not ss.CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then continue end
 			local p2d = ss.To2D(tr.HitPos, surf.Origins[i], surf.Angles[i])
 			local ink = surf.InkCircles[i]
 			for k = #ink, 1, -1 do
@@ -160,6 +165,7 @@ function ss.GetSurfaceColor(tr)
 				local w, h = t.width, t.height
 				local p = (p2d - r.pos) / r.radius
 				p:Rotate(Angle(0, r.angle)) -- (-1, -1) <= (x, y) <= (1, 1)
+				if ss.Debug then ss.Debug.ShowInkChecked(r, surf, i) end
 				if -1 > p.x or p.x > 1 or -1 > p.y or p.y > 1 then continue end
 				p = (p + ss.vector_one) / 2 -- (0, 0) <= (x, y) <= (1, 1)
 				p.y = p.y * h -- 0 <= y <= h

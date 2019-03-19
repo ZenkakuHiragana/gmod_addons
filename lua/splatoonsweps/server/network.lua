@@ -43,13 +43,16 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function(_, ply)
 	local bps = 65530
 	local chunk = data:sub(startpos, startpos + bps - 1)
 	local size = chunk:len()
+	local current = math.floor(startpos / bps)
+	local total = math.floor(data:len() / bps)
 	ply.SendData = startpos + size
 	net.Start "SplatoonSWEPs: Redownload ink data"
 	net.WriteBool(size < bps or data:len() < startpos + bps)
 	net.WriteUInt(size, 16)
 	net.WriteData(chunk, size)
+	net.WriteFloat(current / total)
 	net.Send(ply)
-	print("Redownloading ink data to", ply, "(" .. math.floor(startpos / bps) .. "/" .. math.floor(data:len() / bps) .. ")")
+	print(string.format("Redownloading ink data to %s (%d/%d)", tostring(ply), current, total))
 end)
 
 net.Receive("SplatoonSWEPs: Send ink cleanup", function(_, ply)

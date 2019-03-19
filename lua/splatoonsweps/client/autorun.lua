@@ -124,7 +124,7 @@ function ss.PrepareInkSurface(write)
 			if v < min then min, half = v, m end
 		end
 
-		dv = half.v - 1
+		dv = half.v - 1 - rtmargin
 		divuv = math.max(half.v, v + nv - dv) -- Shrink RT
 		arearatio = arearatio * divuv
 		convertunit = convertunit * divuv
@@ -149,17 +149,19 @@ function ss.PrepareInkSurface(write)
 
 		for sortedID, k in ipairs(sortedsurfs) do
 			if half and sortedID >= half.id then -- If current polygon is moved
+				local bu = surf.Bounds[k].x / convertunit * divuv
 				surf.Angles[k]:RotateAroundAxis(surf.Normals[k], -90)
-				surf.Bounds[k].x, surf.Bounds[k].y, surf.u[k], surf.v[k], surf.Moved[k]
-					= surf.Bounds[k].y, surf.Bounds[k].x, surf.v[k] - dv, surf.u[k], true
+				surf.Bounds[k].x, surf.Bounds[k].y = surf.Bounds[k].y, surf.Bounds[k].x
+				surf.u[k], surf.v[k] = surf.v[k] - dv, 1 - surf.u[k] - bu
+				surf.Moved[k] = true
 				for _, vertex in ipairs(surf.Vertices[k]) do
-					vertex.u, vertex.v = vertex.v - dv, vertex.u
+					vertex.u, vertex.v = vertex.v - dv, 1 - vertex.u
 				end
 
 				if ss.Displacements[k] then
 					for i = 0, #ss.Displacements[k].Positions do
 						local vertex = ss.Displacements[k].Positions[i]
-						vertex.u, vertex.v = vertex.v - dv, vertex.u
+						vertex.u, vertex.v = vertex.v - dv, 1 - vertex.u
 					end
 				end
 			end
@@ -167,14 +169,8 @@ function ss.PrepareInkSurface(write)
 			surf.u[k], surf.v[k] = surf.u[k] / divuv, surf.v[k] / divuv
 			if ss.Displacements[k] then
 				local verts = ss.Displacements[k].Positions
-				for _, v in pairs(verts) do
-					v.u, v.v = v.u / divuv, v.v / divuv
-				end
-
-				for _, v in ipairs(surf.Vertices[k]) do
-					v.u, v.v = v.u / divuv, v.v / divuv
-				end
-
+				for _, v in pairs(verts) do v.u, v.v = v.u / divuv, v.v / divuv end
+				for _, v in ipairs(surf.Vertices[k]) do v.u, v.v = v.u / divuv, v.v / divuv end
 				for _, t in ipairs(ss.Displacements[k].Triangles) do
 					local tv = {verts[t[1]], verts[t[2]], verts[t[3]]}
 					local n = (tv[1].pos - tv[2].pos):Cross(tv[3].pos - tv[2].pos):GetNormalized()
@@ -206,22 +202,20 @@ function ss.PrepareInkSurface(write)
 					ContinueMesh()
 				end
 			end
-			surf.Areas[k], surf.Vertices[k] = nil
+
+			if not ss.Debug then
+				surf.Areas[k], surf.Vertices[k] = nil
+			end
 		end
 		mesh.End()
 	end
 
+	if not ss.Debug then
+		surf.Areas, surf.Vertices, surf.AreaBound = nil
+	end
+
 	ss.ClearAllInk()
 	ss.InitializeMoveEmulation(LocalPlayer())
-	ss.PixelsToUnits = arearatio
-	ss.UVToUnits = convertunit
-	ss.UVToPixels = rtsize
-	ss.UnitsToPixels = 1 / ss.PixelsToUnits
-	ss.UnitsToUV = 1 / ss.UVToUnits
-	ss.PixelsToUV = 1 / ss.UVToPixels
-	surf.Areas, surf.Vertices, surf.AreaBound = nil
-	ss.RenderTarget.Ready = true
-	collectgarbage "collect"
 	net.Start "SplatoonSWEPs: Ready to splat"
 	net.WriteString(LocalPlayer():SteamID64())
 	net.SendToServer()
@@ -232,6 +226,15 @@ function ss.PrepareInkSurface(write)
 		Inked = {},
 		Recent = {},
 	}
+
+	ss.PixelsToUnits = arearatio
+	ss.UVToUnits = convertunit
+	ss.UVToPixels = rtsize
+	ss.UnitsToPixels = 1 / ss.PixelsToUnits
+	ss.UnitsToUV = 1 / ss.UVToUnits
+	ss.PixelsToUV = 1 / ss.UVToPixels
+	ss.RenderTarget.Ready = true
+	collectgarbage "collect"
 end
 
 local IMAGE_FORMAT_BGRA5551 = 21
@@ -303,17 +306,35 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	file.Delete(crashpath)
 	local pathbsp = string.format("maps/%s.bsp", game.GetMap())
 	local path = string.format("splatoonsweps/%s.txt", game.GetMap())
+	local InkCRCServer = GetGlobalString "SplatoonSWEPs: Ink map CRC"
+
+	-- Checking ink map in data/
 	local data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, "rb", "GAME")
-	if not data or data:Size() < 4 or data:ReadULong() ~= tonumber(util.CRC(file.Read(pathbsp, true) or "")) then
+	local MapCRC = tonumber(util.CRC(file.Read(pathbsp, true) or ""))
+	local InkCRC = util.CRC(file.Read("data/" .. path, true) or "")
+	local IsValid = data and data:Size() > 4 and data:ReadULong() == MapCRC and InkCRCServer == InkCRC
+	local UseDownloaded = false
+	if data then data:Close() end
+	if ss.mp and not IsValid then
+		file.Rename(path, path .. ".txt")
+		data = file.Open("data/" .. path, "rb", "GAME")
+		InkCRC = util.CRC(file.Read("data/" .. path, true) or "")
+		IsValid = data and data:Size() > 4 and data:ReadULong() == MapCRC and InkCRCServer == InkCRC
+		UseDownloaded = true
 		if data then data:Close() end
+	end
+
+	if not IsValid then
+		if ss.mp then file.Rename(path .. ".txt", path) end
 		net.Start "SplatoonSWEPs: Redownload ink data"
 		net.SendToServer()
-		ss.Data = ""
+		notification.AddProgress("SplatoonSWEPs: Redownload ink data", "Downloading ink map...")
 		return
 	end
 
-	data:Close()
+	if ss.mp and not UseDownloaded then file.Rename(path .. ".txt", path) end
 	ss.PrepareInkSurface(file.Read("data/" .. path, true))
+	if ss.mp and UseDownloaded then file.Rename(path .. ".txt", path) end
 end)
 
 -- Local player isn't considered by Trace.  This is a poor workaround.

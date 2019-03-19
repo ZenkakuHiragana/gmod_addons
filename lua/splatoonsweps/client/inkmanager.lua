@@ -26,13 +26,13 @@ local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
 	for i, m in ipairs(ss.IMesh) do m:Draw() end -- Draw ink surface
 	render.OverrideDepthEnable(false) -- Back to default
 	render.SetToneMappingScaleLinear(hdrscale) -- Back to default
-	
+
 	if not ss.GetConVar "norefract":GetBool() then
 		render.UpdateRefractTexture() -- Make the ink watery
 		render.SetMaterial(rt.WaterMaterial) -- Set water texture for ink
 		for i, m in ipairs(ss.IMesh) do m:Draw() end -- Draw ink again
 	end
-	
+
 	if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then return end
 	render.PushFlashlightMode(true) -- Ink lit by player's flashlight or projected texture
 	render.SetMaterial(rt.Material) -- Ink base texture
@@ -49,17 +49,19 @@ local function GetLight(p, n)
 end
 
 function ss.ClearAllInk()
-	ss.InkQueue, ss.PaintQueue, ss.PaintSchedule = {}, {}, {}
+	table.Empty(ss.InkQueue)
+	table.Empty(ss.PaintSchedule)
+	if rt.Ready then table.Empty(ss.PaintQueue) end
 	local amb = ss.AmbientColor
 	if not amb then
 		amb = render.GetAmbientLightColor():ToColor()
 		ss.AmbientColor = amb
 	end
-	
-	for i = 1, #surf.InkCircles do
-		surf.InkCircles[i] = {}
+
+	for i, v in pairs(surf.InkCircles) do
+		table.Empty(v)
 	end
-	
+
 	render.PushRenderTarget(rt.BaseTexture)
 	render.OverrideAlphaWriteEnable(true, true)
 	render.ClearDepth()
@@ -67,7 +69,7 @@ function ss.ClearAllInk()
 	render.Clear(0, 0, 0, 0)
 	render.OverrideColorWriteEnable(false)
 	render.PopRenderTarget()
-	
+
 	render.PushRenderTarget(rt.Normalmap)
 	render.OverrideAlphaWriteEnable(true, true)
 	render.ClearDepth()
@@ -75,7 +77,7 @@ function ss.ClearAllInk()
 	render.Clear(128, 128, 255, 0)
 	render.OverrideAlphaWriteEnable(false)
 	render.PopRenderTarget()
-	
+
 	render.PushRenderTarget(rt.Lightmap)
 	render.ClearDepth()
 	render.ClearStencil()
@@ -91,24 +93,29 @@ local function ProcessPaintQueue()
 		for time, queuetable in SortedPairs(ss.PaintQueue) do
 			for id, q in SortedPairs(queuetable) do
 				q.done, done = q.done + 1, done + 1
+				if q.done > 5 then
+					queuetable[id] = nil
+					if q.owner ~= LocalPlayer() then
+						ss.AddInkRectangle(q.c, q.n, q.t, q.inkangle, q.pos, q.r, q.ratio, surf)
+					end
+				end
+
 				local angle, origin, normal, moved = Angles[q.n], Origins[q.n], Normals[q.n], Moved[q.n]
-				local pos2d = ss.To2D(q.pos, origin, angle)
-				if q.done > 5 then queuetable[id] = nil end
-				pos2d = pos2d * ss.UnitsToPixels
+				local pos2d = ss.To2D(q.pos, origin, angle) * ss.UnitsToPixels
 				local bound = surf.Bounds[q.n] * ss.UnitsToPixels
 				local color = ss.GetColor(q.c)
 				local r = math.Round(q.r * ss.UnitsToPixels)
 				local uvorg = Vector(surf.u[q.n], surf.v[q.n]) * ss.UVToPixels
-				if moved then pos2d.x, q.inkangle = -pos2d.x, -q.inkangle - 90 end
 				local lightorg = q.pos - normal * (normal:Dot(q.pos - origin) - 1) * q.dispflag
 				local light = GetLight(lightorg, normal)
+				local settexture = "splatoonsweps/inkshot/shot" .. tostring(q.t)
+				local vrad = ss.vector_one * r
+				if moved then pos2d.x, pos2d.y = -pos2d.x, bound.y - pos2d.y end
 				local b = Vector(math.ceil(uvorg.x + bound.x) + 1, math.ceil(uvorg.y + bound.y) + 1) -- ScissorRect end
 				local c = Vector(math.Round(pos2d.x + uvorg.x), math.Round(pos2d.y + uvorg.y)) -- 2D center position
 				local s = Vector(math.floor(uvorg.x) - 1, math.floor(uvorg.y) - 1) -- ScissorRect start
-				local settexture = "splatoonsweps/inkshot/shot" .. tostring(q.t)
-				local vrad = ss.vector_one * r
 				if not ss.CollisionAABB2D(s, b, c - vrad, c + vrad) then q.done = math.huge continue end
-				
+				ss.Debug.ShowInkDrawn(s, c, b, surf, q, moved)
 				inkmaterial:SetTexture("$basetexture", settexture)
 				normalmaterial:SetTexture("$basetexture", settexture .. "n")
 				render.PushRenderTarget(rt.BaseTexture)
@@ -120,7 +127,7 @@ local function ProcessPaintQueue()
 				cam.End2D()
 				render.SetScissorRect(0, 0, 0, 0, false)
 				render.PopRenderTarget()
-				
+
 				--Draw on normal map
 				render.PushRenderTarget(rt.Normalmap)
 				render.SetScissorRect(s.x, s.y, b.x, b.y, true)
@@ -131,7 +138,7 @@ local function ProcessPaintQueue()
 				cam.End2D()
 				render.SetScissorRect(0, 0, 0, 0, false)
 				render.PopRenderTarget()
-				
+
 				--Draw on lightmap
 				r = r / 2
 				local num = math.floor(math.Clamp(40 - done, 0, 14) / 2)
@@ -154,10 +161,10 @@ local function ProcessPaintQueue()
 				render.SetScissorRect(0, 0, 0, 0, false)
 				render.PopRenderTarget()
 			end
-			
+
 			if #queuetable == 0 then ss.PaintQueue[time] = nil end
 		end
-		
+
 		coroutine.yield()
 	end
 end

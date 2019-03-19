@@ -18,6 +18,7 @@ function ss.hook(func)
 	end
 end
 
+include "debug.lua"
 include "text.lua"
 include "convars.lua"
 include "inkmanager.lua"
@@ -219,12 +220,13 @@ function ss.GenerateBSPTree(write)
 		local leaf = ss.FindLeaf(positions)
 		if SERVER then
 			surf = leaf.Surfaces
-			surf.Mins[i] = ss.MinVector(surf.Mins[i] or mins, mins)
-			surf.Maxs[i] = ss.MaxVector(surf.Maxs[i] or maxs, maxs)
 		else
 			ss.Displacements[i] = disp
 			leaf.Surfaces[i] = true
 		end
+
+		surf.Mins[i] = ss.MinVector(surf.Mins[i] or mins, mins)
+		surf.Maxs[i] = ss.MaxVector(surf.Maxs[i] or maxs, maxs)
 	end
 
 	data:Close()

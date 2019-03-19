@@ -4,7 +4,7 @@ if not ss then return end
 
 local surf = ss.SequentialSurfaces
 function EFFECT:Init(e)
-	if not ss.RenderTarget.Ready then return end
+	self:Remove()
 	local i = math.abs(e:GetScale())
 	local info = e:GetStart() -- Vector(Radius, Inkangle, Ratio)
 	local pos = e:GetOrigin()
@@ -14,15 +14,10 @@ function EFFECT:Init(e)
 		done = 0,
 		inkangle = info.y,
 		n = i,
+		owner = e:GetEntity(),
 		pos = pos,
 		r = info.x,
 		ratio = info.z,
 		t = e:GetFlags(),
 	})
-
-	if e:GetEntity() == LocalPlayer() then return end
-	ss.AddInkRectangle(e:GetAttachment(), i, e:GetFlags(), info.y, pos, info.x, info.z, surf)
 end
-
-function EFFECT:Render() end
-function EFFECT:Think() end

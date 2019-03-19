@@ -13,12 +13,13 @@ net.Receive("SplatoonSWEPs: Play damage sound", function()
 	surface.PlaySound(ss.TakeDamage)
 end)
 
-local redownload = ""
+local buffer = ""
 net.Receive("SplatoonSWEPs: Redownload ink data", function()
 	local finished = net.ReadBool()
 	local size = net.ReadUInt(16)
 	local data = net.ReadData(size)
-	redownload = redownload .. data
+	local prog = net.ReadFloat()
+	buffer = buffer .. data
 	if not finished then
 		net.Start "SplatoonSWEPs: Redownload ink data"
 		net.SendToServer()
@@ -26,8 +27,9 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function()
 	end
 
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
-	file.Write(string.format("splatoonsweps/%s.txt", game.GetMap()), redownload)
-	ss.PrepareInkSurface(redownload)
+	file.Write(string.format("splatoonsweps/%s.txt", game.GetMap()), buffer)
+	notification.Kill "SplatoonSWEPs: Redownload ink data"
+	ss.PrepareInkSurface(buffer)
 	notification.AddLegacy(ss.Text.LateReadyToSplat, NOTIFY_HINT, 8)
 end)
 

@@ -54,11 +54,11 @@ end, nil, ss.Text.CVars.Clear, FCVAR_SERVER_CAN_EXECUTE)
 function ss.ClearAllInk()
 	net.Start "SplatoonSWEPs: Send ink cleanup"
 	net.Send(ss.PlayersReady)
-
-	ss.InkQueue, ss.PaintSchedule = {}, {}
+	table.Empty(ss.InkQueue)
+	table.Empty(ss.PaintSchedule)
 	for node in ss.BSPPairsAll() do
-		for i = 1, #node.Surfaces.InkCircles do
-			node.Surfaces.InkCircles[i] = {}
+		for i, v in pairs(node.Surfaces.InkCircles) do
+			table.Empty(v)
 		end
 	end
 
@@ -175,6 +175,7 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function(
 		ss.GenerateBSPTree(file.Read("data/" .. path, true))
 	end
 
+	SetGlobalString("SplatoonSWEPs: Ink map CRC", util.CRC(file.Read("data/" .. path, true)))
 	resource.AddSingleFile("data/" .. path)
 end)
 
