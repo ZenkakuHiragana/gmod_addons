@@ -1,6 +1,7 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
+local mdl = Model "models/props_junk/PopCan01a.mdl"
 local drawviewmodel = GetConVar "r_drawviewmodel"
 local EmissionDuration = .125
 local EmissionDelay = 1 / 125
@@ -10,6 +11,7 @@ local dr = math.rad(30)
 local drdt = math.rad(-2700)
 local dz = -3
 local function Think(self)
+	if not IsValid(self.Enttiy) then return end
 	local a = self.Entity:GetAttachment(self.Attachment)
 	self:SetPos(a.Pos + a.Ang:Forward() * self.Offset + a.Ang:Up() * dz)
 	self:SetNextThink(CurTime())
@@ -54,6 +56,9 @@ function EFFECT:Think()
 end
 
 function EFFECT:Init(e)
+	self:SetModel(mdl)
+	self:SetMaterial(ss.Materials.Effects.Invisible)
+	self:SetNoDraw(true)
 	local w = e:GetEntity()
 	if not IsValid(w) then return end
 	local t = w:IsTPS()
@@ -74,5 +79,4 @@ function EFFECT:Init(e)
 	self.Time = CurTime()
 	self.TPS = t
 	self.Weapon = w
-	self:SetNoDraw(true)
 end

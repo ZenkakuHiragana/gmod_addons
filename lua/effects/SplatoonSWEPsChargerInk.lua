@@ -2,7 +2,10 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
+local mdl = Model "models/props_junk/PopCan01a.mdl"
 function EFFECT:Init(e)
+	self:SetModel(mdl)
+	self:SetMaterial(ss.Materials.Effects.Invisible)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
 	if not IsValid(self.Weapon.Owner) then return end
@@ -92,9 +95,7 @@ function EFFECT:Init(e)
 		t.Time = 0
 	end
 
-	self:SetModel "models/props_junk/PopCan01a.mdl"
 	self:SetAngles(self.Apparent.Ang)
-	self:SetMaterial(ss.Materials.Effects.Invisible)
 	self:SetPos(self.Apparent.Pos)
 end
 

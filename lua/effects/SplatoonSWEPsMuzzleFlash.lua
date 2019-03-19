@@ -5,6 +5,7 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
+local mdl = Model "models/props_junk/PopCan01a.mdl"
 local drawviewmodel = GetConVar "r_drawviewmodel"
 local function ThinkFPS(self)
 	if not self.Flash:IsValid() then return false end
@@ -28,6 +29,8 @@ local function ThinkTPS(self)
 end
 
 function EFFECT:Init(e)
+	self:SetModel(mdl)
+	self:SetMaterial(ss.Materials.Effects.Invisible)
 	self:SetNoDraw(true)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end

@@ -5,9 +5,12 @@ if not ss then return end
 local MinRadius = 3
 local Division = 16
 local DegStep = 90 / Division
+local mdl = Model "models/props_junk/PopCan01a.mdl"
 local mat = Material "splatoonsweps/effects/ring"
 local drawviewmodel = GetConVar "r_drawviewmodel"
 function EFFECT:Init(e)
+	self:SetModel(mdl)
+	self:SetMaterial(ss.Materials.Effects.Invisible)
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
 	local f = e:GetFlags()

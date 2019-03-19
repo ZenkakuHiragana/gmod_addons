@@ -3,7 +3,10 @@ local ss = SplatoonSWEPs
 if not ss then return end
 
 local surf = ss.SequentialSurfaces
+local mdl = Model "models/props_junk/PopCan01a.mdl"
 function EFFECT:Init(e)
+	self:SetModel(mdl)
+	self:SetMaterial(ss.Materials.Effects.Invisible)
 	self:Remove()
 	local i = math.abs(e:GetScale())
 	local info = e:GetStart() -- Vector(Radius, Inkangle, Ratio)

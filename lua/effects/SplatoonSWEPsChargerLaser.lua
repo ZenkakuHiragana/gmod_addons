@@ -5,6 +5,7 @@ if not ss then return end
 local interp = 30
 local beam = Material "trails/smoke"
 local beamlight = Material "sprites/physbeama"
+local mdl = Model "models/props_junk/PopCan01a.mdl"
 local drawviewmodel = GetConVar "r_drawviewmodel"
 local cubic = Matrix {
 	{2, -2, 1, 1},
@@ -14,6 +15,8 @@ local cubic = Matrix {
 }
 
 function EFFECT:Init(e)
+	self:SetModel(mdl)
+	self:SetMaterial(ss.Materials.Effects.Invisible)
 	self:SetPos(GetViewEntity():GetPos())
 	self.Weapon = e:GetEntity()
 	if not IsValid(self.Weapon) then return end
