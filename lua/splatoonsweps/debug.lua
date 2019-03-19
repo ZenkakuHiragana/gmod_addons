@@ -12,7 +12,7 @@ local sd = ss.Debug
 
 function d.DLoop() end
 if CLIENT then hook.Remove("CreateMove", "Test") end
-local ShowInkChecked = true -- Draws ink boundary.
+local ShowInkChecked = false -- Draws ink boundary.
 local ShowInkDrawn = false -- When ink hits, show ink surface painted by it.
 local MovedOnly = false -- ShowInkDrawn but only for surfaces with "moved" tag.
 local ShowBlasterRadius = false -- Shows where blaster explosion will be.
