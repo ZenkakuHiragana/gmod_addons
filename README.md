@@ -23,19 +23,13 @@ The aim of this rework is the following:
 * All Shooters in Splatoon(WiiU).
 * All Chargers in Splatoon.
 * All Splatlings in Splatoon.
+* All Blasters in Splatoon.
 
 ## Currently working on
-* **Make Blasters**
-    * [x] Make the base
-    * [x] Weapon models (Remaining: Luna Blaster (+Neo), Rapid Blaster (+Deco, +Elite))
-    * [x] Set weapon parameters
-* Explosive ink for bombs and Blasters
-    * [x] Make effects
-    * [ ] Set up properties, damage system, etc
+* Make Rollers
 
 ## Upcoming features
 * Sub weapons
-* Rollers and Inkbrushes
 * Sloshers
 
 ## I want to make the following, too
