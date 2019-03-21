@@ -30,7 +30,7 @@ function EFFECT:Init(e)
 	self:SetMaterial(ss.Materials.Effects.Invisible)
 	self.Weapon = e:GetEntity()
 	local f = e:GetFlags()
-	local ping = IsValid(self.Weapon) and self.Weapon:Ping() or 0
+	local ping = ss.mp and LocalPlayer():Ping() / 1000 or 0
 	self.Color = ss.GetColor(e:GetColor())
 	self.deg = math.Rand(0, 360)
 	self.deg2 = math.Rand(0, 360)
