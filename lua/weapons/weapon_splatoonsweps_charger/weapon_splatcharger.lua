@@ -97,7 +97,7 @@ ss.SetPrimary(SWEP, {
 		MinCharge				= 8,	-- Time between pressing MOUSE1 and beginning of charge[frames]
 		MaxCharge				= 60,	-- Time between pressing MOUSE1 and being fully charged[frames]
 		MinFreeze				= 1,	-- Delay time from ZR released to fire ink[frames]
-		MaxFreeze				= 1,	-- 
+		MaxFreeze				= 1,	--
 	},
 	Scope = {
 		StartMove				= .5,	-- Start moving camera position at specific charge[-]

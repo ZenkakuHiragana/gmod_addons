@@ -83,6 +83,8 @@ ss.Materials = {
 		Outer = Material "splatoonsweps/crosshair/outer.vmt",
 	},
 	Effects = {
+		Hit = Material "splatoonsweps/effects/splatling_muzzleflash",
+		HitCritical = Material "particle/particle_glow_04_additive",
 		Ink = Material "splatoonsweps/inkeffect",
 		Invisible = Material "splatoonsweps/weapons/primaries/shared/weapon_hider",
 	},

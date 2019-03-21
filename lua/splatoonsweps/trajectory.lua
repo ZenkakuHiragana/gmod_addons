@@ -26,23 +26,25 @@ local dropdata = {
 	InitVelocity = 0,
 }
 
-function ss.GetDropType() -- math.floor(1 <= x < 4) -> 1, 2, 3
-	return util.SharedRandom("SplatoonSWEPs: Drop ink type", 1, 4, CurTime())
+local function HitEffect(color, flags, pos, normal)
+	if ss.mp and (SERVER or not IsFirstTimePredicted()) then return end
+	local e = EffectData()
+	e:SetColor(color)
+	e:SetFlags(flags)
+	e:SetOrigin(pos)
+	util.Effect("SplatoonSWEPsOnHit", e)
+	e:SetAngles(normal:Angle())
+	e:SetAttachment(6)
+	e:SetEntity(NULL)
+	e:SetFlags(1)
+	e:SetOrigin(pos)
+	e:SetRadius(50)
+	e:SetScale(.4)
+	util.Effect("SplatoonSWEPsMuzzleSplash", e)
 end
 
-function ss.PlayHitSound(iscritical, owner)
-	if ss.sp or CLIENT and IsFirstTimePredicted() then
-		local ent = ss.IsValidInkling(e) -- Entity hit effect here
-		if not (ent and ss.IsAlly(ent, ink.Color)) then
-			if ss.mp then
-				surface.PlaySound(iscritical and ss.DealDamageCritical or ss.DealDamage)
-			elseif owner:IsPlayer() and SERVER then
-				local s = "SplatoonSWEPs.DealDamage"
-				if iscritical then s = "SplatoonSWEPs.DealDamageCritical" end
-				owner:SendLua(string.format("surface.PlaySound(%s)", s))
-			end
-		end
-	end
+function ss.GetDropType() -- math.floor(1 <= x < 4) -> 1, 2, 3
+	return util.SharedRandom("SplatoonSWEPs: Drop ink type", 1, 4, CurTime())
 end
 
 -- Physics simulation for ink trajectory.
@@ -126,7 +128,7 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t, w)
 	local frac = (math.max(0, CurTime() - ink.InitTime)
 	- ink.DecreaseDamage) / ink.MinDamageTime
 	if ink.IsCarriedByLocalPlayer then
-		ss.PlayHitSound(ink.IsCritical, o)
+		HitEffect(ink.Color, ink.IsCritical and 1 or 0, t.HitPos, t.HitNormal)
 		if ss.mp and CLIENT then return end
 	end
 
@@ -253,7 +255,7 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 	HitSmoke(ink, t)
 	if LifeTime > ink.Straight then return end
 	if ink.IsCarriedByLocalPlayer then
-		ss.PlayHitSound(ink.IsCritical, o)
+		HitEffect(ink.Color, ink.IsCritical and 1 or 0, t.HitPos, t.HitNormal)
 		if ss.mp and CLIENT then return end
 	end
 
@@ -366,9 +368,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 	if isdrop then w = isdrop end
 	local info = isdrop and dropdata or w.Primary
 	local base = isdrop and "weapon_splatoonsweps_shooter" or w.Base
-	local IsLP = Either(isdrop,
-		(isdrop or {}).IsCarriedByLocalPlayer,
-		SERVER or ss.ProtectedCall(w.IsCarriedByLocalPlayer, w))
+	local IsLP = Either(SERVER, ply:IsPlayer(), ss.ProtectedCall(w.IsCarriedByLocalPlayer, w))
 	local dt = CLIENT and IsLP and w:Ping() or 0
 	local t = {
 		Angle = isdrop and isdrop.Angle or w.InitAngle,
@@ -718,11 +718,10 @@ function ss.MakeBlasterExplosion(ink)
 	local attacker = IsValid(ink.filter) and ink.filter or game.GetWorld()
 	local inflictor = ss.IsValidInkling(ink.filter) or game.GetWorld()
 	local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
-	local damagedealed = false
+	local damagedealt = false
 	for _, e in ipairs(ents.FindInSphere(ink.endpos, ink.ColRadiusFar)) do
 		if not IsValid(e) or ss.IsAlly(e) or e:Health() <= 0 then continue end
 		if not hurtowner and e == ink.filter then continue end
-		if CLIENT and e ~= ink.filter then damagedealed = true break end
 		local dmg = ink.DamageClose
 		local dist = Vector()
 		local maxs, mins = e:OBBMaxs(), e:OBBMins()
@@ -736,7 +735,12 @@ function ss.MakeBlasterExplosion(ink)
 			dist = dist + sign * (size[i] - segment) * dir
 		end
 
-		damagedealed = damagedealed or e == ink.filter
+		if ink.IsCarriedByLocalPlayer then
+			HitEffect(ink.Color, damagedealt and 6 or 2, ink.endpos + dist, -dist)
+			if CLIENT and e ~= ink.filter then damagedealt = true break end
+		end
+
+		damagedealt = damagedealt or ss.sp or e == ink.filter
 		dist = dist:Length()
 		if dist > ink.ColRadiusMiddle then
 			dmg = math.Remap(dist, ink.ColRadiusMiddle, ink.ColRadiusFar, ink.DamageMiddle, ink.DamageFar)
@@ -757,7 +761,6 @@ function ss.MakeBlasterExplosion(ink)
 	end
 
 	if ss.mp and not IsFirstTimePredicted() then return end
-	if ink.IsCarriedByLocalPlayer and damagedealed then ss.PlayHitSound(false, attacker) end
 	if ss.mp and SERVER and IsValid(ink.filter) and ink.filter:IsPlayer() then SuppressHostEvents(ink.filter) end
 	local e = EffectData()
 	e:SetOrigin(ink.endpos)

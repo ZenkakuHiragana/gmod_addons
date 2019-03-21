@@ -9,8 +9,11 @@ local RadStep = math.rad(DegStep)
 local LifeTime = 7 * ss.FrameToSec
 local mdl = Model "models/props_junk/PopCan01a.mdl"
 local mat = Material "splatoonsweps/effects/muzzlesplash.vmt"
+local deep = "SplatoonSWEPs_Player.InkDiveDeep"
+local shallow = "SplatoonSWEPs_Player.InkDiveShallow"
 local drawviewmodel = GetConVar "r_drawviewmodel"
 function EFFECT:GetMuzzlePosition()
+	if not IsValid(self.Weapon) then return self.Pos, self.Ang end
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	ang:RotateAroundAxis(ang:Forward(), self.Angle.z)
 	ang:RotateAroundAxis(ang:Right(), self.Angle.p)
@@ -26,28 +29,30 @@ function EFFECT:Init(e)
 	self:SetModel(mdl)
 	self:SetMaterial(ss.Materials.Effects.Invisible)
 	self.Weapon = e:GetEntity()
-	if not IsValid(self.Weapon) then return end
-	if not IsValid(self.Weapon.Owner) then return end
 	local f = e:GetFlags()
+	local ping = IsValid(self.Weapon) and self.Weapon:Ping() or 0
 	self.Color = ss.GetColor(e:GetColor())
 	self.deg = math.Rand(0, 360)
 	self.deg2 = math.Rand(0, 360)
 	self.rad = e:GetRadius()
 	self.tmin = MinLength
 	self.tmax = self.rad * e:GetScale()
-	self.InitTime = CurTime() - self.Weapon:Ping() * bit.band(f, 128) / 128
+	self.InitTime = CurTime() - ping * bit.band(f, 128) / 128
 	self.LifeTime = e:GetAttachment() * ss.FrameToSec
 	self.Pos, self.Angle = e:GetOrigin(), e:GetAngles()
-	if not (isvector(self.Pos) and isangle(self.Angle)) then return end
-	if bit.band(f, 1) == 0 then self.GetPosition = self.GetMuzzlePosition end
+	self.IsTPS = IsValid(self.Weapon) and self.Weapon:IsTPS()
+	if not IsValid(self.Weapon) then self.Weapon = nil end
+	if bit.band(f, 1) == 0 then
+		self.GetPosition = self.GetMuzzlePosition
+	end
 
 	local pos, ang = self:GetPosition()
 	self:SetPos(pos)
 	self:SetAngles(ang)
 
 	if bit.band(f, 2) == 0 then return end
-	local track = "SplatoonSWEPs_Player.InkDive" .. (bit.band(f, 4) > 0 and "Deep" or "Shallow")
-	if self.Weapon:IsCarriedByLocalPlayer() then
+	local track = bit.band(f, 4) > 0 and deep or shallow
+	if IsValid(self.Weapon) and self.Weapon:IsCarriedByLocalPlayer() then
 		self:EmitSound(track)
 	else
 		sound.Play(track, self.Pos)
@@ -64,7 +69,6 @@ end
 
 local halfpi = math.pi / 2
 function EFFECT:Render()
-	if not IsValid(self.Weapon) then return end
 	if not istable(self.Color) then return end
 	if not isnumber(self.Color.r) then return end
 	if not isnumber(self.Color.g) then return end
@@ -76,10 +80,10 @@ function EFFECT:Render()
 	if not isnumber(self.tmin) then return end
 	if not isvector(self.Pos) then return end
 	if not isangle(self.Angle) then return end
-	if not (self.Weapon:IsTPS() or drawviewmodel:GetBool()) then return end
+	if self.Weapon and not (self.IsTPS or drawviewmodel:GetBool()) then return end
 	local pos, ang = self:GetPosition()
 	local norm = ang:Forward()
-	local mul = self.Weapon:IsTPS() and 1 or .5
+	local mul = self.IsTPS and 1 or .5
 	self:SetPos(pos)
 
 	render.SetMaterial(mat)
@@ -124,8 +128,7 @@ end
 
 -- Called when the effect should think, return false to kill the effect.
 function EFFECT:Think()
-	return IsValid(self.Weapon)
-	and istable(self.Color)
+	return istable(self.Color)
 	and isnumber(self.Color.r)
 	and isnumber(self.Color.g)
 	and isnumber(self.Color.b)
@@ -137,5 +140,5 @@ function EFFECT:Think()
 	and isvector(self.Pos)
 	and isangle(self.Angle)
 	and CurTime() < self.InitTime + self.LifeTime
-	and (self.Weapon:IsTPS() or drawviewmodel:GetBool())
+	and (not self.Weapon or self.IsTPS or drawviewmodel:GetBool())
 end

@@ -175,7 +175,7 @@ function SWEP:PlayEmptySound()
 	local timescale = ss.GetTimeScale(self.Owner)
 	if p.TripleShotDelay then self:SetCooldown(CurTime()) end
 	if self:GetPreviousHasInk() then
-		if CLIENT and IsFirstTimePredicted() or ss.sp then
+		if ss.sp or CLIENT and IsFirstTimePredicted() then
 			self.Owner:EmitSound(ss.TankEmpty)
 		end
 

@@ -111,7 +111,7 @@ function EFFECT:HitEffect(tr) -- World hit effect here
 	e:SetAngles(tr.HitNormal:Angle())
 	e:SetAttachment(6)
 	e:SetColor(self.ColorCode)
-	e:SetEntity(self.Weapon)
+	e:SetEntity(NULL)
 	e:SetFlags(1)
 	e:SetOrigin(tr.HitPos - tr.HitNormal * self.Size)
 	e:SetRadius(self.Size * 5)

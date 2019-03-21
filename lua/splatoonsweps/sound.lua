@@ -22,11 +22,27 @@ ss.EnemyInkSound = Sound "splatoonsweps/player/onenemyink.wav"
 ss.SwimSound = Sound "splatoonsweps/player/swimloop.wav"
 ss.TankEmpty = Sound "splatoonsweps/player/tankempty.wav"
 ss.BombAvailable = Sound "splatoonsweps/player/bombavailable.wav"
-ss.DealDamage = Sound "splatoonsweps/player/dealdamagenormal.wav"
-ss.DealDamageCritical = Sound "splatoonsweps/player/dealdamagecritical.wav"
 ss.TakeDamage = Sound "splatoonsweps/player/takedamage.wav"
 ss.ChargerAim = Sound "splatoonsweps/weapons/charger/aim.wav"
 ss.ChargerBeep = Sound "splatoonsweps/weapons/charger/beep.mp3"
+
+sound.Add {
+	channel = CHAN_STATIC,
+	name = "SplatoonSWEPs.DealDamage",
+	level = 75,
+	sound = "splatoonsweps/player/dealdamagenormal.wav",
+	volume = 1,
+	pitch = 100,
+}
+
+sound.Add {
+	channel = CHAN_STATIC,
+	name = "SplatoonSWEPs.DealDamageCritical",
+	level = 80,
+	sound = "splatoonsweps/player/dealdamagecritical.wav",
+	volume = 1,
+	pitch = 100,
+}
 
 sound.Add {
 	channel = CHAN_AUTO,
