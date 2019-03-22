@@ -23,5 +23,5 @@ function EFFECT:Init(e)
 		r = info.x,
 		ratio = e:GetMagnitude(),
 		t = e:GetFlags(),
-	})
+	}
 end
