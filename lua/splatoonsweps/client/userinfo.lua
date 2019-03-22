@@ -226,7 +226,7 @@ local function GenerateWeaponIcons(tab)
 			t.Inked = record.Inked[t.ClassName] or 0
 		end
 
-		table.insert(SpawnList, t)
+		SpawnList[#SpawnList + 1] = t
 	end
 
 	for _, t in SortedPairsByMemberValue(SpawnList, WeaponFilters.Sort or "PrintName") do

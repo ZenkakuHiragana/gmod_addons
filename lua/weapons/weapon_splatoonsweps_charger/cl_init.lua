@@ -221,9 +221,9 @@ function SWEP:ManipulatePlayer(ply)
 		local pm = ply:GetBoneMatrix(pi)
 		bp[b[1]], ba[b[1]] = WorldToLocal(m:GetTranslation(), m:GetAngles(), pm:GetTranslation(), pm:GetAngles())
 		for i, c in ipairs(ply:GetChildBones(b[1])) do
-			table.insert(b, c)
+			b[#b + 1] = c
 		end
-		table.remove(b, 1)
+		ss.tablepop(b)
 	end
 
 	b = {ply:LookupBone "ValveBiped.Bip01_L_Forearm"}
@@ -240,8 +240,8 @@ function SWEP:ManipulatePlayer(ply)
 		local pm = ply:GetBoneMatrix(pi)
 		ply:SetBonePosition(b[1], LocalToWorld(bp[b[1]], ba[b[1]], pm:GetTranslation(), pm:GetAngles()))
 		for i, c in ipairs(ply:GetChildBones(b[1])) do
-			table.insert(b, c)
+			b[#b + 1] = c
 		end
-		table.remove(b, 1)
+		ss.tablepop(b)
 	end
 end

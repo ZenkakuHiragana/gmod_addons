@@ -35,12 +35,12 @@ function IncludeTexts(folder)
 				AddCSLuaFile(path .. f)
 			end
 		end
-        
+
         local path = Workspace .. d .. "/"
-        table.insert(FileList, path)
+        FileList[#FileList + 1] = path
         LoadText(path)
     end
-    
+
     return Texts
 end
 

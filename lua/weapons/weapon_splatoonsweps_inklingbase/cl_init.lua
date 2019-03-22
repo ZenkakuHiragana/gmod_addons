@@ -81,9 +81,9 @@ function SWEP:Initialize()
 	} do
 		for k, v in pairs(e) do
 			if v.type == "Model" then
-				table.insert(r, 1, k)
+				ss.tablepush(r, k)
 			elseif v.type == "Sprite" or v.type == "Quad" then
-				table.insert(r, k)
+				r[#r + 1] = k
 			end
 		end
 	end

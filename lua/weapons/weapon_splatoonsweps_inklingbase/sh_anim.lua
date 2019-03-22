@@ -29,7 +29,7 @@ function SWEP:SetWeaponHoldType(t)
 	if not isstring(t) then return end
 	t = t:lower()
 	local index = assert(ActIndex[t], "SplatoonSWEPs: SWEP:SetWeaponHoldType - ActIndex[] is not set!")
-	
+
 	self.ActivityTranslate = {}
 	self.ActivityTranslate[ ACT_MP_STAND_IDLE ]					= index
 	self.ActivityTranslate[ ACT_MP_WALK ]						= index + 1
@@ -43,11 +43,11 @@ function SWEP:SetWeaponHoldType(t)
 	self.ActivityTranslate[ ACT_MP_JUMP ]						= index + 7
 	self.ActivityTranslate[ ACT_RANGE_ATTACK1 ]					= index + 8
 	self.ActivityTranslate[ ACT_MP_SWIM ]						= index + 9
-	
+
 	if t == "normal" then -- "normal" jump animation doesn't exist
 		self.ActivityTranslate[ACT_MP_JUMP] = ACT_HL2MP_JUMP_SLAM
 	end
-	
+
 	self:SetupWeaponHoldTypeForAI(t)
 end
 
@@ -55,12 +55,12 @@ function SWEP:TranslateActivity(act)
 	if self.Owner:IsNPC() then
 		return self.ActivityTranslateAI[act] or -1
 	end
-	
+
 	local holdtype = ss.ProtectedCall(self.CustomActivity, self) or "passive"
 	if self:Crouching() then holdtype = "melee2" end
 	if self:GetThrowing() then holdtype = "grenade" end
 	self.HoldType = holdtype
-	
+
 	local translate = self.Translate[holdtype]
 	if not translate then return -1 end
 	if translate[act] then
@@ -80,9 +80,9 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 	if 5000 <= event and event < 6000 then
 		event = event - 5000
 		local vararg = string.Explode(" ", options)
-		table.insert(vararg, 1, math.floor(event / 100))
+		ss.tablepush(vararg, math.floor(event / 100))
 		ss.ProtectedCall(ss.DispatchEffect[event % 100], self, vararg, pos, ang)
 	end
-	
+
 	return true
 end

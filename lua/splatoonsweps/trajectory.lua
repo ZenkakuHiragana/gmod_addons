@@ -112,7 +112,7 @@ function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 		end
 	else
 		ink.InkType = ss.GetDropType()
-		ratio = ink.Ratio or ratio
+		ratio = ink.Ratio or 1
 	end
 
 	if (ss.sp or CLIENT and IsFirstTimePredicted()) and t.Hit and (not ink.IsDrop or ink.PlayHitSound) then

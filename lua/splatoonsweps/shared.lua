@@ -18,14 +18,43 @@ function ss.hook(func)
 	end
 end
 
-include "debug.lua"
-include "text.lua"
-include "convars.lua"
-include "inkmanager.lua"
-include "movement.lua"
-include "sound.lua"
-include "trajectory.lua"
-include "weapons.lua"
+-- Faster table.remove() function from stack overflow
+-- https://stackoverflow.com/questions/12394841/safely-remove-items-from-an-array-table-while-iterating
+function ss.tableremove(t, shouldkeep)
+    local k = 1
+    for i = 1, #t do
+        if shouldkeep(t[i]) then
+            -- Move i's kept value to k's position, if it's not already there.
+            if i ~= k then t[k], t[i] = t[i] end
+            k = k + 1 -- Increment position of where we'll place the next kept value.
+        else
+            t[i] = nil
+        end
+    end
+
+    return t
+end
+
+-- Even faster than table.remove() and this removes the first element.
+function ss.tablepop(t)
+	local zero, one = t[0], t[1]
+    for i = 1, #t do
+        t[i - 1], t[i] = t[i]
+    end
+
+	t[0] = zero
+    return one
+end
+
+-- Faster than table.insert() and this inserts an element at the beginning.
+function ss.tablepush(t, v)
+    local n = #t
+    for i = n, 1, -1 do
+        t[i + 1], t[i] = t[i]
+    end
+
+	t[1] = v
+end
 
 -- Each surface should have these fields.
 function ss.CreateSurfaceStructure()
@@ -118,7 +147,7 @@ function ss.GenerateBSPTree(write)
 	models.num = math.floor(models.length / size) - 1
 	for i = 0, models.num do
 		bsp:Skip(12 * 3)
-		table.insert(ss.Models, nodes.data[bsp:ReadLong()])
+		ss.Models[#ss.Models + 1] = nodes.data[bsp:ReadLong()]
 		bsp:Skip(8)
 	end
 
@@ -148,7 +177,7 @@ function ss.GenerateBSPTree(write)
 		local bound = Vector(x, y)
 		x = data:ReadFloat()
 		y = data:ReadFloat()
-		z = data:ReadFloat()
+		local z = data:ReadFloat()
 		local normal = Vector(x, y, z)
 		x = data:ReadFloat()
 		y = data:ReadFloat()
@@ -162,7 +191,7 @@ function ss.GenerateBSPTree(write)
 			y = data:ReadFloat()
 			z = data:ReadFloat()
 			local v = Vector(x, y, z)
-			table.insert(vertices, v)
+			vertices[#vertices + 1] = v
 			mins = ss.MinVector(mins, v)
 			maxs = ss.MaxVector(maxs, v)
 		end
@@ -208,12 +237,12 @@ function ss.GenerateBSPTree(write)
 			disp.Positions[k] = v
 			mins = ss.MinVector(mins, v.pos)
 			maxs = ss.MaxVector(maxs, v.pos)
-			table.insert(positions, v.pos)
+			positions[#positions + 1] = v.pos
 
 			local invert = Either(k % 2 == 0, 1, 0) --Generate triangles from displacement mesh.
 			if k % power < power - 1 and math.floor(k / power) < power - 1 then
-				table.insert(disp.Triangles, {k + power + invert, k + 1, k})
-				table.insert(disp.Triangles, {k + 1 - invert, k + power, k + power + 1})
+				disp.Triangles[#disp.Triangles + 1] = {k + power + invert, k + 1, k}
+				disp.Triangles[#disp.Triangles + 1] = {k + 1 - invert, k + power, k + power + 1}
 			end
 		end
 
@@ -283,10 +312,10 @@ function ss.BSPPairs(vertices, modelindex)
 	return function(queue, old)
 		if old.Separator then
 			local sign = AcrossPlane(vertices, old.Separator.normal, old.Separator.distance)
-			if sign >= 0 then table.insert(queue, old.ChildNodes[1]) end
-			if sign <= 0 then table.insert(queue, old.ChildNodes[2]) end
+			if sign >= 0 then queue[#queue + 1] = old.ChildNodes[1] end
+			if sign <= 0 then queue[#queue + 1] = old.ChildNodes[2] end
 		end
-		return table.remove(queue, 1)
+		return ss.tablepop(queue)
 	end, {ss.Models[modelindex or 1]}, {}
 end
 
@@ -298,10 +327,10 @@ end
 function ss.BSPPairsAll(modelindex)
 	return function(queue, old)
 		if old and old.ChildNodes then
-			table.insert(queue, old.ChildNodes[1])
-			table.insert(queue, old.ChildNodes[2])
+			queue[#queue + 1] = old.ChildNodes[1]
+			queue[#queue + 1] = old.ChildNodes[2]
 		end
-		return table.remove(queue, 1)
+		return ss.tablepop(queue)
 	end, {ss.Models[modelindex or 1]}
 end
 
@@ -396,6 +425,15 @@ end
 function ss.IsInWorld(pos)
 	return math.abs(pos.x) < 16384 and math.abs(pos.y) < 16384 and math.abs(pos.z) < 16384
 end
+
+include "debug.lua"
+include "text.lua"
+include "convars.lua"
+include "inkmanager.lua"
+include "movement.lua"
+include "sound.lua"
+include "trajectory.lua"
+include "weapons.lua"
 
 -- Short for Entity:NetworkVar().
 -- A new function Entity:AddNetworkVar() is created to the given entity.
@@ -526,7 +564,7 @@ function ss.AddTimerFramework(ent)
 		schedule.done = "Done" .. tostring(self:GetLastSlot "Int")
 		self:AddNetworkVar("Int", schedule.done)
 		self["Set" .. schedule.done](self, 0)
-		table.insert(self.FunctionQueue, schedule)
+		self.FunctionQueue[#self.FunctionQueue + 1] = schedule
 		return schedule
 	end
 
@@ -548,7 +586,7 @@ function ss.AddTimerFramework(ent)
 			prevtime = CurTime(),
 			weapon = self,
 		}, ScheduleMeta)
-		table.insert(self.FunctionQueue, schedule)
+		self.FunctionQueue[#self.FunctionQueue + 1] = schedule
 		return schedule
 	end
 
@@ -699,7 +737,7 @@ function ss.KeyRelease(self, ply, key)
 	local keytable, keytime = {}, {}
 	for _, k in ipairs(ss.KeyMask) do
 		local t = self.LastKeyDown[k] or 0
-		if self.Owner:KeyDown(k) then table.insert(keytime, t) end
+		if self.Owner:KeyDown(k) then keytime[#keytime + 1] = t end
 		keytable[t] = k -- [Last time key down] = key
 	end
 

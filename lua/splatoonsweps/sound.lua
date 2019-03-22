@@ -137,7 +137,7 @@ for _, soundData in ipairs {
 	local soundtable = {}
 	local i, str = 1, soundData.sound .. "0.wav"
 	while file.Exists("sound/" .. str, "GAME") do
-		table.insert(soundtable, Sound(str))
+		soundtable[#soundtable + 1] = Sound(str)
 		str = soundData.sound .. tostring(i) .. ".wav"
 		i = i + 1
 	end

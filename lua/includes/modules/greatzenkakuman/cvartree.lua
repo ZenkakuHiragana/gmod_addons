@@ -29,7 +29,7 @@ end
 
 function AddCVarPrefix(p, options)
 	if isstring(p) then
-		table.insert(cvarprefix, p:lower())
+		cvarprefix[#cvarprefix + 1] = p:lower()
 		local placeholder = select(2, CreateCategory(cvarprefix))
 		if istable(options) then table.Merge(placeholder.options, options) end
 	elseif istable(p) then
@@ -40,16 +40,16 @@ function AddCVarPrefix(p, options)
 end
 
 function RemoveCVarPrefix(n)
-	for i = 1, n or 1 do table.remove(cvarprefix) end
+	for i = 1, n or 1 do cvarprefix[#cvarprefix] = nil end
 	return RemoveCVarPrefix
 end
 
 function AddCVar(name, default, helptext, options)
 	local nametable = istable(name) and name or table.Copy(cvarprefix)
-	if isstring(name) then table.insert(nametable, name:lower()) end
+	if isstring(name) then nametable[#nametable + 1] = name:lower() end
 
 	options = options or {}
-	name = table.remove(nametable)
+	name, nametable[#nametable] = nametable[#nametable]
 	local n, placeholder = CreateCategory(nametable)
 
 	if #n == 0 then return end
@@ -320,7 +320,7 @@ local function MakeGUI(p, nametable, admin)
 		end
 
 		local nt = table.Copy(nametable)
-		table.insert(nt, name)
+		nt[#nt + 1] = name
 		MakeGUI(pt.panel, nt, admin)
 	end
 

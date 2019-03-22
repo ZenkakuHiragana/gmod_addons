@@ -85,8 +85,15 @@ function ss.ClearAllInk()
 	render.PopRenderTarget()
 end
 
+local texturename = "splatoonsweps/inkshot/shot%s"
 local function ProcessPaintQueue()
-	local Angles, Origins, Normals, Moved = surf.Angles, surf.Origins, surf.Normals, surf.Moved
+	local Angles = surf.Angles
+	local Bounds = surf.Bounds
+	local Moved = surf.Moved
+	local Normals = surf.Normals
+	local Origins = surf.Origins
+	local u = surf.u
+	local v = surf.v
 	while not rt.Ready do coroutine.yield() end
 	while true do
 		local done = 0
@@ -102,20 +109,20 @@ local function ProcessPaintQueue()
 
 				local angle, origin, normal, moved = Angles[q.n], Origins[q.n], Normals[q.n], Moved[q.n]
 				local pos2d = ss.To2D(q.pos, origin, angle) * ss.UnitsToPixels
-				local bound = surf.Bounds[q.n] * ss.UnitsToPixels
+				local bound = Bounds[q.n] * ss.UnitsToPixels
 				local color = ss.GetColor(q.c)
 				local r = math.Round(q.r * ss.UnitsToPixels)
-				local uvorg = Vector(surf.u[q.n], surf.v[q.n]) * ss.UVToPixels
+				local uvorg = Vector(u[q.n], v[q.n]) * ss.UVToPixels
 				local lightorg = q.pos - normal * (normal:Dot(q.pos - origin) - 1) * q.dispflag
 				local light = GetLight(lightorg, normal)
-				local settexture = "splatoonsweps/inkshot/shot" .. tostring(q.t)
+				local settexture = texturename:format(q.t)
 				local vrad = ss.vector_one * r
 				if moved then pos2d.x, pos2d.y = -pos2d.x, bound.y - pos2d.y end
 				local b = Vector(math.ceil(uvorg.x + bound.x) + 1, math.ceil(uvorg.y + bound.y) + 1) -- ScissorRect end
 				local c = Vector(math.Round(pos2d.x + uvorg.x), math.Round(pos2d.y + uvorg.y)) -- 2D center position
 				local s = Vector(math.floor(uvorg.x) - 1, math.floor(uvorg.y) - 1) -- ScissorRect start
 				if not ss.CollisionAABB2D(s, b, c - vrad, c + vrad) then q.done = math.huge continue end
-				ss.Debug.ShowInkDrawn(s, c, b, surf, q, moved)
+				if ss.Debug then ss.Debug.ShowInkDrawn(s, c, b, surf, q, moved) end
 				inkmaterial:SetTexture("$basetexture", settexture)
 				normalmaterial:SetTexture("$basetexture", settexture .. "n")
 				render.PushRenderTarget(rt.BaseTexture)

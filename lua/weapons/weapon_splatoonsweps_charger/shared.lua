@@ -78,7 +78,7 @@ end
 
 SWEP.SharedDeploy = SWEP.ResetCharge
 SWEP.SharedHolster = SWEP.ResetCharge
-function SWEP:AddPlaylist(p) table.insert(p, self.AimSound) end
+function SWEP:AddPlaylist(p) p[#p + 1] = self.AimSound end
 function SWEP:PlayChargeSound()
 	if ss.mp and (SERVER or not IsFirstTimePredicted()) then return end
 	local prog = self:GetChargeProgress()

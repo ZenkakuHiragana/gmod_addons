@@ -20,11 +20,19 @@ local ChargeQuarter = false -- Press Shift to fire any charger at 25% charge.
 local DrawInkUVMap = false -- Press Shift to draw ink UV map.
 local DrawInkUVBounds = false -- Also draws UV boundary.
 local ShowInkSurface = false -- Press E for serverside, Shift for clientside, draws ink surface nearby player #1.
+local ShowInkChecked_ServerTime = CurTime()
 function sd.ShowInkChecked(r, surf, i)
     if not ShowInkChecked then return end
     local debugv = {Vector(-r.ratio, -1), Vector(r.ratio, -1), Vector(r.ratio, 1), Vector(-r.ratio, 1)}
     for _, v in ipairs(debugv) do v:Rotate(Angle(0, -r.angle)) v:Mul(r.radius) v:Add(r.pos) end
-    d.DTick()
+    if CLIENT then d.DTick() end
+    if SERVER then
+        if CurTime() < ShowInkChecked_ServerTime then return end
+        ShowInkChecked_ServerTime = CurTime + 1
+        d.DShort()
+    end
+
+    local c = ss.GetColor(r.color)
     d.DColor()
     d.DPoly {
     	ss.To3D(debugv[1], surf.Origins[i], surf.Angles[i]),
@@ -32,6 +40,17 @@ function sd.ShowInkChecked(r, surf, i)
     	ss.To3D(debugv[3], surf.Origins[i], surf.Angles[i]),
     	ss.To3D(debugv[4], surf.Origins[i], surf.Angles[i]),
     }
+    d.DColor(c.r, c.g, c.b)
+    for b in pairs(r.bounds) do
+        local b1, b2, b3, b4 = unpack(b)
+        local v1 = ss.To3D(Vector(b1, b2), surf.Origins[i], surf.Angles[i])
+        local v2 = ss.To3D(Vector(b1, b4), surf.Origins[i], surf.Angles[i])
+        local v3 = ss.To3D(Vector(b3, b4), surf.Origins[i], surf.Angles[i])
+        local v4 = ss.To3D(Vector(b3, b2), surf.Origins[i], surf.Angles[i])
+        d.DText(v1, string.format("(%d, %d)", b1, b2))
+        d.DText(v3, string.format("(%d, %d)", b3, b4))
+        d.DPoly {v1, v2, v3, v4}
+    end
 end
 
 function sd.ShowInkDrawn(s, c, b, surf, q, moved)
@@ -39,8 +58,8 @@ function sd.ShowInkDrawn(s, c, b, surf, q, moved)
     if MovedOnly and not moved then return end
     d.DShort()
     d.DColor()
-    d.DBox(s * ss.PixelsToUV * 500, b * ss.PixelsToUV * 500)
-    d.DPoint(c * ss.PixelsToUV * 500)
+    -- d.DBox(s * ss.PixelsToUV * 500, b * ss.PixelsToUV * 500)
+    -- d.DPoint(c * ss.PixelsToUV * 500)
     local v = {}
     for i, w in ipairs(surf.Vertices[q.n]) do v[i] = w.pos end
     d.DPoly(v)

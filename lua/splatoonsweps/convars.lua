@@ -59,6 +59,6 @@ end
 function ss.GetOption(name, ply)
 	local nametable = {"splatoonsweps"}
 	if isstring(name) then name = {name} end
-	for _, n in ipairs(name) do table.insert(nametable, n:lower()) end
+	for _, n in ipairs(name) do nametable[#nametable + 1] = n:lower() end
 	return gc.GetPreference(nametable, ply)
 end

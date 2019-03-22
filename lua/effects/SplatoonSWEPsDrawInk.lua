@@ -11,7 +11,8 @@ function EFFECT:Init(e)
 	local i = math.abs(e:GetScale())
 	local info = e:GetStart() -- Vector(Radius, Inkangle, Ratio)
 	local pos = e:GetOrigin()
-	ss.PaintQueue[CurTime()] = table.ForceInsert(ss.PaintQueue[CurTime()], {
+	local t = ss.PaintQueue[CurTime()] or {}
+	ss.PaintQueue[CurTime()], t[#t + 1] = t, {
 		c = e:GetAttachment(),
 		dispflag = e:GetScale() < 0 and 0 or 1,
 		done = 0,
@@ -20,7 +21,7 @@ function EFFECT:Init(e)
 		owner = e:GetEntity(),
 		pos = pos,
 		r = info.x,
-		ratio = info.z,
+		ratio = e:GetMagnitude(),
 		t = e:GetFlags(),
 	})
 end

@@ -24,8 +24,7 @@ function SWEP:GetFirePosition(ping)
 	for _, e in pairs(ents.FindAlongRay(t.start, t.endpos, t.mins * 5, t.maxs * 5)) do
 		local w = ss.IsValidInkling(e)
 		if not w or ss.IsAlly(w, self) then continue end
-		table.insert(t.filter, e)
-		table.insert(t.filter, w)
+		t.filter = {self, self.Owner, e, w}
 	end
 
 	local tr = util.TraceLine(t)

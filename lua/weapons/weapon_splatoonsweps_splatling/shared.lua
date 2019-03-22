@@ -73,9 +73,9 @@ end
 
 SWEP.SharedHolster = SWEP.ResetCharge
 function SWEP:AddPlaylist(p)
-	table.insert(p, self.AimSound)
+	p[#p + 1] = self.AimSound
 	if not self.SpinupSound then return end
-	for _, s in ipairs(self.SpinupSound) do table.insert(p, s) end
+	for _, s in ipairs(self.SpinupSound) do p[#p + 1] = s end
 end
 
 function SWEP:PlayChargeSound()
@@ -112,7 +112,9 @@ function SWEP:SharedInit()
 	self.AimSound = CreateSound(self, ss.ChargerAim)
 	self.SpinupSound = {}
 	self.SplashInitTable = {}
-	for _, s in ipairs(self.ChargeSound) do table.insert(self.SpinupSound, CreateSound(self, s)) end
+	for _, s in ipairs(self.ChargeSound) do
+		self.SpinupSound[#self.SpinupSound + 1] = CreateSound(self, s)
+	end
 	self.AirTimeFraction = 1 - 1 / self.Primary.EmptyChargeMul
 	self.MediumCharge = (self.Primary.MaxChargeTime[1] - self.Primary.MinChargeTime) / (self.Primary.MaxChargeTime[2] - self.Primary.MinChargeTime)
 	self.SpinupEffectTime = CurTime()

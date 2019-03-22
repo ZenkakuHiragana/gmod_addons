@@ -16,7 +16,7 @@ util.AddNetworkString "SplatoonSWEPs: Send turf inked"
 util.AddNetworkString "SplatoonSWEPs: Send weapon settings"
 util.AddNetworkString "SplatoonSWEPs: Strip weapon"
 net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
-	table.insert(ss.PlayersReady, ply)
+	ss.PlayersReady[#ss.PlayersReady + 1] = ply
 	ss.InitializeMoveEmulation(ply)
 	ss.WeaponRecord[ply] = {
 		Duration = {},

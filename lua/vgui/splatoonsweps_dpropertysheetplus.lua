@@ -35,14 +35,14 @@ function PANEL:PerformLayout()
 	if PropertySheet:GetTabDock() == BOTTOM then
 		y = 1 + (self:IsActive() and PropertySheet:GetPadding() or 0)
 	end
-	
+
 	self.Image:SetPos(7, y)
 	self.Image:SetSize(Width, Height)
-	
+
 	if self:GetText():len() == 0 then
 		self.Image:CenterHorizontal()
 	end
-	
+
 	if self:IsActive() then
 		self.Image:SetImageColor(color_white)
 	else
@@ -59,24 +59,24 @@ function PANEL:ApplySchemeSettings()
 	if self.Image then
 		ExtraInset = ExtraInset + self.Image:GetWide()
 	end
-	
+
 	if PropertySheet:GetTabDock() == TOP and self:IsActive() then
 		InsetY = InsetY - Padding
 	end
-	
+
 	self:SetTextInset(ExtraInset, InsetY)
 	self:SetSize(self:GetContentSize() + 10, self:GetTabHeight())
 	self:SetContentAlignment(1)
-	
+
 	if TabHeight then
 		local y = TabHeight - self:GetTabHeight(true)
 		if PropertySheet:GetTabDock() == BOTTOM then
 			y = self:IsActive() and 0 or Padding
 		end
-		
+
 		self:SetPos(self:GetPos(), y)
 	end
-	
+
 	DLabel.ApplySchemeSettings(self)
 end
 
@@ -104,7 +104,7 @@ function PANEL:Paint(w, h)
 			[false] = {skin.tex.TabR_Inactive, 0, h},
 		},
 	}
-	
+
 	local paint = (func[dock] or {})[self:IsActive()]
 	paint, y, h = unpack(paint or {})
 	if not isfunction(paint) then return end
@@ -139,31 +139,31 @@ function PANEL:AddSheet(label, panel, material, NoStretchX, NoStretchY, Tooltip)
 		debug.Trace()
 		return
 	end
-	
+
 	local Sheet = {}
 	Sheet.Name = label
-	
+
 	Sheet.Tab = vgui.Create("SplatoonSWEPs.DTabPlus", self)
 	Sheet.Tab:SetTooltip(Tooltip)
 	Sheet.Tab:Setup(label, self, panel, material)
-	
+
 	Sheet.Panel = panel
 	Sheet.Panel.NoStretchX = NoStretchX
 	Sheet.Panel.NoStretchY = NoStretchY
 	Sheet.Panel:SetPos(self:GetPadding(), self:GetPadding())
 	Sheet.Panel:SetVisible(false)
-	
+
 	panel:SetParent(self)
-	
-	table.insert(self.Items, Sheet)
+
+	self.Items[#self.Items + 1] = Sheet
 	self.tabScroller:AddPanel(Sheet.Tab)
 	self:SetTabHeight(math.max(self:GetTabHeight(), Sheet.Tab:GetTabHeight(true)))
-	
+
 	if not self:GetActiveTab() then
 		self:SetActiveTab(Sheet.Tab)
 		Sheet.Panel:SetVisible(true)
 	end
-	
+
 	return Sheet
 end
 
@@ -171,11 +171,11 @@ function PANEL:PerformLayout()
 	local ActiveTab = self:GetActiveTab()
 	local Padding = self:GetPadding()
 	if not IsValid(ActiveTab) then return end
-	
+
 	local ActivePanel = ActiveTab:GetPanel()
 	local TabHeight = self:GetTabHeight()
 	self.tabScroller:SetTall(TabHeight)
-	
+
 	for k, v in pairs(self.Items) do
 		local y = TabHeight - v.Tab:GetTabHeight(true)
 		if v.Tab:GetPanel() == ActivePanel then
@@ -186,18 +186,18 @@ function PANEL:PerformLayout()
 			if IsValid(v.Tab:GetPanel()) then v.Tab:GetPanel():SetVisible(false) end
 			v.Tab:SetZPos(1)
 		end
-		
+
 		v.Tab:SetPos(v.Tab:GetPos(), y)
 		v.Tab:ApplySchemeSettings()
 	end
-	
+
 	if IsValid(ActivePanel) then
 		if ActivePanel.NoStretchX then
 			ActivePanel:CenterHorizontal()
 		else
 			ActivePanel:SetWide(self:GetWide() - Padding * 2)
 		end
-		
+
 		if ActivePanel.NoStretchY then
 			ActivePanel:CenterVertical()
 		else
@@ -206,10 +206,10 @@ function PANEL:PerformLayout()
 			ActivePanel:SetPos(ActivePanel:GetPos(), y)
 			ActivePanel:SetTall(self:GetTall() - TabHeight - Padding)
 		end
-		
+
 		ActivePanel:InvalidateLayout()
 	end
-	
+
 	-- Give the animation a chance
 	self.animFade:Run()
 end
@@ -224,7 +224,7 @@ function PANEL:Paint(w, h)
 		[LEFT] = {Offset, 0, Offset, 0},
 		[RIGHT] = {0, 0, Offset, 0},
 	}
-	
+
 	local dx, dy, dw, dh = unpack(Pos[self:GetTabDock()] or {})
 	skin.tex.Tab_Control(assert(dx), dy, w - dw, h - dh)
 end

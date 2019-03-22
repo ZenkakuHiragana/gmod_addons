@@ -64,17 +64,7 @@ local MAX_TRIANGLES = math.floor(32768 / 3) -- mesh library limitation
 local INK_SURFACE_DELTA_NORMAL = .8 -- Distance between map surface and ink mesh
 function ss.PrepareInkSurface(write)
 	ss.GenerateBSPTree(write)
-	if ({ -- HACKHACK - These are Splatoon maps made by Lpower531. It has special decals that hides our ink.
-		gm_flounder_heights_day = true,
-		gm_flounder_heights_night = true,
-		gm_kelp_dome = true,
-		gm_kelp_dome_fes = true,
-		gm_moray_towers = true,
-		gm_new_albacore_hotel = true,
-	})[game.GetMap()] then
-		INK_SURFACE_DELTA_NORMAL = 2
-	end
-
+	if ss.Lpower531Maps[game.GetMap()] then INK_SURFACE_DELTA_NORMAL = 2 end
 	local numsurfs = #surf.Origins
 	local rtsize = rt.BaseTexture:Width()
 	local rtarea = rtsize^2
@@ -86,13 +76,16 @@ function ss.PrepareInkSurface(write)
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
 	local u, v, nv, bu, bv, bk = 0, 0, 0 -- cursor(u, v), shelf height, rectangle size(u, v), beginning of k
 	for k in SortedPairsByValue(surf.Areas, true) do -- Placement of map polygons by Next-Fit algorithm.
-		table.insert(sortedsurfs, k)
+		sortedsurfs[#sortedsurfs + 1] = k
 		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2
 
 		bu, bv = surf.Bounds[k].x / convertunit, surf.Bounds[k].y / convertunit
 		nv = math.max(nv, bv)
 		if u + bu > 1 then -- Creating a new shelf
-			if v + nv + rtmargin > 1 then table.insert(movesurfs, {id = bk, v = v}) end
+			if v + nv + rtmargin > 1 then
+				movesurfs[#movesurfs + 1] = {id = bk, v = v}
+			end
+
 			u, v, nv = 0, v + nv + rtmargin, bv
 		end
 
@@ -133,7 +126,7 @@ function ss.PrepareInkSurface(write)
 	print("SplatoonSWEPs: Total mesh triangles = ", NumMeshTriangles)
 
 	for i = 1, math.ceil(NumMeshTriangles / MAX_TRIANGLES) do
-		table.insert(ss.IMesh, Mesh(ss.RenderTarget.Material))
+		ss.IMesh[#ss.IMesh + 1] = Mesh(ss.RenderTarget.Material)
 	end
 
 	-- Building MeshVertex
@@ -304,15 +297,15 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 	)
 
 	file.Delete(crashpath)
+
+	-- Checking ink map in data/
 	local pathbsp = string.format("maps/%s.bsp", game.GetMap())
 	local path = string.format("splatoonsweps/%s.txt", game.GetMap())
 	local InkCRCServer = GetGlobalString "SplatoonSWEPs: Ink map CRC"
-
-	-- Checking ink map in data/
 	local data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, "rb", "GAME")
 	local MapCRC = tonumber(util.CRC(file.Read(pathbsp, true) or ""))
 	local InkCRC = util.CRC(file.Read("data/" .. path, true) or "")
-	local IsValid = data and data:Size() > 4 and data:ReadULong() == MapCRC and InkCRCServer == InkCRC
+	local IsValid = data and data:Size() > 4 and data:ReadULong() == MapCRC and (ss.sp or InkCRCServer == InkCRC)
 	local UseDownloaded = false
 	if data then data:Close() end
 	if ss.mp and not IsValid then

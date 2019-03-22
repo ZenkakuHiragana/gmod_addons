@@ -118,6 +118,15 @@ ss.ViewModel = { -- Viewmodel animations
 	Throw = ACT_VM_THROW, -- Actual throw animation
 }
 
+ss.Lpower531Maps = { -- HACKHACK - These are Splatoon maps made by Lpower531. It has special decals that hides our ink.
+	gm_flounder_heights_day = true,
+	gm_flounder_heights_night = true,
+	gm_kelp_dome = true,
+	gm_kelp_dome_fes = true,
+	gm_moray_towers = true,
+	gm_new_albacore_hotel = true,
+}
+
 function ss.GetSquidmodel(pmid)
 	if pmid == ss.PLAYER.NOCHANGE then return end
 	local squid = ss.Squidmodel[ss.SquidmodelIndex[pmid] or ss.SQUID.INKLING]

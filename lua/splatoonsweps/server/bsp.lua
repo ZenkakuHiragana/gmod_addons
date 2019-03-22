@@ -201,17 +201,17 @@ local function MakeSurface(mins, maxs, normal, angle, origin, v2d, v3d, disp)
 	ss.AspectSum = ss.AspectSum + bound.y / bound.x
 	ss.AspectSumX = ss.AspectSumX + bound.x
 	ss.AspectSumY = ss.AspectSumY + bound.y
-	table.insert(surf.Angles, angle)
-	table.insert(surf.Areas, area)
-	table.insert(surf.Bounds, bound)
-	table.insert(surf.DefaultAngles, minangle.yaw)
-	table.insert(surf.Indices, bsp.FaceIndex * (disp and -1 or 1))
-	table.insert(surf.InkCircles, {})
-	table.insert(surf.Maxs, maxs)
-	table.insert(surf.Mins, mins)
-	table.insert(surf.Normals, normal)
-	table.insert(surf.Origins, origin)
-	table.insert(surf.Vertices, v3d)
+	surf.Angles[#surf.Angles + 1] = angle
+	surf.Areas[#surf.Areas + 1] = area
+	surf.Bounds[#surf.Bounds + 1] = bound
+	surf.DefaultAngles[#surf.DefaultAngles + 1] = minangle.yaw
+	surf.Indices[#surf.Indices + 1] = bsp.FaceIndex * (disp and -1 or 1)
+	surf.InkCircles[#surf.InkCircles + 1] = {}
+	surf.Maxs[#surf.Maxs + 1] = maxs
+	surf.Mins[#surf.Mins + 1] = mins
+	surf.Normals[#surf.Normals + 1] = normal
+	surf.Origins[#surf.Origins + 1] = origin
+	surf.Vertices[#surf.Vertices + 1] = v3d
 end
 
 local function MakeTriangle(vert)
@@ -234,7 +234,7 @@ local ParseFunction = {
 [LUMP.ENTITIES] = function(lump)
 	lump.data.str = read(lump.length)
 	for s in lump.data.str:gmatch "%{.-%}" do
-		table.insert(lump.data, util.KeyValuesToTable('"xd"\r\n' .. s))
+		lump.data[#lump.data + 1] = util.KeyValuesToTable('"xd"\r\n' .. s)
 	end
 end,
 
@@ -367,7 +367,7 @@ end,
 	lump.num = math.floor(lump.length / size) - 1
 	for i = 0, lump.num do
 		bsp.bsp:Skip(12 * 3)
-		table.insert(ss.Models, nodes.data[read "Long"])
+		ss.Models[#ss.Models + 1] = nodes.data[read "Long"]
 		if i == 0 then
 			bsp.FirstFace = read "Long"
 			bsp.NumFaces = read "Long"
@@ -431,8 +431,8 @@ end,
 			local sin = (prev - v2):GetNormalized():Cross((_next - v2):GetNormalized()).z
 			mins = ss.MinVector(mins, v3) -- Calculate bounding box
 			maxs = ss.MaxVector(maxs, v3)
-			table.insert(v2d, v2)
-			table.insert(v3d, v3)
+			v2d[#v2d + 1] = v2
+			v3d[#v3d + 1] = v3
 		end
 
 		local isdisp = dispinfo >= 0
@@ -482,8 +482,8 @@ end,
 				v.pos2d = ss.To2D(v.pos - normal * normal:Dot(v.vec * v.dist), center, angle)
 				mins = ss.MinVector(mins, v.pos) -- Calculate bounding box
 				maxs = ss.MaxVector(maxs, v.pos)
-				table.insert(isdisp, v.pos)
-				table.insert(isdisp.Positions2D, v.pos2d)
+				isdisp[#isdisp + 1] = v.pos
+				isdisp.Positions2D[#isdisp.Positions2D + 1] = v.pos2d
 			end
 
 		end

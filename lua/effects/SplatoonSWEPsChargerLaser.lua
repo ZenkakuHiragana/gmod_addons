@@ -73,14 +73,14 @@ function EFFECT:Render()
 	for t = 0, interp do
 		t = t / interp
 		local t2, t3 = t^2, t^3
-		p, q = Matrix {
+		local m = Matrix {
 			{t3, t2, t, 1},
 			{t3, t2, t, 1},
 			{t3, t2, t, 1},
 			{t3, t2, t, 1},
-		} * cubic * mpos, q + texpos
-		table.insert(points, Vector(p:GetField(1, 1), p:GetField(2, 2), p:GetField(3, 3)))
-		table.insert(tpoints, q)
+		} * cubic * mpos
+		tpoints[#tpoints + 1] = tpoints[#tpoints] + texpos
+		points[#points + 1] = Vector(m:GetField(1, 1), m:GetField(2, 2), m:GetField(3, 3))
 	end
 
 	for _, m in ipairs {beam, beamlight} do
