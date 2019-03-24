@@ -143,21 +143,23 @@ local function GetFogInfo()
 			FogEditor = f
 		end
 	end
-	
+
 	if IsValid(FogEditor) then return true, FogEditor:GetFogEnd() end
 	if not StormFox then
 		local FogTable = ents.FindByClass "env_fog_controller"
 		local FogController
 		for i = 1, #FogTable do
-			if FogController and FogController:EntIndex() > FogTable[i]:EntIndex() then continue end
+			local f = FogTable[i]
+			if not IsValid(f) then continue end
+			if IsValid(FogController) and FogController:EntIndex() > f:EntIndex() then continue end
 			FogController = f
 		end
-		
+
 		if not IsValid(FogController) then return false, 0 end
 		local keyvalues = FogController:GetKeyValues()
 		return keyvalues.fogenable > 0, keyvalues.fogend
 	end
-	
+
 	local enabled = GetConVar "sf_enablefog"
 	return enabled and enabled:GetBool()
 	and StormFox.GetWeather() == "Fog", StormFox.GetData "Fogend"
@@ -171,10 +173,10 @@ function ENT:CarCollide(data)
 		if not duration or self.Preference.StopEmergencyDurationDependsOnCVar then
 			duration = TimeToStopEmergency:GetFloat()
 		end
-		
+
 		self.Emergency = CurTime() + duration
 	end
-	
+
 	hook.Run("Decent Vehicle: OnCollide", self, data)
 end
 
@@ -196,10 +198,10 @@ function ENT:EstimateAccel()
 			if dir > vel * .9 and vel > 10 then -- BRAKE
 				force = self.v.BreakForce * 1.5
 			elseif self.v.IsOn and vel < self.v.ReverseMaxSpeed and self.v:HasFuel() then -- REVERSE
-				force = self.v.ReverseForce		
+				force = self.v.ReverseForce
 			end
 		end
-		
+
 		accel = math.max(force * self.v.WheelTorqTraction, 1)
 	elseif self.v.IsSimfphyscar then
 		accel = self.v:GetMaxTorque() * 2 - math.Clamp(self.v.ForwardSpeed, -self.v.Brake, self.v.Brake)
@@ -215,16 +217,16 @@ function ENT:EstimateAccel()
 			wheelangvelocity = wheelangvelocity + math.rad(math.abs(w:GetAngleVelocity().x)) / numwheels
 			wheeldirvelocity = wheeldirvelocity + w:GetVelocity():Dot(forward) / numwheels
 		end
-		
+
 		for i, a in ipairs(self.v:GetVehicleParams().axles) do
 			damping = damping + a.wheels_damping * wheeldirvelocity / a.wheels_mass
 			rotdamping = rotdamping + a.wheels_rotdamping * wheelangvelocity
 		end
-		
+
 		accel = 552 * (self.HorsePower * self.AxleRatio * gearratio - rotdamping * math.sqrt(2))
 		* self.WheelCoefficient / self.Mass - damping * math.sqrt(2) + physenv.GetGravity():Dot(forward)
 	end
-	
+
 	return hook.Run("Decent Vehicle: EstimateAccel", self, accel) or accel
 end
 
@@ -248,7 +250,7 @@ function ENT:GetVehicleParams()
 				negative_offset, num_negative = negative_offset + pos, num_negative + 1
 			end
 		end
-		
+
 		self.WheelBase = positive_offset / math.max(num_positive, 1) - negative_offset / math.max(num_negative, 1)
 	elseif isfunction(self.v.GetVehicleParams) then
 		local params = self.v:GetVehicleParams()
@@ -268,7 +270,7 @@ function ENT:GetVehicleParams()
 			self.WheelRadius = self.WheelRadius + axle.wheels_radius / #axles
 			minr, maxr = math.min(minr, axle.wheels_radius), math.max(maxr, axle.wheels_radius)
 		end
-		
+
 		self.WheelBase = #axles > 1 and axles[1].offset:Distance(axles[2].offset) or 1
 		self.WheelRatio = minr / maxr
 		self.WheelCoefficient = 1 / math.sqrt(self.WheelRadius * self.WheelRatio)
@@ -279,7 +281,7 @@ function ENT:GetVehicleParams()
 		self.GearCount = engine.gearCount
 		self.GearRatio = engine.gearRatio
 		self.AxleRatio = engine.axleRatio
-		
+
 		self.SteeringParams = steering
 		self.SteeringExponent = steering.steeringExponent
 		self.SteeringSpeedFast = steering.speedFast
@@ -313,7 +315,7 @@ function ENT:GetVehicleIdentifier()
 	else
 		id = self.v:GetModel()
 	end
-	
+
 	return self:GetVehiclePrefix() .. id
 end
 
@@ -324,7 +326,7 @@ function ENT:AttachModel()
  	elseif self.v.IsSimfphyscar then
 		seat = self.v.DriverSeat
  	end
-	
+
 	if not IsValid(seat) then return end
 	local anim = dvd.DriverAnimation[self:GetVehicleIdentifier()] or dvd.DriverAnimation[self:GetVehiclePrefix()] or "drive_jeep"
 	self:SetModel(istable(self.Model) and self.Model[math.random(#self.Model)]
@@ -334,7 +336,7 @@ function ENT:AttachModel()
 	self:SetNWInt("Sequence", self:LookupSequence(anim))
 	self:SetParent(seat)
 	seat:SetSequence(0) -- Resets the sequence first to correct the seat position
-	
+
 	timer.Simple(.1, function() -- Entity:Sequence() will not work properly if it is
 		if not IsValid(seat) then return end -- called directly after calling Entity:SetModel().
 		if not IsValid(self) then return end
@@ -346,7 +348,7 @@ function ENT:AttachModel()
 		self:SetNWVector("Pos", seatpos)
 		self:SetNWAngle("Ang", seatang)
 		self:SetSequence(anim)
-		
+
 		for i = 1, self:GetFlexNum() do
 			self:SetFlexWeight(i, self:GetFlexBounds(i))
 		end
@@ -373,14 +375,14 @@ function ENT:GetCurrentMaxSpeed()
 		if self.NextWaypoint then -- The speed limit is affected by connected waypoints
 			maxspeed = Lerp(frac, maxspeed, math.Clamp(self.NextWaypoint.SpeedLimit, 1, self.MaxSpeed))
 		end
-		
+
 		-- If the waypoint has a sharp corner, slow down
 		maxspeed = maxspeed * Lerp(frac, 1, 1 - self.Prependicular * .9)
 		if self.Waypoint.TrafficLight and self.Waypoint.TrafficLight:GetNWInt "DVTL_LightColor" == 3 then
 			maxspeed = maxspeed * (1 - frac)
 		end
 	end
-	
+
 	maxspeed = maxspeed * math.max(1 - self.v:GetPhysicsObject():GetAngleVelocity():Dot(self:GetVehicleUp()) / 60, 0)
 	maxspeed = maxspeed * math.Clamp(self.MaxSpeedCoefficient, 0, 1)
 	return hook.Run("Decent Vehicle: GetCurrentMaxSpeed", self, maxspeed) or maxspeed
@@ -414,10 +416,10 @@ function ENT:ShouldStopGoingback()
 		self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
 		return true
 	end
-	
+
 	local ent = self.Trace.Entity
 	if not (IsValid(ent) and ent.DecentVehicle) then return end
-	
+
 	ent = ent.DecentVehicle
 	if ent:GetELS() then return true end
 	if CurTime() > ent.WaitUntilNext then return end
@@ -462,10 +464,10 @@ function ENT:FindFuelStation()
 	for i, id in ipairs(routes) do
 		destinations[id] = true
 	end
-	
+
 	local route = dvd.GetRoute(select(2, dvd.GetNearestWaypoint(self.Waypoint.Target)), destinations, self.Group)
 	if not route then return end
-	
+
 	self.WaypointList = route
 	return true
 end
@@ -528,12 +530,12 @@ function ENT:DriveToWaypoint()
 				local nextpos = self.NextWaypoint.Target
 				frac, p1, p2 = math.max(frac - 1, 0), p2, nextpos + offset
 			end
-			
+
 			targetpos = Lerp(frac, p1, p2)
 		end
 	end
 	debugoverlay.Cross(targetpos, 30, .1, Color(0, 255, 0), true)
-	
+
 	local dest = targetpos - vehiclepos
 	local todestination = dest:GetNormalized()
 	local cross = todestination:Cross(forward)
@@ -543,7 +545,7 @@ function ENT:DriveToWaypoint()
 	self.SteeringOld = steering_angle
 	steering = sPID.x * steering_angle + sPID.y * self.SteeringInt + sPID.z * steering_differece
 	if steering ~= steering then steering = 0 end
-	
+
 	local estimateaccel = math.abs(self:EstimateAccel())
 	local speed_difference = maxspeed - currentspeed
 	local throttle_difference = (speed_difference - self.ThrottleOld) / FrameTime()
@@ -551,7 +553,7 @@ function ENT:DriveToWaypoint()
 	self.ThrottleOld = speed_difference
 	throttle = tPID.x * speed_difference + tPID.y * self.ThrottleInt + tPID.z * throttle_difference
 	if throttle ~= throttle then throttle = 0 end
-	
+
 	-- Prevents from going backward
 	local goback = forward:Dot(todestination)
 	local approaching = velocity:Dot(todestination) / velocity:Length()
@@ -559,13 +561,13 @@ function ENT:DriveToWaypoint()
 	goback = Either(velocitydot > 0, goback < -.5, goback < .5) and -1 or 1
 	handbrake = currentspeed > 10 and goback * velocitydot < 0
 	or currentspeed > math.max(100, maxspeed * .2) and math.abs(approaching) < .5
-	
+
 	if goback < 0 then
 		steering = steering > 0 and -1 or 1
 	elseif handbrake and not (self.v.IsScar or self.v.IsSimfphyscar) then
 		steering = -steering
 	end
-	
+
 	local gobacktime = self.Preference.GobackTime or self.GobackTime
 	local duration = self.Preference.GobackDuration or GobackDuration
 	local GobackByTrace = CurTime() - self.StopByTrace - gobacktime
@@ -576,25 +578,25 @@ function ENT:DriveToWaypoint()
 		if GobackByTrace > duration then
 			self.StopByTrace = CurTime() + FrameTime() -- Reset going back timer
 		end
-		
+
 		if not (self.v.IsScar or self.v.IsSimfphyscar)
 		and velocitydot * goback * throttle < 0
 		and dvd.GetAng(physenv.GetGravity(), forward) < .1 then -- Exception #1: DV is going down
 			throttle = 0 -- The solution of the brake issue.
 		end
 	end
-	
+
 	if IsValid(self.NPCDriver) then
 		local desiredvelocity = todestination * maxspeed
 		self.NPCDriver:SetSaveValue("m_vecDesiredPosition", targetpos)
 		self.NPCDriver:SetSaveValue("m_vecDesiredVelocity", desiredvelocity)
 	end
-	
+
 	self.RelativeSpeed = relspeed
 	self:SetHandbrake(handbrake)
 	self:SetThrottle(math.Clamp(throttle / estimateaccel, -1, 1) * goback)
 	self:SetSteering(steering)
-	
+
 	hook.Run("Decent Vehicle: Drive", self)
 	local rest_length = dvd.GetDir(startpos or vehiclepos, waypointpos):Dot(waypointpos - vehiclepos)
 	local threshold = math.max(bound, math.max(0, velocitydot) * self.Prependicular)
@@ -631,7 +633,7 @@ function ENT:DoTrace()
 	else
 		tracedir = forward
 	end
-	
+
 	local velocitydot = velocity:Dot(tracedir)
 	local currentspeed = math.abs(velocitydot)
 	local trlength = math.max(tracemin, currentspeed * .8)
@@ -652,7 +654,7 @@ function ENT:DoTrace()
 	local sideoffset = pathdir:Cross(up) * bound * 2.5
 	local startonpath = prevpos + pathdir * pathdir:Dot(start - prevpos) + heightoffset
 	local trwaypoint_isvalid = dvd.GetAng(waypointpos - start, tracedir) > .7
-	
+
 	local boundsqr = bound^2
 	local tr = {
 		start = start,
@@ -694,7 +696,7 @@ function ENT:DoTrace()
 		self.TraceNextWaypoint = util.TraceHull(trnext)
 		debugoverlay.SweptBox(trnext.start, trnext.endpos, trnext.mins, trnext.maxs, angle_zero, self.Interval.Trace, Color(0, 255, 255))
 	end
-	
+
 	self.Trace = util.TraceHull(tr)
 	self.TraceBack = util.TraceHull(trback)
 	self.TraceWaypoint = util.TraceHull(trwaypoint)
@@ -708,17 +710,17 @@ function ENT:DoTrace()
 	debugoverlay.SweptBox(trleft.start, trleft.endpos, trleft.mins, trleft.maxs, angle_zero, self.Interval.Trace, Color(255, 255, 0))
 	debugoverlay.SweptBox(trright.start, trright.endpos, trright.mins, trright.maxs, angle_zero, self.Interval.Trace, Color(255, 255, 0))
 	debugoverlay.SweptBox(tr.start, self.Trace.HitPos, tr.mins, tr.maxs, angle_zero, self.Interval.Trace)
-	
+
 	if self.TraceLeft.StartSolid then
 		trleft.start, trleft.endpos = startonpath, start - sideoffset
 		self.TraceLeft = util.TraceHull(trleft)
 	end
-	
+
 	if self.TraceRight.StartSolid then
 		trright.start, trright.endpos = startonpath, start + sideoffset
 		self.TraceRight = util.TraceHull(trright)
 	end
-	
+
 	local ent = self.Trace.Entity
 	local hitforward = IsObstacle(self.Trace)
 	local hitleft = IsObstacle(self.TraceLeft)
@@ -731,30 +733,30 @@ function ENT:DoTrace()
 			maxs = maxs, mins = mins,
 			filter = filter,
 		}
-		
+
 		debugoverlay.SweptBox(trhit.start, trhit.endpos, trhit.mins, trhit.maxs, angle_zero, self.Interval.Trace, Color(0, 255, 0))
 		if tracedir:Dot(trhit.endpos - trhit.start) > 0 then
 			local tr = util.TraceHull(trhit)
 			hitforward = IsObstacle(tr)
 		end
 	end
-	
+
 	if trwaypoint_isvalid and not IsValid(ent) and IsValid(self.TraceWaypoint.Entity) then
 		ent = self.TraceWaypoint.Entity
 	end
-	
+
 	if not (hitforward or hitwaypoint) then
 		if CurTime() < self.StopByTrace + GobackTime then
 			self.StopByTrace = CurTime() + .1
 		end
-		
+
 		self.FormLine = false
 	elseif IsValid(ent) then
 		local dv = ent.DecentVehicle
 		local dvTrace = dv and dv.Trace and dv.Trace.Entity
 		local dvTraceW = dv and dv.TraceWaypoint and dv.TraceWaypoint.Entity
 		self.FormLine = dv and dv:AtTrafficLight()
-		
+
 		if dv then
 			if dvTrace == self.v or dvTraceW == self.v
 			or (self:GetELSSound() and (hitleft or hitright)
@@ -763,7 +765,7 @@ function ENT:DoTrace()
 			end
 		end
 	end
-	
+
 	if CurTime() > self.IsGivingWay then
 		if hitleft and not hitright then
 			self.WaypointOffset = -boundradius
@@ -773,7 +775,7 @@ function ENT:DoTrace()
 			self.WaypointOffset = 0
 		end
 	end
-	
+
 	hook.Run("Decent Vehicle: Trace", self, ent)
 end
 
@@ -788,7 +790,7 @@ function ENT:DoGiveWay()
 		if ent == self.v then continue end
 		if self:GetVehicleForward(ent):Dot(dvd.GetDir(ent:WorldSpaceCenter(), self.v:WorldSpaceCenter())) < -.7 then continue end
 		if not self:GetELSSound(ent) then continue end
-		
+
 		local left = IsObstacle(self.TraceLeft)
 		local right = IsObstacle(self.TraceRight)
 		local time = self.Preference.GiveWayTime or GiveWayTime
@@ -801,7 +803,7 @@ function ENT:DoGiveWay()
 			self.WaypointOffset = -self.v:BoundingRadius() / 3
 			self.MaxSpeedCoefficient = .5
 		end
-		
+
 		return
 	end
 end
@@ -813,7 +815,7 @@ function ENT:FindFirstWaypoint()
 		self.NextWaypoint = table.remove(self.WaypointList)
 		return
 	end
-	
+
 	local pos = self.v:GetPos()
 	self.Waypoint = dvd.GetNearestWaypoint(pos,
 	function(testID, currentID, mindistance)
@@ -821,9 +823,9 @@ function ENT:FindFirstWaypoint()
 		return dvd.WaypointAvailable(testID, self.Group)
 		and dvd.GetDir(pos, w.Target):Dot(self:GetVehicleForward()) > 0
 	end)
-	
+
 	if not self.Waypoint then return end
-	
+
 	self.NextWaypoint = dvd.GetRandomNeighbor(self.Waypoint, function(...) return FilterUTurnAndGroup(self, ...) end)
 	if not self.NextWaypoint and self.Waypoint.Target:Distance(pos) < self.v:BoundingRadius() then
 		self.Waypoint = nil
@@ -834,19 +836,19 @@ function ENT:SetupNextWaypoint()
 	if self.Preference.WaitUntilNext then
 		self.WaitUntilNext = CurTime() + (self.Waypoint.WaitUntilNext or 0)
 	end
-	
+
 	if self.NextWaypoint and self.NextWaypoint.UseTurnLights then
 		local prevpos = self.v:WorldSpaceCenter()
 		if self.PrevWaypoint then prevpos = self.PrevWaypoint.Target end
 		self.UseLeftTurnLight = (self.Waypoint.Target - prevpos):Cross(
 		self.NextWaypoint.Target - self.Waypoint.Target):Dot(self:GetVehicleUp()) > 0
 	end
-	
+
 	self.PrevWaypoint, self.Waypoint = self.Waypoint, self.NextWaypoint
 	if not self.Waypoint then return end
 	self.NextWaypoint = table.remove(self.WaypointList) or
 	dvd.GetRandomNeighbor(self.Waypoint, function(...) return FilterUTurnAndGroup(self, ...) end)
-	
+
 	self.Prependicular = 0
 	if self.NextWaypoint and self.PrevWaypoint then
 		self.Prependicular = 1 - dvd.GetAng3(self.PrevWaypoint.Target, self.Waypoint.Target, self.NextWaypoint.Target)
@@ -861,7 +863,7 @@ function ENT:Think()
 	elseif self:DriveToWaypoint() then -- When it arrives at the current waypoint.
 		hook.Run("Decent Vehicle: OnReachedWaypoint", self)
 		if self.Waypoint.FuelStation then self:Refuel() end
-		
+
 		self:SetupNextWaypoint()
 	elseif self:ShouldRefuel() then
 		if ShouldGoToRefuel:GetBool() then
@@ -870,7 +872,7 @@ function ENT:Think()
 			self:Refuel()
 		end
 	end
-	
+
 	self:DoGiveWay()
 	self:DoTrace()
 	self:DoLights()
@@ -889,23 +891,23 @@ function ENT:Initialize()
 		if d > mindistance then continue end
 		mindistance, vehicle = d, v
 	end
-	
+
 	if not IsValid(vehicle) or self:GetLocked(vehicle) then
 		SafeRemoveEntity(self)
 		return
 	end
-	
+
 	if vehicle.DecentVehicle then
 		SafeRemoveEntity(self)
 		SafeRemoveEntity(vehicle.DecentVehicle)
 		vehicle.DecentVehicle = nil
 		return
 	end
-	
+
 	if vehicle.IsScar and not vehicle:HasDriver() then
 		self.v, vehicle.DecentVehicle = vehicle, self
 		self.v.AIController = self
-		
+
 		-- Tanks or something sometimes make errors so disable thinking.
 		self.OldSpecialThink, self.v.SpecialThink = self.v.SpecialThink
 	elseif vehicle.IsSimfphyscar and vehicle:IsInitialized() and not IsValid(vehicle:GetDriver()) then
@@ -915,7 +917,7 @@ function ENT:Initialize()
 		self.ELSID = numpad.OnUp(self, KEY_H, "k_hrn", self.v, false)
 		self.HornID = numpad.OnDown(self, KEY_H, "k_hrn", self.v, true)
 		self.v.RemoteDriver = self
-		
+
 		self.OldPhysicsCollide = self.v.PhysicsCollide
 		function self.v.PhysicsCollide(...)
 			self.CarCollide(...)
@@ -926,7 +928,7 @@ function ENT:Initialize()
 	and not IsValid(vehicle:GetDriver()) then
 		self.v, vehicle.DecentVehicle = vehicle, self
 		self.OnCollideCallback = self.v:AddCallback("PhysicsCollide", self.CarCollide)
-		
+
 		if not isfunction(self.v.VC_getStates) or VCModFixedAroundNPCDriver then
 			local oldname = self.v:GetName()
 			self.v:SetName "decentvehicle"
@@ -951,9 +953,9 @@ function ENT:Initialize()
 			self.v:SetName(oldname or "")
 		end
 	end
-	
+
 	if not IsValid(self.v) then SafeRemoveEntity(self) return end
-	
+
 	local e = EffectData()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
@@ -970,12 +972,12 @@ function ENT:Initialize()
 	self.TraceLeft = {}
 	self.TraceRight = {}
 	self.TraceNextWaypoint = {}
-	
+
 	self.Preference = table.Copy(self.Preference)
 	if self.Preference.LockVehicleDependsOnCVar then
 		self.Preference.LockVehicle = LockVehicle:GetBool()
 	end
-	
+
 	if self.Preference.LockVehicle then
 		self:SetLocked(true)
 	end
@@ -1013,7 +1015,7 @@ function ENT:OnRemove()
 	self:SetHorn(false)
 	self:SetEngineStarted(false)
 	self:SetLocked(false)
-	
+
 	if self.v.IsScar then -- If the vehicle is SCAR.
 		self.v.AIController = nil
 		self.v.SpecialThink, self.OldSpecialThink = self.OldSpecialThink
@@ -1025,7 +1027,7 @@ function ENT:OnRemove()
 		self.v.PressedKeys.S = false
 		self.v.PressedKeys.D = false
 		self.v.PressedKeys.Space = false
-		
+
 		numpad.Remove(self.HeadLightsID)
 		numpad.Remove(self.FogLightsID)
 		numpad.Remove(self.ELSID)
@@ -1043,7 +1045,7 @@ function ENT:OnRemove()
 		self.v.IsBraking = self.OldPhotonIsBraking
 		self.v.IsReversing = self.OldPhotonIsReversing
 	end
-	
+
 	local e = EffectData()
 	e:SetEntity(self.v)
 	util.Effect("propspawn", e) -- Perform a spawn effect.
