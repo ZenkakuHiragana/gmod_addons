@@ -119,6 +119,10 @@ ss.ViewModel = { -- Viewmodel animations
 }
 
 ss.Lpower531Maps = { -- HACKHACK - These are Splatoon maps made by Lpower531. It has special decals that hides our ink.
+	gm_camp_triggerfish_day_closegate = true,
+	gm_camp_triggerfish_day_opengate = true,
+	gm_camp_triggerfish_night_closegate = true,
+	gm_camp_triggerfish_night_opengate = true,
 	gm_flounder_heights_day = true,
 	gm_flounder_heights_night = true,
 	gm_kelp_dome = true,

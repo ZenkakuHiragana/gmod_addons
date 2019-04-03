@@ -94,19 +94,12 @@ local function ProcessPaintQueue()
 	local Origins = surf.Origins
 	local u = surf.u
 	local v = surf.v
+	local Benchmark = SysTime()
 	while not rt.Ready do coroutine.yield() end
 	while true do
-		local done = 0
+		Benchmark = SysTime()
 		for time, queuetable in SortedPairs(ss.PaintQueue) do
 			for id, q in SortedPairs(queuetable) do
-				q.done, done = q.done + 1, done + 1
-				if q.done > 5 then
-					queuetable[id] = nil
-					if q.owner ~= LocalPlayer() then
-						ss.AddInkRectangle(q.c, q.n, q.t, q.inkangle, q.pos, q.r, q.ratio, surf)
-					end
-				end
-
 				local angle, origin, normal, moved = Angles[q.n], Origins[q.n], Normals[q.n], Moved[q.n]
 				local pos2d = ss.To2D(q.pos, origin, angle) * ss.UnitsToPixels
 				local bound = Bounds[q.n] * ss.UnitsToPixels
@@ -121,55 +114,71 @@ local function ProcessPaintQueue()
 				local b = Vector(math.ceil(uvorg.x + bound.x) + 1, math.ceil(uvorg.y + bound.y) + 1) -- ScissorRect end
 				local c = Vector(math.Round(pos2d.x + uvorg.x), math.Round(pos2d.y + uvorg.y)) -- 2D center position
 				local s = Vector(math.floor(uvorg.x) - 1, math.floor(uvorg.y) - 1) -- ScissorRect start
-				if not ss.CollisionAABB2D(s, b, c - vrad, c + vrad) then q.done = math.huge continue end
-				if ss.Debug then ss.Debug.ShowInkDrawn(s, c, b, surf, q, moved) end
-				inkmaterial:SetTexture("$basetexture", settexture)
-				normalmaterial:SetTexture("$basetexture", settexture .. "n")
-				render.PushRenderTarget(rt.BaseTexture)
-				render.SetScissorRect(s.x, s.y, b.x, b.y, true)
-				cam.Start2D()
-				surface.SetDrawColor(color)
-				surface.SetMaterial(inkmaterial)
-				surface.DrawTexturedRectRotated(c.x, c.y, 2 * r * q.ratio, 2 * r, q.inkangle)
-				cam.End2D()
-				render.SetScissorRect(0, 0, 0, 0, false)
-				render.PopRenderTarget()
+				if ss.CollisionAABB2D(s, b, c - vrad, c + vrad) then
+					if ss.Debug then ss.Debug.ShowInkDrawn(s, c, b, surf, q, moved) end
+					inkmaterial:SetTexture("$basetexture", settexture)
+					normalmaterial:SetTexture("$basetexture", settexture .. "n")
+					render.PushRenderTarget(rt.BaseTexture)
+					render.SetScissorRect(s.x, s.y, b.x, b.y, true)
+					cam.Start2D()
+					surface.SetDrawColor(color)
+					surface.SetMaterial(inkmaterial)
+					surface.DrawTexturedRectRotated(c.x, c.y, 2 * r * q.ratio, 2 * r, q.inkangle)
+					cam.End2D()
+					render.SetScissorRect(0, 0, 0, 0, false)
+					render.PopRenderTarget()
 
-				--Draw on normal map
-				render.PushRenderTarget(rt.Normalmap)
-				render.SetScissorRect(s.x, s.y, b.x, b.y, true)
-				cam.Start2D()
-				surface.SetDrawColor(color_white)
-				surface.SetMaterial(normalmaterial)
-				surface.DrawTexturedRectRotated(c.x, c.y, 2 * r * q.ratio, 2 * r, q.inkangle)
-				cam.End2D()
-				render.SetScissorRect(0, 0, 0, 0, false)
-				render.PopRenderTarget()
+					--Draw on normal map
+					render.PushRenderTarget(rt.Normalmap)
+					render.SetScissorRect(s.x, s.y, b.x, b.y, true)
+					cam.Start2D()
+					surface.SetDrawColor(color_white)
+					surface.SetMaterial(normalmaterial)
+					surface.DrawTexturedRectRotated(c.x, c.y, 2 * r * q.ratio, 2 * r, q.inkangle)
+					cam.End2D()
+					render.SetScissorRect(0, 0, 0, 0, false)
+					render.PopRenderTarget()
 
-				--Draw on lightmap
-				r = r / 2
-				local num = math.floor(math.Clamp(40 - done, 0, 14) / 2)
-				local frac = num / 7
-				render.PushRenderTarget(rt.Lightmap)
-				render.SetScissorRect(s.x, s.y, b.x, b.y, true)
-				cam.Start2D()
-				surface.SetDrawColor(light:ToColor())
-				surface.SetMaterial(lightmapmaterial)
-				surface.DrawTexturedRect(c.x - r * frac, c.y - r * frac, 2 * r * frac, 2 * r * frac)
-				frac = math.rad(360 / num)
-				for i = 1, num do
-					local rx = math.cos(frac * i) * r * (moved and -1 or 1)
-					local ry = math.sin(frac * i) * r
-					local rv = Vector(rx, ry) * ss.PixelsToUnits
-					surface.SetDrawColor(GetLight(ss.To3D(rv, lightorg, angle), normal):ToColor())
-					surface.DrawTexturedRect(math.floor(rx + c.x - r), math.floor(ry + c.y - r), 2 * r, 2 * r)
+					--Draw on lightmap
+					r = r / 2
+					local num = 7
+					local frac = num / 7
+					render.PushRenderTarget(rt.Lightmap)
+					render.SetScissorRect(s.x, s.y, b.x, b.y, true)
+					cam.Start2D()
+					surface.SetDrawColor(light:ToColor())
+					surface.SetMaterial(lightmapmaterial)
+					surface.DrawTexturedRect(c.x - r * frac, c.y - r * frac, 2 * r * frac, 2 * r * frac)
+					frac = math.rad(360 / num)
+					for i = 1, num do
+						local rx = math.cos(frac * i) * r * (moved and -1 or 1)
+						local ry = math.sin(frac * i) * r
+						local rv = Vector(rx, ry) * ss.PixelsToUnits
+						surface.SetDrawColor(GetLight(ss.To3D(rv, lightorg, angle), normal):ToColor())
+						surface.DrawTexturedRect(math.floor(rx + c.x - r), math.floor(ry + c.y - r), 2 * r, 2 * r)
+					end
+					cam.End2D()
+					render.SetScissorRect(0, 0, 0, 0, false)
+					render.PopRenderTarget()
+
+					q.done = q.done + 1
+					if q.done > 5 then
+						queuetable[id] = nil
+						if q.owner ~= LocalPlayer() then
+							ss.AddInkRectangle(q.c, q.n, q.t, q.inkangle, q.pos, q.r, q.ratio, surf)
+						end
+					end
+
+					if SysTime() - Benchmark > ss.FrameToSec then
+						coroutine.yield()
+						Benchmark = SysTime()
+					end
+				else
+					queuetable[id] = nil
 				end
-				cam.End2D()
-				render.SetScissorRect(0, 0, 0, 0, false)
-				render.PopRenderTarget()
 			end
 
-			if #queuetable == 0 then ss.PaintQueue[time] = nil end
+			if not next(queuetable) then ss.PaintQueue[time] = nil end
 		end
 
 		coroutine.yield()

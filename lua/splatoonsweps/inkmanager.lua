@@ -23,6 +23,7 @@ local net_Start = net.Start
 local net_WriteDouble = net.WriteDouble
 local net_WriteUInt = net.WriteUInt
 local NormalizeAngle = math.NormalizeAngle
+local next = next
 local pairs = pairs
 local Round = math.Round
 local select = select

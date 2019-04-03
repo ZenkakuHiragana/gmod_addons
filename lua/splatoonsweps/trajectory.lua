@@ -213,13 +213,14 @@ local function HitSmoke(ink, t)
 end
 
 function HitPaint.weapon_splatoonsweps_charger(ink, t)
-	local wallfrac = math.Remap(ink.Charge, 0, ink.WallPaintCharge, 0, 1)
-	local radius = ink.SplashRadius / ink.SplashRadiusMul
-	local SplashNum = math.Round(Lerp(wallfrac, ink.MinWallPaintNum, ink.MaxWallPaintNum))
 	ink.InkRadius, ink.Ratio = ink.SplashRadius * ((1 + 1 / ink.Ratio) / 2), 1
 	HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	HitSmoke(ink, t)
 	if t.HitNormal.z > ss.MAX_COS_DEG_DIFF then return end
+	local wallfrac = math.Remap(ink.Charge, 0, ink.WallPaintCharge, 0, 1)
+	local radius = ink.SplashRadius / ink.SplashRadiusMul
+	local SplashNum = math.Round(Lerp(wallfrac, ink.MinWallPaintNum, ink.MaxWallPaintNum))
+	t.FractionPaintWall = t.FractionPaintWall or 0
 	for i = 1, SplashNum do
 		local pos = t.HitPos - vector_up * i * radius * Lerp(wallfrac, 1, 1.25)
 		local tr = util.TraceLine {
@@ -230,21 +231,22 @@ function HitPaint.weapon_splatoonsweps_charger(ink, t)
 			start = ink.InitPos,
 		}
 
-		if math.abs(tr.HitNormal.z) > ss.MAX_COS_DEG_DIFF then continue end
-		if (t.FractionPaintWall or 0) > tr.Fraction then continue end
-		if tr.StartSolid or not tr.HitWorld then continue end
-		ss.PaintSchedule[{
-			pos = tr.HitPos,
-			normal = tr.HitNormal,
-			radius = radius,
-			color = ink.Color,
-			angle = ink.Angle,
-			inktype = ss.GetDropType(),
-			ratio = 1,
-			Time = CurTime() + i * radius / ink.Speed,
-			filter = ink.filter,
-			ClassName = ink.ClassName,
-		}] = true
+		if math.abs(tr.HitNormal.z) < ss.MAX_COS_DEG_DIFF
+		and t.FractionPaintWall < tr.Fraction
+		and not tr.StartSolid and tr.HitWorld then
+			ss.PaintSchedule[{
+				pos = tr.HitPos,
+				normal = tr.HitNormal,
+				radius = radius,
+				color = ink.Color,
+				angle = ink.Angle,
+				inktype = ss.GetDropType(),
+				ratio = 1,
+				Time = CurTime() + i * radius / ink.Speed,
+				filter = ink.filter,
+				ClassName = ink.ClassName,
+			}] = true
+		end
 	end
 end
 
@@ -314,31 +316,41 @@ end
 HitEntity.weapon_splatoonsweps_blaster_base = HitEntity.weapon_splatoonsweps_shooter
 
 local function ProcessInkQueue(ply)
+	local Benchmark = SysTime()
 	while true do
+		repeat coroutine.yield() until IsFirstTimePredicted()
+		Benchmark = SysTime()
 		for ink in pairs(ss.InkQueue) do
-			if not IsValid(ink.filter) then ss.InkQueue[ink] = nil continue end
-			if ink.filter:IsPlayer() and ink.filter ~= ply then continue end
+			if IsValid(ink.filter) then
+				if not ink.filter:IsPlayer() or ink.filter == ply then
+					ss.ProtectedCall(Simulate[ink.Base], ink)
+					if ink.start and ink.endpos then
+						local t = util.TraceHull(ink)
+						ink.start = t.HitPos
+						if not (t.Hit or ss.IsInWorld(t.HitPos)) then
+							ss.InkQueue[ink] = nil
+						elseif IsValid(t.Entity) and t.Entity:Health() > 0 and ink.Damage > 0 then -- If ink hits an NPC or something
+							local w = ss.IsValidInkling(t.Entity)
+							if not (w and ss.IsAlly(w, ink.Color)) then
+								ss.ProtectedCall(HitEntity[ink.Base], ink, t, w)
+							end
+							ss.InkQueue[ink] = nil
+						elseif t.Hit then
+							ink.endpos = t.HitPos - t.HitNormal * ink.ColRadius * 2
+							t = util.TraceLine(ink)
+							ss.ProtectedCall(HitPaint[ink.Base], ink, t)
+							ss.InkQueue[ink] = nil
+						end
 
-			ss.ProtectedCall(Simulate[ink.Base], ink)
-			if not (ink.start and ink.endpos) then
-				ss.InkQueue[ink] = nil
-				continue
-			end
-
-			local t = util.TraceHull(ink)
-			ink.start = t.HitPos
-			if not (t.Hit or ss.IsInWorld(t.HitPos)) then
-				ss.InkQueue[ink] = nil
-			elseif IsValid(t.Entity) and t.Entity:Health() > 0 and ink.Damage > 0 then -- If ink hits an NPC or something
-				local w = ss.IsValidInkling(t.Entity)
-				if not (w and ss.IsAlly(w, ink.Color)) then
-					ss.ProtectedCall(HitEntity[ink.Base], ink, t, w)
+						if SysTime() - Benchmark > ss.FrameToSec then
+							coroutine.yield()
+							Benchmark = SysTime()
+						end
+					else
+						ss.InkQueue[ink] = nil
+					end
 				end
-				ss.InkQueue[ink] = nil
-			elseif t.Hit then
-				ink.endpos = t.HitPos - t.HitNormal * ink.ColRadius * 2
-				t = util.TraceLine(ink)
-				ss.ProtectedCall(HitPaint[ink.Base], ink, t)
+			else
 				ss.InkQueue[ink] = nil
 			end
 		end
@@ -348,12 +360,13 @@ local function ProcessInkQueue(ply)
 				ss.Paint(ink.pos, ink.normal, ink.radius, ink.color,
 				ink.angle, ink.inktype, ink.ratio, ink.filter, ink.ClassName)
 				ss.PaintSchedule[ink] = nil
+
+				if SysTime() - Benchmark > ss.FrameToSec then
+					coroutine.yield()
+					Benchmark = SysTime()
+				end
 			end
 		end
-
-		repeat
-			ply = coroutine.yield()
-		until IsFirstTimePredicted()
 	end
 end
 
@@ -475,13 +488,20 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 	return t
 end
 
-local process = coroutine.create(ProcessInkQueue)
+local processes = {}
 hook.Add("Move", "SplatoonSWEPs: Simulate ink", function(ply, mv)
-	if coroutine.status(process) == "dead" then return end
+	local p = processes[ply]
+	if not p or coroutine.status(p) == "dead" then
+		processes[ply] = coroutine.create(ProcessInkQueue)
+		p = processes[ply]
+	end
+
 	ply:LagCompensation(true)
-	local ok, msg = coroutine.resume(process, ply)
+	local ok, msg = coroutine.resume(p, ply)
 	ply:LagCompensation(false)
-	if not ok then ErrorNoHalt(msg) end
+
+	if ok then return end
+	ErrorNoHalt(msg)
 end)
 
 local function AdvanceVertex(color, pos, normal, u, v, alpha)
@@ -720,44 +740,43 @@ function ss.MakeBlasterExplosion(ink)
 	local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
 	local damagedealt = false
 	for _, e in ipairs(ents.FindInSphere(ink.endpos, ink.ColRadiusFar)) do
-		if not IsValid(e) or ss.IsAlly(e) or e:Health() <= 0 then continue end
-		if not hurtowner and e == ink.filter then continue end
-		local dmg = ink.DamageClose
-		local dist = Vector()
-		local maxs, mins = e:OBBMaxs(), e:OBBMins()
-		local origin = e:LocalToWorld(e:OBBCenter())
-		local size = (maxs - mins) / 2
-		for i, dir in pairs {x = e:GetForward(), y = e:GetRight(), z = e:GetUp()} do
-			local segment = dir:Dot(ink.endpos - origin)
-			local sign = segment == 0 and 0 or segment > 0 and 1 or -1
-			segment = math.abs(segment)
-			if segment <= size[i] then continue end
-			dist = dist + sign * (size[i] - segment) * dir
-		end
+		if IsValid(e) and not ss.IsAlly(e) and e:Health() > 0 and not hurtowner and e ~= ink.filter then
+			local dmg = ink.DamageClose
+			local dist = Vector()
+			local maxs, mins = e:OBBMaxs(), e:OBBMins()
+			local origin = e:LocalToWorld(e:OBBCenter())
+			local size = (maxs - mins) / 2
+			for i, dir in pairs {x = e:GetForward(), y = e:GetRight(), z = e:GetUp()} do
+				local segment = dir:Dot(ink.endpos - origin)
+				local sign = segment == 0 and 0 or segment > 0 and 1 or -1
+				segment = math.abs(segment)
+				if segment > size[i] then dist = dist + sign * (size[i] - segment) * dir end
+			end
 
-		if ink.IsCarriedByLocalPlayer then
-			HitEffect(ink.Color, damagedealt and 6 or 2, ink.endpos + dist, -dist)
-			if CLIENT and e ~= ink.filter then damagedealt = true break end
-		end
+			if ink.IsCarriedByLocalPlayer then
+				HitEffect(ink.Color, damagedealt and 6 or 2, ink.endpos + dist, -dist)
+				if CLIENT and e ~= ink.filter then damagedealt = true break end
+			end
 
-		damagedealt = damagedealt or ss.sp or e == ink.filter
-		dist = dist:Length()
-		if dist > ink.ColRadiusMiddle then
-			dmg = math.Remap(dist, ink.ColRadiusMiddle, ink.ColRadiusFar, ink.DamageMiddle, ink.DamageFar)
-		elseif dist > ink.ColRadiusClose then
-			dmg = math.Remap(dist, ink.ColRadiusClose, ink.ColRadiusMiddle, ink.DamageClose, ink.DamageMiddle)
-		end
+			damagedealt = damagedealt or ss.sp or e == ink.filter
+			dist = dist:Length()
+			if dist > ink.ColRadiusMiddle then
+				dmg = math.Remap(dist, ink.ColRadiusMiddle, ink.ColRadiusFar, ink.DamageMiddle, ink.DamageFar)
+			elseif dist > ink.ColRadiusClose then
+				dmg = math.Remap(dist, ink.ColRadiusClose, ink.ColRadiusMiddle, ink.DamageClose, ink.DamageMiddle)
+			end
 
-		d:SetDamage(dmg)
-		d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * dmg)
-		d:SetDamagePosition(ink.endpos)
-		d:SetDamageType(DMG_GENERIC)
-		d:SetMaxDamage(dmg)
-		d:SetReportedPosition(ink.endpos)
-		d:SetAttacker(attacker)
-		d:SetInflictor(inflictor)
-		d:ScaleDamage(ss.ToHammerHealth)
-		ss.ProtectedCall(e.TakeDamageInfo, e, d)
+			d:SetDamage(dmg)
+			d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * dmg)
+			d:SetDamagePosition(ink.endpos)
+			d:SetDamageType(DMG_GENERIC)
+			d:SetMaxDamage(dmg)
+			d:SetReportedPosition(ink.endpos)
+			d:SetAttacker(attacker)
+			d:SetInflictor(inflictor)
+			d:ScaleDamage(ss.ToHammerHealth)
+			ss.ProtectedCall(e.TakeDamageInfo, e, d)
+		end
 	end
 
 	if ss.mp and not IsFirstTimePredicted() then return end
@@ -791,9 +810,10 @@ function ss.MakeBlasterExplosion(ink)
 			mask = ss.SquidSolidMaskBrushOnly,
 		}
 
-		if not t.Hit or t.StartSolid then continue end
-		local frac = t.HitPos:Distance(t.StartPos) / ink.ColRadiusFar
-		local radius = Lerp(frac, ink.InkRadiusBlastMax, ink.InkRadiusBlastMin)
-		ss.Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ss.GetDropType(), 1, ink.filter, ink.ClassName)
+		if t.Hit and not t.StartSolid then
+			local frac = t.HitPos:Distance(t.StartPos) / ink.ColRadiusFar
+			local radius = Lerp(frac, ink.InkRadiusBlastMax, ink.InkRadiusBlastMin)
+			ss.Paint(t.HitPos, t.HitNormal, radius, ink.Color, ink.Angle, ss.GetDropType(), 1, ink.filter, ink.ClassName)
+		end
 	end
 end
