@@ -4,11 +4,9 @@ if not ss then return end
 
 EFFECT.Alpha = 255
 EFFECT.InitRatio = 32
-EFFECT.InitSize = ScrH() / 40
 EFFECT.Ratio = EFFECT.InitRatio
 EFFECT.Rotated = false
 EFFECT.Rotation = 45
-EFFECT.Size = EFFECT.InitSize
 local RotationInverseTime = 2 * ss.FrameToSec
 local FadeStartTime = 4 * ss.FrameToSec
 local LifeTime = 6 * ss.FrameToSec
@@ -16,11 +14,12 @@ local LifeTimeCritical = 18 * ss.FrameToSec
 local mdl = Model "models/props_junk/PopCan01a.mdl"
 local hitnormal = "SplatoonSWEPs.DealDamage"
 local hitcritical = "SplatoonSWEPs.DealDamageCritical"
+local critsglow = Material "sprites/animglow02"
 local function AnimateCritical(self, t)
 	if t > LifeTime then
 		local f = math.EaseInOut(math.TimeFraction(LifeTime, LifeTimeCritical, t), 0, .75)
 		self.Alpha = Lerp(f, 255, 0)
-		self.Ratio = Lerp(f, 1, 24)
+		self.Ratio = Lerp(f, 1, 64)
 		self.Size = self.InitSize * Lerp(f, .2, .01)
 	else
 		local f = math.EaseInOut(t / LifeTime, .5, 0)
@@ -50,17 +49,19 @@ end
 
 function EFFECT:Init(e)
 	local ping = ss.mp and LocalPlayer():Ping() / 1000 or 0
+	local c = ss.GetColor(e:GetColor())
 	self:SetModel(mdl)
 	self:SetMaterial(ss.Materials.Effects.Invisible)
 	self:SetPos(e:GetOrigin())
-	self.Color = ss.GetColor(e:GetColor()):ToVector()
-	self.Color = (self.Color + ss.vector_one) / 2
+	self.Color = (c:ToVector() + ss.vector_one) / 2
 	self.Color = self.Color:ToColor()
 	self.Flags = e:GetFlags()
+	self.InitSize = ScrH() / 40
 	self.IsCritical = bit.band(self.Flags, 1) > 0
 	self.LifeTime = LifeTime
 	self.Material = ss.Materials.Effects.Hit
 	self.Rotation = self.Rotation + math.Rand(-45, 45) + math.random(0, 1) * 90
+	self.Size = self.InitSize
 	self.Time = CurTime() - ping
 	if bit.band(self.Flags, 2) > 0 then self.InitSize = self.InitSize * 2 end
 	if bit.band(self.Flags, 4) == 0 then
@@ -69,7 +70,8 @@ function EFFECT:Init(e)
 
 	if not self.IsCritical then return end
 	self.Animate = AnimateCritical
-	self.InitSize = self.InitSize * self.InitRatio
+	-- self.Color = c
+	self.InitSize = self.InitSize * self.InitRatio / 2
 	self.InitRatio = 1
 	self.LifeTime = LifeTimeCritical
 	self.Material = ss.Materials.Effects.HitCritical
@@ -93,6 +95,10 @@ function EFFECT:Render()
 	surface.SetDrawColor(ColorAlpha(self.Color, self.Alpha))
 	surface.SetMaterial(self.Material)
 	surface.DrawTexturedRectRotated(x, y, self.Size * self.Ratio, self.Size, self.Rotation)
+	if self.IsCritical then
+		surface.SetMaterial(critsglow)
+		surface.DrawTexturedRectRotated(x, y, self.Size * self.Ratio, self.Size, self.Rotation)
+	end
 	cam.End2D()
 end
 

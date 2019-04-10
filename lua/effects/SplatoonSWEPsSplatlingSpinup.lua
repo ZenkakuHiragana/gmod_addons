@@ -29,7 +29,7 @@ function EFFECT:Think()
 	local t = CurTime() - self.Time
 	local a = ent:GetAttachment(i)
 	local dx = self.TPS and -30 or -15
-	local dz = self.TPS and dz or 0
+	local dz = self.TPS and dz or dz / 2
 	local dt = EmissionDelay * (self.TPS and 1 or 2)
 	self.Emitter:SetPos(a.Pos)
 	while t < EmissionDuration and self.Count < math.floor(t / dt) do

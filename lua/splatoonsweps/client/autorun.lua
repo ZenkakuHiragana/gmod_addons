@@ -64,7 +64,7 @@ local MAX_TRIANGLES = math.floor(32768 / 3) -- mesh library limitation
 local INK_SURFACE_DELTA_NORMAL = .8 -- Distance between map surface and ink mesh
 function ss.PrepareInkSurface(write)
 	ss.GenerateBSPTree(write)
-	if ss.Lpower531Maps[game.GetMap()] then INK_SURFACE_DELTA_NORMAL = 2 end
+	if ss.SplatoonMapPorts[game.GetMap()] then INK_SURFACE_DELTA_NORMAL = 2 end
 	local numsurfs = #surf.Origins
 	local rtsize = rt.BaseTexture:Width()
 	local rtarea = rtsize^2

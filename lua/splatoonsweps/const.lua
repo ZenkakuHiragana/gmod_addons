@@ -84,7 +84,7 @@ ss.Materials = {
 	},
 	Effects = {
 		Hit = Material "splatoonsweps/effects/splatling_muzzleflash",
-		HitCritical = Material "particle/particle_glow_04_additive",
+		HitCritical = Material "particle/sparkles",
 		Ink = Material "splatoonsweps/inkeffect",
 		Invisible = Material "splatoonsweps/weapons/primaries/shared/weapon_hider",
 	},
@@ -118,17 +118,35 @@ ss.ViewModel = { -- Viewmodel animations
 	Throw = ACT_VM_THROW, -- Actual throw animation
 }
 
-ss.Lpower531Maps = { -- HACKHACK - These are Splatoon maps made by Lpower531. It has special decals that hides our ink.
-	gm_camp_triggerfish_day_closegate = true,
-	gm_camp_triggerfish_day_opengate = true,
-	gm_camp_triggerfish_night_closegate = true,
-	gm_camp_triggerfish_night_opengate = true,
+-- HACKHACK
+-- This is a list of Splatoon maps available in Garry's Mod.
+-- They seem unusual and hide our ink.
+ss.SplatoonMapPorts = {
+	-- gm_arena_octostomp = true,
+	-- gm_camp_triggerfish_day_closegate = true,
+	-- gm_camp_triggerfish_day_opengate = true,
+	-- gm_camp_triggerfish_night_closegate = true,
+	-- gm_camp_triggerfish_night_opengate = true,
 	gm_flounder_heights_day = true,
 	gm_flounder_heights_night = true,
 	gm_kelp_dome = true,
 	gm_kelp_dome_fes = true,
+	-- gm_mako_mart = true,
+	-- gm_mako_mart_night = true,
 	gm_moray_towers = true,
 	gm_new_albacore_hotel = true,
+	-- gm_octo_showdown = true,
+	-- gm_snapper_canal = true,
+	-- gm_snapper_canal_night = true,
+	-- gm_spawning_grounds_fog_high = true,
+	-- gm_spawning_grounds_fog_low = true,
+	-- gm_spawning_grounds_fog_normal = true,
+	-- gm_spawning_grounds_high = true,
+	-- gm_spawning_grounds_low = true,
+	-- gm_spawning_grounds_night_high = true,
+	-- gm_spawning_grounds_night_low = true,
+	-- gm_spawning_grounds_night_normal = true,
+	-- gm_spawning_grounds_normal = true,
 }
 
 function ss.GetSquidmodel(pmid)
