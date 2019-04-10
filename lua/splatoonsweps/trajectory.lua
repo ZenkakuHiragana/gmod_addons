@@ -740,7 +740,7 @@ function ss.MakeBlasterExplosion(ink)
 	local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
 	local damagedealt = false
 	for _, e in ipairs(ents.FindInSphere(ink.endpos, ink.ColRadiusFar)) do
-		if IsValid(e) and not ss.IsAlly(e) and e:Health() > 0 and not hurtowner and e ~= ink.filter then
+		if IsValid(e) and e:Health() > 0 and (not ss.IsAlly(e) or hurtowner and e == ink.filter) then
 			local dmg = ink.DamageClose
 			local dist = Vector()
 			local maxs, mins = e:OBBMaxs(), e:OBBMins()
@@ -753,29 +753,35 @@ function ss.MakeBlasterExplosion(ink)
 				if segment > size[i] then dist = dist + sign * (size[i] - segment) * dir end
 			end
 
-			if ink.IsCarriedByLocalPlayer then
-				HitEffect(ink.Color, damagedealt and 6 or 2, ink.endpos + dist, -dist)
-				if CLIENT and e ~= ink.filter then damagedealt = true break end
-			end
+			local t = ss.SquidTrace
+			t.start = ink.endpos
+			t.endpos = ink.endpos + dist
+			t = util.TraceLine(t)
+			if not t.Hit or t.Entity == e then
+				if ink.IsCarriedByLocalPlayer then
+					HitEffect(ink.Color, damagedealt and 6 or 2, ink.endpos + dist, -dist)
+					if CLIENT and e ~= ink.filter then damagedealt = true break end
+				end
 
-			damagedealt = damagedealt or ss.sp or e == ink.filter
-			dist = dist:Length()
-			if dist > ink.ColRadiusMiddle then
-				dmg = math.Remap(dist, ink.ColRadiusMiddle, ink.ColRadiusFar, ink.DamageMiddle, ink.DamageFar)
-			elseif dist > ink.ColRadiusClose then
-				dmg = math.Remap(dist, ink.ColRadiusClose, ink.ColRadiusMiddle, ink.DamageClose, ink.DamageMiddle)
-			end
+				damagedealt = damagedealt or ss.sp or e == ink.filter
+				dist = dist:Length()
+				if dist > ink.ColRadiusMiddle then
+					dmg = math.Remap(dist, ink.ColRadiusMiddle, ink.ColRadiusFar, ink.DamageMiddle, ink.DamageFar)
+				elseif dist > ink.ColRadiusClose then
+					dmg = math.Remap(dist, ink.ColRadiusClose, ink.ColRadiusMiddle, ink.DamageClose, ink.DamageMiddle)
+				end
 
-			d:SetDamage(dmg)
-			d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * dmg)
-			d:SetDamagePosition(ink.endpos)
-			d:SetDamageType(DMG_GENERIC)
-			d:SetMaxDamage(dmg)
-			d:SetReportedPosition(ink.endpos)
-			d:SetAttacker(attacker)
-			d:SetInflictor(inflictor)
-			d:ScaleDamage(ss.ToHammerHealth)
-			ss.ProtectedCall(e.TakeDamageInfo, e, d)
+				d:SetDamage(dmg)
+				d:SetDamageForce((e:WorldSpaceCenter() - ink.endpos):GetNormalized() * dmg)
+				d:SetDamagePosition(ink.endpos)
+				d:SetDamageType(DMG_GENERIC)
+				d:SetMaxDamage(dmg)
+				d:SetReportedPosition(ink.endpos)
+				d:SetAttacker(attacker)
+				d:SetInflictor(inflictor)
+				d:ScaleDamage(ss.ToHammerHealth)
+				ss.ProtectedCall(e.TakeDamageInfo, e, d)
+			end
 		end
 	end
 

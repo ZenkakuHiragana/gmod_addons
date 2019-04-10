@@ -1906,7 +1906,7 @@ function ss.MoveHook(w, p, m)
 	end
 
 	w.OnOutofInk = w:GetInWallInk()
-	w:SetOldCrouching(crouching)
+	w:SetOldCrouching(crouching or infence)
 	me.m_angViewPunchAngles[ply] = ply:GetViewPunchAngles()
 	me.m_bAllowAutoMovement[ply] = true
 	me.m_bInDuckJump[ply] = crouching and not ply:OnGround()

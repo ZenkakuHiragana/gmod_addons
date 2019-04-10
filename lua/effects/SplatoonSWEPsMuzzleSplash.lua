@@ -13,7 +13,7 @@ local deep = "SplatoonSWEPs_Player.InkDiveDeep"
 local shallow = "SplatoonSWEPs_Player.InkDiveShallow"
 local drawviewmodel = GetConVar "r_drawviewmodel"
 function EFFECT:GetMuzzlePosition()
-	if not IsValid(self.Weapon) then return self.Pos, self.Ang end
+	if not IsValid(self.Weapon) then return self.Pos, self.Angle end
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	ang:RotateAroundAxis(ang:Forward(), self.Angle.z)
 	ang:RotateAroundAxis(ang:Right(), self.Angle.p)
