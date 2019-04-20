@@ -123,6 +123,8 @@ ss.ViewModel = { -- Viewmodel animations
 -- They seem unusual and hide our ink.
 ss.SplatoonMapPorts = {
 	-- gm_arena_octostomp = true,
+	gm_blackbelly_skatepark = true,
+	gm_blackbelly_skatepark_night = true,
 	-- gm_camp_triggerfish_day_closegate = true,
 	-- gm_camp_triggerfish_day_opengate = true,
 	-- gm_camp_triggerfish_night_closegate = true,
