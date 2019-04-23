@@ -107,16 +107,27 @@ function SWEP:GetOptions(opt, getopt)
 	self:SetNWInt("inkcolor", ss.GetNPCInkColor(self.Owner))
 end
 
+function SWEP:ApplySkinAndBodygroups()
+	self:SetSkin(self.Skin or 0)
+	for k, v in pairs(self.Bodygroup or {}) do
+		self:SetBodygroup(k, v)
+	end
+end
+
 -- When NPC weapon is picked up by player.
 function SWEP:OwnerChanged()
 	if not IsValid(self.Owner) then
 		if SERVER then
+			self:CreateRagdoll()
 			timer.Simple(5, function()
 				if not IsValid(self) or IsValid(self.Owner) then return end
 				self:Remove()
 			end)
 		end
 		return self:StopLoopSound()
+	elseif IsValid(self.Ragdoll) and self.Owner:IsPlayer() then
+		self.Owner:Give(self.ClassName)
+		self:Remove()
 	else
 		return self:PlayLoopSound()
 	end
@@ -172,6 +183,7 @@ end
 
 function SWEP:SharedInitBase()
 	self:SetCooldown(CurTime())
+	self:ApplySkinAndBodygroups()
 	self.SwimSound = CreateSound(self, ss.SwimSound)
 	self.EnemyInkSound = CreateSound(self, ss.EnemyInkSound)
 	self.LastKeyDown = {}
@@ -236,15 +248,10 @@ function SWEP:SharedHolsterBase()
 end
 
 function SWEP:SharedThinkBase()
-	self:SetSkin(self.Skin or 0)
-	for k, v in pairs(self.Bodygroup or {}) do
-		self:SetBodygroup(k, v)
-	end
-
 	local ShouldNoDraw = Either(self:GetNWBool "becomesquid", self:Crouching(), self:GetInInk())
 	self.Owner:DrawShadow(not ShouldNoDraw)
 	self:DrawShadow(not ShouldNoDraw)
-
+	self:ApplySkinAndBodygroups()
 	ss.ProtectedCall(self.SharedThink, self)
 end
 
@@ -311,7 +318,7 @@ function SWEP:ChangeInInk(name, old, new)
 	if not IsValid(self.Owner) or self:GetHolstering() then return end
 	local outofink, intoink = old and not new, not old and new
 	if not intoink then self:SetOldSpeed(self.Owner:GetVelocity().z) end
-	if outofink == intoink then return end
+	if old == new then return end
 	if intoink and self:IsFirstTimePredicted() then
 		if self.Owner:IsPlayer() then self.Owner:SetDSP(14) end
 		local velocity = math.abs(self:GetOldSpeed())
@@ -334,8 +341,8 @@ end
 
 function SWEP:ChangeOnEnemyInk(name, old, new)
 	if self:GetHolstering() then return end
+	if old == new then return end
 	local outofink, intoink = old and not new, not old and new
-	if outofink == intoink then return end
 	if intoink then
 		self.EnemyInkSound:ChangeVolume(1, .5)
 		if self:IsFirstTimePredicted() then

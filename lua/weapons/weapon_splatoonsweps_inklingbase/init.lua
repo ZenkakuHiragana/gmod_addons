@@ -42,6 +42,54 @@ function SWEP:ChangePlayermodel(data)
 	hands:SetBodyGroups(info.body)
 end
 
+function SWEP:CreateRagdoll()
+	local ragdoll = self.Ragdoll
+	if IsValid(ragdoll) then ragdoll:Remove() end
+	ragdoll = ents.Create "prop_ragdoll"
+	ragdoll:SetModel(self.WorldModel)
+	ragdoll:SetPos(self:GetPos())
+	ragdoll:SetAngles(self:GetAngles())
+	ragdoll:SetNoDraw(true)
+	ragdoll:DeleteOnRemove(self)
+	ragdoll:Spawn()
+	ragdoll:SetCollisionGroup(COLLISION_GROUP_WEAPON)
+	if ragdoll:GetPhysicsObjectCount() == 1 then
+		ragdoll:Remove()
+		return
+	end
+
+	self:PhysicsDestroy()
+	self:SetMoveType(MOVETYPE_NONE)
+	self:SetParent(ragdoll)
+	self:AddEffects(EF_BONEMERGE)
+	self:DeleteOnRemove(ragdoll)
+	self.Ragdoll = ragdoll
+	local n = "SplatoonSWEPs: RagdollCollisionCheck" .. self:EntIndex()
+	timer.Create(n, 0, 0, function()
+		if not (IsValid(self) and IsValid(ragdoll)) then timer.Remove(n) return end
+		local nearest, ply = self:BoundingRadius()^2, NULL
+		for _, p in ipairs(ss.PlayersReady) do
+			local d = p:GetPos():DistToSqr(ragdoll:GetPos())
+			if d < nearest then nearest, ply = d, p end
+		end
+
+		if not IsValid(ply) then return end
+		ply:Give(self.ClassName)
+		self:Remove()
+		timer.Remove(n)
+	end)
+end
+
+function SWEP:RemoveRagdoll()
+	local ragdoll = self.Ragdoll
+	if not IsValid(ragdoll) then return end
+	self:DontDeleteOnRemove(ragdoll)
+	self:RemoveEffects(EF_BONEMERGE)
+	self:SetParent(NULL)
+	ragdoll:DontDeleteOnRemove(self)
+	ragdoll:Remove()
+end
+
 function SWEP:Initialize()
 	self:SetHolstering(true)
 	self:SetInInk(false)
@@ -49,6 +97,12 @@ function SWEP:Initialize()
 	self:SetInk(ss.GetMaxInkAmount())
 	self:SetInkColorProxy(ss.vector_one)
 	self:SharedInitBase()
+	timer.Simple(0, function()
+		if not IsValid(self) then return end
+		if IsValid(self.Owner) then return end
+		self:CreateRagdoll()
+	end)
+
 	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
 		self:SetSaveValue("m_fMinRange1", 0)
 		self:SetSaveValue("m_fMinRange2", 0)
@@ -198,6 +252,7 @@ function SWEP:Deploy()
 end
 
 function SWEP:OnRemove()
+	self:RemoveRagdoll()
 	self:StopLoopSound()
 	self:EndRecording()
 end

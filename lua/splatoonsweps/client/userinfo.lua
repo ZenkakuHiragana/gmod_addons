@@ -268,7 +268,7 @@ local function GenerateWeaponIcons(tab)
 			end):SetIcon "icon16/page_copy.png"
 			menu:AddOption("#spawnmenu.menu.spawn_with_toolgun", function()
 				RunConsoleCommand("gmod_tool", "creator")
-				RunConsoleCommand("creator_type", "0")
+				RunConsoleCommand("creator_type", "3")
 				RunConsoleCommand("creator_name", t.ClassName)
 			end):SetIcon "icon16/brick_add.png"
 			menu:AddSpacer()
