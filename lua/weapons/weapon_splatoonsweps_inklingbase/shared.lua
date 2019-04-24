@@ -124,6 +124,7 @@ function SWEP:OwnerChanged()
 				self:Remove()
 			end)
 		end
+
 		return self:StopLoopSound()
 	elseif IsValid(self.Ragdoll) and self.Owner:IsPlayer() then
 		self.Owner:Give(self.ClassName)
@@ -196,12 +197,13 @@ function SWEP:SharedInitBase()
 		"ar2",
 		"crossbow",
 		"grenade",
+		"melee",
 		"melee2",
 		"passive",
 		"revolver",
 		"rpg",
 		"shotgun",
-		"smg"
+		"smg",
 	} do
 		self:SetWeaponHoldType(t)
 		translate[t] = self.ActivityTranslate

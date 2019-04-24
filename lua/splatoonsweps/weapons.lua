@@ -151,6 +151,10 @@ function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(p, info)
 	p.PostFireDelay = info.Delay.PostFire * ss.FrameToSec
 end
 
+function ss.CustomPrimary.weapon_splatoonsweps_roller(p, info)
+	ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
+end
+
 local SplatoonSWEPsMuzzleSplash = 0
 local SplatoonSWEPsMuzzleRing = 1
 local SplatoonSWEPsMuzzleMist = 2

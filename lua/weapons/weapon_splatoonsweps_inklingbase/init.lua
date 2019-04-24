@@ -42,23 +42,25 @@ function SWEP:ChangePlayermodel(data)
 	hands:SetBodyGroups(info.body)
 end
 
+local UseRagdoll = {
+	weapon_splatoonsweps_roller = true,
+	weapon_splatoonsweps_splatling = true,
+}
 function SWEP:CreateRagdoll()
+	if not UseRagdoll[self.Base] then return end
 	local ragdoll = self.Ragdoll
 	if IsValid(ragdoll) then ragdoll:Remove() end
 	ragdoll = ents.Create "prop_ragdoll"
 	ragdoll:SetModel(self.WorldModel)
 	ragdoll:SetPos(self:GetPos())
 	ragdoll:SetAngles(self:GetAngles())
-	ragdoll:SetNoDraw(true)
+	ragdoll:SetMaterial(ss.Materials.Effects.Invisible:GetName(), true)
 	ragdoll:DeleteOnRemove(self)
 	ragdoll:Spawn()
 	ragdoll:SetCollisionGroup(COLLISION_GROUP_WEAPON)
-	if ragdoll:GetPhysicsObjectCount() == 1 then
-		ragdoll:Remove()
-		return
-	end
 
 	self:PhysicsDestroy()
+	self:DrawShadow(false)
 	self:SetMoveType(MOVETYPE_NONE)
 	self:SetParent(ragdoll)
 	self:AddEffects(EF_BONEMERGE)
@@ -81,8 +83,10 @@ function SWEP:CreateRagdoll()
 end
 
 function SWEP:RemoveRagdoll()
+	if not UseRagdoll[self.Base] then return end
 	local ragdoll = self.Ragdoll
 	if not IsValid(ragdoll) then return end
+	self:DrawShadow(true)
 	self:DontDeleteOnRemove(ragdoll)
 	self:RemoveEffects(EF_BONEMERGE)
 	self:SetParent(NULL)

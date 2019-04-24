@@ -191,7 +191,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	if not IsValid(self.Owner) then return end
 	local p = self.Primary
 	local timescale = ss.GetTimeScale(self.Owner)
-	self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / timescale)
+	self:SetNextPrimaryFire(CurTime() + p.Delay / timescale)
 	self:SetInk(math.max(0, self:GetInk() - self:GetTakeAmmo()))
 	self:SetCooldown(math.max(self:GetCooldown(),
 	CurTime() + math.min(p.Delay, p.CrouchDelay) / timescale))

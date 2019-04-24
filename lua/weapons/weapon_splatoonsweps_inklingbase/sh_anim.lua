@@ -51,9 +51,19 @@ function SWEP:SetWeaponHoldType(t)
 	self:SetupWeaponHoldTypeForAI(t)
 end
 
+local NPCHoldType = {
+	weapon_splatoonsweps_blaster_base = "smg",
+	weapon_splatoonsweps_charger = "smg",
+	weapon_splatoonsweps_shooter = "smg",
+	weapon_splatoonsweps_splatling = "smg",
+	weapon_splatoonsweps_roller = "melee",
+}
 function SWEP:TranslateActivity(act)
 	if self.Owner:IsNPC() then
-		return self.ActivityTranslateAI[act] or -1
+		local h = NPCHoldType[self.Base]
+		local a = self.ActivityTranslateAI
+		local invalid = self.Owner:SelectWeightedSequence(a[h][act] or 0) < 0
+		return not invalid and a[h][act] or a.smg[act] or -1
 	end
 
 	local holdtype = ss.ProtectedCall(self.CustomActivity, self) or "passive"
@@ -62,12 +72,7 @@ function SWEP:TranslateActivity(act)
 	self.HoldType = holdtype
 
 	local translate = self.Translate[holdtype]
-	if not translate then return -1 end
-	if translate[act] then
-		return translate[act]
-	end
-
-	return -1
+	return translate and translate[act] or -1
 end
 
 -- event = 5xyy, x = option index, yy = effect type
