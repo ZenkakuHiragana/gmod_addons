@@ -39,6 +39,7 @@ function SWEP:Move(ply)
 	local keyrelease = not (ply:IsPlayer() and ply:KeyDown(IN_ATTACK))
 	if mode == self.MODE.PAINT and keyrelease and CurTime() > self:GetEndTime() + self.SwingBackWait then
 		self:SetMode(self.MODE.READY)
+		self:SetWeaponAnim(ACT_VM_IDLE)
 		self:SetStartTime(CurTime())
 	end
 
@@ -46,6 +47,7 @@ function SWEP:Move(ply)
 	if mode ~= self.MODE.ATTACK then return end
 	if CurTime() < self:GetEndTime() then return end
 	self:SetMode(self.MODE.PAINT)
+	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
 end
 
 function SWEP:UpdateAnimation(ply, velocity, maxseqspeed)

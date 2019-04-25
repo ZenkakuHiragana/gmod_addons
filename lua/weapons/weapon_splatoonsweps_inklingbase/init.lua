@@ -315,10 +315,4 @@ function SWEP:Think()
 	if self.Owner:GetPlayerColor() ~= self:GetInkColorProxy() then
 		self.Owner:SetPlayerColor(self:GetInkColorProxy())
 	end
-
-	local vm = self:GetViewModel()
-	if not IsValid(vm) then return end
-	if vm:GetSequenceActivityName(vm:GetSequence()) == "ACT_VM_DRAW" and vm:GetCycle() > 0.999 then
-		self:SetWeaponAnim(ACT_VM_IDLE)
-	end
 end
