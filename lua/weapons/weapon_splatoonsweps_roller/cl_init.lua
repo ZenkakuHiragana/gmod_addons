@@ -5,20 +5,31 @@ include "shared.lua"
 
 local Pitch = Angle(1, 0, 0)
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
+	self.VMBones = self.VMBones or {
+		Neck = vm:LookupBone "neck_1",
+		Roll = vm:LookupBone "roll_root_1",
+		Root = vm:LookupBone "root_1",
+	}
 	local a = CurTime() * 360 * Pitch
-	self:ManipulateBoneAngles(self:LookupBone "roll_root_1", a)
-	if not IsValid(vm) then return end
 	if self.ViewModelFlip then a.p = -a.p end
-	vm:ManipulateBoneAngles(vm:LookupBone "roll_root_1", a)
+	vm:ManipulateBoneAngles(self.VMBones.Roll, a)
 	function vm.GetInkColorProxy()
 		return ss.ProtectedCall(self.GetInkColorProxy, self) or ss.vector_one
 	end
 end
 
+local RollLerpTime = 5 * ss.FrameToSec
 function SWEP:PreDrawWorldModel(vm, weapon, ply)
+	self.Bones = self.Bones or {
+		Neck = self:LookupBone "neck_1",
+		Roll = self:LookupBone "roll_root_1",
+		Root = self:LookupBone "root_1",
+	}
 	local a = CurTime() * 360 * Pitch
-	self:ManipulateBoneAngles(self:LookupBone "roll_root_1", a)
+	self:ManipulateBoneAngles(self.Bones.Roll, a)
+	self:ManipulateBoneAngles(self.Bones.Root, angle_zero)
 
+	-- Animate the neck
 	local mode = self:GetMode()
 	local neck, start, duration, n1, n2 = 0, self:GetStartTime()
 	if mode ~= self.MODE.PAINT then
@@ -32,9 +43,63 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 
 		local f = math.TimeFraction(start, start + duration, CurTime())
 		neck = Lerp(math.EaseInOut(math.Clamp(f, 0, 1), .25, .25), n1, n2)
+	else -- Adjust the angle
+		local t = self:GetEndTime()
+		local d  = self.SwingAnimTime + RollLerpTime
+		local f = math.TimeFraction(t, t + d, CurTime())
+		local a = self:GetManipulateBoneAngles(self.Bones.Root)
+		local dir = self:GetAimVector()
+		local right = self:GetRight()
+		f = math.EaseInOut(math.Clamp(f, 0, 1), 0, RollLerpTime / d)
+		dir.z = 0
+		dir:Normalize()
+		local l = {
+			start = self:GetPos() + vector_up * 60,
+			endpos = self:GetPos() + vector_up * 60 + dir * 60 + right * 30,
+			filter = {self.Owner, self},
+		}
+		local r = {
+			start = self:GetPos() + vector_up * 60,
+			endpos = self:GetPos() + vector_up * 60 + dir * 60 - right * 30,
+			filter = {self.Owner, self},
+		}
+		local trleft = util.TraceLine(l)
+		local trright = util.TraceLine(r)
+		greatzenkakuman.debug.DTick()
+		greatzenkakuman.debug.DLine(trleft.StartPos, trleft.HitPos)
+		greatzenkakuman.debug.DLine(trright.StartPos, trright.HitPos)
+		l = {
+			start = trleft.HitPos,
+			endpos = trleft.HitPos - vector_up * 60 * 2,
+			filter = {self.Owner, self},
+		}
+		r = {
+			start = trright.HitPos,
+			endpos = trright.HitPos - vector_up * 60 * 2,
+			filter = {self.Owner, self},
+		}
+		trleft = util.TraceLine(l)
+		trright = util.TraceLine(r)
+		greatzenkakuman.debug.DLine(trleft.StartPos, trleft.HitPos)
+		greatzenkakuman.debug.DLine(trright.StartPos, trright.HitPos)
+
+		local att = self.Owner:GetAttachment(self.Owner:LookupAttachment "anim_attachment_RH")
+		local org = att.Pos
+		local forward = att.Ang:Up()
+		local hitpos = (trleft.HitPos + trright.HitPos) / 2
+		dir = hitpos - org
+		greatzenkakuman.debug.DVector(org, dir)
+		dir:Normalize()
+		local ang = math.deg(math.acos(forward:Dot(dir)))
+		local sign = forward:Cross(dir):Dot(right)
+		ang = ang * (sign == 0 and 0 or sign > 0 and -1 or 1) - 20
+		greatzenkakuman.debug.DVector(org, forward * 100)
+		greatzenkakuman.debug.DVector(org, forward:Cross(dir) * 100)
+		greatzenkakuman.debug.DVector(org, right * 100)
+		self:ManipulateBoneAngles(self.Bones.Root, LerpAngle(f, a, Angle(ang, 18, 0)))
 	end
 
-	self:ManipulateBoneAngles(self:LookupBone "neck_1", Angle(0, 0, neck))
+	self:ManipulateBoneAngles(self.Bones.Neck, Angle(0, 0, neck))
 end
 
 SWEP.SwayTime = 12 * ss.FrameToSec
@@ -86,8 +151,11 @@ function SWEP:GetMuzzlePosition()
 	return a.Pos, a.Ang
 end
 
+function SWEP:ClientInit()
+	self.Bodygroup = table.Copy(self.Bodygroup or {})
+end
+
 function SWEP:ClientThink()
-	if not self.Bodygroup then return end
 	self.Bodygroup[1] = self:GetInk() > self:GetTakeAmmo() and 0 or 1
 end
 

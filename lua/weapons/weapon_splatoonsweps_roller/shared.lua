@@ -10,6 +10,9 @@ function SWEP:SharedInit()
 	self.SwingAnimTime = 10 * ss.FrameToSec
 	self.SwingBackWait = 20 * ss.FrameToSec
 	self.Primary.SwingWaitTime = 20 * ss.FrameToSec
+	self:SetStartTime(CurTime())
+	self:SetEndTime(CurTime())
+	self:SetMode(self.MODE.READY)
 end
 
 function SWEP:SharedPrimaryAttack(able, auto)
