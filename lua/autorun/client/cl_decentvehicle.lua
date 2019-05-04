@@ -22,10 +22,10 @@ local function NotifyUpdate(d)
 	if not d then return end
 	local header = d.description:match "Version[^%c]+" or ""
 	dvd.Texts.Version = "Decent Vehicle: " .. header
-	
+
 	local showupdates = GetConVar "dv_route_showupdates"
 	if not (showupdates and showupdates:GetBool()) then return end
-	
+
 	if not file.Exists("decentvehicle", "DATA") then file.CreateDir "decentvehicle" end
 	local versionfile = "decentvehicle/version.txt"
 	local checkedversion = string.Explode(".", file.Read(versionfile) or "0.0.0")
@@ -35,18 +35,20 @@ local function NotifyUpdate(d)
 		notification.AddLegacy(dvd.Texts.OldVersionNotify, NOTIFY_ERROR, 15)
 	elseif CompareVersion(checkedversion, dvd.Version) then
 		notification.AddLegacy("Decent Vehicle " .. header, NOTIFY_GENERIC, 18)
-		
+
 		local i = 0
-		local description = d.description:sub(1, d.description:find "quote=Decent Vehicle" - 2)
+		local sub = d.description:find "quote=Decent Vehicle"
+		if not sub then return end
+		local description = d.description:sub(1, sub - 2)
 		for update in description:gmatch "%[%*%][^%c]+" do
 			timer.Simple(3 * i, function()
 				if not showupdates:GetBool() then return end
 				notification.AddLegacy(update:sub(4), NOTIFY_UNDO, 6)
 			end)
-			
+
 			i = i + 1
 		end
-		
+
 		file.Write(versionfile, string.format("%d.%d.%d",
 		dvd.Version[1], dvd.Version[2], dvd.Version[3]))
 	end
@@ -69,10 +71,10 @@ net.Receive("Decent Vehicle: Remove a waypoint", function()
 				table.insert(Neighbors, n)
 			end
 		end
-		
+
 		w.Neighbors = Neighbors
 	end
-	
+
 	table.remove(dvd.Waypoints, id)
 end)
 
@@ -131,14 +133,14 @@ net.Receive("Decent Vehicle: Save and restore", function()
 	Text:SizeToContents()
 	Text:Center()
 	Confirm:MakePopup()
-	
+
 	function Cancel:DoClick() Confirm:Close() end
 	function OK:DoClick()
 		net.Start "Decent Vehicle: Save and restore"
 		net.WriteUInt(save, dvd.POPUPWINDOW.BITS)
 		net.SendToServer()
 		notification.AddLegacy(Notifications[save + 1], NOTIFY_GENERIC, 5)
-		
+
 		Confirm:Close()
 	end
 end)
@@ -151,7 +153,7 @@ hook.Add("InitPostEntity", "Decent Vehicle: Load waypoints", function()
 	net.Start "Decent Vehicle: Retrive waypoints"
 	net.WriteUInt(1, 24)
 	net.SendToServer()
-	
+
 	steamworks.FileInfo("1587455087", NotifyUpdate)
 end)
 
@@ -171,7 +173,7 @@ net.Receive("Decent Vehicle: Retrive waypoints", function()
 	for i = 1, num do
 		table.insert(neighbors, net.ReadUInt(24))
 	end
-	
+
 	dvd.Waypoints[id] = {
 		Target = pos,
 		TrafficLight = traffic,
@@ -182,7 +184,7 @@ net.Receive("Decent Vehicle: Retrive waypoints", function()
 		Group = group,
 		Neighbors = neighbors,
 	}
-	
+
 	net.Start "Decent Vehicle: Retrive waypoints"
 	net.WriteUInt(id + 1, 24)
 	net.SendToServer()
@@ -221,7 +223,7 @@ hook.Add("PostDrawTranslucentRenderables", "Decent Vehicle: Draw waypoints",
 function(bDrawingDepth, bDrawingSkybox)
 	local weapon = LocalPlayer():GetActiveWeapon()
 	if not IsValid(weapon) then return end
-	
+
 	local always = GetConVar "dv_route_showalways"
 	local showpoints = GetConVar "dv_route_showpoints"
 	local drawdistance = GetConVar "dv_route_drawdistance"
@@ -235,7 +237,7 @@ function(bDrawingDepth, bDrawingSkybox)
 	local Radius = UpdateRadius and UpdateRadius:GetInt() or 0
 	local RadiusSqr = Radius^2
 	if not (always:GetBool() or ToolEquipped) then return end
-	
+
 	if bDrawingSkybox or not (showpoints and showpoints:GetBool()) then return end
 	if MultiEdit then
 		render.SetMaterial(SelectRadiusMaterial)
@@ -274,7 +276,7 @@ function(bDrawingDepth, bDrawingSkybox)
 				render.DrawSprite(w.Target + Height, size, size, color_white)
 			end
 		end
-		
+
 		render.SetMaterial(LinkMaterial)
 		for _, link in ipairs(w.Neighbors) do
 			local n = dvd.Waypoints[link]
@@ -285,7 +287,7 @@ function(bDrawingDepth, bDrawingSkybox)
 				render.DrawBeam(w.Target + Height, pos + Height, 20, texbase, texbase + tex, color_white)
 			end
 		end
-		
+
 		if IsValid(w.TrafficLight) then
 			local pos = w.TrafficLight:GetPos()
 			if visible or EyeAngles():Forward():Dot(pos - EyePos()) > 0 then
@@ -294,6 +296,17 @@ function(bDrawingDepth, bDrawingSkybox)
 				render.DrawBeam(w.Target + Height, pos, 20, 0, tex, color_white)
 			end
 		end
+	end
+
+	render.SetMaterial(TrafficMaterial)
+	for m in pairs(dvd.WireManagers) do
+		local i = m:GetNWInt "WaypointID"
+		if i < 0 then continue end
+		local w = dvd.Waypoints[i]
+		if not w then continue end
+		local pos = w.Target + Height
+		local tex = m:GetPos():Distance(pos) / 100
+		render.DrawBeam(m:GetPos(), pos, 20, 0, tex, color_white)
 	end
 end)
 

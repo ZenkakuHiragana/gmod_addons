@@ -22,17 +22,17 @@ function ENT:Initialize()
 	self:SetModel "models/decentvehicle/trafficlight.mdl"
 	self:PhysicsInit(SOLID_VPHYSICS)
 	self:SetMoveType(MOVETYPE_VPHYSICS)
-	
+
 	local phys = self:GetPhysicsObject()
 	if not IsValid(phys) then return end
 	phys:SetMass(50)
 	phys:Wake()
-	
+
 	self:DrawShadow(false)
 	self:Fire "DisableCollision"
 	self:SetNWInt("DVTL_LightColor", 1)
 	self:SetPattern(1)
-	
+
 	self.Waypoints = {}
 end
 
@@ -48,9 +48,13 @@ function ENT:SpawnFunction(ply, tr, ClassName)
 end
 
 function ENT:Think()
-	local color = dvd.TrafficLights[self:GetPattern()].Light
+	local p = self:GetPattern()
+	if not p then return end
+	local tl = dvd.TrafficLights[p]
+	if not tl then return end
+	local color = tl.Light
 	self:SetNWInt("DVTL_LightColor", color)
-	
+
 	for i = 1, 3 do
 		self:SetSubMaterial(i, LightTable[color][i])
 	end

@@ -54,18 +54,18 @@ local function OverwriteWaypoints(source)
 	dvd.DriveSide = source.DriveSide or 0
 	ClearUndoList()
 	table.Empty(dvd.Waypoints)
-	
+
 	if player.GetCount() > 0 then
 		net.Start "Decent Vehicle: Sync CVar"
 		net.Broadcast()
 		net.Start "Decent Vehicle: Clear waypoints"
 		net.Broadcast()
 	end
-	
+
 	for i, t in ipairs(ents.GetAll()) do
 		if t.IsDVTrafficLight then t:Remove() end
 	end
-	
+
 	for i, w in ipairs(source) do
 		local new = dvd.AddWaypoint(w.Target)
 		for key, value in pairs(w) do
@@ -73,7 +73,7 @@ local function OverwriteWaypoints(source)
 			new[key] = value
 		end
 	end
-	
+
 	for i, t in ipairs(source.TrafficLights) do
 		local traffic = ents.Create(t.ClassName)
 		if not IsValid(traffic) then continue end
@@ -86,13 +86,13 @@ local function OverwriteWaypoints(source)
 			if not dvd.Waypoints[id] then continue end
 			dvd.Waypoints[id].TrafficLight = traffic
 		end
-		
+
 		local p = traffic:GetPhysicsObject()
 		if IsValid(p) then p:Sleep() end
 	end
-	
+
 	hook.Run("Decent Vehicle: OnLoadWaypoints", source)
-	
+
 	if #dvd.Waypoints * player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Retrive waypoints"
 	WriteWaypoint(1)
@@ -116,7 +116,7 @@ local function ParseAIN()
 	local path = string.format("maps/graphs/%s.ain", game.GetMap())
 	local f = file.Open(path, "rb", "GAME")
 	if not f then return end
-	
+
 	local node_version = f:ReadLong()
 	local map_version = f:ReadLong()
 	local numNodes = f:ReadLong()
@@ -124,10 +124,10 @@ local function ParseAIN()
 		node_version = node_version,
 		map_version = map_version,
 	}
-	
+
 	assert(node_version == NODE_VERSION_NUMBER, "Decent Vehicle: Unknown graph file.")
 	assert(0 <= numNodes and numNodes <= MAX_NODES, "Decent Vehicle: Graph file has an unexpected amount of nodes")
-	
+
 	local nodes = {}
 	for i = 1, numNodes do
 		local x = f:ReadFloat()
@@ -139,7 +139,7 @@ local function ParseAIN()
 		for i = 1, HULLS do
 			flOffsets[i] = f:ReadFloat()
 		end
-		
+
 		local nodetype = f:ReadByte()
 		local nodeinfo = f:ReadUShort()
 		local zone = f:ReadShort()
@@ -155,10 +155,10 @@ local function ParseAIN()
 			link = {},
 			numlinks = 0
 		}
-		
+
 		table.insert(nodes, node)
 	end
-	
+
 	local numLinks = f:ReadLong()
 	local links = {}
 	for i = 1, numLinks do
@@ -169,31 +169,31 @@ local function ParseAIN()
 		local nodedest = assert(nodes[destID + 1], "Decent Vehicle: Unknown destination node")
 		table.insert(nodesrc. neighbor, nodedest)
 		nodesrc.numneighbors = nodesrc.numneighbors + 1
-		
+
 		table.insert(nodesrc.link, link)
 		nodesrc.numlinks = nodesrc.numlinks + 1
 		link.src, link.srcID = nodesrc, srcID + 1
-		
+
 		table.insert(nodedest.neighbor, nodesrc)
 		nodedest.numneighbors = nodedest.numneighbors + 1
-		
+
 		table.insert(nodedest.link, link)
 		nodedest.numlinks = nodedest.numlinks + 1
 		link.dest, link.destID = nodedest, destID + 1
-		
+
 		link.move = {}
 		for i = 1, HULLS do
 			link.move[i] = f:ReadByte()
 		end
-		
+
 		table.insert(links, link)
 	end
-	
+
 	local lookup = {}
 	for i = 1, numNodes do
 		table.insert(lookup, f:ReadLong())
 	end
-	
+
 	f:Close()
 	nodegraph.nodes = nodes
 	nodegraph.links = links
@@ -209,7 +209,7 @@ local function GenerateWaypoints(ply)
 		net.Start "Decent Vehicle: Clear waypoints"
 		net.Broadcast()
 	end
-	
+
 	local speed = ply:GetInfoNum("dv_route_speed", 45) * dvd.KmphToHUps
 	local time = CurTime()
 	local map = {}
@@ -227,10 +227,10 @@ local function GenerateWaypoints(ply)
 			UseTurnLights = false,
 			WaitUntilNext = 0,
 		})
-		
+
 		map[i] = #dvd.Waypoints
 	end
-	
+
 	for i, link in ipairs(dvd.Nodegraph.links) do
 		if link.move[HULL_LARGE_CENTERED + 1] ~= 1 then continue end
 		local d, s = map[link.destID], map[link.srcID]
@@ -239,7 +239,7 @@ local function GenerateWaypoints(ply)
 			table.insert(dvd.Waypoints[d].Neighbors, s)
 		end
 	end
-	
+
 	if #dvd.Waypoints * player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Retrive waypoints"
 	WriteWaypoint(1)
@@ -315,7 +315,7 @@ net.Receive("Decent Vehicle: Retrive waypoints", function(_, ply)
 		net.Send(ply)
 		return
 	end
-	
+
 	WriteWaypoint(id)
 	net.Send(ply)
 end)
@@ -386,7 +386,7 @@ function dvd.GetSaveTable()
 			ClassName = t:GetClass(),
 		})
 	end
-	
+
 	save.DriveSide = dvd.DriveSide
 	save.ForceHeadlights = dvd.CVars.ForceHeadlights:GetBool() -- Added from version 1.0.7
 	hook.Run("Decent Vehicle: OnSaveWaypoints", save)
@@ -426,11 +426,17 @@ function dvd.RemoveWaypoint(id)
 				table.insert(Neighbors, n)
 			end
 		end
-		
+
 		w.Neighbors = Neighbors
 	end
-	
+
 	table.remove(dvd.Waypoints, id)
+	for m in pairs(dvd.WireManagers) do
+		if IsValid(m) and m:GetNWInt "WaypointID" ~= id then continue end
+		m:UnlinkEnt()
+		break
+	end
+
 	if player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Remove a waypoint"
 	net.WriteUInt(id, 24)
@@ -458,7 +464,7 @@ function dvd.GetFuelStations()
 		table.insert(fuelstations, w)
 		table.insert(fuelIDs, i)
 	end
-	
+
 	return fuelstations, fuelIDs
 end
 
@@ -524,7 +530,7 @@ function dvd.AddTrafficLight(id, traffic)
 			traffic = nil
 		end
 	end
-	
+
 	waypoint.TrafficLight = traffic
 	if player.GetCount() == 0 then return end
 	net.Start "Decent Vehicle: Traffic light"
@@ -541,7 +547,7 @@ end
 --   table waypoint | The connected waypoint.
 function dvd.GetRandomNeighbor(waypoint, filter)
 	if not waypoint.Neighbors then return end
-	
+
 	local suggestion = {}
 	for i, n in ipairs(waypoint.Neighbors) do
 		local w = dvd.Waypoints[n]
@@ -549,7 +555,7 @@ function dvd.GetRandomNeighbor(waypoint, filter)
 		if not (isfunction(filter) and filter(waypoint, n)) then continue end
 		table.insert(suggestion, w)
 	end
-	
+
 	return suggestion[math.random(#suggestion)]
 end
 
@@ -565,7 +571,7 @@ end
 function dvd.GetRoute(start, endpos, group)
 	if not (isnumber(start) and istable(endpos)) then return end
 	group = group or 0
-	
+
 	local nodes, opens = {}, {}
 	local function CreateNode(id)
 		nodes[id] = {
@@ -576,10 +582,10 @@ function dvd.GetRoute(start, endpos, group)
 			parent = nil,
 			score = 0,
 		}
-		
+
 		return nodes[id]
 	end
-	
+
 	local function EstimateCost(node)
 		local w = dvd.Waypoints[node.id]
 		local cost = math.huge
@@ -591,10 +597,10 @@ function dvd.GetRoute(start, endpos, group)
 			if not wi then continue end
 			cost = math.min(cost, node:Distance(wi.Target))
 		end
-		
+
 		return cost
 	end
-	
+
 	local function AddToOpenList(node, parent)
 		if parent then
 			local nodepos = dvd.Waypoints[node.id].Target
@@ -605,15 +611,15 @@ function dvd.GetRoute(start, endpos, group)
 				local gppos = dvd.Waypoints[grandpa.id].Target
 				cost = cost * (2 - dvd.GetAng3(gppos, parentpos, nodepos))
 			end
-			
+
 			node.cost = parent.cost + cost
 		end
-		
+
 		node.closed = false
 		node.estimate = EstimateCost(node)
 		node.parent = parent
 		node.score = node.estimate + node.cost
-		
+
 		-- Open list is binary heap
 		table.insert(opens, node.id)
 		local i = #opens
@@ -623,18 +629,18 @@ function dvd.GetRoute(start, endpos, group)
 			i, p = p, math.floor(p / 2)
 		end
 	end
-	
+
 	start = CreateNode(start)
 	for id in pairs(endpos) do
 		endpos[id] = CreateNode(id)
 	end
-	
+
 	AddToOpenList(start)
 	while #opens > 0 do
 		local current = opens[1] -- Pop a node which has minimum cost.
 		opens[1] = opens[#opens]
 		opens[#opens] = nil
-		
+
 		local i = 1 -- Down-heap on the open list
 		while i <= #opens do
 			local c = i * 2
@@ -644,7 +650,7 @@ function dvd.GetRoute(start, endpos, group)
 			opens[i], opens[c] = opens[c], opens[i]
 			i = c
 		end
-		
+
 		if nodes[current].closed then continue end
 		if endpos[current] then
 			current = nodes[current]
@@ -655,10 +661,10 @@ function dvd.GetRoute(start, endpos, group)
 				table.insert(route, dvd.Waypoints[current.id])
 				current = current.parent
 			end
-			
+
 			return route
 		end
-		
+
 		nodes[current].closed = true
 		for i, n in ipairs(dvd.Waypoints[nodes[current].id].Neighbors) do
 			if nodes[n] and nodes[n].closed ~= nil then continue end
@@ -685,7 +691,7 @@ function dvd.GetRouteVector(start, endpos, group)
 		if not id then continue end
 		endpostable[id] = true
 	end
-	
+
 	return dvd.GetRoute(select(2, dvd.GetNearestWaypoint(start)), endpostable, group)
 end
 

@@ -100,4 +100,8 @@ return {
 0 means all vehicles can go there.]],
 	},
 	UndoText = "Undone Decent Vehicle's waypoint",
+	WireSupport = {
+		ToolDesc = "Provides some data of Decent Vehicle's waypoints for use with the wire system.",
+		ToolName = "[DV] Wire Waypoint Manager",
+	},
 }

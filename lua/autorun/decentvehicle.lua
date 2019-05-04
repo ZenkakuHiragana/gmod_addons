@@ -75,13 +75,29 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		{Time = CurTime() + 33, Light = 1}, -- Light pattern #1
 		{Time = CurTime() + 40, Light = 3}, -- Light pattern #2
 	},
-	Version = {1, 0, 7}, -- Major version, Minor version, Revision
+	Version = {1, 1, 0}, -- Major version, Minor version, Revision
 	Waypoints = {},
 	WaypointSize = 32,
+	WireManagers = {},
 }
 
 local dvd = DecentVehicleDestination
 local CVarFlags = {FCVAR_ARCHIVE, FCVAR_SERVER_CAN_EXECUTE, FCVAR_REPLICATED}
+
+-- Model list for wiremod support
+local WireModels = {
+	"models/props_c17/lampShade001a.mdl",
+	"models/hunter/blocks/cube025x025x025.mdl",
+	"models/props_wasteland/controlroom_filecabinet001a.mdl",
+	"models/props_lab/powerbox02d.mdl",
+	"models/jaanus/wiretool/wiretool_siren.mdl",
+	"models/jaanus/wiretool/wiretool_range.mdl",
+}
+for k, v in pairs(WireModels) do
+	if file.Exists(v, "GAME") then
+		list.Set("[DV] WireManager Model List", v, true)
+	end
+end
 
 -- Gets direction vector from v1 to v2.
 -- Arguments:
@@ -132,14 +148,14 @@ function dvd.GetNearestWaypoint(pos, filter)
 			mindistance, waypoint, waypointID = distance, w, i
 		end
 	end
-	
+
 	return waypoint, waypointID
 end
 
 local lang = GetConVar "gmod_language":GetString()
 local function ReadTexts(convar, old, new)
 	dvd.Texts = {}
-	
+
 	local directories = select(2, file.Find("decentvehicle/*", "LUA"))
 	for _, dir in ipairs(directories) do
 		if SERVER then -- We need to run AddCSLuaFile() for all languages.
@@ -149,7 +165,7 @@ local function ReadTexts(convar, old, new)
 				AddCSLuaFile(path .. f)
 			end
 		end
-		
+
 		local path = string.format("decentvehicle/%s/en.lua", dir)
 		if file.Exists(path, "LUA") then table.Merge(dvd.Texts, include(path)) end
 		path = string.format("decentvehicle/%s/%s.lua", dir, new)
