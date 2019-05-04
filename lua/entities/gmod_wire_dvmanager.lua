@@ -3,7 +3,7 @@
 -- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
-if not WireAddons then return end
+if not WireLib then return end
 AddCSLuaFile()
 DEFINE_BASECLASS "base_wire_entity"
 ENT.WireDebugName = "[DV] Waypoint Manager"
