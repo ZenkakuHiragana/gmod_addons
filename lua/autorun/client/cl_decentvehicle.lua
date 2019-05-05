@@ -20,6 +20,7 @@ end
 local dvd = DecentVehicleDestination
 local function NotifyUpdate(d)
 	if not d then return end
+	-- local header = d.description:match(dvd.Texts.VersionPrefix .. "[^%c]+") or ""
 	local header = d.description:match "Version[^%c]+" or ""
 	dvd.Texts.Version = "Decent Vehicle: " .. header
 
@@ -34,12 +35,11 @@ local function NotifyUpdate(d)
 	if CompareVersion(dvd.Version, version) then
 		notification.AddLegacy(dvd.Texts.OldVersionNotify, NOTIFY_ERROR, 15)
 	elseif CompareVersion(checkedversion, dvd.Version) then
-		notification.AddLegacy("Decent Vehicle " .. header, NOTIFY_GENERIC, 18)
-
 		local i = 0
 		local sub = d.description:find "quote=Decent Vehicle"
 		if not sub then return end
 		local description = d.description:sub(1, sub - 2)
+		notification.AddLegacy("Decent Vehicle " .. header, NOTIFY_GENERIC, 18)
 		for update in description:gmatch "%[%*%][^%c]+" do
 			timer.Simple(3 * i, function()
 				if not showupdates:GetBool() then return end

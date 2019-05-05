@@ -100,4 +100,9 @@ return {
 0にすると誰でも通れるウェイポイントになる。]],
 	},
 	UndoText = "Decent Vehicleのウェイポイントを元に戻した",
+	-- VersionPrefix = "バージョン",
+	WireSupport = {
+		ToolDesc = "Decent Vehicleのウェイポイントに関する情報をWireが利用できるようにする。",
+		ToolName = "[DV] Wire ウェイポイント マネージャ",
+	},
 }
