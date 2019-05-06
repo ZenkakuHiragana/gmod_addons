@@ -4,30 +4,104 @@ if not ss then return end
 include "shared.lua"
 
 local Pitch = Angle(1, 0, 0)
+local InitLerpTime = 5 * ss.FrameToSec
+local LerpSpeed = 360 -- degs/sec
+local Width = 75
+local function AdjustRollerAngles(self, tracelength, traceheight, tracewidth, tracedown, vm)
+	local target = vm or self
+	local bone = vm and self.VMBones.Root or self.Bones.Root
+	local oldang = target:GetManipulateBoneAngles(bone)
+	local ownerang = Angle(0, self.Owner:GetAngles().yaw, 0)
+	local up = vector_up * traceheight
+	local down = -vector_up * tracedown
+	local forward = ownerang:Forward() * tracelength
+	local right = ownerang:Right() * tracewidth / 2
+	local l = {
+		start = self:GetPos() + up,
+		endpos = self:GetPos() + up + forward + right,
+		filter = {self.Owner, self},
+	}
+	local r = {
+		start = self:GetPos() + up,
+		endpos = self:GetPos() + up + forward - right,
+		filter = {self.Owner, self},
+	}
+	local trleft = util.TraceLine(l)
+	local trright = util.TraceLine(r)
+	l = {
+		start = trleft.HitPos,
+		endpos = trleft.HitPos + down,
+		filter = {self.Owner, self},
+	}
+	r = {
+		start = trright.HitPos,
+		endpos = trright.HitPos + down,
+		filter = {self.Owner, self},
+	}
+	trleft = util.TraceLine(l)
+	trright = util.TraceLine(r)
+	target:ManipulateBoneAngles(bone, angle_zero)
+	target:SetupBones()
+
+	local hitpos = (trleft.HitPos + trright.HitPos) / 2
+	local bonemat = target:GetBoneMatrix(bone)
+	local bonepos = bonemat:GetTranslation()
+	local dzp = bonepos.z - hitpos.z
+	local dp = math.deg(math.asin(dzp / hitpos:Distance(bonepos)))
+	local dzr = trleft.HitPos.z - trright.HitPos.z
+	local dr = math.deg(math.atan2(dzr, tracewidth))
+	local ang = Angle(dp - 90, ownerang.yaw)
+	local step = LerpSpeed * RealFrameTime()
+	ang:RotateAroundAxis(ang:Up(), dr)
+	ang = select(2, WorldToLocal(vector_origin, ang, vector_origin, bonemat:GetAngles()))
+	ang.p = math.Approach(oldang.p, ang.p, step)
+	ang.y = math.Approach(oldang.y, ang.y, step)
+	ang.r = math.Approach(oldang.r, ang.r, step)
+	target:ManipulateBoneAngles(bone, ang)
+end
+
+local function RotateRoll(self, vm)
+	local target = vm or self
+	local bone = vm and self.VMBones.Roll or self.Bones.Roll
+	local oldpos = self.RotateRollPos or self.Owner:GetPos()
+	local oldang = target:GetManipulateBoneAngles(bone)
+	local forward = Angle(0, self.Owner:GetAngles().yaw, 0):Forward()
+	local diameter = self.Primary.Diameter or 15
+	local diff = self.Owner:GetPos() - oldpos
+	local amount = forward:Dot(diff)
+	local mul = vm and .5 or 1
+	local p = oldang.p + math.deg(amount / diameter * mul)
+	if vm and self.ViewModelFlip then p = -p end
+	target:ManipulateBoneAngles(bone, math.NormalizeAngle(p) * Pitch)
+	self.RotateRollPos = self.Owner:GetPos()
+end
+
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	self.VMBones = self.VMBones or {
 		Neck = vm:LookupBone "neck_1",
 		Roll = vm:LookupBone "roll_root_1",
 		Root = vm:LookupBone "root_1",
 	}
-	local a = CurTime() * 360 * Pitch
-	if self.ViewModelFlip then a.p = -a.p end
-	vm:ManipulateBoneAngles(self.VMBones.Roll, a)
 	function vm.GetInkColorProxy()
 		return ss.ProtectedCall(self.GetInkColorProxy, self) or ss.vector_one
 	end
+
+	if self:GetMode() ~= self.MODE.PAINT then
+		vm:ManipulateBoneAngles(self.VMBones.Root, angle_zero)
+		return
+	end
+
+	local h = self.Owner:OBBMaxs().z
+	AdjustRollerAngles(self, 40, h / 2, Width, h * 2, vm)
+	RotateRoll(self, vm)
 end
 
-local RollLerpTime = 5 * ss.FrameToSec
 function SWEP:PreDrawWorldModel(vm, weapon, ply)
 	self.Bones = self.Bones or {
 		Neck = self:LookupBone "neck_1",
 		Roll = self:LookupBone "roll_root_1",
 		Root = self:LookupBone "root_1",
 	}
-	local a = CurTime() * 360 * Pitch
-	self:ManipulateBoneAngles(self.Bones.Roll, a)
-	self:ManipulateBoneAngles(self.Bones.Root, angle_zero)
 
 	-- Animate the neck
 	local mode = self:GetMode()
@@ -43,60 +117,11 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 
 		local f = math.TimeFraction(start, start + duration, CurTime())
 		neck = Lerp(math.EaseInOut(math.Clamp(f, 0, 1), .25, .25), n1, n2)
+		self:ManipulateBoneAngles(self.Bones.Root, angle_zero)
 	else -- Adjust the angle
-		local t = self:GetEndTime()
-		local d  = self.SwingAnimTime + RollLerpTime
-		local f = math.TimeFraction(t, t + d, CurTime())
-		local a = self:GetManipulateBoneAngles(self.Bones.Root)
-		local dir = self:GetAimVector()
-		local right = self:GetRight()
-		f = math.EaseInOut(math.Clamp(f, 0, 1), 0, RollLerpTime / d)
-		dir.z = 0
-		dir:Normalize()
-		local l = {
-			start = self:GetPos() + vector_up * 60,
-			endpos = self:GetPos() + vector_up * 60 + dir * 60 + right * 30,
-			filter = {self.Owner, self},
-		}
-		local r = {
-			start = self:GetPos() + vector_up * 60,
-			endpos = self:GetPos() + vector_up * 60 + dir * 60 - right * 30,
-			filter = {self.Owner, self},
-		}
-		local trleft = util.TraceLine(l)
-		local trright = util.TraceLine(r)
-		greatzenkakuman.debug.DTick()
-		greatzenkakuman.debug.DLine(trleft.StartPos, trleft.HitPos)
-		greatzenkakuman.debug.DLine(trright.StartPos, trright.HitPos)
-		l = {
-			start = trleft.HitPos,
-			endpos = trleft.HitPos - vector_up * 60 * 2,
-			filter = {self.Owner, self},
-		}
-		r = {
-			start = trright.HitPos,
-			endpos = trright.HitPos - vector_up * 60 * 2,
-			filter = {self.Owner, self},
-		}
-		trleft = util.TraceLine(l)
-		trright = util.TraceLine(r)
-		greatzenkakuman.debug.DLine(trleft.StartPos, trleft.HitPos)
-		greatzenkakuman.debug.DLine(trright.StartPos, trright.HitPos)
-
-		local att = self.Owner:GetAttachment(self.Owner:LookupAttachment "anim_attachment_RH")
-		local org = att.Pos
-		local forward = att.Ang:Up()
-		local hitpos = (trleft.HitPos + trright.HitPos) / 2
-		dir = hitpos - org
-		greatzenkakuman.debug.DVector(org, dir)
-		dir:Normalize()
-		local ang = math.deg(math.acos(forward:Dot(dir)))
-		local sign = forward:Cross(dir):Dot(right)
-		ang = ang * (sign == 0 and 0 or sign > 0 and -1 or 1) - 20
-		greatzenkakuman.debug.DVector(org, forward * 100)
-		greatzenkakuman.debug.DVector(org, forward:Cross(dir) * 100)
-		greatzenkakuman.debug.DVector(org, right * 100)
-		self:ManipulateBoneAngles(self.Bones.Root, LerpAngle(f, a, Angle(ang, 18, 0)))
+		local h = self.Owner:OBBMaxs().z
+		AdjustRollerAngles(self, 75, h, Width, h * 3)
+		RotateRoll(self)
 	end
 
 	self:ManipulateBoneAngles(self.Bones.Neck, Angle(0, 0, neck))

@@ -39,7 +39,7 @@ function SWEP:CustomActivity() return "melee2" end
 function SWEP:CustomMoveSpeed() end
 function SWEP:Move(ply)
 	local mode = self:GetMode()
-	local keyrelease = not (ply:IsPlayer() and ply:KeyDown(IN_ATTACK))
+	local keyrelease = not (ply:IsPlayer() and self:GetKey() == IN_ATTACK)
 	if mode == self.MODE.PAINT and keyrelease and CurTime() > self:GetEndTime() + self.SwingBackWait then
 		self:SetMode(self.MODE.READY)
 		self:SetWeaponAnim(ACT_VM_IDLE)

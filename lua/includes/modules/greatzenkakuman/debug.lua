@@ -48,7 +48,7 @@ end
 function DAxis(v, a, z, l)
 	a, z, l = a or angle_zero, Either(z ~= nil, z, g), l or s
 	if d then
-		debugoverlay.Axis(v, ang, l, t, z)
+		debugoverlay.Axis(v, a, l, t, z)
 	else
 		BroadcastLua(daxis:format(v.x, v.y, v.z, a.p, a.y, a.r, tostring(z), t, l))
 	end
