@@ -25,6 +25,10 @@ ss.BombAvailable = Sound "splatoonsweps/player/bombavailable.wav"
 ss.TakeDamage = Sound "splatoonsweps/player/takedamage.wav"
 ss.ChargerAim = Sound "splatoonsweps/weapons/charger/aim.wav"
 ss.ChargerBeep = Sound "splatoonsweps/weapons/charger/beep.mp3"
+ss.SplatRollerRoll = Sound "splatoonsweps/weapons/roller/splatroller_roll.wav"
+ss.CarbonRollerRoll = Sound "splatoonsweps/weapons/roller/carbonroller_roll.wav"
+ss.DynamoRollerRoll = Sound "splatoonsweps/weapons/roller/dynamoroller_roll.wav"
+ss.EmptyRoll = Sound "splatoonsweps/weapons/roller/emptyroll.wav"
 
 sound.Add {
 	channel = CHAN_STATIC,
@@ -132,6 +136,30 @@ for _, soundData in ipairs {
 		sound = "splatoonsweps/player/footsteps/slime",
 		volume = 1,
 		pitch = 80,
+	},
+	{
+		channel = CHAN_WEAPON,
+		name = "SplatoonSWEPs.RollerSwingLight",
+		level = 75,
+		sound = "splatoonsweps/weapons/roller/inkbrush",
+		volume = 1,
+		pitch = 100,
+	},
+	{
+		channel = CHAN_WEAPON,
+		name = "SplatoonSWEPs.RollerSwingMedium",
+		level = 75,
+		sound = "splatoonsweps/weapons/roller/octobrush",
+		volume = 1,
+		pitch = 100,
+	},
+	{
+		channel = CHAN_AUTO,
+		name = "SplatoonSWEPs.RollerSwing",
+		level = 75,
+		sound = "splatoonsweps/weapons/roller/swing",
+		volume = 1,
+		pitch = 100,
 	},
 } do
 	local soundtable = {}
@@ -290,7 +318,7 @@ sound.Add { -- N-Zap 85 / 89 / 83
 	pitch = WeaponSoundPitch,
 }
 
------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 local WeakShotLevel = 75
 sound.Add { -- Splat Charger / Kelp / Bento
@@ -438,3 +466,33 @@ sound.Add { -- Mini Splatling / Zink / Refurbished, Fully charged
 	volume = WeaponSoundVolume,
 	pitch = 100,
 }
+
+-------------------------------------------------------------------------------
+
+sound.Add { -- Roller holster sound
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.RollerHolster",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/roller/holster.wav",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Splat Roller / Krak-On / CoroCoro, Dynamo Roller / Gold / Tempered, Pre-swing
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.RollerPreSwing",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/roller/preswing.wav",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add { -- Carbon Roller / Deco, Pre-swing
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.CarbonRollerPreSwing",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/roller/carbonroller_preswing.wav",
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+

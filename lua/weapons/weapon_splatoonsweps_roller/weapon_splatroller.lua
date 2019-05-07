@@ -4,7 +4,9 @@ local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
 SWEP.ADSAngOffset = Angle(0, 0, 0)
 SWEP.ADSOffset = Vector(-5, 0, 1.8)
-SWEP.ShootSound = "SplatoonSWEPs.52"
+SWEP.PreSwingSound = "SplatoonSWEPs.RollerPreSwing"
+SWEP.SwingSound = "SplatoonSWEPs.RollerSwing"
+SWEP.RollSound = ss.SplatRollerRoll
 SWEP.Special = "killerwail"
 SWEP.Sub = "suctionbomb"
 SWEP.Variations = {{
@@ -16,7 +18,7 @@ SWEP.Variations = {{
 }}
 
 ss.SetPrimary(SWEP, {
-	IsAutomatic			= false,		-- false to semi-automatic
+	IsAutomatic			= false,	-- false to semi-automatic
 	Recoil				= .2,		-- Viewmodel recoil intensity[-]
 	TakeAmmo			= .012,		-- Ink consumption per fire[-]
 	Damage				= .52,		-- Maximum damage[-]

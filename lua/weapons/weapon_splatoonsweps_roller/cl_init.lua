@@ -61,6 +61,7 @@ local function AdjustRollerAngles(self, tracelength, traceheight, tracewidth, tr
 end
 
 local function RotateRoll(self, vm)
+	if not self.Owner:OnGround() then return end
 	local target = vm or self
 	local bone = vm and self.VMBones.Roll or self.Bones.Roll
 	local oldpos = self.RotateRollPos or self.Owner:GetPos()
@@ -69,8 +70,7 @@ local function RotateRoll(self, vm)
 	local diameter = self.Primary.Diameter or 15
 	local diff = self.Owner:GetPos() - oldpos
 	local amount = forward:Dot(diff)
-	local mul = vm and .5 or 1
-	local p = oldang.p + math.deg(amount / diameter * mul)
+	local p = oldang.p + math.deg(amount / diameter)
 	if vm and self.ViewModelFlip then p = -p end
 	target:ManipulateBoneAngles(bone, math.NormalizeAngle(p) * Pitch)
 	self.RotateRollPos = self.Owner:GetPos()
