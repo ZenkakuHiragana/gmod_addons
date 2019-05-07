@@ -139,7 +139,7 @@ for _, soundData in ipairs {
 	},
 	{
 		channel = CHAN_WEAPON,
-		name = "SplatoonSWEPs.RollerSwingLight",
+		name = "SplatoonSWEPs.RollerSplashLight",
 		level = 75,
 		sound = "splatoonsweps/weapons/roller/inkbrush",
 		volume = 1,
@@ -147,7 +147,7 @@ for _, soundData in ipairs {
 	},
 	{
 		channel = CHAN_WEAPON,
-		name = "SplatoonSWEPs.RollerSwingMedium",
+		name = "SplatoonSWEPs.RollerSplashMedium",
 		level = 75,
 		sound = "splatoonsweps/weapons/roller/octobrush",
 		volume = 1,

@@ -6,16 +6,25 @@ SWEP.ADSAngOffset = Angle(0, 0, 0)
 SWEP.ADSOffset = Vector(-5, 0, 1.8)
 SWEP.PreSwingSound = "SplatoonSWEPs.RollerPreSwing"
 SWEP.SwingSound = "SplatoonSWEPs.RollerSwing"
+SWEP.SplashSound = "SplatoonSWEPs.RollerSplashLight"
 SWEP.RollSound = ss.SplatRollerRoll
 SWEP.Special = "killerwail"
 SWEP.Sub = "suctionbomb"
-SWEP.Variations = {{
-	Customized = true,
-	Bodygroup = {nil, 1},
-	Special = "kraken",
-	Sub = "squidbeakon",
-	Suffix = "krakon",
-}}
+SWEP.Variations = {
+	{
+		Customized = true,
+		Bodygroup = {nil, 1},
+		Special = "kraken",
+		Sub = "squidbeakon",
+		Suffix = "krakon",
+	},
+	{
+		ClassName = "splatroller_corocoro",
+		SheldonsPicks = true,
+		Special = "inkzooka",
+		Sub = "splashwall",
+	},
+}
 
 ss.SetPrimary(SWEP, {
 	IsAutomatic			= false,	-- false to semi-automatic

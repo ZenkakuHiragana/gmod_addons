@@ -83,6 +83,7 @@ function SWEP:Move(ply, mv)
 	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
 	if not self:IsFirstTimePredicted() then return end
 	self:EmitSound(self.SwingSound)
+	self:EmitSound(self.SplashSound)
 end
 
 function SWEP:UpdateAnimation(ply, velocity, maxseqspeed)
