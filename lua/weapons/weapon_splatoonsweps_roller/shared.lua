@@ -3,6 +3,10 @@ local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_inklingbase"
 SWEP.MODE = {READY = 0, ATTACK = 1, PAINT = 2}
+SWEP.CollapseRollTime = 10 * ss.FrameToSec
+SWEP.PreSwingTime = 10 * ss.FrameToSec
+SWEP.SwingAnimTime = 10 * ss.FrameToSec
+SWEP.SwingBackWait = 20 * ss.FrameToSec
 
 function SWEP:AddPlaylist(p)
 	p[#p + 1] = self.EmptyRollSound
@@ -12,11 +16,6 @@ end
 function SWEP:SharedInit()
 	self.EmptyRollSound = CreateSound(self, ss.EmptyRoll)
 	self.RollingSound = CreateSound(self, self.RollSound)
-	self.CollapseRollTime = 10 * ss.FrameToSec
-	self.PreSwingTime = 10 * ss.FrameToSec
-	self.SwingAnimTime = 10 * ss.FrameToSec
-	self.SwingBackWait = 20 * ss.FrameToSec
-	self.Primary.SwingWaitTime = 20 * ss.FrameToSec
 	self:SetStartTime(CurTime())
 	self:SetEndTime(CurTime())
 	self:SetMode(self.MODE.READY)
@@ -30,7 +29,6 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	self:SetMode(self.MODE.ATTACK)
 	self:SetStartTime(CurTime())
 	self:SetEndTime(CurTime() + p.SwingWaitTime)
-	self:SetNextPrimaryFire(CurTime() + p.Delay / timescale)
 	self:SetInk(math.max(0, self:GetInk() - self:GetTakeAmmo()))
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
@@ -54,6 +52,7 @@ function SWEP:Move(ply, mv)
 			self:SetMode(self.MODE.READY)
 			self:SetWeaponAnim(ACT_VM_IDLE)
 			self:SetStartTime(CurTime())
+			self:SetNextPrimaryFire(CurTime() + self.Primary.Delay)
 			if self:IsFirstTimePredicted() then
 				self:EmitSound "SplatoonSWEPs.RollerHolster"
 			end
@@ -88,6 +87,7 @@ end
 
 function SWEP:UpdateAnimation(ply, velocity, maxseqspeed)
 	local mode = self:GetMode()
+	local ct = CurTime() + (self:IsMine() and self:Ping() or 0)
 	local start, duration, c1, c2
 	if mode == self.MODE.READY then
 		return
@@ -101,7 +101,7 @@ function SWEP:UpdateAnimation(ply, velocity, maxseqspeed)
 		c1, c2 = .3, .6125
 	end
 
-	local f = math.TimeFraction(start, start + duration, CurTime())
+	local f = math.TimeFraction(start, start + duration, ct)
 	local cycle = Lerp(math.EaseInOut(math.Clamp(f, 0, 1), 0, 1), c1, c2)
 	ply:AddVCDSequenceToGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD, ply:SelectWeightedSequence(ACT_HL2MP_GESTURE_RANGE_ATTACK_MELEE2), cycle, true)
 end

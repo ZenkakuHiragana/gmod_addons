@@ -158,8 +158,16 @@ for _, soundData in ipairs {
 		name = "SplatoonSWEPs.RollerSwing",
 		level = 75,
 		sound = "splatoonsweps/weapons/roller/swing",
-		volume = 1,
+		volume = .8,
 		pitch = 100,
+	},
+	{
+		channel = CHAN_AUTO,
+		name = "SplatoonSWEPs.CarbonRollerSwing",
+		level = 75,
+		sound = "splatoonsweps/weapons/roller/swing",
+		volume = .6,
+		pitch = 120,
 	},
 } do
 	local soundtable = {}

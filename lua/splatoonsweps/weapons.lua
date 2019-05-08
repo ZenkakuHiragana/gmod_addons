@@ -14,9 +14,9 @@ function ss.SetPrimary(weapon, info)
 	p.Delay = (info.Delay.Fire or 0) * ss.FrameToSec
 	p.FirePosition = info.FirePosition
 	p.Recoil = info.Recoil or .2
-	p.ReloadDelay = info.Delay.Reload * ss.FrameToSec
+	p.ReloadDelay = (info.Delay.Reload or 0) * ss.FrameToSec
 	p.TakeAmmo = info.TakeAmmo
-	p.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
+	p.CrouchDelay = (info.Delay.Crouch or 0) * ss.FrameToSec
 	ss.ProtectedCall(ss.CustomPrimary[weapon.Base], p, info)
 	weapon.Primary = p
 end
@@ -152,7 +152,7 @@ function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(p, info)
 end
 
 function ss.CustomPrimary.weapon_splatoonsweps_roller(p, info)
-	ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
+	p.SwingWaitTime = info.Delay.SwingWait * ss.FrameToSec
 end
 
 local SplatoonSWEPsMuzzleSplash = 0
