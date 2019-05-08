@@ -88,8 +88,9 @@ function SWEP:ClientThink()
 	if self.IsOctoShot then
 		self.Skin = self:GetNWBool "advanced"
 		self.Skin = self.Skin and 1 or 0
-	elseif self.IsHeroShot then
+	elseif self.IsHeroWeapon then
 		self.Skin = self:GetNWInt "level"
+		if not self.IsHeroShot then return end
 		local t = self:GetNWEntity "Trail"
 		local tv = self:GetNWEntity "TrailVM"
 		local fps = self:IsMine() and not self:IsTPS()

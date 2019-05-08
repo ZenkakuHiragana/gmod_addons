@@ -79,7 +79,7 @@ end
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	self.VMBones = self.VMBones or {
 		Neck = vm:LookupBone "neck_1",
-		Roll = vm:LookupBone "roll_root_1",
+		Roll = vm:LookupBone "roll_root_1" or self:LookupBone "roll_1",
 		Root = vm:LookupBone "root_1",
 	}
 	function vm.GetInkColorProxy()
@@ -91,6 +91,7 @@ function SWEP:PreViewModelDrawn(vm, weapon, ply)
 		return
 	end
 
+	if CurTime() < self:GetEndTime() then return end
 	local h = self.Owner:OBBMaxs().z
 	AdjustRollerAngles(self, 40, h / 2, Width, h * 2, vm)
 	RotateRoll(self, vm)
@@ -99,7 +100,7 @@ end
 function SWEP:PreDrawWorldModel(vm, weapon, ply)
 	self.Bones = self.Bones or {
 		Neck = self:LookupBone "neck_1",
-		Roll = self:LookupBone "roll_root_1",
+		Roll = self:LookupBone "roll_root_1" or self:LookupBone "roll_1",
 		Root = self:LookupBone "root_1",
 	}
 
@@ -118,7 +119,7 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 		local f = math.TimeFraction(start, start + duration, CurTime())
 		neck = Lerp(math.EaseInOut(math.Clamp(f, 0, 1), .25, .25), n1, n2)
 		self:ManipulateBoneAngles(self.Bones.Root, angle_zero)
-	else -- Adjust the angle
+	elseif CurTime() > self:GetEndTime() then -- Adjust the angle
 		local h = self.Owner:OBBMaxs().z
 		AdjustRollerAngles(self, 75, h, Width, h * 3)
 		RotateRoll(self)
@@ -182,6 +183,8 @@ end
 
 function SWEP:ClientThink()
 	self.Bodygroup[1] = self:GetInk() > self:GetTakeAmmo() and 0 or 1
+	if not self.IsHeroWeapon then return end
+	self.Skin = self:GetNWInt "level"
 end
 
 function SWEP:GetCrosshairTrace(t)

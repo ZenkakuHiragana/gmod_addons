@@ -134,8 +134,12 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 			self.Weapon:Spawn()
 		end
 
+		local sequences = {
+			weapon_splatoonsweps_splatling = "idle_crossbow",
+			weapon_splatoonsweps_roller = "idle_melee2",
+		}
 		if self.ClassName ~= w.ClassName then
-			self.Entity:SetSequence(w.Base == "weapon_splatoonsweps_splatling" and "idle_crossbow" or "idle_passive")
+			self.Entity:SetSequence(sequences[w.Base] or "idle_passive")
 			self.Weapon.Visible = true
 			self.Weapon:SetModel(w.ModelPath .. "w_right.mdl")
 			self.Weapon:SetSkin(w.Skin or 0)
@@ -149,6 +153,10 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 
 			function self.Weapon:GetInkColorProxy()
 				return w:GetInkColorProxy()
+			end
+
+			if w.Base == "weapon_splatoonsweps_roller" then
+				self.Weapon:ManipulateBoneAngles(self.Weapon:LookupBone "neck_1", Angle(0, 0, -90))
 			end
 		end
 

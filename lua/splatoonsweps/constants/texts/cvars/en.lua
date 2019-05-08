@@ -62,4 +62,9 @@ Make sure your graphics card has enough space of video memory.
             Advanced = "Skin color for Octoshot Replica. (set to 0 for standard octalian's weapon color, 1 for elite octalian's)",
         },
     },
+	weapon_splatoonsweps_roller = {
+		weapon_splatoonsweps_heroroller = {
+            Level = "The level of Hero Roller Replica. (0, 1, 2, 3 -> Level 1, 2, 3, 4)",
+        },
+	},
 }}

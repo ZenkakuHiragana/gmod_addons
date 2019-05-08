@@ -55,4 +55,9 @@ return {Options = {
             Advanced = "オクタシューター: 上級タコゾネス仕様",
         },
     },
+	weapon_splatoonsweps_roller = {
+		weapon_splatoonsweps_heroroller = {
+            Level = "ヒーローローラーのレベル",
+        },
+	},
 }}

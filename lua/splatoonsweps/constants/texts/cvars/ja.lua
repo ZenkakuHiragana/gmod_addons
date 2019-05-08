@@ -62,4 +62,9 @@ return {CVars = {
             Advanced = "オクタシューターレプリカのスキン。 (0: 通常タコゾネス, 1: ワカメ付きタコゾネス)",
         },
     },
+	weapon_splatoonsweps_roller = {
+		weapon_splatoonsweps_heroroller = {
+            Level = "ヒーローローラーレプリカのレベル。 (0, 1, 2, 3 → レベル 1, 2, 3, 4)",
+        },
+	},
 }}

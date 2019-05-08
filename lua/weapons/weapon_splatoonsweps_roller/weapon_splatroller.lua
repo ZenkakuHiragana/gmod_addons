@@ -24,6 +24,10 @@ SWEP.Variations = {
 		Special = "inkzooka",
 		Sub = "splashwall",
 	},
+	{
+		ClassName = "heroroller",
+		IsHeroWeapon = true,
+	},
 }
 
 ss.SetPrimary(SWEP, {

@@ -25,6 +25,7 @@ SWEP.Variations = {
 	{
 		ClassName = "heroshot",
 		IsHeroShot = true,
+		IsHeroWeapon = true,
 	},
 	{
 		ClassName = "octoshot",
@@ -54,7 +55,7 @@ ss.SetPrimary(SWEP, {
 	SpreadBiasStep		= .02,		-- Aim cone random bias initial value and step[-]
 	SpreadBiasJump		= .4,		-- Aim cone random bias while jumping[-]
 	MoveSpeed			= .72,		-- Walk speed while shooting[Splatoon units/frame]
-	InitVelocity		= 22,		-- Ink initial velocity[Splatoon units/frame]	
+	InitVelocity		= 22,		-- Ink initial velocity[Splatoon units/frame]
 	Delay = {
 		Aim				= 20,		-- Change hold type[frames]
 		Fire			= 6,		-- Fire rate[frames]
