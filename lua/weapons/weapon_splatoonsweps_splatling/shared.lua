@@ -270,9 +270,10 @@ function SWEP:CustomDataTables()
 end
 
 function SWEP:CustomMoveSpeed()
-	return self:GetFireInk() > 0 and self.Primary.MoveSpeed
-	or self:GetCharge() < math.huge and Lerp(self:GetChargeProgress(),
-	self.InklingSpeed, self.Primary.MoveSpeedCharge) or self.InklingSpeed
+	if self:GetFireInk() > 0 then return self.Primary.MoveSpeed end
+	if self:GetCharge() < math.huge then
+		return Lerp(self:GetChargeProgress(), self.InklingSpeed, self.Primary.MoveSpeedCharge)
+	end
 end
 
 function SWEP:CustomActivity()

@@ -254,7 +254,8 @@ function SWEP:CustomActivity()
 end
 
 function SWEP:CustomMoveSpeed()
-	return CurTime() < self:GetAimTimer() and self.Primary.MoveSpeed or nil
+	if CurTime() > self:GetAimTimer() then return end
+	return self.Primary.MoveSpeed
 end
 
 function SWEP:Move(ply)

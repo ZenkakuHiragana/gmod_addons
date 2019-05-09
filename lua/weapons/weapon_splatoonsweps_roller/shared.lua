@@ -29,7 +29,6 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	self:SetMode(self.MODE.ATTACK)
 	self:SetStartTime(CurTime())
 	self:SetEndTime(CurTime() + p.SwingWaitTime)
-	self:SetInk(math.max(0, self:GetInk() - self:GetTakeAmmo()))
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 	if not self:IsFirstTimePredicted() then return end
@@ -45,14 +44,17 @@ end
 function SWEP:CustomActivity() return "melee2" end
 function SWEP:CustomMoveSpeed() end
 function SWEP:Move(ply, mv)
+	local p = self.Primary
 	local mode = self:GetMode()
+	local enoughink = self:GetInk() > self:GetTakeAmmo()
 	local keyrelease = not (ply:IsPlayer() and self:GetKey() == IN_ATTACK)
 	if mode == self.MODE.PAINT then
 		if keyrelease and CurTime() > self:GetEndTime() + self.SwingBackWait then
+			self.NotEnoughInk = false
 			self:SetMode(self.MODE.READY)
 			self:SetWeaponAnim(ACT_VM_IDLE)
 			self:SetStartTime(CurTime())
-			self:SetNextPrimaryFire(CurTime() + self.Primary.Delay)
+			self:SetNextPrimaryFire(CurTime() + p.Delay)
 			if self:IsFirstTimePredicted() then
 				self:EmitSound "SplatoonSWEPs.RollerHolster"
 			end
@@ -73,16 +75,28 @@ function SWEP:Move(ply, mv)
 	end
 
 	if mode ~= self.MODE.READY then
+		local reloadtime = p.ReloadDelay / ss.GetTimeScale(ply)
+		self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
+		self.ReloadSchedule:SetLastCalled(CurTime() + reloadtime)
 		self:SetCooldown(CurTime() + FrameTime())
 	end
 
 	if mode ~= self.MODE.ATTACK then return end
 	if CurTime() < self:GetEndTime() then return end
+	self:SetInk(math.max(self:GetInk() - self:GetTakeAmmo(), 0))
 	self:SetMode(self.MODE.PAINT)
 	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
+
 	if not self:IsFirstTimePredicted() then return end
-	self:EmitSound(self.SwingSound)
-	self:EmitSound(self.SplashSound)
+	if enoughink then
+		self:EmitSound(self.SwingSound)
+		self:EmitSound(self.SplashSound)
+	end
+
+	if (ss.sp or CLIENT) and not (self.NotEnoughInk or enoughink) then
+		self.NotEnoughInk = true
+		ss.EmitSound(ply, ss.TankEmpty)
+	end
 end
 
 function SWEP:UpdateAnimation(ply, velocity, maxseqspeed)
@@ -104,4 +118,10 @@ function SWEP:UpdateAnimation(ply, velocity, maxseqspeed)
 	local f = math.TimeFraction(start, start + duration, ct)
 	local cycle = Lerp(math.EaseInOut(math.Clamp(f, 0, 1), 0, 1), c1, c2)
 	ply:AddVCDSequenceToGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD, ply:SelectWeightedSequence(ACT_HL2MP_GESTURE_RANGE_ATTACK_MELEE2), cycle, true)
+end
+
+function SWEP:CustomMoveSpeed()
+	if self:GetMode() == self.MODE.PAINT and self.Owner:OnGround() then
+		return self.Primary.MoveSpeed
+	end
 end

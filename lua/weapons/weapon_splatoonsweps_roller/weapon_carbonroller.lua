@@ -19,11 +19,12 @@ SWEP.Variations = {{
 ss.SetPrimary(SWEP, {
 	IsAutomatic			= false,	-- false to semi-automatic
 	Recoil				= .2,		-- Viewmodel recoil intensity[-]
-	TakeAmmo			= .012,		-- Ink consumption per fire[-]
+	TakeAmmo			= .05,		-- Ink consumption per swing[-]
 	Damage				= .52,		-- Maximum damage[-]
 	MinDamage			= .26,		-- Minimum damage[-]
+	MoveSpeed			= 1.44,		-- Walk speed while painting the ground[Splatoon units/frame]
 	Delay = {
-		Reload			= 20,		-- Start reloading after firing weapon[frames]
+		Reload			= 40,		-- Start reloading after firing weapon[frames]
 		Straight		= 4,		-- Ink goes without gravity[frames]
 		MinDamage		= 15,		-- Deals minimum damage[frames]
 		DecreaseDamage	= 8,		-- Start decreasing damage[frames]

@@ -152,6 +152,8 @@ function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(p, info)
 end
 
 function ss.CustomPrimary.weapon_splatoonsweps_roller(p, info)
+	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
+	p.Range = 100 -- Dummy data for NPCs, for now
 	p.SwingWaitTime = info.Delay.SwingWait * ss.FrameToSec
 end
 

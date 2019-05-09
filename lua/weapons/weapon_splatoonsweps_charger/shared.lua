@@ -270,8 +270,8 @@ function SWEP:CustomDataTables()
 end
 
 function SWEP:CustomMoveSpeed()
-	return self:GetKey() == IN_ATTACK and Lerp(self:GetChargeProgress(),
-	self.InklingSpeed, self.Primary.MoveSpeed) or self.InklingSpeed
+	if self:GetKey() ~= IN_ATTACK then return end
+	return Lerp(self:GetChargeProgress(), self.InklingSpeed, self.Primary.MoveSpeed)
 end
 
 function SWEP:GetAnimWeight()

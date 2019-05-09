@@ -7,7 +7,7 @@ if CLIENT then
 	SWEP.Author = ss.Text.Author
 	SWEP.BobScale = 1
 	SWEP.BounceWeaponIcon = true
-	SWEP.DrawAmmo = false
+	SWEP.DrawAmmo = true
 	SWEP.DrawCrosshair = true
 	SWEP.DrawWeaponInfoBox = true
 	SWEP.Instructions = ss.Text.Instructions

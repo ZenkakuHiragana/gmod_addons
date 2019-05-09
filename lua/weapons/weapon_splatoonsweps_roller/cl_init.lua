@@ -3,6 +3,19 @@ local ss = SplatoonSWEPs
 if not ss then return end
 include "shared.lua"
 
+local crosshairalpha = 64
+local texdotsize = 32 / 4
+local texringsize = 128 / 2
+local texlinesize = 128 / 2
+local texlinewidth = 8 / 2
+local hitcrossbg = 4 -- in pixel
+local hitouterbg = 3 -- in pixel
+local originalres = 1920 * 1080
+local hitline, hitwidth = 50, 3
+local line, linewidth = 16, 3
+local PaintNearDistance = SWEP.Primary.PaintNearDistance or ss.mPaintNearDistance
+local PaintFraction = 1 + PaintNearDistance / ss.mPaintFarDistance
+
 local Pitch = Angle(1, 0, 0)
 local InitLerpTime = 5 * ss.FrameToSec
 local LerpSpeed = 360 -- degs/sec
@@ -66,15 +79,44 @@ local function RotateRoll(self, vm)
 	local bone = vm and self.VMBones.Roll or self.Bones.Roll
 	local oldpos = self.RotateRollPos or self.Owner:GetPos()
 	local oldang = target:GetManipulateBoneAngles(bone)
-	local forward = Angle(0, self.Owner:GetAngles().yaw, 0):Forward()
+	local forward = Angle(0, self:GetAimVector():Angle().yaw, 0):Forward()
 	local diameter = self.Primary.Diameter or 15
 	local diff = self.Owner:GetPos() - oldpos
 	local amount = forward:Dot(diff)
 	local p = oldang.p + math.deg(amount / diameter)
-	if vm and self.ViewModelFlip then p = -p end
 	target:ManipulateBoneAngles(bone, math.NormalizeAngle(p) * Pitch)
 	self.RotateRollPos = self.Owner:GetPos()
 end
+
+SWEP.SwayTime = 12 * ss.FrameToSec
+SWEP.IronSightsAng = {
+	Angle(), -- right
+	Angle(), -- left
+	Angle(0, 0, -60), -- top-right
+	Angle(0, 0, -60), -- top-left
+	Angle(), -- center
+}
+SWEP.IronSightsPos = {
+	Vector(), -- right
+	Vector(), -- left
+	Vector(), -- top-right
+	Vector(), -- top-left
+	Vector(0, 6, -2), -- center
+}
+SWEP.IronSightsFlip = {
+	false,
+	true,
+	false,
+	true,
+	false,
+}
+SWEP.Crosshair = {
+	color_circle = ColorAlpha(color_black, crosshairalpha),
+	color_nohit = ColorAlpha(color_white, crosshairalpha),
+	Dot = 7, HitLine = 50, HitWidth = 2, Inner = 35, -- in pixel
+	Line = 8, LineWidth = 2, Middle = 44, Outer = 51, -- in pixel
+	HitLineSize = 44,
+}
 
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	self.VMBones = self.VMBones or {
@@ -130,49 +172,6 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 	self:ManipulateBoneAngles(self.Bones.Neck, Angle(0, 0, neck))
 end
 
-SWEP.SwayTime = 12 * ss.FrameToSec
-SWEP.IronSightsAng = {
-	Angle(), -- right
-	Angle(), -- left
-	Angle(0, 0, -60), -- top-right
-	Angle(0, 0, -60), -- top-left
-	Angle(), -- center
-}
-SWEP.IronSightsPos = {
-	Vector(), -- right
-	Vector(), -- left
-	Vector(), -- top-right
-	Vector(), -- top-left
-	Vector(0, 6, -2), -- center
-}
-SWEP.IronSightsFlip = {
-	false,
-	true,
-	false,
-	true,
-	false,
-}
-
-local crosshairalpha = 64
-local texdotsize = 32 / 4
-local texringsize = 128 / 2
-local texlinesize = 128 / 2
-local texlinewidth = 8 / 2
-local hitcrossbg = 4 -- in pixel
-local hitouterbg = 3 -- in pixel
-local originalres = 1920 * 1080
-local hitline, hitwidth = 50, 3
-local line, linewidth = 16, 3
-local PaintNearDistance = SWEP.Primary.PaintNearDistance or ss.mPaintNearDistance
-local PaintFraction = 1 + PaintNearDistance / ss.mPaintFarDistance
-SWEP.Crosshair = {
-	color_circle = ColorAlpha(color_black, crosshairalpha),
-	color_nohit = ColorAlpha(color_white, crosshairalpha),
-	Dot = 7, HitLine = 50, HitWidth = 2, Inner = 35, -- in pixel
-	Line = 8, LineWidth = 2, Middle = 44, Outer = 51, -- in pixel
-	HitLineSize = 44,
-}
-
 function SWEP:GetMuzzlePosition()
 	local ent = self:IsTPS() and self or self:GetViewModel()
 	local a = ent:GetAttachment(ent:LookupAttachment "roll")
@@ -184,7 +183,7 @@ function SWEP:ClientInit()
 end
 
 function SWEP:ClientThink()
-	self.Bodygroup[1] = self:GetInk() > self:GetTakeAmmo() and 0 or 1
+	self.Bodygroup[1] = self:GetInk() > 0 and 0 or 1
 	if not self.IsHeroWeapon then return end
 	self.Skin = self:GetNWInt "level"
 end
