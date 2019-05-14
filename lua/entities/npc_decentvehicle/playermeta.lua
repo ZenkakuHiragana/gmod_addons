@@ -3,6 +3,32 @@
 -- written by ∩(≡＾ω＾≡)∩ (https://steamcommunity.com/id/greatzenkakuman/)
 -- and DangerKiddy(DK) (https://steamcommunity.com/profiles/76561198132964487/).
 
+function ENT:AccountID() end -- For bots and in singleplayer, return no value
+function ENT:AddCleanup() end
+function ENT:AddCount() end
+function ENT:AddVCDSequenceToGestureSlot() end
+function ENT:Alive() return self:Health() > 0 end
+function ENT:AllowFlashlight() end
+function ENT:AnimResetGestureSlot() end
+function ENT:AnimRestartGesture() end
+function ENT:AnimRestartMainSequence() end
+function ENT:AnimSetGestureSequence() end
+function ENT:AnimSetGestureWeight() end
+function ENT:Armor() return 0 end
+function ENT:CanUseFlashlight() return false end
+function ENT:ChatPrint() end
+function ENT:CheckLimit() return true end
+function ENT:ConCommand() end
+function ENT:Crouching() return false end
+function ENT:Deaths() return 0 end
+function ENT:DoAnimationEvent() end
+function ENT:DoAttackEvent() end
+function ENT:DoCustomAnimEvent() end
+function ENT:DoReloadEvent() end
+function ENT:DoSecondaryAttack() end
+function ENT:DrawViewModel() end
+function ENT:FlashlightIsOn() return false end
+function ENT:Frags() return 0 end
 function ENT:PlayerEnteredSCar() end -- For SCAR base
 function ENT:OnTakeDamage() end -- For SCAR base
 function ENT:RemoveCarConnection() end -- For SCAR base
@@ -15,8 +41,10 @@ function ENT:SetEyeAngles() end
 function ENT:GetViewPunchAngles() return Angle() end
 function ENT:SetViewPunchAngles() end
 function ENT:UniqueID() return self:EntIndex() end
+function ENT:Team() return TEAM_UNASSIGNED end
 
 if CLIENT then
+	function ENT:AddPlayerOption() end
 	function ENT:KeyDown() return false end
 	return
 end
@@ -31,6 +59,25 @@ function ENT:GetInfoNum(key, default) --For Simfphys Vehicles
 	return InfoNum[key] or isnumber(default) and default or 0
 end
 
+function ENT:AddDeaths() end
+function ENT:AddFrags() end
+function ENT:AddFrozenPhysicsObject() end
+function ENT:AllowImmediateDecalPainting() end
+function ENT:Ban() end
+function ENT:CreateRagdoll() end
+function ENT:CrosshairDisable() end
+function ENT:CrosshairEnable() end
+function ENT:DebugInfo() end
+function ENT:DetonateTripmines() end
+function ENT:DrawWorldModel() end
+function ENT:DropNamedWeapon() end
+function ENT:DropObject() end
+function ENT:DropWeapon() end
+function ENT:EnterVehicle() end
+function ENT:EquipSuit() end
+function ENT:ExitVehicle() end
+function ENT:Flashlight() end
+function ENT:Freeze() end
 function ENT:SendHint() end
 function ENT:KeyDown(key)
 	return key == IN_FORWARD and self.Throttle > 0
@@ -68,7 +115,7 @@ function vehiclemeta:GetDriver(...)
 			return self.DecentVehicle
 		end
 	end
-	
+
 	return GetDriver(self, ...)
 end
 
