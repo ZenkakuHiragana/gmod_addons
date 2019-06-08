@@ -90,32 +90,34 @@ function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, su
 		for i = 1, #ink do
 			local r = ink[i]
 			local rb = r.bounds
-			for b in pairs(rb) do
-				local b1, b2, b3, b4 = unpack(b)
-				local w, h = b3 - b1, b4 - b2
-				if min(w, h) < 10 or w * h < 100 then
-					rb[b] = nil
-				elseif not (n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2) then
-					local x1, x2 = n1, n3 if x1 > x2 then x1, x2 = x2, x1 end
-					local x3, x4 = b1, b3 if x3 > x4 then x3, x4 = x4, x3 end
-					local y1, y2 = n2, n4 if y1 > y2 then y1, y2 = y2, y1 end
-					local y3, y4 = b2, b4 if y3 > y4 then y3, y4 = y4, y3 end
-					if x1 > x3 then x1, x3 = x3, x1 end
-					if x2 > x4 then x2, x4 = x4, x2 end
-					if x2 > x3 then x2, x3 = x3, x2 end
-					if y1 > y3 then y1, y3 = y3, y1 end
-					if y2 > y4 then y2, y4 = y4, y2 end
-					if y2 > y3 then y2, y3 = y3, y2 end
-					rb[b] = nil
-					rb[{x1, y1, x2, y2}] = b1 < x2 and b3 > x1 and b2 < y2 and b4 > y1 and (n1 >= x2 or n3 <= x1 or n2 >= y2 or n4 <= y1) or nil
-					rb[{x2, y1, x3, y2}] = b1 < x3 and b3 > x2 and b2 < y2 and b4 > y1 and (n1 >= x3 or n3 <= x2 or n2 >= y2 or n4 <= y1) or nil
-					rb[{x3, y1, x4, y2}] = b1 < x4 and b3 > x3 and b2 < y2 and b4 > y1 and (n1 >= x4 or n3 <= x3 or n2 >= y2 or n4 <= y1) or nil
-					rb[{x1, y2, x2, y3}] = b1 < x2 and b3 > x1 and b2 < y3 and b4 > y2 and (n1 >= x2 or n3 <= x1 or n2 >= y3 or n4 <= y2) or nil
-					rb[{x2, y2, x3, y3}] = b1 < x3 and b3 > x2 and b2 < y3 and b4 > y2 and (n1 >= x3 or n3 <= x2 or n2 >= y3 or n4 <= y2) or nil
-					rb[{x3, y2, x4, y3}] = b1 < x4 and b3 > x3 and b2 < y3 and b4 > y2 and (n1 >= x4 or n3 <= x3 or n2 >= y3 or n4 <= y2) or nil
-					rb[{x1, y3, x2, y4}] = b1 < x2 and b3 > x1 and b2 < y4 and b4 > y3 and (n1 >= x2 or n3 <= x1 or n2 >= y4 or n4 <= y3) or nil
-					rb[{x2, y3, x3, y4}] = b1 < x3 and b3 > x2 and b2 < y4 and b4 > y3 and (n1 >= x3 or n3 <= x2 or n2 >= y4 or n4 <= y3) or nil
-					rb[{x3, y3, x4, y4}] = b1 < x4 and b3 > x3 and b2 < y4 and b4 > y3 and (n1 >= x4 or n3 <= x3 or n2 >= y4 or n4 <= y3) or nil
+			if inktype < 10 or r.texid < 10 then
+				for b in pairs(rb) do
+					local b1, b2, b3, b4 = unpack(b)
+					local w, h = b3 - b1, b4 - b2
+					if min(w, h) < 10 or w * h < 100 then
+						rb[b] = nil
+					elseif not (n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2) then
+						local x1, x2 = n1, n3 if x1 > x2 then x1, x2 = x2, x1 end
+						local x3, x4 = b1, b3 if x3 > x4 then x3, x4 = x4, x3 end
+						local y1, y2 = n2, n4 if y1 > y2 then y1, y2 = y2, y1 end
+						local y3, y4 = b2, b4 if y3 > y4 then y3, y4 = y4, y3 end
+						if x1 > x3 then x1, x3 = x3, x1 end
+						if x2 > x4 then x2, x4 = x4, x2 end
+						if x2 > x3 then x2, x3 = x3, x2 end
+						if y1 > y3 then y1, y3 = y3, y1 end
+						if y2 > y4 then y2, y4 = y4, y2 end
+						if y2 > y3 then y2, y3 = y3, y2 end
+						rb[b] = nil
+						rb[{x1, y1, x2, y2}] = b1 < x2 and b3 > x1 and b2 < y2 and b4 > y1 and (n1 >= x2 or n3 <= x1 or n2 >= y2 or n4 <= y1) or nil
+						rb[{x2, y1, x3, y2}] = b1 < x3 and b3 > x2 and b2 < y2 and b4 > y1 and (n1 >= x3 or n3 <= x2 or n2 >= y2 or n4 <= y1) or nil
+						rb[{x3, y1, x4, y2}] = b1 < x4 and b3 > x3 and b2 < y2 and b4 > y1 and (n1 >= x4 or n3 <= x3 or n2 >= y2 or n4 <= y1) or nil
+						rb[{x1, y2, x2, y3}] = b1 < x2 and b3 > x1 and b2 < y3 and b4 > y2 and (n1 >= x2 or n3 <= x1 or n2 >= y3 or n4 <= y2) or nil
+						rb[{x2, y2, x3, y3}] = b1 < x3 and b3 > x2 and b2 < y3 and b4 > y2 and (n1 >= x3 or n3 <= x2 or n2 >= y3 or n4 <= y2) or nil
+						rb[{x3, y2, x4, y3}] = b1 < x4 and b3 > x3 and b2 < y3 and b4 > y2 and (n1 >= x4 or n3 <= x3 or n2 >= y3 or n4 <= y2) or nil
+						rb[{x1, y3, x2, y4}] = b1 < x2 and b3 > x1 and b2 < y4 and b4 > y3 and (n1 >= x2 or n3 <= x1 or n2 >= y4 or n4 <= y3) or nil
+						rb[{x2, y3, x3, y4}] = b1 < x3 and b3 > x2 and b2 < y4 and b4 > y3 and (n1 >= x3 or n3 <= x2 or n2 >= y4 or n4 <= y3) or nil
+						rb[{x3, y3, x4, y4}] = b1 < x4 and b3 > x3 and b2 < y4 and b4 > y3 and (n1 >= x4 or n3 <= x3 or n2 >= y4 or n4 <= y3) or nil
+					end
 				end
 			end
 		end

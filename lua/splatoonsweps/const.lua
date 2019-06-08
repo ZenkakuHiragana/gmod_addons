@@ -167,7 +167,7 @@ end
 do -- Ink distribution map
 	local one = string.byte "1"
 	local path = "splatoonsweps/constants/inkdistributions/shot%d.lua"
-	for i = 1, 9 do
+	for i = 1, 12 do
 		local f, mask = path:format(i), {}
 		local w, h, data = include(f)
 		mask.width, mask.height = w, h

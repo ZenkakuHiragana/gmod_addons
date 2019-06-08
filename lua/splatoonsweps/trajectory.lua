@@ -100,19 +100,21 @@ end
 function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	local ratio = 1
 	local radius = ink.InkRadius
-	if not ink.IsDrop and ink.Base ~= "weapon_splatoonsweps_charger" and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
-		local actual = (t.HitPos - ink.InitPos):Length2D()
-		local min = SplashDistance + ink.PaintNearDistance
-		if actual > min then
-			local max = ss.mPaintFarDistance
-			local stretch = (actual - min) / max + 0.5
-			radius, ratio = radius * (stretch + 0.5), 0.5 / stretch
+	if not ink.IsRoller then
+		if not ink.IsDrop and not ink.IsCharger and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
+			local actual = (t.HitPos - ink.InitPos):Length2D()
+			local min = SplashDistance + ink.PaintNearDistance
+			if actual > min then
+				local max = ss.mPaintFarDistance
+				local stretch = (actual - min) / max + 0.5
+				radius, ratio = radius * (stretch + 0.5), 0.5 / stretch
+			else
+				ink.InkType = ss.GetDropType()
+			end
 		else
 			ink.InkType = ss.GetDropType()
+			ratio = ink.Ratio or 1
 		end
-	else
-		ink.InkType = ss.GetDropType()
-		ratio = ink.Ratio or 1
 	end
 
 	if (ss.sp or CLIENT and IsFirstTimePredicted()) and t.Hit and (not ink.IsDrop or ink.PlayHitSound) then
@@ -273,9 +275,6 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t, w)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
-Simulate.weapon_splatoonsweps_splatling = Simulate.weapon_splatoonsweps_shooter
-HitPaint.weapon_splatoonsweps_splatling = HitPaint.weapon_splatoonsweps_shooter
-HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shooter
 function Simulate.weapon_splatoonsweps_blaster_base(ink)
 	Simulate.weapon_splatoonsweps_shooter(ink)
 	if ink.Time <= ink.ExplosionTime then return end
@@ -314,6 +313,12 @@ function HitPaint.weapon_splatoonsweps_blaster_base(ink, t)
 end
 
 HitEntity.weapon_splatoonsweps_blaster_base = HitEntity.weapon_splatoonsweps_shooter
+Simulate.weapon_splatoonsweps_splatling = Simulate.weapon_splatoonsweps_shooter
+HitPaint.weapon_splatoonsweps_splatling = HitPaint.weapon_splatoonsweps_shooter
+HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shooter
+Simulate.weapon_splatoonsweps_roller = Simulate.weapon_splatoonsweps_shooter
+HitPaint.weapon_splatoonsweps_roller = HitPaint.weapon_splatoonsweps_shooter
+HitEntity.weapon_splatoonsweps_roller = HitEntity.weapon_splatoonsweps_shooter
 
 local function ProcessInkQueue(ply)
 	local Benchmark = SysTime()
@@ -399,6 +404,7 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 		IsCarriedByLocalPlayer = IsLP,
 		IsBlaster = base == "weapon_splatoonsweps_blaster_base",
 		IsCharger = base == "weapon_splatoonsweps_charger",
+		IsRoller = base == "weapon_splatoonsweps_roller",
 		IsShooter = not isdrop and base == "weapon_splatoonsweps_shooter",
 		IsDrop = isdrop,
 		MinDamage = info.MinDamage,
@@ -445,6 +451,20 @@ function ss.AddInk(ply, pos, inktype, isdrop)
 			Straight = w.Range / Speed,
 			StraightPos = pos + t.InitDirection * w.Range,
 			WallPaintCharge = info.WallPaintCharge,
+		})
+	elseif t.IsRoller then
+		table.Merge(t, {
+			InkRadius = info.InkRadius,
+			MinRadius = info.MinRadius,
+			PaintNearDistance = info.MinPaintDistance,
+			PlayHitSound = true,
+			Range = 0,
+			SplashCount = 0,
+			SplashInit = 0,
+			SplashInitMul = 0,
+			SplashMinRadius = 0,
+			SplashNum = 0,
+			SplashRadius = 0,
 		})
 	else
 		table.Merge(t, {

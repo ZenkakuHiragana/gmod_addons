@@ -28,7 +28,7 @@ function sd.ShowInkChecked(r, surf, i)
     if CLIENT then d.DTick() end
     if SERVER then
         if CurTime() < ShowInkChecked_ServerTime then return end
-        ShowInkChecked_ServerTime = CurTime + 1
+        ShowInkChecked_ServerTime = CurTime() + 1
         d.DShort()
     end
 

@@ -152,9 +152,61 @@ function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(p, info)
 end
 
 function ss.CustomPrimary.weapon_splatoonsweps_roller(p, info)
-	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
-	p.Range = 100 -- Dummy data for NPCs, for now
 	p.SwingWaitTime = info.Delay.SwingWait * ss.FrameToSec
+	p.Straight = info.Delay.Straight * ss.FrameToSec
+	p.StraightSub = info.Delay.StraightSub * ss.FrameToSec
+	p.ReloadDelayGround = info.Delay.ReloadGround * ss.FrameToSec
+	p.TakeAmmoGround = info.TakeAmmoGround
+	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
+
+	p.Damage = info.Damage
+	p.DamageSub = info.DamageSub
+	p.MinDamage = info.MinDamage
+	p.MinDamageSub = info.MinDamageSub
+	p.DamageGround = info.DamageGround
+
+	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
+	p.InitVelocitySub = info.InitVelocitySub * ss.ToHammerUnitsPerSec
+	p.SpreadVelocity = info.SpreadVelocity * ss.ToHammerUnitsPerSec
+	p.SpreadVelocitySub = info.SpreadVelocitySub * ss.ToHammerUnitsPerSec
+
+	p.Spread = info.Spread
+	p.SpreadSub = info.SpreadSub
+	p.SplashNum = info.SplashNum
+	p.SplashSubNum = info.SplashSubNum
+	p.SplashPosWidth = info.SplashPosWidth * ss.ToHammerUnits
+
+	p.MaxWidth = info.MaxWidth * ss.ToHammerUnits
+	p.MinWidth = info.MinWidth * ss.ToHammerUnits
+	p.CollisionWidth = info.CollisionWidth * ss.ToHammerUnits
+
+	p.EffectScale = info.EffectScale
+	p.EffectVelocityRate = info.EffectVelocityRate
+
+	p.MinDamageDist = info.MinDamageDist * ss.ToHammerUnits
+	p.MinDamageDistSub = info.MinDamageDistSub * ss.ToHammerUnits
+	p.DecreaseDamageDist = info.DecreaseDamageDist * ss.ToHammerUnits
+	p.DecreaseDamageDistSub = info.DecDamageDistSub * ss.ToHammerUnits
+
+	p.InkRadius = info.InkRadius * ss.ToHammerUnits
+	p.InkRadiusSub = info.InkRadiusSub * ss.ToHammerUnits
+	p.MinRadius = info.MinRadius * ss.ToHammerUnits
+	p.MinRadiusSub = info.MinRadiusSub * ss.ToHammerUnits
+
+	p.MaxPaintDistance = info.MaxPaintDistance * ss.ToHammerUnits
+	p.MaxPaintDistanceSub = info.MaxPaintDistSub * ss.ToHammerUnits
+	p.MinPaintDistance = info.MinPaintDistance * ss.ToHammerUnits
+	p.MinPaintDistanceSub = info.MinPaintDistSub * ss.ToHammerUnits
+
+	p.CollisionRadiusWorld = info.ColRadiusWorld * ss.ToHammerUnits
+	p.CollisionRadiusWorldSub = info.ColRadiusWorldSub * ss.ToHammerUnits
+	p.CollisionRadiusPlayer = info.ColRadiusPlayer * ss.ToHammerUnits
+	p.CollisionRadiusPlayerSub = info.ColRadiusPlayerSub * ss.ToHammerUnits
+	p.ColRadius = p.CollisionRadiusPlayer
+
+	p.Range = p.InitVelocity * (p.Straight + ss.ShooterDecreaseFrame / 2)
+	p.SplashInterval = 0
+	p.SplashPatterns = 0
 end
 
 local SplatoonSWEPsMuzzleSplash = 0

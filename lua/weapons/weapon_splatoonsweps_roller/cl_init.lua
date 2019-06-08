@@ -58,6 +58,7 @@ local function AdjustRollerAngles(self, tracelength, traceheight, tracewidth, tr
 
 	local hitpos = (trleft.HitPos + trright.HitPos) / 2
 	local bonemat = target:GetBoneMatrix(bone)
+	if not bonemat then return end
 	local bonepos = bonemat:GetTranslation()
 	local dzp = bonepos.z - hitpos.z
 	local dp = math.deg(math.asin(dzp / hitpos:Distance(bonepos)))
