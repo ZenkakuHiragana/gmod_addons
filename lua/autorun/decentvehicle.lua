@@ -51,6 +51,7 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		"models/player/group03/male_08.mdl",
 		"models/player/group03/male_09.mdl",
 	},
+	FakeCUserCmd = nil,
 	KmphToHUps = 1000 * 3.2808399 * 16 / 3600,
 	KmToHU = 1000 * 3.2808399 * 16,
 	PID = {
@@ -75,7 +76,7 @@ DecentVehicleDestination = DecentVehicleDestination or {
 		{Time = CurTime() + 33, Light = 1}, -- Light pattern #1
 		{Time = CurTime() + 40, Light = 3}, -- Light pattern #2
 	},
-	Version = {1, 1, 0}, -- Major version, Minor version, Revision
+	Version = {1, 1, 1}, -- Major version, Minor version, Revision
 	Waypoints = {},
 	WaypointSize = 32,
 	WireManagers = {},
@@ -192,3 +193,8 @@ dvd.CVars = dvd.CVars or {
 	TimeToStopEmergency = CreateConVar("decentvehicle_timetostopemergency", 5, CVarFlags, dvd.Texts.CVars.TimeToStopEmergency),
 	TurnOnLights = CreateConVar("decentvehicle_turnonlights", 3, CVarFlags, dvd.Texts.CVars.TurnOnLights),
 }
+
+hook.Add("StartCommand", "Decent Vehicle: Get a fake CUserCmd", function(ply, cmd)
+	dvd.FakeCUserCmd = cmd
+	hook.Remove("StartCommand", "Decent Vehicle: Get a fake CUserCmd")
+end)

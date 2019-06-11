@@ -30,7 +30,7 @@ end
 
 function ENT:GetVehicleForward(v)
 	local vehicle = v or self:GetNWEntity "Vehicle"
-	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return self:GetForward() end
 	if vehicle.IsScar then
 		return vehicle:GetForward()
 	elseif vehicle.IsSimfphyscar then
@@ -42,7 +42,7 @@ end
 
 function ENT:GetVehicleRight(v)
 	local vehicle = v or self:GetNWEntity "Vehicle"
-	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return self:GetRight() end
 	if vehicle.IsScar then
 		return vehicle:GetRight()
 	elseif vehicle.IsSimfphyscar then
@@ -54,7 +54,7 @@ end
 
 function ENT:GetVehicleUp(v)
 	local vehicle = v or self:GetNWEntity "Vehicle"
-	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return end
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return self:GetUp() end
 	if vehicle.IsScar then
 		return vehicle:GetUp()
 	elseif vehicle.IsSimfphyscar then
@@ -63,5 +63,3 @@ function ENT:GetVehicleUp(v)
 		return vehicle:GetUp()
 	end
 end
-
-ENT.GetAimVector = ENT.GetVehicleForward -- For SCAR base
