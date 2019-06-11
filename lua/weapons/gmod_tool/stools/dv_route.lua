@@ -216,6 +216,7 @@ function TOOL.BuildCPanel(CPanel)
 			ForceHeadlights = "decentvehicle_forceheadlights",
 			LockVehicle = "decentvehicle_gotorefuel",
 			ShouldGoToRefuel = "decentvehicle_lock",
+			StopInfrontofPerson = "decentvehicle_stop_infrontof_person",
 		} do
 			local c = vgui.Create("DCheckBoxLabel", CPanel)
 			local cvar = GetConVar(cvarname)

@@ -67,6 +67,8 @@ ENT.Preference = { -- Some preferences for Decent Vehicle here
 	StopEmergency = true, -- Whether or not it stops on crash
 	StopEmergencyDuration = 5, -- Duration of stopping on crash
 	StopEmergencyDurationDependsOnCVar = true, -- Same as LockVehicle, but for StopEmergencyDuration
+	StopInfrontofPerson = true, -- Whether or not it stops when it sees something in front of it
+	StopInfrontofPersonDependsOnCVar = true, -- Same as LockVehicle, but for StopInfrontofPerson
 	TraceMaxBound = 64, -- Maximum hull size of trace: max = Vector(1, 1, 1) * this value, min = -max
 	TraceMinLength = 200, -- Minimum trace length in hammer units
 	WaitUntilNext = true, -- Whether or not it waits on WaitUntilNext
@@ -100,6 +102,7 @@ local DetectionRange = dvd.CVars.DetectionRange
 local DetectionRangeELS = dvd.CVars.DetectionRangeELS
 local DriveSide = dvd.CVars.DriveSide
 local LockVehicle = dvd.CVars.LockVehicle
+local StopInfrontofPerson = dvd.CVars.StopInfrontofPerson
 local Interval = {
 	DoLights = 1 / 10,
 	GiveWay = 1 / 20,
@@ -431,7 +434,8 @@ function ENT:ShouldStop()
 	if not self.Waypoint then return true end
 	if CurTime() < self.WaitUntilNext then return true end
 	if CurTime() < self.Emergency then return true end
-	if CurTime() > self.StopByTrace and CurTime() < self.StopByTrace + GobackTime then return true end
+	if self.Preference.StopInfrontofPerson and CurTime() > self.StopByTrace
+	and CurTime() < self.StopByTrace + GobackTime then return true end
 	if self.Preference.StopAtTL and self:AtTrafficLight() then return true end
 end
 
@@ -976,6 +980,10 @@ function ENT:Initialize()
 	self.Preference = table.Copy(self.Preference)
 	if self.Preference.LockVehicleDependsOnCVar then
 		self.Preference.LockVehicle = LockVehicle:GetBool()
+	end
+
+	if self.Preference.StopInfrontofPersonDependsOnCVar then
+		self.Preference.StopInfrontofPerson = StopInfrontofPerson:GetBool()
 	end
 
 	if self.Preference.LockVehicle then

@@ -14,6 +14,7 @@ return {
 		ForceHeadlights = "Decent Vehicle: 常にヘッドライトを点灯させるかどうか。",
 		LockVehicle = "Decent Vehicle: 1にすると、Decent Vehicleの操縦する車両にプレイヤーが乗れないようになる。",
 		ShouldGoToRefuel = "Decent Vehicle: 1: ガソリンスタンドに向かって給油する  0: 自動的に給油されるようにする",
+		StopInfrontofPerson = "Decent Vehicle: 走行中、前方に物を検知した時に停止するかどうか。",
 		TimeToStopEmergency = "Decent Vehicle: 衝突時、ハザードランプを消すまでの時間。",
 		TurnOnLights = [[Decent Vehicle: 使用するライトのレベル。
 0: 無効
@@ -89,6 +90,8 @@ return {
 		},
 		ShowUpdates = "アップデートを通知する",
 		ShowUpdatesHelp = "チェックすると、アップデートされたときに通知が出るようになる。",
+		StopInfrontofPerson = "前方に物がある時に停止",
+		StopInfrontofPersonHelp = "Decent Vehicleが前方に物を検知した時に停止するかどうか。",
 		UpdateRadius = "アップデートの適用半径",
 		UpdateRadiusHelp = "E + 右クリックでこの範囲にあるウェイポイントが一度に更新される。",
 		UseTurnLights = "ウィンカーを使う",

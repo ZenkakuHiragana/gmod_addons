@@ -14,6 +14,7 @@ return {
         ForceHeadlights = "Decent Vehicle: Заставляет Decent Vehicle включить фары",
 		LockVehicle = "Decent Vehicle: Закрывать транспорт при спавне?",
         ShouldGoToRefuel = "Decent Vehicle: 1: Ехать на АЗС чтобы заправитьсч.  0: заправляться автоматичкски.",
+		StopInfrontofPerson = "Decent Vehicle: Whether or not Decent Vehicle stops when it sees something in front of it.",
         TimeToStopEmergency = "Decent Vehicle: Время в секундах чтобы выключить аварийные сигналы.",
         TurnOnLights = [[Decent Vehicle: Уровень использования фаи.
 0: Выключены
@@ -89,6 +90,8 @@ return {
         },
         ShowUpdates = "Уведомлять об обновлениях",
         ShowUpdatesHelp = "Если отмечено, вы будете уведомлены о всех обновлениях.",
+		StopInfrontofPerson = "Stop when it sees something",
+		StopInfrontofPersonHelp = "If checked, Decent Vehicle stops running if it sees something in front of it.",
         UpdateRadius = "Обновить радиус",
         UpdateRadiusHelp = "Точки в этом радиусе будут обновлены в то время, когда вы нажмете E + Правая Кнопка Мыши.",
         UseTurnLights = "Использовать поворотники",

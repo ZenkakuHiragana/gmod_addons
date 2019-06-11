@@ -14,6 +14,7 @@ return {
 		ForceHeadlights = "Decent Vehicle: Forces Decent Vehicle to enable headlights.",
 		LockVehicle = "Decent Vehicle: Whether or not Decent Vehicle prevents players from getting in.",
 		ShouldGoToRefuel = "Decent Vehicle: 1: Go to a fuel station to refuel.  0: Refuel automatically.",
+		StopInfrontofPerson = "Decent Vehicle: Whether or not Decent Vehicle stops when it sees something in front of it.",
 		TimeToStopEmergency = "Decent Vehicle: Time to turn off hazard lights in seconds.",
 		TurnOnLights = [[Decent Vehicle: The level of using lights.
 0: Disabled
@@ -89,6 +90,8 @@ return {
 		},
 		ShowUpdates = "Notify the latest updates",
 		ShowUpdatesHelp = "If checked, some notifications are shown when this addon is updated.",
+		StopInfrontofPerson = "Stop when it sees something",
+		StopInfrontofPersonHelp = "If checked, Decent Vehicle stops running if it sees something in front of it.",
 		UpdateRadius = "Update radius",
 		UpdateRadiusHelp = "Waypoints in this radius will be updated at a time when you press E + Right click.",
 		UseTurnLights = "Use turn signals",

@@ -187,6 +187,7 @@ dvd.CVars = dvd.CVars or {
 		ChangeCode = CreateConVar("decentvehicle_police_changecodetimer", 60, CVarFlags, dvd.Texts.Police.CVars.ChangeCode),
 	},
 	ShouldGoToRefuel = CreateConVar("decentvehicle_gotorefuel", 1, CVarFlags, dvd.Texts.CVars.ShouldGoToRefuel),
+	StopInfrontofPerson = CreateConVar("decentvehicle_stop_infrontof_person", 1, CVarFlags, dvd.Texts.CVars.StopInfrontofPerson),
 	Taxi = {
 		UnitPrice = CreateConVar("decentvehicle_taxi_unitprice", 5, CVarFlags, dvd.Texts.Taxi.UnitPrice),
 	},
