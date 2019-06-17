@@ -9,8 +9,6 @@ local hitline, hitwidth = 50, 3
 local line, linewidth = 16, 3
 local texlinesize = 128 / 2
 local texlinewidth = 8 / 2
-local PaintNearDistance = SWEP.Primary.PaintNearDistance or ss.mPaintNearDistance
-local PaintFraction = 1 + PaintNearDistance / ss.mPaintFarDistance
 SWEP.Crosshair = {
 	color_circle = ColorAlpha(color_black, crosshairalpha),
 	color_nohit = ColorAlpha(color_white, crosshairalpha),
@@ -28,7 +26,7 @@ local function Spin(self, vm, weapon, ply)
 		local prog = self:GetFireInk() > 0 and self:GetFireAt() or self:GetChargeProgress(true)
 		local b = self:LookupBone "rotate_1" or 0
 		local a = self:GetManipulateBoneAngles(b)
-		local dy = RealFrameTime() * 60 / self.Primary.Delay * (prog + .1)
+		local dy = RealFrameTime() * 60 / self.Parameters.mRepeatFrame * (prog + .1)
 		a.y = a.y + sgn * dy
 		self:ManipulateBoneAngles(b, a)
 		if not IsValid(vm) then return end
@@ -49,7 +47,7 @@ SWEP.PreDrawWorldModel = Spin
 
 function SWEP:ClientInit()
 	self.CrosshairFlashTime = CurTime()
-	self.MinChargeDeg = self.Primary.MinChargeTime / self.Primary.MaxChargeTime[1] * 360
+	self.MinChargeDeg = self.Parameters.mMinChargeFrame / self.Parameters.mFirstPeriodMaxChargeFrame * 360
 	self:GetBase().ClientInit(self)
 	self:AddSchedule(0, function()
 		local e = EffectData()
@@ -108,7 +106,7 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 	local pitch = EyeAngles():Right()
 	local yaw = pitch:Cross(dir)
 	if t.IsSplatoon2 then
-		frac, range = 1, self.Primary.Range
+		frac, range = 1, self.Range
 		if t.Trace.Hit then
 			dir = self:GetAimVector()
 			pos = self:GetShootPos()
@@ -146,11 +144,12 @@ end
 
 function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 	if not t.HitEntity then return end
+	local p = self.Parameters
 	local mul = 1.2
 	local s = 10 * mul
 	local w, h = t.Size.HitLine * mul, t.Size.HitWidth * mul
-	local lp = s + math.max(PaintFraction - (t.Distance
-	/ ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
+	local frac = 1 + p.mPaintNearDistance / p.mPaintFarDistance
+	local lp = s + math.max(frac - (t.Distance / p.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
 	for mat, col in pairs {[""] = color_white, Color = ss.GetColor(self:GetNWInt "inkcolor")} do
 		surface.SetMaterial(ss.Materials.Crosshair["Line" .. mat])
 		surface.SetDrawColor(col)
@@ -162,15 +161,15 @@ function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 end
 
 function SWEP:DrawChargeCircle(t)
-	local timescale = ss.GetTimeScale(self.Owner)
+	local p = self.Parameters
 	local r = {t.Size.Outside1 / 2, t.Size.Outside2 / 2}
 	local ri = {t.Size.Inside1 / 2, t.Size.Inside2 / 2}
 	local prog = self:GetChargeProgress(true)
 	if self:GetFireInk() > 0 then
-		local frac = math.max(self:GetNextPrimaryFire() - CurTime() - self:Ping(), 0) / self.Primary.Delay
+		local frac = math.max(self:GetNextPrimaryFire() - CurTime() - self:Ping(), 0) / p.mRepeatFrame
 		local max = {
-			math.floor(self.Primary.FireDuration[1] / self.Primary.Delay) + 1,
-			math.floor(self.Primary.FireDuration[2] / self.Primary.Delay) + 1,
+			math.floor(p.mFirstPeriodMaxChargeShootingFrame / p.mRepeatFrame) + 1,
+			math.floor(p.mSecondPeriodMaxChargeShootingFrame / p.mRepeatFrame) + 1,
 		}
 
 		prog = {
@@ -183,8 +182,8 @@ function SWEP:DrawChargeCircle(t)
 			math.Clamp((prog - self.MediumCharge) / (1 - self.MediumCharge), 0, 1) * 360,
 		}
 		if prog[1] <= 0 then
-			local frac = math.max(CurTime() - self:GetCharge() + self:Ping(), 0) / self.Primary.MaxChargeTime[1] * timescale
-			prog[1] = math.Clamp(frac, 0, 1) * 360
+			local frac = math.max(CurTime() - self:GetCharge() + self:Ping(), 0) / p.mFirstPeriodMaxChargeFrame
+			prog[1] = math.Clamp(frac * ss.GetTimeScale(self.Owner), 0, 1) * 360
 		else
 			prog[1] = prog[1] + self.MinChargeDeg
 		end
@@ -243,7 +242,7 @@ end
 
 function SWEP:DrawCrosshair(x, y, t)
 	if self:GetCharge() == math.huge and self:GetFireInk() == 0 then return end
-	t.EndPosScreen = (self:GetShootPos() + self:GetAimVector() * self.Primary.Range):ToScreen()
+	t.EndPosScreen = (self:GetShootPos() + self:GetAimVector() * self.Range):ToScreen()
 	t.CrosshairDarkColor = ColorAlpha(t.CrosshairColor, 192)
 	t.CrosshairDarkColor.r, t.CrosshairDarkColor.g, t.CrosshairDarkColor.b
 	= t.CrosshairDarkColor.r / 2, t.CrosshairDarkColor.g / 2, t.CrosshairDarkColor.b / 2

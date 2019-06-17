@@ -2,68 +2,63 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_shooter"
+SWEP.IsCharger = true
 SWEP.FlashDuration = .25
 
-function SWEP:GetLerp(frac, min, max, full)
-	return frac < 1 and Lerp(frac, min, max) or full or max
-end
-
 function SWEP:GetColRadius()
-	return self:GetLerp(self:GetChargeProgress(CLIENT),
-	self.Primary.MinColRadius, self.Primary.ColRadius)
+	return Lerp(self:GetChargeProgress(CLIENT),
+		self.Parameters.mMinChargeColRadiusForPlayer,
+		self.Parameters.mMaxChargeColRadiusForPlayer)
 end
 
 function SWEP:GetDamage(ping)
-	local p = self.Primary
-	local ChargeFrame = p.MaxChargeTime * ss.SecToFrame
-	local frac = math.floor(self:GetChargeProgress(ping) * ChargeFrame) / ChargeFrame
-	return self:GetLerp(frac, p.MinDamage, p.MaxDamage, p.Damage)
+	return ss.Lerp3(
+		self:GetChargeProgress(ping),
+		self.Parameters.mMinChargeDamage,
+		self.Parameters.mMaxChargeDamage,
+		self.Parameters.mFullChargeDamage)
 end
 
 function SWEP:GetRange(ping)
-	return self:GetLerp(self:GetChargeProgress(ping),
-	self.Primary.MinRange, self.Primary.MaxRange, self.Primary.Range)
+	if self.Scoped then
+		return ss.Lerp3(
+			self:GetChargeProgress(ping),
+			self.Parameters.mMinDistance,
+			self.Parameters.mMaxDistanceScoped,
+			self.Parameters.mFullChargeDistanceScoped)
+	else
+		return ss.Lerp3(
+			self:GetChargeProgress(ping),
+			self.Parameters.mMinDistance,
+			self.Parameters.mMaxDistance,
+			self.Parameters.mFullChargeDistance)
+	end
 end
 
 function SWEP:GetInkVelocity()
-	return self:GetLerp(self:GetChargeProgress(),
-	self.Primary.MinVelocity, self.Primary.MaxVelocity, self.Primary.InitVelocity)
+	return ss.Lerp3(
+		self:GetChargeProgress(),
+		self.Parameters.mInitVelL,
+		self.Parameters.mInitVelH,
+		self.Parameters.mInitVelF)
 end
 
 function SWEP:GetChargeProgress(ping)
-	local timescale = ss.GetTimeScale(self.Owner)
-	local frac = CurTime() - self:GetCharge() - self.Primary.MinChargeTime / timescale
+	local ts = ss.GetTimeScale(self.Owner)
+	local frac = CurTime() - self:GetCharge() - self.Parameters.mMinChargeFrame / ts
 	if ping then frac = frac + self:Ping() end
-	return math.Clamp(frac / self.Primary.MaxChargeTime * timescale, 0, 1)
+	return math.Clamp(frac / self.Parameters.mMaxChargeFrame * ts, 0, 1)
 end
 
 function SWEP:GetScopedProgress(ping)
 	if not self.Scoped then return 0 end
 	if CLIENT and GetViewEntity() ~= self.Owner then return 0 end
 	local prog = self:GetChargeProgress(ping)
-	local scope = self.Primary.Scope
-	if prog < scope.StartMove then return 0 end
-	return math.Clamp((prog - scope.StartMove)
-		/ (scope.EndMove - scope.StartMove), 0, 1)
-end
-
-function SWEP:ResetSkin()
-	if ss.ChargingEyeSkin[self.Owner:GetModel()] then
-		local skin = 0
-		if self:GetNWInt "playermodel" == ss.PLAYER.NOCHANGE then
-			skin = CLIENT and
-			GetConVar "cl_playerskin":GetInt() or
-			self.BackupPlayerInfo.Playermodel.Skin
-		end
-
-		if self.Owner:GetSkin() == skin then return end
-		self.Owner:SetSkin(skin)
-	elseif ss.TwilightPlayermodels[self.Owner:GetModel()] then
-		local l = self.Owner:GetFlexIDByName "Blink_L"
-		local r = self.Owner:GetFlexIDByName "Blink_R"
-		if l then self.Owner:SetFlexWeight(l, 0) end
-		if r then self.Owner:SetFlexWeight(r, 0) end
-	end
+	local p = self.Parameters
+	local startmove = p.mSniperCameraMoveStartChargeRate
+	local endmove = p.mSniperCameraMoveEndChargeRate
+	if prog < startmove then return 0 end
+	return math.Clamp((prog - startmove) / (endmove - startmove), 0, 1)
 end
 
 function SWEP:ResetCharge()
@@ -90,9 +85,17 @@ function SWEP:PlayChargeSound()
 	end
 end
 
+function SWEP:ShouldChargeWeapon()
+	if self.Owner:IsPlayer() then
+		return self.Owner:KeyDown(IN_ATTACK)
+	else
+		return CurTime() - self:GetCharge() < self.Parameters.mMaxChargeFrame * 2
+	end
+end
+
 function SWEP:SharedInit()
 	self.AimSound = CreateSound(self, ss.ChargerAim)
-	self.AirTimeFraction = 1 - 1 / self.Primary.EmptyChargeMul
+	self.AirTimeFraction = 1 - 1 / self.Parameters.mEmptyChargeTimes
 	self:SetAimTimer(CurTime())
 	self:ResetCharge()
 	self:AddSchedule(0, function()
@@ -120,20 +123,23 @@ function SWEP:SharedInit()
 end
 
 function SWEP:SharedPrimaryAttack()
+	local p = self.Parameters
 	if not IsValid(self.Owner) then return end
-	if self:GetCharge() < math.huge then
+	
+	self:SetReloadDelay(p.mInkRecoverStop)
+	if self:GetCharge() < math.huge then -- Hold +attack to charge
 		local prog = self:GetChargeProgress()
-		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
-		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
+		self:SetAimTimer(CurTime() + ss.AimDuration)
+		self.JumpPower = Lerp(prog, ss.InklingJumpPower, p.mJumpGnd)
 		if prog > 0 then
-			local EnoughInk = self:GetInk() >= prog * self:GetTakeAmmo()
+			local EnoughInk = self:GetInk() >= prog * p.mInkConsume
 			if not self.Owner:OnGround() or not EnoughInk then
 				if EnoughInk or self:GetNWBool "canreloadstand" then
 					self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
 				else
-					local timescale = ss.GetTimeScale(self.Owner)
-					local elapsed = prog * self.Primary.MaxChargeTime / timescale
-					local min = self.Primary.MinChargeTime / timescale
+					local ts = ss.GetTimeScale(self.Owner)
+					local elapsed = prog * p.mMaxChargeFrame / ts
+					local min = p.mMinChargeFrame / ts
 					local ping = CLIENT and self:Ping() or 0
 					self:SetCharge(CurTime() + FrameTime() - elapsed - min)
 				end
@@ -146,34 +152,24 @@ function SWEP:SharedPrimaryAttack()
 		end
 
 		self:PlayChargeSound()
-		return
+	else -- First attempt
+		if CurTime() > self:GetAimTimer() then
+			self:SetSplashInitMul(0)
+		end
+
+		self.FullChargeFlag = false
+		self.AimSound:PlayEx(0, 1)
+		self:SetAimTimer(CurTime() + ss.AimDuration)
+		self:SetCharge(CurTime())
+		self:SetWeaponAnim(ACT_VM_IDLE)
+		ss.SetChargingEye(self)
+
+		if not self:IsFirstTimePredicted() then return end
+		local e = EffectData()
+		e:SetEntity(self)
+		util.Effect("SplatoonSWEPsChargerLaser", e, true, self.IgnorePrediction)
+		self:EmitSound "SplatoonSWEPs.ChargerPreFire"
 	end
-
-	if CurTime() > self:GetAimTimer() then
-		self:SetSplashInitMul(0)
-	end
-
-	self.FullChargeFlag = false
-	self.AimSound:PlayEx(0, 1)
-	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
-	self:SetCharge(CurTime() + self.Primary.MinFreezeTime)
-	self:SetWeaponAnim(ACT_VM_IDLE)
-
-	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
-	if skin and self.Owner:GetSkin() ~= skin then
-		self.Owner:SetSkin(skin)
-	elseif ss.TwilightPlayermodels[self.Owner:GetModel()] then
-		local l = self.Owner:GetFlexIDByName "Blink_L"
-		local r = self.Owner:GetFlexIDByName "Blink_R"
-		if l then self.Owner:SetFlexWeight(l, .3) end
-		if r then self.Owner:SetFlexWeight(r, 1) end
-	end
-
-	if not self:IsFirstTimePredicted() then return end
-	local e = EffectData() e:SetEntity(self)
-	util.Effect("SplatoonSWEPsChargerLaser", e, true,
-	not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
-	self:EmitSound "SplatoonSWEPs.ChargerPreFire"
 end
 
 function SWEP:KeyPress(ply, key)
@@ -183,8 +179,7 @@ function SWEP:KeyPress(ply, key)
 end
 
 function SWEP:Move(ply)
-	local p = self.Primary
-	local prog = self:GetChargeProgress()
+	local p = self.Parameters
 	if ply:IsPlayer() then
 		if self:GetNWBool "toggleads" then
 			if ply:KeyPressed(IN_USE) then
@@ -195,54 +190,59 @@ function SWEP:Move(ply)
 		end
 	end
 
-	if CurTime() > self:GetAimTimer() then
-		local f = ply:GetFlexIDByName "Blink_R"
-		if ply:GetSkin() == ss.ChargingEyeSkin[ply:GetModel()]
-		or ss.TwilightPlayermodels[ply:GetModel()]
-		and f and ply:GetFlexWeight(f) == 1 then
-			self:ResetSkin()
-		end
+	if CurTime() > self:GetAimTimer() then -- It's no longer aiming
+		ss.SetNormalEye(self)
 	end
 
 	if self:GetCharge() == math.huge then return end
-	if ply:IsPlayer() and ply:KeyDown(IN_ATTACK) then return end
-	if not ply:IsPlayer() and self:ShouldChargeWeapon() then return end
-	if CurTime() - self:GetCharge() < p.MinChargeTime then return end
+	if self:ShouldChargeWeapon() then return end
+	if CurTime() - self:GetCharge() < p.mMinChargeFrame then return end
 	if ply:IsPlayer() and SERVER and ss.mp then SuppressHostEvents(ply) end
-	local inkprog = math.max(p.MinChargeTime / p.MaxChargeTime, prog)
+	local prog = self:GetChargeProgress()
+	local inkconsume = math.max(p.mMinChargeFrame / p.mMaxChargeFrame, prog) * p.mInkConsume
 	local ShootSound = prog > .75 and self.ShootSound2 or self.ShootSound
-	local pitch = 100 + (prog > .75 and 15 or 0) - prog * 20
+	local pitch = (prog > .75 and 115 or 100) - prog * 20
 	local pos, dir = self:GetFirePosition()
 	local ang = dir:Angle()
-	self.SplashInit = self:GetSplashInitMul() % p.SplashPatterns * (1 - prog)
-	self.Range = self:GetRange()
-	self.InitVelocity = dir * self:GetInkVelocity()
-	self.InitAngle = ang.yaw
+	local colradius = self:GetColRadius()
+	table.Merge(self.Projectile, {
+		Charge = prog,
+		Color = self:GetNWInt "inkcolor",
+		ColRadiusEntity = colradius,
+		ColRadiusWorld = colradius,
+		InitPos = pos,
+		InitVel = dir * self:GetInkVelocity(),
+		IsCharger = true,
+		SplashInit = self:GetSplashInitMul() % p.mSplashSplitNum * (1 - prog),
+		Type = ss.GetDropType(),
+		Yaw = ply:GetAngles().yaw,
+	})
+	
 	if self:IsFirstTimePredicted() then
-		local rnda = p.Recoil * -1
-		local rndb = p.Recoil * math.Rand(-1, 1)
+		local Recoil = 0.2
+		local rnda = Recoil * -1
+		local rndb = Recoil * math.Rand(-1, 1)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
 		self.ModifyWeaponSize = SysTime()
 
 		local e = EffectData()
-		e:SetAttachment(self.SplashInit)
-		e:SetAngles(ang)
-		e:SetColor(self:GetNWInt "inkcolor")
+		local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
+		e:SetAttachment(self.Projectile.SplashInit)
+		e:SetColor(self.Projectile.Color)
 		e:SetEntity(self)
-		e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)
-		e:SetOrigin(pos)
-		e:SetScale(self.Range)
-		e:SetStart(self.InitVelocity)
-		e:SetRadius(0)
-		e:SetMagnitude(prog)
-		util.Effect("SplatoonSWEPsChargerInk", e)
-		ss.AddInk(ply, pos, ss.GetDropType())
+		e:SetFlags(IsLP and 128 or 0)
+		e:SetMagnitude(colradius)
+		e:SetOrigin(self.Projectile.InitPos)
+		e:SetScale(self.Projectile.Charge)
+		e:SetStart(self.Projectile.InitVel)
+		util.Effect("SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
+		ss.AddInk(p, self.Projectile)
 	end
 
 	self:EmitSound(ShootSound, 80, pitch)
-	self:SetCooldown(CurTime() + p.MaxFreezeTime)
+	self:SetCooldown(CurTime())
 	self:SetFireAt(prog)
-	self:SetInk(math.max(0, self:GetInk() - inkprog * self:GetTakeAmmo()))
+	self:SetInk(math.max(0, self:GetInk() - inkconsume))
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:ResetCharge()
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
@@ -262,16 +262,16 @@ function SWEP:CustomDataTables()
 	if not self.Scoped then return end
 
 	local getads = self.GetADS
-	local scope = self.Primary.Scope
+	local startmove = self.Parameters.mSniperCameraMoveStartChargeRate
 	function self:GetADS(org)
 		if org then return getads(self) end
-		return getads(self) or self:GetChargeProgress() > scope.StartMove
+		return getads(self) or self:GetChargeProgress() > startmove
 	end
 end
 
 function SWEP:CustomMoveSpeed()
 	if self:GetKey() ~= IN_ATTACK then return end
-	return Lerp(self:GetChargeProgress(), self.InklingSpeed, self.Primary.MoveSpeed)
+	return Lerp(self:GetChargeProgress(), self.InklingSpeed, self.Parameters.mMoveSpeed)
 end
 
 function SWEP:GetAnimWeight()

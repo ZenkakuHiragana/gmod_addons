@@ -15,7 +15,7 @@ SWEP.Crosshair = {
 
 function SWEP:ClientInit()
 	self.CrosshairFlashTime = CurTime()
-	self.MinChargeDeg = self.Primary.MinChargeTime / self.Primary.MaxChargeTime * 360
+	self.MinChargeDeg = self.Parameters.mMinChargeFrame / self.Parameters.mMaxChargeFrame * 360
 	self.IronSightsPos[6] = self.ScopePos
 	self.IronSightsAng[6] = self.ScopeAng
 	self.IronSightsFlip[6] = false
@@ -56,9 +56,11 @@ function SWEP:DrawOuterCircle(t)
 	local ri = t.Size.Inner / 2 * scoped
 	local rm = t.Size.Middle / 2 * scoped
 	local prog = self:GetChargeProgress(true)
-	local timescale = ss.GetTimeScale(self.Owner)
 	if prog == 0 then
-		prog = math.Clamp(math.max(CurTime() - self:GetCharge() + self:Ping(), 0) / self.Primary.MaxChargeTime * timescale, 0, 1) * 360
+		prog = math.Clamp(
+			math.max(CurTime() - self:GetCharge() + self:Ping(), 0)
+			/ self.Parameters.mMaxChargeFrame * ss.GetTimeScale(self.Owner),
+			0, 1) * 360
 	else
 		prog = prog * (360 - self.MinChargeDeg) + self.MinChargeDeg
 	end
@@ -143,7 +145,9 @@ end
 
 function SWEP:DrawCrosshair(x, y, t)
 	if self:GetCharge() == math.huge then return end
-	t.EndPosScreen = (self:GetShootPos() + self:GetAimVector() * self.Primary.Range):ToScreen()
+	local p = self.Parameters
+	local dist = self.Scoped and p.mFullChargeDistanceScoped or p.mFullChargeDistance
+	t.EndPosScreen = (self:GetShootPos() + self:GetAimVector() * dist):ToScreen()
 	t.CrosshairDarkColor = ColorAlpha(t.CrosshairColor, 192)
 	t.CrosshairDarkColor.r, t.CrosshairDarkColor.g, t.CrosshairDarkColor.b
 	= t.CrosshairDarkColor.r / 2, t.CrosshairDarkColor.g / 2, t.CrosshairDarkColor.b / 2
@@ -158,7 +162,7 @@ end
 
 function SWEP:TranslateFOV(fov)
 	if not self.Scoped or self:GetNWBool "usertscope" then return end
-	return Lerp(self:GetScopedProgress(true), fov, self.Primary.Scope.FOV)
+	return Lerp(self:GetScopedProgress(true), fov, self.Parameters.mSniperCameraFovy)
 end
 
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
@@ -186,12 +190,14 @@ function SWEP:PreDrawWorldModel()
 end
 
 function SWEP:GetArmPos()
-	local scope = self.Primary.Scope
+	local p = self.Parameters
+	local startmove = p.mSniperCameraMoveStartChargeRate
+	local endmove = p.mSniperCameraMoveEndChargeRate
+	local swaytime = (endmove - startmove) * p.mMaxChargeFrame / 2
 	local prog = self:GetChargeProgress(true)
 	if not self:GetADS() then return end
-	if not self.Scoped or prog < scope.StartMove then
-		self.SwayTime = self.TransitFlip and
-		12 * ss.FrameToSec or scope.SwayTime / 2
+	if not self.Scoped or prog < startmove then
+		self.SwayTime = self.TransitFlip and 12 * ss.FrameToSec or swaytime
 	end
 
 	return 6

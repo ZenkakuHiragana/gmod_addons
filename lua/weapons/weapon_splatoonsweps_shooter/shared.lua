@@ -2,19 +2,21 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_inklingbase"
+SWEP.IsShooter = true
 SWEP.HeroColor = {ss.GetColor(8), ss.GetColor(11), ss.GetColor(2), ss.GetColor(5)}
 
 local FirePosition = 10
 local rand = "SplatoonSWEPs: Spread"
 local randsplash = "SplatoonSWEPs: SplashNum"
-function SWEP:GetRange() return self.Primary.Range end
-function SWEP:GetInitVelocity() return self.Primary.InitVelocity end
+local randinktype = "SplatoonSWEPs: Shooter ink type"
+function SWEP:GetRange() return self.Range end
+function SWEP:GetInitVelocity() return self.Parameters.mInitVel end
 function SWEP:GetFirePosition(ping)
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
 	local aim = self:GetAimVector() * self:GetRange(ping)
 	local ang = aim:Angle()
 	local shootpos = self:GetShootPos()
-	local col = ss.vector_one * self.Primary.ColRadius
+	local col = ss.vector_one * self.Parameters.mColRadius
 	local dy = FirePosition * (self:GetNWBool "lefthand" and -1 or 1)
 	local dp = -Vector(0, dy, FirePosition) dp:Rotate(ang)
 	local t = ss.SquidTrace
@@ -66,18 +68,18 @@ end
 function SWEP:GetSpreadJumpFraction()
 	local frac = CurTime() - self:GetJump()
 	if CLIENT then frac = frac + self:Ping() end
-	return math.Clamp(frac / self.Primary.SpreadJumpDelay, 0, 1)
+	return math.Clamp(frac / self.Parameters.mDegJumpBiasFrame, 0, 1)
 end
 
 function SWEP:GetSpreadAmount()
 	return Lerp(self:GetSpreadJumpFraction(),
-	self.Primary.SpreadJump, self.Primary.Spread),
-	ss.mDegRandomY
+	self.Parameters.mDegJumpRandom, self.Parameters.mDegRandom), ss.mDegRandomY
 end
 
 function SWEP:GenerateSplashInitTable()
-	local n, t = self.Primary.SplashPatterns, self.SplashInitTable
-	for i = 0, n - 1 do t[i + 1] = (i * (self.Primary.TripleShotDelay and 3 or 1)) % n end
+	local n, t = self.Parameters.mSplashSplitNum, self.SplashInitTable
+	local step = self.Parameters.mTripleShotSpan and 3 or 1
+	for i = 0, n - 1 do t[i + 1] = i * step % n end
 	for i = 1, n do
 		local k = math.floor(util.SharedRandom(randsplash, i, n))
 		t[i], t[k] = t[k], t[i]
@@ -89,13 +91,23 @@ function SWEP:SharedInit()
 	self:SetAimTimer(CurTime())
 	self:SetNextPlayEmpty(CurTime())
 	self:SetSplashInitMul(1)
+
+	local p = self.Parameters
+	table.Merge(self.Projectile, {
+		ColRadiusEntity = p.mColRadius,
+		ColRadiusWorld = p.mColRadius,
+		PaintFarRadius = p.mPaintFarRadius,
+		PaintNearRadius = p.mPaintNearRadius,
+		StraightFrame = p.mStraightFrame,
+	})
 end
 
 function SWEP:SharedDeploy()
 	self:SetSplashInitMul(1)
 	self:GenerateSplashInitTable()
-	if not self.Primary.TripleShotDelay then return end
-	self.TripleSchedule:SetDone(0)
+	if self.Parameters.mTripleShotSpan > 0 then
+		self.TripleSchedule:SetDone(0)
+	end
 end
 
 function SWEP:GetSpread()
@@ -117,101 +129,114 @@ function SWEP:GetSpread()
 end
 
 function SWEP:CreateInk()
-	local p = self.Primary
+	local p = self.Parameters
 	local pos, dir = self:GetFirePosition()
 	local right = self.Owner:GetRight()
 	local ang = dir:Angle()
 	local rx, ry = self:GetSpread()
+	local splashnum = math.floor(p.mCreateSplashNum)
 	local AlreadyAiming = CurTime() < self:GetAimTimer()
-	if CurTime() - self:GetJump() < p.SpreadJumpDelay then
-		self:SetBias(p.SpreadBiasJump)
+	if CurTime() - self:GetJump() < p.mDegJumpBiasFrame then
+		self:SetBias(p.mDegJumpBias)
 	else
 		if not AlreadyAiming then self:SetBias(0) end
-		self:SetBias(math.min(self:GetBias() + p.SpreadBiasStep, p.SpreadBias))
+		self:SetBias(math.min(self:GetBias() + p.mDegBiasKf, p.mDegBias))
+	end
+
+	if util.SharedRandom(randsplash, 0, 1) < p.mCreateSplashNum % 1 then
+		splashnum = splashnum + 1
 	end
 
 	ang:RotateAroundAxis(right:Cross(dir), rx)
 	ang:RotateAroundAxis(right, ry)
-	self.InitVelocity = ang:Forward() * self:GetInitVelocity()
-	self.InitAngle = ang.yaw
-	self.SplashInit = self.SplashInitTable[self:GetSplashInitMul()]
-	self.SplashNum = math.floor(p.SplashNum) + (util.SharedRandom(randsplash, 0, 1) < p.SplashNum % 1 and 1 or 0)
+	table.Merge(self.Projectile, {
+		Color = self:GetNWInt "inkcolor",
+		InitPos = pos,
+		InitVel = ang:Forward() * self:GetInitVelocity(),
+		SplashInit = self.SplashInitTable[self:GetSplashInitMul()],
+		SplashNum = splashnum,
+		Type = util.SharedRandom(randinktype, 4, 9),
+		Yaw = ang.yaw,
+	})
+
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:ResetSequence "fire"
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 	self:EmitSound(self.ShootSound)
-	if self:GetSplashInitMul() > p.SplashPatterns then
+
+	if self:GetSplashInitMul() > p.mSplashSplitNum then
 		self:SetSplashInitMul(1)
 		self:GenerateSplashInitTable()
 	end
 
 	if self:IsFirstTimePredicted() then
-		local rnda = p.Recoil * -1
-		local rndb = p.Recoil * math.Rand(-1, 1)
+		local Recoil = 0.2
+		local rnda = Recoil * -1
+		local rndb = Recoil * math.Rand(-1, 1)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
 
 		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
 		local e = EffectData()
-		e:SetAttachment(self.SplashInit)
-		e:SetAngles(ang)
-		e:SetColor(self:GetNWInt "inkcolor")
+		local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
+		e:SetAttachment(self.Projectile.SplashInit)
+		e:SetColor(self.Projectile.Color)
 		e:SetEntity(self)
-		e:SetFlags((CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0) + (self.IsBlaster and 2 or 0))
-		e:SetMagnitude(self.EffectRadius or ss.mColRadius)
-		e:SetOrigin(pos)
-		e:SetScale(self.SplashNum)
-		e:SetStart(self.InitVelocity)
-		util.Effect("SplatoonSWEPsShooterInk", e, true,
-		not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+		e:SetFlags(IsLP and 128 or 0)
+		e:SetMagnitude(self.Projectile.ColRadiusWorld)
+		e:SetOrigin(self.Projectile.InitPos)
+		e:SetScale(self.Projectile.SplashNum)
+		e:SetStart(self.Projectile.InitVel)
+		util.Effect("SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
 		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
-		ss.AddInk(self.Owner, pos, util.SharedRandom("SplatoonSWEPs: Shooter ink type", 4, 9))
+		ss.AddInk(p, self.Projectile)
 	end
 end
 
 function SWEP:PlayEmptySound()
-	local p = self.Primary
-	local timescale = ss.GetTimeScale(self.Owner)
-	if p.TripleShotDelay then self:SetCooldown(CurTime()) end
+	local nextempty = self.Parameters.mRepeatFrame * 2 / ss.GetTimeScale(self.Owner)
 	if self:GetPreviousHasInk() then
 		if ss.sp or CLIENT and IsFirstTimePredicted() then
 			self.Owner:EmitSound(ss.TankEmpty)
 		end
 
-		self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
+		self:SetNextPlayEmpty(CurTime() + nextempty)
 		self:SetPreviousHasInk(false)
 		self.PreviousHasInk = false
 	elseif CurTime() > self:GetNextPlayEmpty() then
 		self:EmitSound "SplatoonSWEPs.EmptyShot"
-		self:SetNextPlayEmpty(CurTime() + p.Delay * 2 / timescale)
+		self:SetNextPlayEmpty(CurTime() + nextempty)
 	end
 end
 
 function SWEP:SharedPrimaryAttack(able, auto)
 	if not IsValid(self.Owner) then return end
-	local p = self.Primary
-	local timescale = ss.GetTimeScale(self.Owner)
-	self:SetNextPrimaryFire(CurTime() + p.Delay / timescale)
-	self:SetInk(math.max(0, self:GetInk() - self:GetTakeAmmo()))
+	local p = self.Parameters
+	local ts = ss.GetTimeScale(self.Owner)
+	self:SetNextPrimaryFire(CurTime() + p.mRepeatFrame / ts)
+	self:SetInk(math.max(0, self:GetInk() - p.mInkConsume))
+	self:SetReloadDelay(p.mInkRecoverStop)
 	self:SetCooldown(math.max(self:GetCooldown(),
-	CurTime() + math.min(p.Delay, p.CrouchDelay) / timescale))
+	CurTime() + math.min(p.mRepeatFrame, ss.CrouchDelay) / ts))
 
 	if not able then
-		self:SetAimTimer(CurTime() + p.AimDuration)
+		if p.mTripleShotSpan > 0 then self:SetCooldown(CurTime()) end
+		self:SetAimTimer(CurTime() + ss.AimDuration)
 		self:PlayEmptySound()
 		return
 	end
 
 	self:CreateInk()
 	self:SetPreviousHasInk(true)
-	self:SetAimTimer(CurTime() + p.AimDuration)
+	self:SetAimTimer(CurTime() + ss.AimDuration)
 	if self:IsFirstTimePredicted() then self.ModifyWeaponSize = SysTime() end
-	if not p.TripleShotDelay then return end
-	local d = self.TripleSchedule:GetDone()
-	if d == 1 or d == 2 then return end
-	self:SetCooldown(CurTime() + (p.Delay * 2 + p.TripleShotDelay) / timescale)
-	self:SetAimTimer(self:GetCooldown())
-	self.TripleSchedule:SetDone(1)
+	if p.mTripleShotSpan > 0 then
+		local d = self.TripleSchedule:GetDone()
+		if d == 1 or d == 2 then return end
+		self:SetCooldown(CurTime() + (p.mRepeatFrame * 2 + p.mTripleShotSpan) / ts)
+		self:SetAimTimer(self:GetCooldown())
+		self.TripleSchedule:SetDone(1)
+	end
 end
 
 function SWEP:CustomDataTables()
@@ -223,21 +248,22 @@ function SWEP:CustomDataTables()
 	self:AddNetworkVar("Float", "NextPlayEmpty")
 	self:AddNetworkVar("Int", "SplashInitMul")
 
-	if not self.Primary.TripleShotDelay then return end
-	self.TripleSchedule = self:AddNetworkSchedule(0, function(self, schedule)
-		if schedule:GetDone() == 1 or schedule:GetDone() == 2 then
-			if self:GetNextPrimaryFire() > CurTime() then
-				schedule:SetDone(schedule:GetDone() - 1)
-			else
-				self:PrimaryAttack(true)
+	if self.Parameters.mTripleShotSpan > 0 then
+		self.TripleSchedule = self:AddNetworkSchedule(0, function(self, schedule)
+			if schedule:GetDone() == 1 or schedule:GetDone() == 2 then
+				if self:GetNextPrimaryFire() > CurTime() then
+					schedule:SetDone(schedule:GetDone() - 1)
+				else
+					self:PrimaryAttack(true)
+				end
+
+				return
 			end
 
-			return
-		end
-
-		schedule:SetDone(3)
-	end)
-	self.TripleSchedule:SetDone(3)
+			schedule:SetDone(3)
+		end)
+		self.TripleSchedule:SetDone(3)
+	end
 end
 
 function SWEP:CustomActivity()
@@ -255,7 +281,7 @@ end
 
 function SWEP:CustomMoveSpeed()
 	if CurTime() > self:GetAimTimer() then return end
-	return self.Primary.MoveSpeed
+	return self.Parameters.mMoveSpeed
 end
 
 function SWEP:Move(ply)
@@ -270,7 +296,7 @@ function SWEP:Move(ply)
 	end
 
 	if not ply:OnGround() then return end
-	if CurTime() - self:GetJump() < self.Primary.SpreadJumpDelay then
+	if CurTime() - self:GetJump() < self.Parameters.mDegJumpBiasFrame then
 		self:SetJump(self:GetJump() - FrameTime() / 2)
 	end
 end
@@ -280,7 +306,7 @@ function SWEP:KeyPress(ply, key)
 end
 
 function SWEP:GetAnimWeight()
-	return (self.Primary.Delay + .5) / 1.5
+	return (self.Parameters.mRepeatFrame + .5) / 1.5
 end
 
 function SWEP:UpdateAnimation(ply, vel, max)

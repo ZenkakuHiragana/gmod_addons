@@ -30,23 +30,6 @@ SWEP.Slot = 1
 SWEP.SlotPos = 2
 SWEP.IsSplatoonWeapon = true
 SWEP.m_WeaponDeploySpeed = 2
-ss.SetPrimary(SWEP, {
-	Recoil				= .2,	--Viewmodel recoil intensity
-	TakeAmmo			= .01,	--Ink consumption per fire[-].
-	Delay = {
-		Fire			= 6,	--Fire rate in frames.
-		Reload			= 30,	--Start reloading after firing weapon[frames].
-		Crouch			= 10,	--Can't crouch for some frames after firing.
-	},
-})
 
-ss.SetSecondary(SWEP, {
-	IsAutomatic			= true,
-	Recoil				= .2,
-	TakeAmmo			= .7,	 --Sub weapon consumption[-].
-	Delay = {
-		Fire			= 30,
-		Reload			= 40,
-		Crouch			= 30,
-	},
-})
+SWEP.Secondary = SWEP.Secondary or {}
+SWEP.Secondary.TakeAmmo = 0.7

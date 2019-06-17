@@ -4,9 +4,20 @@ if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_shooter"
 SWEP.IsBlaster = true
 
+function SWEP:GetPreFireDelay()
+    if self:Crouching() then
+        return self.Parameters.mPreDelayFrm_SquidMain
+    else
+        return self.Parameters.mPreDelayFrm_HumanMain
+    end
+end
+
 function SWEP:SharedInit()
     self:GetBase().SharedInit(self)
-    self.EffectRadius = (self.Primary.ColRadiusMiddle + self.Primary.ColRadiusClose) / 4
+    table.Merge(self.Projectile, {
+        ColRadiusEntity = self.Parameters.mCollisionRadiusNear,
+        ColRadiusWorld = self.Parameters.mCollisionRadiusNear,
+    })
 end
 
 function SWEP:SharedDeploy()
@@ -15,13 +26,13 @@ function SWEP:SharedDeploy()
 end
 
 function SWEP:SharedPrimaryAttack(able)
-	local p = self.Primary
-	local timescale = ss.GetTimeScale(self.Owner)
-    local prefiredelay = self:Crouching() and p.PreFireDelaySquid or p.PreFireDelay
-	self:SetNextPrimaryFire(CurTime() + p.Delay / timescale)
-	self:SetAimTimer(CurTime() + prefiredelay / timescale)
-	self:SetCooldown(math.max(self:GetCooldown(), CurTime() + prefiredelay / timescale))
-    self:SetFireDelay(CurTime() + prefiredelay / timescale)
+	local p = self.Parameters
+	local ts = ss.GetTimeScale(self.Owner)
+    local time = CurTime() + self:GetPreFireDelay() / ts
+	self:SetNextPrimaryFire(CurTime() + p.mRepeatFrame / ts)
+	self:SetAimTimer(time)
+	self:SetCooldown(math.max(self:GetCooldown(), time))
+    self:SetFireDelay(time)
 end
 
 function SWEP:Move(ply)
@@ -29,25 +40,22 @@ function SWEP:Move(ply)
     if CurTime() < self:GetFireDelay() then return end
     if self.CannotStandup then return end
 
-    local p = self.Primary
-    local timescale = ss.GetTimeScale(ply)
-    local d = p.PostFireDelay / timescale
-    local r = p.ReloadDelay / timescale
+    local p = self.Parameters
+    local ts = ss.GetTimeScale(ply)
+    local d = p.mPostDelayFrm_Main / ts
     self:SetFireDelay(math.huge)
-	self.ReloadSchedule:SetDelay(r) -- Stop reloading ink
-	self.ReloadSchedule:SetLastCalled(CurTime() + r)
-    if self:GetInk() < self:GetTakeAmmo() then
-        d = p.PreFireDelay / timescale
+    self:SetReloadDelay(p.mInkRecoverStop)
+    if self:GetInk() < p.mInkConsume then
+        d = self:GetPreFireDelay() / ts
         self:PlayEmptySound()
         self:SetCooldown(math.max(self:GetCooldown(), CurTime() + d))
         self:SetAimTimer(math.max(self:GetAimTimer(true), CurTime() + d))
-        return
+    else
+        self:CreateInk()
+        self:SetInk(math.max(0, self:GetInk() - p.mInkConsume))
+        self:SetCooldown(math.max(self:GetCooldown(), CurTime() + d))
+        self:SetAimTimer(CurTime() + d)
     end
-
-    self:CreateInk()
-    self:SetInk(math.max(0, self:GetInk() - self:GetTakeAmmo()))
-    self:SetCooldown(math.max(self:GetCooldown(), CurTime() + d))
-    self:SetAimTimer(CurTime() + d)
 end
 
 function SWEP:UpdateAnimation(ply, min, max) end

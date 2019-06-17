@@ -60,8 +60,6 @@ local hitouterbg = 3 -- in pixel
 local originalres = 1920 * 1080
 local hitline, hitwidth = 50, 3
 local line, linewidth = 16, 3
-local PaintNearDistance = SWEP.Primary.PaintNearDistance or ss.mPaintNearDistance
-local PaintFraction = 1 + PaintNearDistance / ss.mPaintFarDistance
 SWEP.Crosshair = {
 	color_circle = ColorAlpha(color_black, crosshairalpha),
 	color_nohit = ColorAlpha(color_white, crosshairalpha),
@@ -111,7 +109,7 @@ function SWEP:GetCrosshairTrace(t)
 	local tr = ss.SquidTrace
 	tr.start, tr.endpos = t.pos, t.pos + t.dir * range
 	tr.filter = {self, self.Owner}
-	tr.maxs = ss.vector_one * self.Primary.ColRadius
+	tr.maxs = ss.vector_one * self.Parameters.mColRadius
 	tr.mins = -tr.maxs
 
 	t.Trace = util.TraceHull(tr)
@@ -171,10 +169,11 @@ function SWEP:DrawHitCrossBG(t) -- Hit cross pattern, background
 	if not t.HitEntity then return end
 	surface.SetMaterial(ss.Materials.Crosshair.Line)
 	surface.SetDrawColor(color_black)
+	local p = self.Parameters
 	local mul = ss.ProtectedCall(self.GetScopedSize, self) or 1
 	local s = t.Size.Inner / 2 * mul
-	local lp = s + math.max(PaintFraction - (t.Distance
-	/ ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
+	local frac = 1 + p.mPaintNearDistance / p.mPaintFarDistance
+	local lp = s + math.max(frac - (t.Distance / p.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
 	local w, h = t.Size.HitLine * mul + hitcrossbg, t.Size.HitWidth * mul + hitcrossbg
 	for i = 1, 4 do
 		local dx, dy = lp * (i > 2 and 1 or -1), lp * (bit.band(i, 3) > 1 and 1 or -1)
@@ -206,8 +205,9 @@ function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 	local mul = ss.ProtectedCall(self.GetScopedSize, self) or 1
 	local s = t.Size.Inner / 2 * mul
 	local w, h = t.Size.HitLine * mul, t.Size.HitWidth * mul
-	local lp = s + math.max(PaintFraction - (t.Distance
-	/ ss.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
+	local p = self.Parameters
+	local frac = 1 + p.mPaintNearDistance / p.mPaintFarDistance
+	local lp = s + math.max(frac - (t.Distance / p.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
 	for mat, col in pairs {
 		[""] = color_white,
 		Color = ss.GetColor(self:GetNWInt "inkcolor")

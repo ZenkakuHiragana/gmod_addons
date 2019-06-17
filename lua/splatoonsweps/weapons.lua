@@ -4,209 +4,369 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
-function ss.SetPrimary(weapon, info)
-	local p = istable(weapon.Primary) and weapon.Primary or {}
-	p.Info = info
-	p.ClipSize = ss.GetMaxInkAmount() --Clip size only for displaying.
-	p.DefaultClip = ss.GetMaxInkAmount()
-	p.Automatic = info.IsAutomatic or false
-	p.Ammo = "Ink"
-	p.Delay = (info.Delay.Fire or 0) * ss.FrameToSec
-	p.FirePosition = info.FirePosition
-	p.Recoil = info.Recoil or .2
-	p.ReloadDelay = (info.Delay.Reload or 0) * ss.FrameToSec
-	p.TakeAmmo = info.TakeAmmo
-	p.CrouchDelay = (info.Delay.Crouch or 0) * ss.FrameToSec
-	ss.ProtectedCall(ss.CustomPrimary[weapon.Base], p, info)
-	weapon.Primary = p
+function ss.SetChargingEye(self)
+	local ply = self.Owner
+	local mdl = ply:GetModel()
+	local skin = ss.ChargingEyeSkin[mdl]
+	if skin and ply:GetSkin() ~= skin then
+		ply:SetSkin(skin)
+	elseif ss.TwilightPlayermodels[mdl] then
+		-- Eye animation for Twilight's Octoling playermodel
+		local l = ply:GetFlexIDByName "Blink_L"
+		local r = ply:GetFlexIDByName "Blink_R"
+		if l then ply:SetFlexWeight(l, .3) end
+		if r then ply:SetFlexWeight(r, 1) end
+	end
 end
 
-function ss.SetSecondary(weapon, info)
-	local s = istable(weapon.Secondary) and weapon.Secondary or {}
-	s.ClipSize = -1
-	s.DefaultClip = -1
-	s.Automatic = info.IsAutomatic or false
-	s.Ammo = "Ink"
-	s.Delay = info.Delay.Fire * ss.FrameToSec
-	s.Recoil = info.Recoil or .2
-	s.ReloadDelay = info.Delay.Reload * ss.FrameToSec
-	s.TakeAmmo = info.TakeAmmo
-	s.CrouchDelay = info.Delay.Crouch * ss.FrameToSec
-	ss.ProtectedCall(ss.CustomSecondary[weapon.Base], s, info)
-	weapon.Secondary = s
+function ss.SetNormalEye(self)
+	local ply = self.Owner
+	local mdl = ply:GetModel()
+	local f = ply:GetFlexIDByName "Blink_R"
+	local IsTwilightModel = ss.TwilightPlayermodels[mdl]
+	local skin = ss.ChargingEyeSkin[mdl]
+	if skin and ply:GetSkin() == skin then
+		local s = 0
+		if self:GetNWInt "playermodel" == ss.PLAYER.NOCHANGE then
+			if CLIENT then
+				s = GetConVar "cl_playerskin":GetInt()
+			else
+				s = self.BackupPlayerInfo.Playermodel.Skin
+			end
+		end
+
+		if ply:GetSkin() == s then return end
+		ply:SetSkin(s)
+	elseif IsTwilightModel and f and ply:GetFlexWeight() == 1 then
+		local l = ply:GetFlexIDByName "Blink_L"
+		local r = ply:GetFlexIDByName "Blink_R"
+		if l then ply:SetFlexWeight(l, 0) end
+		if r then ply:SetFlexWeight(r, 0) end
+	end
 end
 
+function ss.MakeProjectileStructure()
+	return { -- Used in ss.AddInk(), describes how a projectile is.
+		Charge = nil,
+		Color = 1,
+		ColRadiusEntity = 1,
+		ColRadiusWorld = 1,
+		DoDamage = true,
+		DamageMax = nil,
+		DamageMaxDistance = nil,
+		DamageMin = nil,
+		DamageMinDistance = nil,
+		InitDir = Vector(),
+		InitPos = Vector(),
+		InitSpeed = 0,
+		InitVel = Vector(),
+		IsCharger = nil,
+		PaintFarDistance = nil,
+		PaintFarRadius = 0,
+		PaintNearDistance = nil,
+		PaintNearRadius = 0,
+		Range = nil,
+		SplashCount = 0,
+		SplashInit = 0,
+		SplashNum = 0,
+		StraightFrame = 0,
+		Type = 1,
+		Weapon = NULL,
+		Yaw = 0,
+	}
+end
+
+function ss.MakeInkQueueTraceStructure()
+	return {
+		endpos = Vector(),
+		filter = NULL,
+		LengthSum = 0,
+		LifeTime = 0,
+		mask = ss.SquidSolidMask,
+		maxs = ss.vector_one * 1,
+		mins = ss.vector_one * -1,
+		start = Vector(),
+	}
+end
+
+function ss.MakeInkQueueStructure()
+	return {
+		Color = 1,
+		Data = {},
+		InitTime = CurTime(),
+		IsCarriedByLocalPlayer = false,
+		Parameters = {},
+		Trace = ss.MakeInkQueueTraceStructure(),
+	}
+end
+
+function ss.SetPrimary(weapon, parameters)
+	local maxink = ss.GetMaxInkAmount()
+	ss.ProtectedCall(ss.DefaultParams[weapon.Base], weapon)
+	weapon.Primary = {
+		Ammo = "Ink",
+		Automatic = true,
+		ClipSize = maxink,
+		DefaultClip = maxink,
+	}
+
+	table.Merge(weapon.Parameters, parameters or {})
+	for name, value in pairs(weapon.Parameters) do
+		if isnumber(value) then
+			local units = ss.Units[name]
+			local converter = units and ss.UnitsConverter[units] or 1
+			weapon.Parameters[name] = value * converter
+		end
+	end
+
+	ss.ProtectedCall(ss.CustomPrimary[weapon.Base], weapon)
+end
+
+ss.DefaultParams = {}
 ss.CustomPrimary = {}
-ss.CustomSecondary = {}
-function ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
-	p.Straight = info.Delay.Straight * ss.FrameToSec
-	p.Damage = info.Damage
-	p.MinDamage = info.MinDamage
-	p.InkRadius = info.InkRadius * ss.ToHammerUnits
-	p.MinRadius = info.MinRadius * ss.ToHammerUnits
-	p.SplashRadius = info.SplashRadius * ss.ToHammerUnits
-	p.SplashPatterns = info.SplashPatterns
-	p.SplashNum = info.SplashNum
-	p.SplashInterval = info.SplashInterval * ss.ToHammerUnits
-	p.Spread = info.Spread
-	p.SpreadJump = info.SpreadJump
-	p.SpreadBias = info.SpreadBias
-	p.SpreadBiasStep = info.SpreadBiasStep
-	p.SpreadBiasJump = info.SpreadBiasJump
-	p.SpreadJumpDelay = info.Delay.SpreadJump * ss.FrameToSec
-	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
-	p.MinDamageTime = info.Delay.MinDamage * ss.FrameToSec
-	p.DecreaseDamage = info.Delay.DecreaseDamage * ss.FrameToSec
-	p.AimDuration = info.Delay.Aim * ss.FrameToSec
-	p.ColRadius = info.ColRadius or ss.mColRadius
-	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
-	p.Range = p.InitVelocity * (p.Straight + ss.ShooterDecreaseFrame / 2)
-
-	if not info.Delay.TripleShot then return end
-	p.TripleShotDelay = info.Delay.TripleShot * ss.FrameToSec
+function ss.DefaultParams.weapon_splatoonsweps_shooter(weapon)
+	weapon.Parameters = {
+		mRepeatFrame = 6,
+		mTripleShotSpan = 0,
+		mInitVel = 22,
+		mDegRandom = 6,
+		mDegJumpRandom = 15,
+		mSplashSplitNum = 5,
+		mKnockBack = 0,
+		mInkConsume = 0.009,
+		mInkRecoverStop = 20,
+		mMoveSpeed = 0.72,
+		mDamageMax = 0.35,
+		mDamageMin = 0.175,
+		mDamageMinFrame = 15,
+		mStraightFrame = 4,
+		mGuideCheckCollisionFrame = 8,
+		mCreateSplashNum = 2,
+		mCreateSplashLength = 75,
+		mDrawRadius = 2.5,
+		mColRadius = 2,
+		mPaintNearDistance = 11,
+		mPaintFarDistance = 200,
+		mPaintNearRadius = 19.2,
+		mPaintFarRadius = 18,
+		mSplashDrawRadius = 3,
+		mSplashColRadius = 1.5,
+		mSplashPaintRadius = 13,
+		mArmorTypeGachihokoDamageRate = 1,
+		mDegBias = 0.25,
+		mDegBiasKf = 0.02,
+		mDegJumpBias = 0.4,
+		mDegJumpBiasFrame = 60,
+	}
 end
 
-function ss.CustomPrimary.weapon_splatoonsweps_charger(p, info)
-	p.EmptyChargeMul = info.EmptyChargeMul
-	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
-	p.JumpPower = info.JumpMul * ss.InklingJumpPower
-	p.MinRange = info.MinRange * ss.ToHammerUnits
-	p.MaxRange = info.MaxRange * ss.ToHammerUnits
-	p.Range = (info.FullRange or info.MaxRange) * ss.ToHammerUnits
-	p.MinVelocity = info.MinVelocity * ss.ToHammerUnitsPerSec
-	p.MaxVelocity = info.MaxVelocity * ss.ToHammerUnitsPerSec
-	p.InitVelocity = (info.FullVelocity or info.MaxVelocity) * ss.ToHammerUnitsPerSec
-	p.MinDamage = info.MinDamage
-	p.MaxDamage = info.MaxDamage
-	p.Damage = info.FullDamage or info.MaxDamage
-	p.MinChargeTime = info.Delay.MinCharge * ss.FrameToSec
-	p.MaxChargeTime = info.Delay.MaxCharge * ss.FrameToSec
-	p.MinColRadius = info.MinColRadius or ss.mColRadius
-	p.ColRadius = info.MaxColRadius or ss.mColRadius
-	p.MinWallPaintNum = info.MinWallPaintNum
-	p.MaxWallPaintNum = info.MaxWallPaintNum
-	p.WallPaintCharge = info.WallPaintChargeThreshold
-	p.FootpaintCharge = info.FootpaintChargeRate
-	p.Spread = info.Spread or 0
-	p.SpreadJump = info.SpreadJump or 0
-	p.SpreadBias = info.SpreadBias or 0
-	p.SplashPatterns = info.SplashPatterns or 1
-	p.SplashRadiusMul = info.LastSplashRadiusMul
-	p.MaxSplashRadius = info.MaxChargeSplashPaintRadius * ss.ToHammerUnits
-	p.MinSplashRadius = info.MinChargeSplashPaintRadius * p.MaxSplashRadius
-	p.MinSplashRatio = info.MinSplashRatio
-	p.MaxSplashRatio = info.MaxSplashRatio
-	p.MinSplashInterval = info.MinSplashInterval
-	p.MaxSplashInterval = info.MaxSplashInterval
-	p.MinFreezeTime = (info.Delay.MinFreeze or 1) * ss.FrameToSec
-	p.MaxFreezeTime = (info.Delay.MaxFreeze or 1) * ss.FrameToSec
-	p.AimDuration = info.Delay.Aim * ss.FrameToSec
-	p.Automatic = true
-	p.Scope = {}
-	p.Scope.StartMove = info.Scope.StartMove
-	p.Scope.EndMove = info.Scope.EndMove
-	p.Scope.FOV = info.Scope.CameraFOV
-	p.Scope.Alpha = info.Scope.PlayerAlpha
-	p.Scope.Invisible = info.Scope.PlayerInvisible
-	p.Scope.SwayTime = (info.Scope.EndMove - info.Scope.StartMove) * p.MaxChargeTime
+function ss.CustomPrimary.weapon_splatoonsweps_shooter(weapon)
+	local p = weapon.Parameters
+	weapon.NPCDelay = p.mRepeatFrame
+	weapon.Range = p.mInitVel * (p.mStraightFrame + 2.5 * ss.FrameToSec)
+	weapon.Primary.Automatic = p.mTripleShotSpan == 0
 end
 
-function ss.CustomPrimary.weapon_splatoonsweps_splatling(p, info)
-	ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
-	p.Automatic = true
-	p.EmptyChargeMul = info.EmptyChargeMul
-	p.JumpPower = info.JumpMul * ss.InklingJumpPower
-	p.MoveSpeedCharge = info.MoveSpeedCharge * ss.ToHammerUnitsPerSec
-	p.SpreadVelocity = info.SpreadVelocity
-	p.SpreadBiasVelocity = info.SpreadBiasVelocity
-	p.InkRadiusMul = info.InkScale
-	p.MinChargeTime = info.Delay.MinCharge * ss.FrameToSec
-	p.MaxChargeTime = {info.Delay.MaxCharge[1] * ss.FrameToSec, info.Delay.MaxCharge[2] * ss.FrameToSec}
-	p.FireDuration = {info.Delay.FireDuration[1] * ss.FrameToSec, info.Delay.FireDuration[2] * ss.FrameToSec}
-	p.MinVelocity = info.MinVelocity * ss.ToHammerUnitsPerSec
-	p.MediumVelocity = info.MediumVelocity * ss.ToHammerUnitsPerSec
-	p.MaxTakeAmmo = p.TakeAmmo
-	p.TakeAmmo = p.TakeAmmo / (info.Delay.FireDuration[2] / info.Delay.Fire)
-	if not info.PaintNearDistance then return end
-	p.PaintNearDistance = info.PaintNearDistance * ss.ToHammerUnits
+function ss.DefaultParams.weapon_splatoonsweps_blaster_base(weapon)
+	ss.DefaultParams.weapon_splatoonsweps_shooter(weapon)
+	table.Merge(weapon.Parameters, {
+		mExplosionFrame = 13,
+		mExplosionSleep = true,
+		mDamageNear = 0.8,
+		mCollisionRadiusNear = 10,
+		mDamageMiddle = 0.65,
+		mCollisionRadiusMiddle = 18,
+		mDamageFar = 0.5,
+		mCollisionRadiusFar = 37.5,
+		mShotCollisionHitDamageRate = 0.5,
+		mShotCollisionRadiusRate = 0.5,
+		mKnockBackRadius = 37.5,
+		mMoveLength = 23.5,
+		mSphereSplashDropOn = true,
+		mSphereSplashDropInitSpeed = 0,
+		mSphereSplashDropCollisionRadius = 4,
+		mSphereSplashDropDrawRadius = 6,
+		mSphereSplashDropPaintRadius = 34,
+		mSphereSplashDropPaintShotCollisionHitRadius = 22,
+		mBoundPaintMaxRadius = 25,
+		mBoundPaintMinRadius = 20,
+		mBoundPaintMinDistanceXZ = 90,
+		mWallHitPaintRadius = 20,
+		mPreDelayFrm_HumanMain = 10,
+		mPreDelayFrm_SquidMain = 15,
+		mPostDelayFrm_Main = 30,
+	})
 end
 
-function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(p, info)
-	ss.CustomPrimary.weapon_splatoonsweps_shooter(p, info)
-	p.DamageClose = info.DamageClose
-	p.DamageMiddle = info.DamageMiddle
-	p.DamageFar = info.DamageFar
-	p.DamageWallMul = info.DamageWallMul
-	p.ColRadiusClose = info.ColRadiusClose * ss.ToHammerUnits
-	p.ColRadiusMiddle = info.ColRadiusMiddle * ss.ToHammerUnits
-	p.ColRadiusFar = info.ColRadiusFar * ss.ToHammerUnits
-	p.ColRadiusWallMul = info.ColRadiusWallMul
-	p.InkRadiusGround = info.InkRadiusGround * ss.ToHammerUnits
-	p.InkRadiusWall = info.InkRadiusWall * ss.ToHammerUnits
-	p.InkRadiusBlastMax = info.InkRadiusBlastMax * ss.ToHammerUnits
-	p.InkRadiusBlastMin = info.InkRadiusBlastMin * ss.ToHammerUnits
-	p.ExplosionTime = info.Delay.Explosion * ss.FrameToSec
-	p.PreFireDelay = info.Delay.PreFire * ss.FrameToSec
-	p.PreFireDelaySquid = info.Delay.PreFireSquid * ss.FrameToSec
-	p.PostFireDelay = info.Delay.PostFire * ss.FrameToSec
+function ss.CustomPrimary.weapon_splatoonsweps_blaster_base(weapon)
+	ss.CustomPrimary.weapon_splatoonsweps_shooter(weapon)
 end
 
-function ss.CustomPrimary.weapon_splatoonsweps_roller(p, info)
-	p.SwingWaitTime = info.Delay.SwingWait * ss.FrameToSec
-	p.Straight = info.Delay.Straight * ss.FrameToSec
-	p.StraightSub = info.Delay.StraightSub * ss.FrameToSec
-	p.ReloadDelayGround = info.Delay.ReloadGround * ss.FrameToSec
-	p.TakeAmmoGround = info.TakeAmmoGround
-	p.MoveSpeed = info.MoveSpeed * ss.ToHammerUnitsPerSec
+function ss.DefaultParams.weapon_splatoonsweps_splatling(weapon)
+	ss.DefaultParams.weapon_splatoonsweps_shooter(weapon)
+	table.Merge(weapon.Parameters, {
+		mMinChargeFrame = 8,
+		mFirstPeriodMaxChargeFrame = 108,
+		mSecondPeriodMaxChargeFrame = 135,
+		mFirstPeriodMaxChargeShootingFrame = 108,
+		mSecondPeriodMaxChargeShootingFrame = 216,
+		mWaitShootingFrame = 0,
+		mEmptyChargeTimes = 3,
+		mInitVelMinCharge = 10.5,
+		mInitVelFirstPeriodMaxCharge = 24,
+		mInitVelSecondPeriodMinCharge = 24,
+		mInitVelSecondPeriodMaxCharge = 24,
+		mDamageMaxMaxCharge = 0.35,
+		mMoveSpeed_Charge = 0.4,
+		mVelGnd_DownRt_Charge = 0.05,
+		mVelGnd_Bias_Charge = 0.9,
+		mJumpGnd_Charge = 0.6,
+		mInitVelSpeedRateRandom = 0.14,
+		mInitVelSpeedBias = 0.2,
+		mInitVelDegRandom = 2,
+		mInitVelDegBias = 0.4,
+		mPaintDepthScaleBias = 1.2,
+	})
+end
 
-	p.Damage = info.Damage
-	p.DamageSub = info.DamageSub
-	p.MinDamage = info.MinDamage
-	p.MinDamageSub = info.MinDamageSub
-	p.DamageGround = info.DamageGround
+function ss.CustomPrimary.weapon_splatoonsweps_splatling(weapon)
+	ss.CustomPrimary.weapon_splatoonsweps_shooter(weapon)
+end
 
-	p.InitVelocity = info.InitVelocity * ss.ToHammerUnitsPerSec
-	p.InitVelocitySub = info.InitVelocitySub * ss.ToHammerUnitsPerSec
-	p.SpreadVelocity = info.SpreadVelocity * ss.ToHammerUnitsPerSec
-	p.SpreadVelocitySub = info.SpreadVelocitySub * ss.ToHammerUnitsPerSec
+function ss.DefaultParams.weapon_splatoonsweps_charger(weapon)
+	ss.DefaultParams.weapon_splatoonsweps_shooter(weapon)
+	table.Merge(weapon.Parameters, {
+		mMinDistance = 90,
+		mMaxDistance = 200,
+		mMaxDistanceScoped = 200,
+		mFullChargeDistance = 260,
+		mFullChargeDistanceScoped = 286,
+		mMinChargeFrame = 8,
+		mMaxChargeFrame = 60,
+		mEmptyChargeTimes = 3,
+		mFreezeFrmL = 1,
+		mInitVelL = 12,
+		mFreezeFrmH = 1,
+		mInitVelH = 35.29,
+		mInitVelF = 48,
+		mInkConsume = 0.18,
+		mMoveSpeed = 0.2,
+		mVelGnd_DownRt = 0.2,
+		mVelGnd_Bias = 0.5,
+		mJumpGnd = 0.7,
+		mMaxChargeSplashPaintRadius = 18.5,
+		mPaintNearR_WeakRate = 0.45,
+		mPaintRateLastSplash = 1.6,
+		mMinChargeDamage = 0.4,
+		mMaxChargeDamage = 1,
+		mFullChargeDamage = 1.6,
+		mSplashBetweenMaxSplashPaintRadiusRate = 1.58,
+		mSplashBetweenMinSplashPaintRadiusRate = 1.32,
+		mSplashDepthMinChargeScaleRateByWidth = 3,
+		mSplashDepthMaxChargeScaleRateByWidth = 1,
+		mSplashNearFootOccurChargeRate = 0.166,
+		mSplashSplitNum = 1,
+		mSniperCameraMoveStartChargeRate = 0.5,
+		mSniperCameraMoveEndChargeRate = 1,
+		mSniperCameraFovy = 28,
+		mSniperCameraPlayerAlphaChargeRate = 0.5,
+		mSniperCameraPlayerInvisibleChargeRate = 0.85,
+		mMinChargeColRadiusForPlayer = 1,
+		mMaxChargeColRadiusForPlayer = 1,
+		mMinChargeHitSplashNum = 0,
+		mMaxChargeHitSplashNum = 8,
+		mMaxHitSplashNumChargeRate = 0.54,
+	})
+end
 
-	p.Spread = info.Spread
-	p.SpreadSub = info.SpreadSub
-	p.SplashNum = info.SplashNum
-	p.SplashSubNum = info.SplashSubNum
-	p.SplashPosWidth = info.SplashPosWidth * ss.ToHammerUnits
+function ss.CustomPrimary.weapon_splatoonsweps_charger(weapon)
+	local p = weapon.Parameters
+	ss.CustomPrimary.weapon_splatoonsweps_shooter(weapon)
+	weapon.Range = weapon.Scoped and p.mFullChargeDistanceScoped or p.mFullChargeDistance
+	weapon.NPCDelay = p.mMinChargeFrame
+end
 
-	p.MaxWidth = info.MaxWidth * ss.ToHammerUnits
-	p.MinWidth = info.MinWidth * ss.ToHammerUnits
-	p.CollisionWidth = info.CollisionWidth * ss.ToHammerUnits
+function ss.DefaultParams.weapon_splatoonsweps_roller(weapon)
+	weapon.Parameters = {
+		mSwingLiftFrame = 20,
+		mSplashNum = 12,
+		mSplashInitSpeedBase = 8.2,
+		mSplashInitSpeedRandomZ = 3,
+		mSplashInitSpeedRandomX = 0.4,
+		mSplashInitVecYRate = 0,
+		mSplashDeg = 2.2,
+		mSplashSubNum = 0,
+		mSplashSubInitSpeedBase = 17.5,
+		mSplashSubInitSpeedRandomZ = 3.5,
+		mSplashSubInitSpeedRandomX = 0,
+		mSplashSubInitVecYRate = 0,
+		mSplashSubDeg = 7,
+		mSplashPositionWidth = 8,
+		mSplashInsideDamageRate = 0.4,
+		mCorePaintWidthHalf = 26,
+		mCorePaintSlowMoveWidthHalf = 13,
+		mSlowMoveSpeed = 0,
+		mCoreColWidthHalf = 10,
+		mInkConsumeCore = 0.001,
+		mInkConsumeSplash = 0.09,
+		mInkRecoverCoreStop = 20,
+		mInkRecoverSplashStop = 45,
+		mMoveSpeed = 1.2,
+		mCoreColRadius = 4,
+		mCoreDamage = 1.4,
+		mTargetEffectScale = 1.5,
+		mTargetEffectVelRate = 1.2,
+		mSplashStraightFrame = 4,
+		mSplashDamageMaxDist = 65,
+		mSplashDamageMinDist = 105,
+		mSplashDamageMaxValue = 1.25,
+		mSplashDamageMinValue = 0.25,
+		mSplashOutsideDamageMaxDist = 95,
+		mSplashOutsideDamageMinDist = 105,
+		mSplashOutsideDamageMaxValue = 0.5,
+		mSplashOutsideDamageMinValue = 0.25,
+		mSplashDamageRateBias = 1,
+		mSplashDrawRadius = 3,
+		mSplashPaintNearD = 10,
+		mSplashPaintNearR = 20,
+		mSplashPaintFarD = 200,
+		mSplashPaintFarR = 17,
+		mSplashCollisionRadiusForField = 6,
+		mSplashCollisionRadiusForPlayer = 8.5,
+		mSplashCoverApertureFreeFrame = -1,
+		mSplashSubStraightFrame = 4,
+		mSplashSubDamageMaxDist = 35,
+		mSplashSubDamageMinDist = 90,
+		mSplashSubDamageMaxValue = 1.25,
+		mSplashSubDamageMinValue = 0.25,
+		mSplashSubDamageRateBias = 1,
+		mSplashSubDrawRadius = 3,
+		mSplashSubPaintNearD = 10,
+		mSplashSubPaintNearR = 18,
+		mSplashSubPaintFarD = 200,
+		mSplashSubPaintFarR = 15,
+		mSplashSubCollisionRadiusForField = 9,
+		mSplashSubCollisionRadiusForPlayer = 9,
+		mSplashSubCoverApertureFreeFrame = -1,
+		mSplashPaintType = 1,
+		mArmorTypeObjectDamageRate = 0.4,
+		mArmorTypeGachihokoDamageRate = 0.3,
+		mPaintBrushType = false,
+		mPaintBrushRotYDegree = 0,
+		mPaintBrushSwingRepeatFrame = 6,
+		mPaintBrushNearestBulletLoopNum = 6,
+		mPaintBrushNearestBulletOrderNum = 2,
+		mPaintBrushNearestBulletRadius = 20,
+		mDropSplashDrawRadius = 0.5,
+		mDropSplashPaintRadius = 0,
+	}
+end
 
-	p.EffectScale = info.EffectScale
-	p.EffectVelocityRate = info.EffectVelocityRate
-
-	p.MinDamageDist = info.MinDamageDist * ss.ToHammerUnits
-	p.MinDamageDistSub = info.MinDamageDistSub * ss.ToHammerUnits
-	p.DecreaseDamageDist = info.DecreaseDamageDist * ss.ToHammerUnits
-	p.DecreaseDamageDistSub = info.DecDamageDistSub * ss.ToHammerUnits
-
-	p.InkRadius = info.InkRadius * ss.ToHammerUnits
-	p.InkRadiusSub = info.InkRadiusSub * ss.ToHammerUnits
-	p.MinRadius = info.MinRadius * ss.ToHammerUnits
-	p.MinRadiusSub = info.MinRadiusSub * ss.ToHammerUnits
-
-	p.MaxPaintDistance = info.MaxPaintDistance * ss.ToHammerUnits
-	p.MaxPaintDistanceSub = info.MaxPaintDistSub * ss.ToHammerUnits
-	p.MinPaintDistance = info.MinPaintDistance * ss.ToHammerUnits
-	p.MinPaintDistanceSub = info.MinPaintDistSub * ss.ToHammerUnits
-
-	p.CollisionRadiusWorld = info.ColRadiusWorld * ss.ToHammerUnits
-	p.CollisionRadiusWorldSub = info.ColRadiusWorldSub * ss.ToHammerUnits
-	p.CollisionRadiusPlayer = info.ColRadiusPlayer * ss.ToHammerUnits
-	p.CollisionRadiusPlayerSub = info.ColRadiusPlayerSub * ss.ToHammerUnits
-	p.ColRadius = p.CollisionRadiusPlayer
-
-	p.Range = p.InitVelocity * (p.Straight + ss.ShooterDecreaseFrame / 2)
-	p.SplashInterval = 0
-	p.SplashPatterns = 0
+function ss.CustomPrimary.weapon_splatoonsweps_roller(weapon)
+	local p = weapon.Parameters
+	weapon.Primary.Automatic = false
+	weapon.NPCDelay = p.mSwingLiftFrame
+	weapon.Range = p.mSplashInitSpeedBase * (p.mSplashStraightFrame + 2.5 * ss.FrameToSec)
 end
 
 local SplatoonSWEPsMuzzleSplash = 0

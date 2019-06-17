@@ -2,6 +2,7 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_inklingbase"
+SWEP.IsRoller = true
 SWEP.MODE = {READY = 0, ATTACK = 1, PAINT = 2}
 SWEP.CollapseRollTime = 10 * ss.FrameToSec
 SWEP.PreSwingTime = 10 * ss.FrameToSec
@@ -14,80 +15,102 @@ function SWEP:AddPlaylist(p)
 end
 
 local rand = "SplatoonSWEPs: Spread"
-local randvel = "SplatoonSWEPs: Spread velocity"
 local randink = "SplatoonSWEPs: Shooter ink type"
-function SWEP:GetSpread(seed)
-	local seed = seed or CurTime()
-	local DegRandX, DegRandY = self.Primary.Spread, ss.mDegRandomY
-	local sgnx = math.Round(util.SharedRandom(rand, 0, 1, seed)) * 2 - 1
-	local sgny = math.Round(util.SharedRandom(rand, 0, 1, seed * 2)) * 2 - 1
-	local fracx = util.SharedRandom(rand, 0, 1, seed * 3)
-	local fracy = util.SharedRandom(rand, 0, 1, seed * 4)
-	local rx = sgnx * fracx * DegRandX
-	local ry = sgny * fracy * DegRandY
-	return rx, ry
+local randsplash = "Splatoon SWEPs: SplashNum"
+local randvel = "SplatoonSWEPs: Spread velocity"
+function SWEP:GetInitVelocity(i, splashnum)
+	local p = self.Parameters
+	local degmax = p.mSplashDeg
+	local frac = splashnum == 1 and 1 or (i - 1) / (splashnum - 1)
+	local deg = (frac * 2 - 1) * degmax
+	local sb = p.mSplashInitSpeedBase
+	local sz = p.mSplashInitSpeedRandomZ
+	local sx = p.mSplashInitSpeedRandomX
+	local sy = p.mSplashInitVecYRate
+	local forward = sb + util.SharedRandom(randvel, -sz, sz, i)
+	local right = util.SharedRandom(randvel, -sx, sx, i * 2)
+	local up = sb * sy
+	return forward, right + deg, up
 end
 
-function SWEP:GetInitVelocity(seed)
-	local seed = seed or CurTime()
-	local p = self.Primary
-	local s = p.SpreadVelocity
-	local forward = p.InitVelocity + util.SharedRandom(randvel, -s.z, s.z, seed)
-	local right = util.SharedRandom(randvel, -s.x, s.x, seed * 2)
-	local up = forward * util.SharedRandom(randvel, -s.y, s.y, seed * 3)
-	return forward, right, up
-end
-
-function SWEP:SetReloadDelay(delay)
-	local reloadtime = delay / ss.GetTimeScale(ply)
-	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
-	self.ReloadSchedule:SetLastCalled(CurTime() + reloadtime)
-	self:SetCooldown(CurTime() + FrameTime())
-end
-
-function SWEP:CreateInk()
-	local p = self.Primary
+function SWEP:CreateInk(skipnum)
+	local p = self.Parameters
 	local dir = self:GetAimVector()
 	local pos = self:GetShootPos()
 	local right = self.Owner:GetRight()
-	for i = 1, p.SplashNum do
-		local ang = dir:Angle()
-		local rx, ry = self:GetSpread(i)
-		local vf, vr, vu = self:GetInitVelocity(i)
-		local dp = p.SplashPosWidth
-		ang:RotateAroundAxis(right:Cross(dir), rx)
-		ang:RotateAroundAxis(right, ry)
-		dp = right * util.SharedRandom("Splatoon SWEPs: Roller width", -dp, dp, i)
-		self.InitVelocity = ang:Forward() * vf + ang:Right() * vr + ang:Up() * vu
-		self.InitAngle = ang.yaw
-
-		if self:IsFirstTimePredicted() then
-			if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
-			local e = EffectData()
-			e:SetAttachment(0)
-			e:SetAngles(ang)
-			e:SetColor(self:GetNWInt "inkcolor")
-			e:SetEntity(self)
-			e:SetFlags(CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0)
-			e:SetMagnitude(self.EffectRadius or ss.mColRadius)
-			e:SetOrigin(pos + dp)
-			e:SetScale(0)
-			e:SetStart(self.InitVelocity)
-			util.Effect("SplatoonSWEPsShooterInk", e, true,
-			not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
-			if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
-			ss.AddInk(self.Owner, pos + dp, util.SharedRandom(randink, 4, 9))
-		end
+	local splashnum = p.mSplashNum
+	local width = p.mSplashPositionWidth
+	local insiderate = p.mSplashInsideDamageRate
+	local insidenum = math.floor(splashnum * insiderate)
+	if splashnum % 1 ~= insidenum % 1 then
+		insidenum = insidenum - 1
 	end
 
-	if not self:IsFirstTimePredicted() then return end
-	local rnda = p.Recoil * -1
-	local rndb = p.Recoil * math.Rand(-1, 1)
-	self.ViewPunch = Angle(rnda, rndb, rnda)
+	local skiptable = {}
+	for i = 1, splashnum do
+		table.insert(skiptable, i)
+	end
+
+	for i = 1, skipnum do
+		local k = math.floor(util.SharedRandom(randsplash, i, splashnum))
+		skiptable[i], skiptable[k] = skiptable[k], skiptable[i]
+	end
+
+	table.Merge(self.Projectile, {
+		Color = self:GetNWInt "inkcolor",
+		ColRadiusEntity = p.mSplashCollisionRadiusForPlayer,
+		ColRadiusWorld = p.mSplashCollisionRadiusForField,
+		PaintFarDistance = p.mSplashPaintFarD,
+		PaintFarRadius = p.mSplashPaintFarR,
+		PaintNearDistance = p.mSplashPaintNearD,
+		PaintNearRadius = p.mSplashPaintNearR,
+		StraightFrame = p.mSplashStraightFrame,
+	})
+
+	local insidestart = (splashnum - insidenum) / 2
+	local nextskip = 1
+	for i = 1, splashnum do
+		if nextskip < skipnum and i == skiptable[nextskip] then
+			nextskip = nextskip + 1
+		else
+			local ang = dir:Angle()
+			local isoutside = i < insidestart or splashnum - i < insidestart
+			local frac = splashnum == 1 and 1 or (i - 1) / (splashnum - 1)
+			local dp = right * (frac * 2 - 1) * width
+			local vf, vr, vu = self:GetInitVelocity(i, splashnum)
+			table.Merge(self.Projectile, {
+				DamageMax = isoutside and p.mSplashOutsideDamageMaxValue or p.mSplashDamageMaxValue,
+				DamageMaxDistance = isoutside and p.mSplashOutsideDamageMaxDist or p.mSplashDamageMaxDist,
+				DamageMin = isoutside and p.mSplashOutsideDamageMinValue or p.mSplashDamageMinValue,
+				DamageMinDistance = isoutside and p.mSplashOutsideDamageMinDist or p.mSplashDamageMinDist,
+				InitPos = pos + dp,
+				InitVel = dir * vf + ang:Right() * vr + ang:Up() * vu,
+				Type = util.SharedRandom(randink, 4, 9),
+				Yaw = ang.yaw,
+			})
+
+			if self:IsFirstTimePredicted() then
+				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
+				local e = EffectData()
+				e:SetAttachment(self.Projectile.SplashInit)
+				e:SetColor(self.Projectile.Color)
+				e:SetEntity(self)
+				e:SetFlags(IsLP and 128 or 0)
+				e:SetMagnitude(self.EffectRadius or self.Projectile.ColRadiusWorld)
+				e:SetOrigin(self.Projectile.InitPos)
+				e:SetScale(self.Projectile.SplashNum)
+				e:SetStart(self.Projectile.InitVel)
+				util.Effect("SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
+				if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
+				ss.AddInk(p, self.Projectile)
+			end
+		end
+	end
 end
 
 function SWEP:SharedInit()
 	self.EmptyRollSound = CreateSound(self, ss.EmptyRoll)
+	self.Projectile.IsRoller = true
 	self.RollingSound = CreateSound(self, self.RollSound)
 	self:SetStartTime(CurTime())
 	self:SetEndTime(CurTime())
@@ -97,11 +120,10 @@ end
 function SWEP:SharedPrimaryAttack(able, auto)
 	if not IsValid(self.Owner) then return end
 	if self:GetMode() > self.MODE.READY then return end
-	local p = self.Primary
-	local timescale = ss.GetTimeScale(self.Owner)
+	local p = self.Parameters
 	self:SetMode(self.MODE.ATTACK)
 	self:SetStartTime(CurTime())
-	self:SetEndTime(CurTime() + p.SwingWaitTime)
+	self:SetEndTime(CurTime() + p.mSwingLiftFrame)
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 	if not self:IsFirstTimePredicted() then return end
@@ -117,9 +139,8 @@ end
 
 function SWEP:CustomActivity() return "melee2" end
 function SWEP:Move(ply, mv)
-	local p = self.Primary
+	local p = self.Parameters
 	local mode = self:GetMode()
-	local enoughink = self:GetInk() > self:GetTakeAmmo()
 	local keyrelease = not (ply:IsPlayer() and self:GetKey() == IN_ATTACK)
 	if mode == self.MODE.PAINT then
 		if keyrelease and CurTime() > self:GetEndTime() + self.SwingBackWait then
@@ -127,7 +148,6 @@ function SWEP:Move(ply, mv)
 			self:SetMode(self.MODE.READY)
 			self:SetWeaponAnim(ACT_VM_IDLE)
 			self:SetStartTime(CurTime())
-			self:SetNextPrimaryFire(CurTime() + p.Delay)
 			if self:IsFirstTimePredicted() then
 				self:EmitSound "SplatoonSWEPs.RollerHolster"
 			end
@@ -145,20 +165,23 @@ function SWEP:Move(ply, mv)
 		s:ChangeVolume(v)
 		s2:ChangeVolume(0)
 		if v > 0 then
-			self:SetReloadDelay(p.ReloadDelayGround)
+			self:SetReloadDelay(p.mInkRecoverCoreStop)
+			self:SetCooldown(CurTime() + FrameTime())
 			if self:GetInk() > 0 then
-				local pos = self:GetShootPos()
+				local color = self:GetNWInt "inkcolor"
 				local dir = self:GetForward()
-				local width = Lerp(v, p.MinWidth, p.MaxWidth)
 				local inktype = util.SharedRandom(rand, 10, 12)
+				local pos = self:GetShootPos()
+				local width = Lerp(v, p.mCorePaintSlowMoveWidthHalf, p.mCorePaintWidthHalf) * .67
+				local yaw = self:GetAimVector():Angle().yaw + 90
 				local t = util.TraceLine {
 					start = pos + dir * 45,
 					endpos = pos + dir * 45 - vector_up * 80,
 					filter = {self, self.Owner},
 					mask = ss.SquidSolidMask,
 				}
-				self:SetInk(math.max(self:GetInk() - p.TakeAmmoGround, 0))
-				ss.Paint(t.HitPos, t.HitNormal, width * .67, self:GetNWInt "inkcolor", self:GetAimVector():Angle().yaw + 90, inktype, .25, self.Owner, self.ClassName)
+				self:SetInk(math.max(self:GetInk() - p.mInkConsumeCore, 0))
+				ss.Paint(t.HitPos, t.HitNormal, width, color, yaw, inktype, .25, self.Owner, self.ClassName)
 			end
 		end
 	else
@@ -167,17 +190,22 @@ function SWEP:Move(ply, mv)
 	end
 
 	if mode ~= self.MODE.ATTACK then return end
-	self:SetReloadDelay(p.ReloadDelay)
+	self:SetReloadDelay(p.mInkRecoverSplashStop)
+	self:SetCooldown(CurTime() + FrameTime())
+
 	if CurTime() < self:GetEndTime() then return end
-	self:SetInk(math.max(self:GetInk() - self:GetTakeAmmo(), 0))
+	local frac = math.min(self:GetInk() / p.mInkConsumeSplash, 1)
+	local splashnum = math.floor(frac * p.mSplashNum)
+	local enoughink = self:GetInk() > p.mInkConsumeSplash
+	self:SetInk(math.max(self:GetInk() - p.mInkConsumeSplash, 0))
 	self:SetMode(self.MODE.PAINT)
 	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
 
 	if not self:IsFirstTimePredicted() then return end
-	if enoughink then
+	if enoughink or splashnum > 0 then
 		self:EmitSound(self.SwingSound)
 		self:EmitSound(self.SplashSound)
-		self:CreateInk()
+		self:CreateInk(p.mSplashNum - splashnum)
 	end
 
 	if (ss.sp or CLIENT) and not (self.NotEnoughInk or enoughink) then
@@ -209,6 +237,6 @@ end
 
 function SWEP:CustomMoveSpeed()
 	if self:GetMode() == self.MODE.PAINT and self.Owner:OnGround() then
-		return self.Primary.MoveSpeed
+		return self.Parameters.mMoveSpeed
 	end
 end

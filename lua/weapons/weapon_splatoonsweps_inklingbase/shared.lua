@@ -80,14 +80,6 @@ function SWEP:GetFOV()
 	return self.Owner:GetFOV()
 end
 
-function SWEP:GetTakeAmmo(secondary)
-	if secondary then
-		return self.Secondary.TakeAmmo * ss.GetMaxInkAmount()
-	else
-		return self.Primary.TakeAmmo * ss.MaxInkAmount
-	end
-end
-
 function SWEP:GetOptions(opt, getopt)
 	if not self:IsMine() then return end
 	local gc = greatzenkakuman.cvartree
@@ -116,7 +108,11 @@ end
 
 -- When NPC weapon is picked up by player.
 function SWEP:OwnerChanged()
-	if not IsValid(self.Owner) then
+	local o = self.Owner
+	local isvalid = IsValid(o)
+	local isplayer = isvalid and o:IsPlayer()
+	self.IgnorePrediction = SERVER and ss.mp and not isplayer or nil
+	if not isvalid then
 		if SERVER then
 			self:CreateRagdoll()
 			timer.Simple(5, function()
@@ -126,7 +122,7 @@ function SWEP:OwnerChanged()
 		end
 
 		return self:StopLoopSound()
-	elseif IsValid(self.Ragdoll) and self.Owner:IsPlayer() then
+	elseif IsValid(self.Ragdoll) and isplayer then
 		self.Owner:Give(self.ClassName)
 		self:Remove()
 	else
@@ -214,6 +210,8 @@ function SWEP:SharedInitBase()
 	end
 
 	self.Translate = translate
+	self.Projectile = ss.MakeProjectileStructure()
+	self.Projectile.Weapon = self
 	ss.ProtectedCall(self.SharedInit, self)
 end
 
@@ -235,6 +233,18 @@ function SWEP:SharedDeployBase()
 	if self.Owner:IsPlayer() then
 		self.Owner:SetJumpPower(self.JumpPower)
 		self.Owner:SetCrouchedWalkSpeed(.5)
+	end
+	
+	local vm = self:GetViewModel()
+	if IsValid(vm) then
+		local id, duration = vm:LookupSequence "draw"
+		if duration > 0 then
+			self:AddSchedule(duration, 1, function(self, schedule)
+				if not IsValid(vm) then return end
+				if vm:GetSequence() ~= id then return end
+				self:SetWeaponAnim(ACT_VM_IDLE)
+			end)
+		end
 	end
 
 	ss.ProtectedCall(self.SharedDeploy, self)
@@ -281,6 +291,13 @@ function SWEP:CheckCannotStandup()
 	return self.CannotStandup
 end
 
+function SWEP:SetReloadDelay(delay)
+	local reloadtime = delay / ss.GetTimeScale(self.Owner)
+	if self.ReloadSchedule:SinceLastCalled() < -reloadtime then return end
+	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
+	self.ReloadSchedule:SetLastCalled(-reloadtime)
+end
+
 function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if self:GetHolstering() then return end
 	if self:CheckCannotStandup() then return end
@@ -290,10 +307,6 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if not auto and self.Owner:IsPlayer() and self:GetKey() ~= IN_ATTACK then return end
 	local hasink = self:GetInk() > 0
 	local able = hasink and not self.CannotStandup
-	local timescale = ss.GetTimeScale(self.Owner)
-	local reloadtime = self.Primary.ReloadDelay / timescale
-	self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
-	self.ReloadSchedule:SetLastCalled(CurTime() + reloadtime)
 	if SERVER and ss.mp then SuppressHostEvents(self.Owner) end
 	ss.ProtectedCall(self.SharedPrimaryAttack, self, able, auto)
 	ss.ProtectedCall(Either(SERVER, self.ServerPrimaryAttack, self.ClientPrimaryAttack), self, able, auto)

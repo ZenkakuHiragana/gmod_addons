@@ -99,7 +99,7 @@ function SWEP:Initialize()
 	self.EnoughSubWeapon = true
 	self.PreviousInk = true
 	self.Cursor = {x = ScrW() / 2, y = ScrH() / 2}
-	self:GetBombMeterPosition(self:GetTakeAmmo(true))
+	self:GetBombMeterPosition(self.Secondary.TakeAmmo)
 	self:MakeSquidModel()
 	self.JustUsableTime = CurTime() - 1 -- For animation of ink tank light
 	self:SharedInitBase()
@@ -153,12 +153,14 @@ function SWEP:OnRemove()
 	if IsValid(self.Squid) then self.Squid:Remove() end
 	self:StopLoopSound()
 	self:EndRecording()
+	ss.ProtectedCall(self.ClientOnRemove, self)
+	ss.ProtectedCall(self.SharedOnRemove, self)
 end
 
 function SWEP:Think()
 	if not IsValid(self.Owner) or self:GetHolstering() then return end
 	if self:IsFirstTimePredicted() then
-		local enough = self:GetInk() > self:GetTakeAmmo(true)
+		local enough = self:GetInk() > self.Secondary.TakeAmmo
 		if not self.EnoughSubWeapon and enough then
 			self.JustUsableTime = CurTime() - LocalPlayer():Ping() / 1000
 			if self:IsCarriedByLocalPlayer() then

@@ -175,9 +175,9 @@ function DABox(v, a, b, o, sv)
 	end
 end
 
-function DTrace(v, z)
+function DTrace(v, z, sv)
 	if v.mins and v.maxs then
-		DSBox(v.mins, v.maxs, v.start, v.endpos)
+		DSBox(v.mins, v.maxs, v.start, v.endpos, nil, SERVER)
 	else
 		z = Either(z ~= nil, z, g)
 		DLine(v.StartPos or v.start, v.HitPos or v.endpos, z)

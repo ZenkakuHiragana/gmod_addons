@@ -27,34 +27,36 @@ SWEP.Variations = {
 }
 
 ss.SetPrimary(SWEP, {
-	IsAutomatic			= true,		-- false to semi-automatic
-	Recoil				= .2,		-- Viewmodel recoil intensity[-]
-	TakeAmmo			= .008,		-- Ink consumption per fire[-]
-	Damage				= .28,		-- Maximum damage[-]
-	MinDamage			= .14,		-- Minimum damage[-]
-	InkRadius			= 19.2,		-- Painting radius[Splatoon units]
-	MinRadius			= 18,		-- Minimum painting radius[Splatoon units]
-	SplashRadius		= 12,		-- Painting radius[Splatoon units]
-	SplashPatterns		= 11,		-- Paint patterns[-]
-	SplashNum			= 1.5,		-- Number of splashes[-]
-	SplashInterval		= 110,		-- Make an interval on each splash[Splatoon units]
-	Spread				= 12,		-- Aim cone[deg]
-	SpreadJump			= 18,		-- Aim cone while jumping[deg]
-	SpreadBias			= .25,		-- Aim cone random component[deg]
-	SpreadBiasStep		= .02,		-- Aim cone random bias initial value and step[-]
-	SpreadBiasJump		= .4,		-- Aim cone random bias while jumping[-]
-	MoveSpeed			= .72,		-- Walk speed while shooting[Splatoon units/frame]
-	InitVelocity		= 22,		-- Ink initial velocity[Splatoon units/frame]
-	Delay = {
-		Aim				= 20,		-- Change hold type[frames]
-		Fire			= 5,		-- Fire rate[frames]
-		Reload			= 20,		-- Start reloading after firing weapon[frames]
-		Crouch			= 6,		-- Cannot crouch for some frames after firing[frames]
-		Straight		= 4,		-- Ink goes without gravity[frames]
-		MinDamage		= 15,		-- Deals minimum damage[frames]
-		DecreaseDamage	= 8,		-- Start decreasing damage[frames]
-		SpreadJump		= 60,		-- Time to get spread angle back to normal[frames]
-	},
+	mRepeatFrame = 5,
+	mTripleShotSpan = 0,
+	mInitVel = 22,
+	mDegRandom = 6,
+	mDegJumpRandom = 15,
+	mSplashSplitNum = 11,
+	mKnockBack = 0,
+	mInkConsume = 0.008,
+	mInkRecoverStop = 20,
+	mMoveSpeed = 0.72,
+	mDamageMax = 0.28,
+	mDamageMin = 0.14,
+	mDamageMinFrame = 15,
+	mStraightFrame = 4,
+	mGuideCheckCollisionFrame = 8,
+	mCreateSplashNum = 1.5,
+	mCreateSplashLength = 110,
+	mDrawRadius = 2.5,
+	mColRadius = 2,
+	mPaintNearDistance = 11,
+	mPaintFarDistance = 200,
+	mPaintNearRadius = 19.2,
+	mPaintFarRadius = 18,
+	mSplashDrawRadius = 3,
+	mSplashColRadius = 1.5,
+	mSplashPaintRadius = 12,
+	mDegBias = 0.25,
+	mDegBiasKf = 0.02,
+	mDegJumpBias = 0.4,
+	mDegJumpBiasFrame = 60,
 })
 
 local function RefreshViewModel(self)

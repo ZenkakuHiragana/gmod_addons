@@ -351,7 +351,7 @@ function SWEP:DrawWorldModelTranslucent()
 			local fraction = math.Clamp(self.JustUsableTime + 0.15 - CurTime(), 0, 0.15)
 			local size = -1600 * (fraction - 0.075)^2 + 20
 			v.size = {x = size, y = size}
-			v.hide = not IsValid(self.WElements["inktank"].modelEnt) or self:GetInk() < self:GetTakeAmmo(true)
+			v.hide = not IsValid(self.WElements["inktank"].modelEnt) or self:GetInk() < self.Secondary.TakeAmmo
 		elseif name == "inktank" and IsValid(self.Owner) then
 			bone_ent = self.Owner
 		end

@@ -20,6 +20,7 @@ ss.WeaponClassNames2 = include "splatoonsweps/constants/weaponclasses2.lua"
 ss.TEXTUREFLAGS = include "splatoonsweps/constants/textureflags.lua"
 ss.RenderTarget = table.Merge(ss.RenderTarget, include "splatoonsweps/constants/rendertarget.lua")
 ss.InkTankModel = Model "models/props_splatoon/gear/inktank_backpack/inktank_backpack.mdl"
+ss.Units = include "splatoonsweps/constants/parameterunits.lua"
 ss.Playermodel = {nil, InkGirl, InkBoy, Marie, Callie, Octo, OctoGirl, OctoBoy}
 ss.PLAYER = {
 	NOCHANGE = 1,
@@ -212,14 +213,9 @@ ss.ToHammerHealth = 100 -- Health is normalized in Splatoon (0--1)
 ss.FrameToSec = 1 / framepersec -- = 0.016667, Constants for time conversion
 ss.SecToFrame = framepersec -- = 60, Constants for time conversion
 ss.mDegRandomY = .5 -- Shooter spread angle, yaw (need to be validated)
-ss.HealDelay = 60 * ss.FrameToSec -- Time to heal again after taking damage.
-ss.ShooterTrailDelay = 2 * ss.FrameToSec -- Time to start to move the latter half of shooter's ink.
 ss.SpreadJumpMaxVelocity = 32 -- Player's Z-speed threshold for shooter's spread angle expansion by jumping.
 ss.SquidSpeedOutofInk = .45 -- Squid speed coefficient when it goes out of ink.
-ss.CameraFadeDistance = 100^2 -- Thirdperson model fade distance[units^2]
-ss.SubWeaponThrowTime = 25 * ss.FrameToSec -- Duration of TPS sub weapon throwing animation.
-ss.ShooterDecreaseFrame = 4 * ss.FrameToSec -- Shooters ink velocity deceleration time to start falling.
-ss.ShooterTermTime = 10 * ss.FrameToSec -- Time to reach the terminal velocity
+ss.CameraFadeDistance = 100^2 -- Thirdperson model fade distance[Hammer units^2]
 ss.SquidTrace = {
 	start = vector_origin, endpos = vector_origin,
 	filter = {}, mask = ss.SquidSolidMask,
@@ -239,3 +235,23 @@ for key, value in pairs {
 } do
 	ss[key] = value * ss.ToHammerUnits
 end
+
+for key, value in pairs {
+	AimDuration = 20, -- Change hold type
+	CrouchDelay = 6, -- Cannot crouch for some frames after firing.
+	HealDelay = 60, -- Time to heal again after taking damage.
+	RollerDecreaseFrame = 15, -- Rollers ink velocity deceleration time to start falling.
+	ShooterDecreaseFrame = 5, -- Shooters ink velocity deceleration time to start falling.
+	ShooterTermTime = 10, -- Time to reach the terminal velocity.
+	ShooterTrailDelay = 2, -- Time to start to move the latter half of shooter's ink.
+	SubWeaponThrowTime = 25, -- Duration of TPS sub weapon throwing animation.
+} do
+	ss[key] = value * ss.FrameToSec
+end
+
+ss.UnitsConverter = {
+	["du"] = ss.ToHammerUnits,
+	["du/f"] = ss.ToHammerUnitsPerSec,
+	["f"] = ss.FrameToSec,
+	["ink"] = ss.MaxInkAmount,
+}

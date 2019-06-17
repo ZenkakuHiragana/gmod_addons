@@ -2,69 +2,53 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 SWEP.Base = "weapon_splatoonsweps_shooter"
+SWEP.IsSplatling = true
 SWEP.FlashDuration = .25
 
 local rand = "SplatoonSWEPs: Spread"
 local randsplash = "SplatoonSWEPs: SplashNum"
 function SWEP:GetChargeProgress(ping)
-	local timescale = ss.GetTimeScale(self.Owner)
-	local frac = CurTime() - self:GetCharge() - self.Primary.MinChargeTime / timescale
+	local p = self.Parameters
+	local ts = ss.GetTimeScale(self.Owner)
+	local frac = CurTime() - self:GetCharge() - p.mMinChargeFrame / ts
 	if ping then frac = frac + self:Ping() end
-	return math.Clamp(frac	/ self.Primary.MaxChargeTime[2] * timescale, 0, 1)
+	return math.Clamp(frac / p.mSecondPeriodMaxChargeFrame * ts, 0, 1)
 end
 
-function SWEP:GetInitVelocity(r)
-	local p, v = self.Primary
+function SWEP:GetInitVelocity(nospread)
+	local v
+	local p = self.Parameters
 	local prog = self:GetFireInk() > 0 and self:GetFireAt() or self:GetChargeProgress(CLIENT)
 	if prog < self.MediumCharge then
-		v = Lerp(prog / self.MediumCharge, p.MinVelocity, p.MediumVelocity)
+		v = Lerp(prog / self.MediumCharge, p.mInitVelMinCharge, p.mInitVelFirstPeriodMaxCharge)
 	else
-		v =  Lerp(prog - self.MediumCharge, p.MediumVelocity, p.InitVelocity)
+		v = Lerp(prog - self.MediumCharge, p.mInitVelSecondPeriodMinCharge, p.mInitVelSecondPeriodMaxCharge)
 	end
 
-	if r then return v end
+	if nospread then return v end
 	local sgnv = math.Round(util.SharedRandom(rand, 0, 1, CurTime() * 7)) * 2 - 1
 	local SelectIntervalV = self:GetBiasVelocity() > util.SharedRandom(rand, 0, 1, CurTime() * 8)
 	local fracmin = SelectIntervalV and self:GetBias() or 0
 	local fracmax = SelectIntervalV and 1 or self:GetBiasVelocity(), CurTime() * 9
 	local frac = util.SharedRandom(rand, fracmin, fracmax)
 
-	return v + sgnv * frac * p.SpreadVelocity * p.InitVelocity
+	return v * (1 + sgnv * frac * p.mInitVelSpeedRateRandom)
 end
 
 function SWEP:GetRange()
-	return self:GetInitVelocity(true) * (self.Primary.Straight + ss.ShooterDecreaseFrame / 2)
+	return self:GetInitVelocity(true) * (self.Parameters.mStraightFrame + ss.ShooterDecreaseFrame / 2)
 end
 
 function SWEP:GetSpreadAmount()
 	local sx, sy = self:GetBase().GetSpreadAmount(self)
-	return sx, (self.Primary.Spread + sy) / 2
-end
-
-function SWEP:ResetSkin()
-	if ss.ChargingEyeSkin[self.Owner:GetModel()] then
-		local skin = 0
-		if self:GetNWInt "playermodel" == ss.PLAYER.NOCHANGE then
-			skin = CLIENT and
-			GetConVar "cl_playerskin":GetInt() or
-			self.BackupPlayerInfo.Playermodel.Skin
-		end
-
-		if self.Owner:GetSkin() == skin then return end
-		self.Owner:SetSkin(skin)
-	elseif ss.TwilightPlayermodels[self.Owner:GetModel()] then
-		local l = self.Owner:GetFlexIDByName "Blink_L"
-		local r = self.Owner:GetFlexIDByName "Blink_R"
-		if l then self.Owner:SetFlexWeight(l, 0) end
-		if r then self.Owner:SetFlexWeight(r, 0) end
-	end
+	return sx, (self.Parameters.mDegRandom + sy) / 2
 end
 
 function SWEP:ResetCharge()
 	self:SetCharge(math.huge)
+	self:SetFireInk(0)
 	self.FullChargeFlag = false
 	self.NotEnoughInk = false
-	self:SetFireInk(0)
 	self.JumpPower = ss.InklingJumpPower
 	if ss.mp and CLIENT and not IsFirstTimePredicted() then return end
 	for _, s in ipairs(self.SpinupSound) do s:Stop() end
@@ -102,6 +86,14 @@ function SWEP:PlayChargeSound()
 	end
 end
 
+function SWEP:ShouldChargeWeapon()
+	if self.Owner:IsPlayer() then
+		return self.Owner:KeyDown(IN_ATTACK)
+	else
+		return CurTime() - self:GetCharge() < self.Parameters.mSecondPeriodMaxChargeFrame + .5
+	end
+end
+
 function SWEP:SharedDeploy()
 	self:SetSplashInitMul(1)
 	self:GenerateSplashInitTable()
@@ -115,58 +107,56 @@ function SWEP:SharedInit()
 	for _, s in ipairs(self.ChargeSound) do
 		self.SpinupSound[#self.SpinupSound + 1] = CreateSound(self, s)
 	end
-	self.AirTimeFraction = 1 - 1 / self.Primary.EmptyChargeMul
-	self.MediumCharge = (self.Primary.MaxChargeTime[1] - self.Primary.MinChargeTime) / (self.Primary.MaxChargeTime[2] - self.Primary.MinChargeTime)
+
+	local p = self.Parameters
+	self.AirTimeFraction = 1 - 1 / p.mEmptyChargeTimes
+	self.MediumCharge = (p.mFirstPeriodMaxChargeFrame - p.mMinChargeFrame) / (p.mSecondPeriodMaxChargeFrame - p.mMinChargeFrame)
 	self.SpinupEffectTime = CurTime()
 	self:SetAimTimer(CurTime())
 	self:SharedDeploy()
+	table.Merge(self.Projectile, {
+		ColRadiusEntity = p.mColRadius,
+		ColRadiusWorld = p.mColRadius,
+		PaintFarRadius = p.mPaintFarRadius,
+		PaintNearRadius = p.mPaintNearRadius,
+		StraightFrame = p.mStraightFrame,
+	})
 end
 
 function SWEP:SharedPrimaryAttack()
 	if not IsValid(self.Owner) then return end
-	if self:GetCharge() < math.huge then
+	if self:GetCharge() < math.huge then -- Hold +attack to charge
+		local p = self.Parameters
 		local prog = self:GetChargeProgress(CLIENT)
-		self:SetAimTimer(CurTime() + self.Primary.AimDuration)
-		self.JumpPower = Lerp(prog, ss.InklingJumpPower, self.Primary.JumpPower)
-		if prog > 0 then
-			local EnoughInk = self:GetInk() >= prog * self.Primary.MaxTakeAmmo * ss.MaxInkAmount
-			if not self.Owner:OnGround() or not EnoughInk then
-				if EnoughInk or self:GetNWBool "canreloadstand" then
-					self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
-				else
-					local timescale = ss.GetTimeScale(self.Owner)
-					local elapsed = prog * self.Primary.MaxChargeTime[2] / timescale
-					local min = self.Primary.MinChargeTime / timescale
-					local ping = CLIENT and self:Ping() or 0
-					self:SetCharge(CurTime() + FrameTime() - elapsed - min + ping)
-				end
+		self:SetAimTimer(CurTime() + ss.AimDuration)
+		self:PlayChargeSound()
+		self.JumpPower = Lerp(prog, ss.InklingJumpPower, p.mJumpGnd_Charge)
+		if prog == 0 then return end
+		local EnoughInk = self:GetInk() >= prog * p.mInkConsume
+		if not self.Owner:OnGround() or not EnoughInk then
+			if EnoughInk or self:GetNWBool "canreloadstand" then
+				self:SetCharge(self:GetCharge() + FrameTime() * self.AirTimeFraction)
+			else
+				local ts = ss.GetTimeScale(self.Owner)
+				local elapsed = prog * p.mSecondPeriodMaxChargeFrame / ts
+				local min = p.mMinChargeFrame / ts
+				local ping = CLIENT and self:Ping() or 0
+				self:SetCharge(CurTime() + FrameTime() - elapsed - min + ping)
+			end
 
-				if (ss.sp or CLIENT) and not (self.NotEnoughInk or EnoughInk) then
-					self.NotEnoughInk = true
-					ss.EmitSound(self.Owner, ss.TankEmpty)
-				end
+			if (ss.sp or CLIENT) and not (self.NotEnoughInk or EnoughInk) then
+				self.NotEnoughInk = true
+				ss.EmitSound(self.Owner, ss.TankEmpty)
 			end
 		end
-
-		self:PlayChargeSound()
-		return
-	end
-
-	self.FullChargeFlag = false
-	self.AimSound:PlayEx(0, 1)
-	self.SpinupSound[1]:Play()
-	self:SetAimTimer(CurTime() + self.Primary.AimDuration)
-	self:SetCharge(CurTime())
-	self:SetWeaponAnim(ACT_VM_IDLE)
-
-	local skin = ss.ChargingEyeSkin[self.Owner:GetModel()]
-	if skin and self.Owner:GetSkin() ~= skin then
-		self.Owner:SetSkin(skin)
-	elseif ss.TwilightPlayermodels[self.Owner:GetModel()] then
-		local l = self.Owner:GetFlexIDByName "Blink_L"
-		local r = self.Owner:GetFlexIDByName "Blink_R"
-		if l then self.Owner:SetFlexWeight(l, .3) end
-		if r then self.Owner:SetFlexWeight(r, 1) end
+	else -- First attempt
+		self.FullChargeFlag = false
+		self.AimSound:PlayEx(0, 1)
+		self.SpinupSound[1]:Play()
+		self:SetAimTimer(CurTime() + ss.AimDuration)
+		self:SetCharge(CurTime())
+		self:SetWeaponAnim(ACT_VM_IDLE)
+		ss.SetChargingEye(self)
 	end
 end
 
@@ -178,6 +168,7 @@ function SWEP:KeyPress(ply, key)
 end
 
 function SWEP:Move(ply)
+	local p = self.Parameters
 	if ply:IsPlayer() then
 		if self:GetNWBool "toggleads" then
 			if ply:KeyPressed(IN_USE) then
@@ -188,72 +179,65 @@ function SWEP:Move(ply)
 		end
 	end
 
-	if ply:OnGround() then
-		if CurTime() - self:GetJump() < self.Primary.SpreadJumpDelay then
-			self:SetJump(self:GetJump() - FrameTime() / 2)
-		end
+	if ply:OnGround() and CurTime() - self:GetJump() < p.mDegJumpBiasFrame then
+		self:SetJump(self:GetJump() - FrameTime() / 2)
 	end
 
 	if CurTime() > self:GetAimTimer() then
-		local f = ply:GetFlexIDByName "Blink_R"
-		if ply:GetSkin() == ss.ChargingEyeSkin[ply:GetModel()]
-		or ss.TwilightPlayermodels[ply:GetModel()]
-		and f and ply:GetFlexWeight(f) == 1 then
-			self:ResetSkin()
-		end
+		ss.SetNormalEye(self)
 	end
 
-	if self:GetFireInk() > 0 then
+	if self:GetFireInk() > 0 then -- It's firing
 		if self:CheckCannotStandup() then return end
 		if self:GetThrowing() then return end
 		if CLIENT and (ss.sp or not self:IsMine()) then return end
 		if self:GetNextPrimaryFire() > CurTime() then return end
 		if ply:IsPlayer() and SERVER and ss.mp then SuppressHostEvents(ply) end
 
-		local p = self.Primary
-		local timescale = ss.GetTimeScale(ply)
-		local reloadtime = self.Primary.ReloadDelay / timescale
+		local ts = ss.GetTimeScale(ply)
 		local AlreadyAiming = CurTime() < self:GetAimTimer()
-		self:SetNextPrimaryFire(CurTime() + self.Primary.Delay / timescale)
-		self:SetAimTimer(CurTime() + p.AimDuration)
+		local crouchdelay = math.min(p.mRepeatFrame, ss.CrouchDelay)
+		self:SetNextPrimaryFire(CurTime() + p.mRepeatFrame / ts)
+		self:SetAimTimer(CurTime() + ss.AimDuration)
 		self:SetFireInk(self:GetFireInk() - 1)
 		self:SetInk(math.max(0, self:GetInk() - self.TakeAmmo))
-		self:SetCooldown(math.max(self:GetCooldown(),
-		CurTime() + math.min(p.Delay, p.CrouchDelay) / timescale))
-		self.ReloadSchedule:SetDelay(reloadtime) -- Stop reloading ink
-		self.ReloadSchedule:SetLastCalled(CurTime() + reloadtime)
+		self:SetReloadDelay(p.mInkRecoverStop)
+		self:SetCooldown(math.max(self:GetCooldown(), CurTime() + crouchdelay / ts))
 
-		if CurTime() - self:GetJump() > p.SpreadJumpDelay then
+		if CurTime() - self:GetJump() > p.mDegJumpBiasFrame then
 			if not AlreadyAiming then self:SetBiasVelocity(0) end
-			self:SetBiasVelocity(math.min(self:GetBiasVelocity() + p.SpreadBiasStep, p.SpreadBiasVelocity))
+			self:SetBiasVelocity(math.min(self:GetBiasVelocity() + p.mDegBiasKf, p.mInitVelSpeedBias))
 		end
 
 		if self:IsFirstTimePredicted() then
 			local e = EffectData()
 			e:SetEntity(self)
-			util.Effect("SplatoonSWEPsSplatlingMuzzleFlash", e,
-			not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+			util.Effect("SplatoonSWEPsSplatlingMuzzleFlash", e, true, self.IgnorePrediction)
 		end
 
 		self:CreateInk()
 		if SERVER and ss.mp then SuppressHostEvents() end
-	else
-		local p = self.Primary
+	else -- Just released MOUSE1
 		if self:GetCharge() == math.huge then return end
-		if ply:IsPlayer() and ply:KeyDown(IN_ATTACK) then return end
-		if not ply:IsPlayer() and self:ShouldChargeWeapon() then return end
-		if CurTime() - self:GetCharge() < p.MinChargeTime then return end
-		local prog, Duration = self:GetChargeProgress()
+		if self:ShouldChargeWeapon() then return end
+		if CurTime() - self:GetCharge() < p.mMinChargeFrame then return end
+		local duration
+		local prog = self:GetChargeProgress()
+		local d1 = p.mFirstPeriodMaxChargeShootingFrame
+		local d2 = p.mSecondPeriodMaxChargeShootingFrame
 		if prog < self.MediumCharge then
-			Duration = self.Primary.FireDuration[1] * prog / self.MediumCharge
+			duration = d1 * prog / self.MediumCharge
 		else
-			Duration = Lerp((prog - self.MediumCharge) / (1 - self.MediumCharge), self.Primary.FireDuration[1], self.Primary.FireDuration[2])
+			local frac = (prog - self.MediumCharge) / (1 - self.MediumCharge)
+			duration = Lerp(frac, d1, d2)
 		end
 
 		self:SetFireAt(prog)
 		self:ResetCharge()
-		self:SetFireInk(math.floor(Duration / self.Primary.Delay) + 1)
-		self.TakeAmmo = p.MaxTakeAmmo * ss.MaxInkAmount * prog / self:GetFireInk()
+		self:SetFireInk(math.floor(duration / p.mRepeatFrame) + 1)
+		self.TakeAmmo = p.mInkConsume * prog / self:GetFireInk()
+		self.Projectile.Charge = prog
+		self.Projectile.DamageMax = prog == 1 and p.mDamageMaxMaxCharge or nil
 	end
 end
 
@@ -270,9 +254,9 @@ function SWEP:CustomDataTables()
 end
 
 function SWEP:CustomMoveSpeed()
-	if self:GetFireInk() > 0 then return self.Primary.MoveSpeed end
+	if self:GetFireInk() > 0 then return self.Parameters.mMoveSpeed end
 	if self:GetCharge() < math.huge then
-		return Lerp(self:GetChargeProgress(), self.InklingSpeed, self.Primary.MoveSpeedCharge)
+		return Lerp(self:GetChargeProgress(), self.InklingSpeed, self.Parameters.mMoveSpeed_Charge)
 	end
 end
 

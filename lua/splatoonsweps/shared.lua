@@ -426,6 +426,18 @@ function ss.IsInWorld(pos)
 	return math.abs(pos.x) < 16384 and math.abs(pos.y) < 16384 and math.abs(pos.z) < 16384
 end
 
+-- For Charger's interpolation.
+-- Arguments:
+--   number frac	| Fraction.
+--   number min 	| Minimum value.
+--   number max 	| Maximum value.
+--   number full	| An optional value returned when frac == 1.
+-- Returning:
+--   number			| Interpolated value.
+function ss.Lerp3(frac, min, max, full)
+	return frac < 1 and Lerp(frac, min, max) or full or max
+end
+
 include "debug.lua"
 include "text.lua"
 include "convars.lua"
@@ -528,16 +540,19 @@ function ss.AddTimerFramework(ent)
 	--   number newtime	| Relative to CurTime()
 	function ScheduleFunc:SetLastCalled(newtime)
 		if isstring(self.prevtime) then
-			self.weapon["Set" .. self.prevtime](self.weapon, CurTime() + newtime)
+			self.weapon["Set" .. self.prevtime](self.weapon, CurTime() - newtime)
 		else
-			self.prevtime = CurTime() + newtime
+			self.prevtime = CurTime() - newtime
 		end
 	end
 
 	-- Returns the time since the schedule has been last called.
 	function ScheduleFunc:SinceLastCalled()
-		return CurTime() - (isstring(self.prevtime) and
-		self.weapon["Get" .. self.prevtime](self.weapon) or self.prevtime)
+		if isstring(self.prevtime) then
+			return CurTime() - self.weapon["Get" .. self.prevtime](self.weapon)
+		else
+			return CurTime() - self.prevtime
+		end
 	end
 
 	-- Adds an syncronized schedule.

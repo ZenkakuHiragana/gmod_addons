@@ -5,11 +5,12 @@ AddCSLuaFile "shared.lua"
 include "shared.lua"
 
 function SWEP:ServerInit()
-	if not self.Primary.TripleShotDelay then return end
-	self:SetNPCMinBurst(1)
-	self:SetNPCMaxBurst(1)
-	self:SetNPCMinRest(self.Primary.TripleShotDelay)
-	self:SetNPCMaxRest(self.Primary.TripleShotDelay)
+	if self.Parameters.mTripleShotSpan > 0 then
+		self:SetNPCMinBurst(1)
+		self:SetNPCMaxBurst(1)
+		self:SetNPCMinRest(self.Parameters.mTripleShotSpan)
+		self:SetNPCMaxRest(self.Parameters.mTripleShotSpan)
+	end
 end
 
 local TrailParams = {true, 3, 1, .5, .125, "sprites/physbeama"}
@@ -19,10 +20,12 @@ function SWEP:ServerDeploy()
 	local c = self.HeroColor[self:GetNWInt "level" + 1]
 	local vm = self:GetViewModel()
 	self:SetNWEntity("Trail", util.SpriteTrail(self, a,	c, unpack(TrailParams)))
+	self:DeleteOnRemove(self:GetNWEntity "Trail")
 
 	if not IsValid(vm) then return end
 	a = vm:LookupAttachment "trail"
 	self:SetNWEntity("TrailVM", util.SpriteTrail(vm, a, c, unpack(TrailParams)))
+	self:DeleteOnRemove(self:GetNWEntity "TrailVM")
 end
 
 function SWEP:ServerHolster()
@@ -40,7 +43,8 @@ end
 
 function SWEP:NPCShoot_Primary(ShootPos, ShootDir)
 	self:PrimaryAttack()
-	self:AddSchedule(self.Primary.Delay, 2, function(self, schedule)
+	if self.IsBlaster then return end
+	self:AddSchedule(self.Parameters.mRepeatFrame, 2, function(self, schedule)
 		self:PrimaryAttack()
 	end)
 end
