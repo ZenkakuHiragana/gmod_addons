@@ -1,5 +1,5 @@
 # gmod_addons / SplatoonSWEPs!
-This is the huge rework of my existing addon, [SplatoonSWEPs][1].
+This is a huge rework of my existing addon, [SplatoonSWEPs][1].
 Commit messages are all Japanese.
 
 The aim of this rework is the following:
@@ -26,11 +26,17 @@ The aim of this rework is the following:
 * All Blasters in Splatoon.
 
 ## Currently working on
-* Make Rollers
+* Finish making Rollers
+    * [x] Fling ink at a short range on +attack.
+    * [x] Then, it'll be able to leave a trail of ink.
+    * [ ] Ability to "run over."
+    * [ ] Make a proper ink effect (later).
+    
 
 ## Upcoming features
-* Sub weapons
+* Inkbrushes
 * Sloshers
+* Sub weapons
 
 ## I want to make the following, too
 * Special weapons in Splatoon and Splatoon 2
