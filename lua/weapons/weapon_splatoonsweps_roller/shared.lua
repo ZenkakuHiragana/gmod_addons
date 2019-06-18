@@ -70,7 +70,7 @@ function SWEP:CreateInk(skipnum)
 		PaintNearRadius = p.mSplashPaintNearR,
 		StraightFrame = p.mSplashStraightFrame,
 	})
-	PrintTable(skiptable)
+	
 	local insidestart = (splashnum - insidenum) / 2
 	local nextskip = 1
 	for i = 1, splashnum do
