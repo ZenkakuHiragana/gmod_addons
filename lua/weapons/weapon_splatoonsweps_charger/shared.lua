@@ -213,7 +213,7 @@ function SWEP:Move(ply)
 		InitPos = pos,
 		InitVel = dir * self:GetInkVelocity(),
 		IsCharger = true,
-		SplashInit = self:GetSplashInitMul() % p.mSplashSplitNum * (1 - prog),
+		SplashInit = self:GetSplashInitMul() % p.mSplashSplitNum,
 		Type = ss.GetDropType(),
 		Yaw = ply:GetAngles().yaw,
 	})

@@ -46,14 +46,18 @@ function SWEP:CreateInk(skipnum)
 		insidenum = insidenum - 1
 	end
 
-	local skiptable = {}
+	local t, skiptable = {}, {}
 	for i = 1, splashnum do
-		table.insert(skiptable, i)
+		table.insert(t, i)
 	end
 
 	for i = 1, skipnum do
 		local k = math.floor(util.SharedRandom(randsplash, i, splashnum))
-		skiptable[i], skiptable[k] = skiptable[k], skiptable[i]
+		t[i], t[k] = t[k], t[i]
+	end
+
+	for i = 1, skipnum do
+		skiptable[t[i]] = true
 	end
 
 	table.Merge(self.Projectile, {
@@ -66,11 +70,11 @@ function SWEP:CreateInk(skipnum)
 		PaintNearRadius = p.mSplashPaintNearR,
 		StraightFrame = p.mSplashStraightFrame,
 	})
-
+	PrintTable(skiptable)
 	local insidestart = (splashnum - insidenum) / 2
 	local nextskip = 1
 	for i = 1, splashnum do
-		if nextskip < skipnum and i == skiptable[nextskip] then
+		if nextskip < skipnum and skiptable[i] then
 			nextskip = nextskip + 1
 		else
 			local ang = dir:Angle()
@@ -114,6 +118,10 @@ function SWEP:SharedInit()
 	self.RollingSound = CreateSound(self, self.RollSound)
 	self:SetStartTime(CurTime())
 	self:SetEndTime(CurTime())
+	self:SetMode(self.MODE.READY)
+end
+
+function SWEP:SharedHolster()
 	self:SetMode(self.MODE.READY)
 end
 

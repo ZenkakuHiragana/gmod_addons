@@ -150,11 +150,12 @@ function Simulate.weapon_splatoonsweps_charger(ink)
 	local minrate = parameters.mSplashBetweenMinSplashPaintRadiusRate
 	local paintlastmul = parameters.mPaintRateLastSplash
 	local paintradius = data.PaintNearRadius / paintlastmul
-
+	
 	local t = math.max(0, CurTime() - ink.InitTime)
-	local lengthstep = Lerp(data.Charge, minrate, maxrate) * paintradius
+	local lengthstep = Lerp(data.Charge, maxrate, minrate) * paintradius
 	local length = math.Clamp(data.InitSpeed * t, 0, data.Range)
-	local nextlength = data.SplashCount * lengthstep + data.SplashInit
+	local splitnum = parameters.mSplashSplitNum
+	local nextlength = (data.SplashCount + data.SplashInit / splitnum) * lengthstep
 	table.Merge(dropdata, {
 		Charge = data.Charge,
 		Color = data.Color,
@@ -167,7 +168,7 @@ function Simulate.weapon_splatoonsweps_charger(ink)
 		Weapon = weapon,
 		Yaw = data.Yaw,
 	})
-	
+
 	while length >= nextlength do -- Create ink drops
 		local hull = {
 			collisiongroup = ink.collisiongroup,
@@ -183,8 +184,8 @@ function Simulate.weapon_splatoonsweps_charger(ink)
 		dropdata.InitPos = t.HitPos + t.HitNormal
 
 		if data.SplashCount == 0 then
-			local footpaint = data.Charge > footpaintcharge and 1 or 0
-			mul = footpaint / paintlastmul
+			local footpaint = weapon.IsBamboozler or data.Charge > footpaintcharge
+			mul = (footpaint and 1 or 0) / paintlastmul
 			dropdata.InitPos:Add(data.InitDir * (1 - mul) * paintradius)
 			HitPaint.weapon_splatoonsweps_charger(ink, {
 				FractionPaintWall = .8,
@@ -227,18 +228,25 @@ end
 function HitPaint.weapon_splatoonsweps_charger(ink, t)
 	local data, parameters, trace, weapon = ink.Data, ink.Parameters, ink.Trace, ink.Data.Weapon
 	local hitfloor = t.HitNormal.z > ss.MAX_COS_DEG_DIFF
-	local radius = data.PaintNearRadius
 	local ratio = hitfloor and data.Ratio or 1
+	local radius = data.PaintNearRadius * data.Ratio
 	local radiusmul = parameters.mPaintRateLastSplash
-	if data.DoDamage and not hitfloor then
-		radius = radius * data.Ratio / radiusmul
+	if data.DoDamage then
+		if not hitfloor then
+			radius = radius / radiusmul
+		end
+
+		if trace.LengthSum < data.Range then
+			local cos = math.Clamp(-data.InitDir.z, ss.MAX_COS_DEG_DIFF, 1)
+			ratio = math.Remap(cos, ss.MAX_COS_DEG_DIFF, 1, ratio, 1)
+		end
 	end
 
 	if (ss.sp or CLIENT and IsFirstTimePredicted()) and t.Hit and data.DoDamage then
 		sound.Play("SplatoonSWEPs_Ink.HitWorld", t.HitPos)
 	end
 
-	ss.Paint(t.HitPos, t.HitNormal, radius, data.Color,
+	ss.Paint(t.HitPos, t.HitNormal, radius / ratio, data.Color,
 	data.Yaw, data.Type, ratio, trace.filter, weapon.ClassName)
 
 	HitSmoke(ink, t)

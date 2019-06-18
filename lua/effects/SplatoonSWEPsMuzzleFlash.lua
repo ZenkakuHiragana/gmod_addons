@@ -43,8 +43,11 @@ function EFFECT:Init(e)
 	if e:GetFlags() == 1 then
 		local scale = 15 * (self.Weapon:GetFireAt() + 1)
 		local function SetPos(p)
-			p:SetPos(ent:GetAttachment(a).Pos)
-			p:SetNextThink(CurTime())
+			local att = ent:GetAttachment(a)
+			if att then
+				p:SetPos(att.Pos)
+				p:SetNextThink(CurTime())
+			end
 		end
 
 		if ss.sp and self.Weapon.Owner:IsPlayer() then
@@ -72,9 +75,11 @@ function EFFECT:Init(e)
 
 	if ss.sp and self.Weapon.Owner:IsPlayer() then
 		local function SetPos(p)
-			local a = ent:GetAttachment(a)
-			p:SetPos(a.Pos + a.Ang:Forward() * 2)
-			p:SetNextThink(CurTime())
+			local att = ent:GetAttachment(a)
+			if att then
+				p:SetPos(att.Pos + att.Ang:Forward() * 2)
+				p:SetNextThink(CurTime())
+			end
 		end
 
 		c:Mul(255)
