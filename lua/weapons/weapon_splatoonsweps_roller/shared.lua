@@ -116,9 +116,15 @@ function SWEP:SharedInit()
 	self.EmptyRollSound = CreateSound(self, ss.EmptyRoll)
 	self.Projectile.IsRoller = true
 	self.RollingSound = CreateSound(self, self.RollSound)
+	self.Bodygroup = table.Copy(self.Bodygroup or {})
 	self:SetStartTime(CurTime())
 	self:SetEndTime(CurTime())
 	self:SetMode(self.MODE.READY)
+	self:AddSchedule(0, function(self, schedule)
+		self.Bodygroup[1] = self:GetInk() > 0 and 0 or 1
+		if not self.IsHeroWeapon then return end
+		self.Skin = self:GetNWInt "level"
+	end)
 end
 
 function SWEP:SharedHolster()

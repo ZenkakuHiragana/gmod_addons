@@ -645,7 +645,8 @@ function ss.MakeBlasterExplosion(ink)
 	local rmid = parameters.mCollisionRadiusMiddle * rmul
 	local rfar = parameters.mCollisionRadiusFar * rmul
 	for _, e in ipairs(ents.FindInSphere(tr.endpos, rfar)) do
-		if IsValid(e) and e:Health() > 0 and (not ss.IsAlly(e) or hurtowner and e == tr.filter) then
+		local target_weapon = ss.IsValidInkling(e)
+		if IsValid(e) and e:Health() > 0 and (not ss.IsAlly(target_weapon, data.Color) or hurtowner and e == tr.filter) then
 			local dist = Vector()
 			local maxs, mins = e:OBBMaxs(), e:OBBMins()
 			local origin = e:LocalToWorld(e:OBBCenter())

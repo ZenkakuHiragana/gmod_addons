@@ -382,7 +382,7 @@ function ss.PostRender(w)
 	render.RenderView {
 		origin = w.ScopeOrigin or a.Pos, angle = a.Ang,
 		x = 0, y = 0, w = 512, h = 512, aspectratio = 1,
-		fov = w.Primary.Scope.FOV / 2,
+		fov = w.Parameters.mSniperCameraFovy,
 		drawviewmodel = false,
 	}
 	ss.ProtectedCall(w.HideRTScope, w, alpha)

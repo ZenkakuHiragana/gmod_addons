@@ -196,7 +196,9 @@ function SWEP:GetArmPos()
 	local swaytime = (endmove - startmove) * p.mMaxChargeFrame / 2
 	local prog = self:GetChargeProgress(true)
 	if not self:GetADS() then return end
-	if not self.Scoped or prog < startmove then
+	if not self.Scoped then
+		self.SwayTime = 12 * ss.FrameToSec
+	elseif prog < startmove then
 		self.SwayTime = self.TransitFlip and 12 * ss.FrameToSec or swaytime
 	end
 

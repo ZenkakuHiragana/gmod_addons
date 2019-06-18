@@ -179,16 +179,6 @@ function SWEP:GetMuzzlePosition()
 	return a.Pos, a.Ang
 end
 
-function SWEP:ClientInit()
-	self.Bodygroup = table.Copy(self.Bodygroup or {})
-end
-
-function SWEP:ClientThink()
-	self.Bodygroup[1] = self:GetInk() > 0 and 0 or 1
-	if not self.IsHeroWeapon then return end
-	self.Skin = self:GetNWInt "level"
-end
-
 function SWEP:GetCrosshairTrace(t)
 	local range = self:GetRange(true)
 	local tr = ss.SquidTrace

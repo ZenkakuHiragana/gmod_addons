@@ -129,6 +129,7 @@ function SWEP:SharedPrimaryAttack()
 		local p = self.Parameters
 		local prog = self:GetChargeProgress(CLIENT)
 		self:SetAimTimer(CurTime() + ss.AimDuration)
+		self:SetReloadDelay(FrameTime())
 		self:PlayChargeSound()
 		self.JumpPower = Lerp(prog, ss.InklingJumpPower, p.mJumpGnd_Charge)
 		if prog == 0 then return end

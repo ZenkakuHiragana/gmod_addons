@@ -37,7 +37,7 @@ function ss.SetNormalEye(self)
 
 		if ply:GetSkin() == s then return end
 		ply:SetSkin(s)
-	elseif IsTwilightModel and f and ply:GetFlexWeight() == 1 then
+	elseif IsTwilightModel and f and ply:GetFlexWeight(f) == 1 then
 		local l = ply:GetFlexIDByName "Blink_L"
 		local r = ply:GetFlexIDByName "Blink_R"
 		if l then ply:SetFlexWeight(l, 0) end
