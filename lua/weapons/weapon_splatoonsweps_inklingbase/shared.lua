@@ -429,13 +429,13 @@ function SWEP:SetupDataTables()
 	self.HealSchedule = self:AddNetworkSchedule(0, function(self, schedule)
 		local healink = self:GetNWBool "canhealink" and self:GetInInk() -- Gradually heals the owner
 		local timescale = ss.GetTimeScale(self.Owner)
-		local delay = 10 / ss.GetMaxHealth() / timescale
+		local delay = 10 / timescale
 		if healink then
-			delay = delay / 8 / gain "healspeedink" / 100
+			delay = delay / 8 / gain "healspeedink"
 		else
-			delay = delay / gain "healspeedstand" / 100
+			delay = delay / gain "healspeedstand"
 		end
-
+		
 		if schedule:GetDelay() ~= delay then schedule:SetDelay(delay) end
 		if not self:GetOnEnemyInk() and (self:GetNWBool "canhealstand" or healink) then
 			local health = math.Clamp(self.Owner:Health() + 1, 0, self.Owner:GetMaxHealth())
