@@ -105,7 +105,7 @@ ss.KeyMaskFind = {[IN_ATTACK] = true, [IN_DUCK] = true, [IN_ATTACK2] = true}
 ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
 ss.ShooterGravityMul = 15
-ss.RollerGravityMul = 5
+ss.RollerGravityMul = 2.25
 ss.COLOR_BITS = 5
 ss.PLAYER_BITS = 3
 ss.SQUID_BITS = 2
@@ -241,6 +241,7 @@ for key, value in pairs {
 	AimDuration = 20, -- Change hold type
 	CrouchDelay = 6, -- Cannot crouch for some frames after firing.
 	HealDelay = 60, -- Time to heal again after taking damage.
+	RollerRunoverStopFrame = 30, -- Stopping time when inkling tries to run over.
 	RollerDecreaseFrame = 15, -- Rollers ink velocity deceleration time to start falling.
 	ShooterDecreaseFrame = 5, -- Shooters ink velocity deceleration time to start falling.
 	ShooterTermTime = 10, -- Time to reach the terminal velocity.

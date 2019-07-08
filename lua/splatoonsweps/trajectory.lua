@@ -11,7 +11,7 @@ local MAX_INK_SIM_AT_ONCE = 60 -- Calculating ink trajectory at once
 local SplashMinDistance = 50 * ss.ToHammerUnits -- Transition between drop and splash
 local SplashMaxDistance = 150 * ss.ToHammerUnits
 
-local function HitEffect(color, flags, pos, normal)
+function ss.CreateHitEffect(color, flags, pos, normal)
 	if ss.mp and (SERVER or not IsFirstTimePredicted()) then return end
 	local e = EffectData()
 	e:SetColor(color)
@@ -124,7 +124,7 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t)
 	local value = weapon.IsRoller and tr.LengthSum or math.max(CurTime() - ink.InitTime, 0)
 	local frac = math.Remap(value, decay_start, decay_end, 0, 1)
 	if ink.IsCarriedByLocalPlayer then
-		HitEffect(data.Color, weapon.IsBlaster and 1 or 0, t.HitPos, t.HitNormal)
+		ss.CreateHitEffect(data.Color, weapon.IsBlaster and 1 or 0, t.HitPos, t.HitNormal)
 		if ss.mp and CLIENT then return end
 	end
 
@@ -296,7 +296,7 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t)
 	local damage_min = parameters.mMinChargeDamage
 	local damage = ss.Lerp3(data.Charge, damage_min, damage_max, damage_full)
 	if ink.IsCarriedByLocalPlayer then
-		HitEffect(data.Color, damage < 1 and 0 or 1, t.HitPos, t.HitNormal)
+		ss.CreateHitEffect(data.Color, damage < 1 and 0 or 1, t.HitPos, t.HitNormal)
 		if ss.mp and CLIENT then return end
 	end
 
@@ -666,7 +666,7 @@ function ss.MakeBlasterExplosion(ink)
 			t = util.TraceLine(t)
 			if not t.Hit or t.Entity == e then
 				if ink.IsCarriedByLocalPlayer then
-					HitEffect(data.Color, damagedealt and 6 or 2, tr.endpos + dist, -dist)
+					ss.CreateHitEffect(data.Color, damagedealt and 6 or 2, tr.endpos + dist, -dist)
 					if CLIENT and e ~= tr.filter then damagedealt = true break end
 				end
 

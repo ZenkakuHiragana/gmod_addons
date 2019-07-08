@@ -113,10 +113,11 @@ function SWEP:CreateInk(skipnum)
 end
 
 function SWEP:SharedInit()
+	self.Bodygroup = table.Copy(self.Bodygroup or {})
 	self.EmptyRollSound = CreateSound(self, ss.EmptyRoll)
 	self.Projectile.IsRoller = true
 	self.RollingSound = CreateSound(self, self.RollSound)
-	self.Bodygroup = table.Copy(self.Bodygroup or {})
+	self.RunoverExceptions = {}
 	self:SetStartTime(CurTime())
 	self:SetEndTime(CurTime())
 	self:SetMode(self.MODE.READY)
@@ -147,7 +148,7 @@ end
 function SWEP:CustomDataTables()
 	self:AddNetworkVar("Float", "StartTime")
 	self:AddNetworkVar("Float", "EndTime")
-	self:AddNetworkVar("Float", "PaintGroundTime")
+	self:AddNetworkVar("Float", "RunoverDelay")
 	self:AddNetworkVar("Int", "Mode")
 end
 
@@ -156,6 +157,11 @@ function SWEP:Move(ply, mv)
 	local p = self.Parameters
 	local mode = self:GetMode()
 	local keyrelease = not (ply:IsPlayer() and self:GetKey() == IN_ATTACK)
+	if self.Owner:IsPlayer() and CurTime() < self:GetRunoverDelay() then
+		mv:SetForwardSpeed(0)
+		mv:SetSideSpeed(0)
+	end
+
 	if mode == self.MODE.PAINT then
 		if keyrelease and CurTime() > self:GetEndTime() + self.SwingBackWait then
 			self.NotEnoughInk = false
@@ -171,11 +177,11 @@ function SWEP:Move(ply, mv)
 		local s2 = self:GetInk() > 0 and self.EmptyRollSound or self.RollingSound
 		local v = ply:OnGround() and 1 or 0
 		if ply:IsPlayer() then
-			v = v * math.abs(mv:GetForwardSpeed()) / ply:GetMaxSpeed()
+			v = v * math.abs(ply:GetVelocity():Dot(ply:GetForward())) / ply:GetMaxSpeed()
 		elseif ply:IsNPC() and isfunction(ply.IsMoving) then
 			v = v * (ply:IsMoving() and 1 or 0)
 		end
-
+		
 		s:ChangeVolume(v)
 		s2:ChangeVolume(0)
 		if v > 0 then
@@ -183,19 +189,67 @@ function SWEP:Move(ply, mv)
 			self:SetCooldown(CurTime() + FrameTime())
 			if self:GetInk() > 0 then
 				local color = self:GetNWInt "inkcolor"
-				local dir = self:GetForward()
+				local forward = self:GetForward()
 				local inktype = util.SharedRandom(rand, 10, 12)
 				local pos = self:GetShootPos()
 				local width = Lerp(v, p.mCorePaintSlowMoveWidthHalf, p.mCorePaintWidthHalf) * .67
 				local yaw = self:GetAimVector():Angle().yaw + 90
 				local t = util.TraceLine {
-					start = pos + dir * 45,
-					endpos = pos + dir * 45 - vector_up * 80,
+					start = pos + forward * 45,
+					endpos = pos + forward * 45 - vector_up * 80,
 					filter = {self, self.Owner},
 					mask = ss.SquidSolidMask,
 				}
 				self:SetInk(math.max(self:GetInk() - p.mInkConsumeCore, 0))
 				ss.Paint(t.HitPos, t.HitNormal, width, color, yaw, inktype, .25, self.Owner, self.ClassName)
+
+				local dir = self:GetRight()
+				local radius = p.mCoreColRadius / 2
+				local width = p.mCoreColWidthHalf
+				local bounds = ss.vector_one * radius
+				local center = t.HitPos + vector_up * radius
+				local left = center - dir * width
+				local right = center + dir * width
+				local victims = ents.FindAlongRay(left, right, -bounds, bounds)
+				local knockback = false
+				local keys = {}
+				for i, v in ipairs(victims) do
+					keys[v] = true
+					local health = v:Health()
+					if not self.RunoverExceptions[v] and health > 0 then
+						local d = DamageInfo()
+						local effectpos = center + dir * dir:Dot(v:GetPos() - center)
+						if self:IsMine() then
+							ss.CreateHitEffect(color, 0, effectpos, -forward)
+						end
+					
+						if SERVER then
+							d:SetDamage(p.mCoreDamage)
+							d:SetDamageForce(forward)
+							d:SetDamagePosition(effectpos)
+							d:SetDamageType(DMG_GENERIC)
+							d:SetMaxDamage(p.mCoreDamage)
+							d:SetReportedPosition(effectpos)
+							d:SetAttacker(self.Owner)
+							d:SetInflictor(self)
+							d:ScaleDamage(ss.ToHammerHealth)
+							ss.ProtectedCall(v.TakeDamageInfo, v, d)
+							knockback = knockback or v:Health() > 0
+						else
+							knockback = knockback or health > p.mCoreDamage * ss.ToHammerHealth
+						end
+					end
+				end
+
+				self.RunoverExceptions = keys
+				self.NotEnoughInkRoll = false
+				if self.Owner:IsPlayer() and knockback then
+					mv:SetVelocity(mv:GetVelocity() - forward * ss.InklingBaseSpeed * 10)
+					self:SetRunoverDelay(CurTime() + ss.RollerRunoverStopFrame)
+				end
+			elseif (ss.sp or CLIENT) and not self.NotEnoughInkRoll then
+				self.NotEnoughInkRoll = true
+				ss.EmitSound(ply, ss.TankEmpty)
 			end
 		end
 	else
