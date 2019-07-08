@@ -104,7 +104,8 @@ ss.KeyMask = {IN_ATTACK, IN_DUCK, IN_ATTACK2}
 ss.KeyMaskFind = {[IN_ATTACK] = true, [IN_DUCK] = true, [IN_ATTACK2] = true}
 ss.CleanupTypeInk = "SplatoonSWEPs Ink"
 ss.GrayScaleFactor = Vector(.298912, .586611, .114478)
-ss.InkGravityMul = 15
+ss.ShooterGravityMul = 15
+ss.RollerGravityMul = 5
 ss.COLOR_BITS = 5
 ss.PLAYER_BITS = 3
 ss.SQUID_BITS = 2

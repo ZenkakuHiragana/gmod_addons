@@ -100,7 +100,7 @@ function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 		local length2d = (t.HitPos - data.InitPos):Length2D()
 		if length2d < min then data.Type = ss.GetDropType() end
 		length2d = math.Clamp(length2d, min, max)
-		ratio = math.Remap(length2d, min, max, 1, 0.5)
+		ratio = 1 / math.Remap(length2d, min, max, 1.5, 3)
 	else
 		data.Type = ss.GetDropType()
 		ratio = data.Ratio or 1
@@ -604,7 +604,8 @@ end
 -- After that, ink decelerates horizontally and is affected by gravity.
 function ss.Simulate.Shooter(ink)
 	local data, tr = ink.Data, ink.Trace
-	local g = physenv.GetGravity() * ss.InkGravityMul
+	local gmul = data.IsRoller and ss.RollerGravityMul or ss.ShooterGravityMul
+	local g = physenv.GetGravity() * gmul
 	local t = math.max(CurTime() - ink.InitTime, 0)
 	tr.start:Set(tr.endpos)
 	tr.endpos:Set(data.InitPos)

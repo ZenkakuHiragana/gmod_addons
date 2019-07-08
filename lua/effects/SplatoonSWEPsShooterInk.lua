@@ -37,12 +37,15 @@ function EFFECT:Init(e)
 	local splashcolradius = Either(IsCharger, colradius, p.mSplashColRadius)
 	local splitnum = IsRoller and 1 or p.mSplashSplitNum
 	local straightframe = p.mStraightFrame
+	local decreaseframe = ss.ShooterDecreaseFrame
 	local drawradius = IsBlasterSphereSplashDrop and p.mSphereSplashDropDrawRadius or p.mDrawRadius
 	if IsRoller then
 		drawradius = IsRollerSubSplash and p.mSplashSubDrawRadius or p.mSplashDrawRadius
 		straightframe = IsRollerSubSplash and p.mSplashSubStraightFrame or p.mSplashStraightFrame
+		decreaseframe = ss.RollerDecreaseFrame
 	elseif isdrop then
 		straightframe = 0
+		decreaseframe = 0
 	elseif IsCharger then
 		if self.Weapon.IsScoped then
 			range = ss.Lerp3(prog, p.mMinDistance, p.mMaxDistanceScoped, p.mFullChargeDistanceScoped)
@@ -51,9 +54,9 @@ function EFFECT:Init(e)
 		end
 
 		straightframe = range / speed
+		decreaseframe = 0
 	end
 
-	local decreaseframe = (isdrop or IsCharger) and 0 or ss.ShooterDecreaseFrame
 	local fallingframe = straightframe + decreaseframe
 	local destination = initpos + Either(IsCharger, initdir * range, initvel * fallingframe)
 	local trailoffset = -initdir * splashlength * (IsBlasterSphereSplashDrop and 0 or 1)
@@ -75,6 +78,7 @@ function EFFECT:Init(e)
 	self.IsCharger = IsCharger
 	self.IsCarriedByLocalPlayer = self.Weapon:IsCarriedByLocalPlayer()
 	self.IsDrop = isdrop
+	self.IsRoller = IsRoller
 	self.Range = range
 	self.Render = ss.Simulate.EFFECT_ShooterRender
 	self.Simulate = ss.Simulate.Shooter
@@ -89,6 +93,7 @@ function EFFECT:Init(e)
 		InitPos = initpos,
 		InitVel = initvel,
 		IsCharger = IsCharger,
+		IsRoller = IsRoller,
 		StraightFrame = straightframe,
 	})
 	self.Real.InitTime = CurTime() - ping
@@ -108,6 +113,7 @@ function EFFECT:Init(e)
 		InitPos = pos,
 		InitVel = apparentvel,
 		IsCharger = IsCharger,
+		IsRoller = IsRoller,
 		StraightFrame = straightframe,
 	})
 	self.Apparent.InitTime = self.Real.InitTime
