@@ -89,7 +89,7 @@ function SWEP:CreateInk(skipnum)
 				DamageMinDistance = isoutside and p.mSplashOutsideDamageMinDist or p.mSplashDamageMinDist,
 				InitPos = pos + dp,
 				InitVel = dir * vf + ang:Right() * vr + ang:Up() * vu,
-				Type = util.SharedRandom(randink, 4, 9),
+				Type = util.SharedRandom(randink, 4, 9, CurTime() * i),
 				Yaw = ang.yaw,
 			})
 
