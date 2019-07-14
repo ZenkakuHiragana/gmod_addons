@@ -29,10 +29,10 @@ The aim of this rework is the following:
 * Finish making Rollers
     * [x] Fling ink at a short range on +attack.
     * [x] Then, it'll be able to leave a trail of ink.
-    * [ ] Ability to "run over."
-    * [ ] Make a proper ink effect (later).
+    * [x] Ability to "run over."
+    * [ ] Make a crosshair.
+    * [ ] Make a proper ink effect.
     
-
 ## Upcoming features
 * Inkbrushes
 * Sloshers
