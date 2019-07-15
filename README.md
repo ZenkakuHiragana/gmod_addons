@@ -13,6 +13,16 @@ The aim of this rework is the following:
     * Aim down sight
     * And so on...
 
+# Important thing -- read before you're testing
+***
+**I don't intend to let you enjoy the new SWEPs.  Actually I want you to test it to help me fix bugs.**  
+**So, I think something like "The addon isn't working for me" isn't worth reading.**  
+**If you're going to tell me you're in trouble, write at least the following:**  
+* [ ] Any errors?  If so, the message in the console
+* [ ] Your environment (OS, Graphics card, and so on)
+* [ ] Addons in your game - Some of them may conflict. Please specify the one.  
+**Something like "I have 300+ addons" isn't helpful, either.**
+
 ***
 ## Done
 * A new ink system
