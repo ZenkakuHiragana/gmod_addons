@@ -163,7 +163,7 @@ end
 function ss.CustomPrimary.weapon_splatoonsweps_shooter(weapon)
 	local p = weapon.Parameters
 	weapon.NPCDelay = p.mRepeatFrame
-	weapon.Range = p.mInitVel * (p.mStraightFrame + 2.5 * ss.FrameToSec)
+	weapon.Range = p.mInitVel * (p.mStraightFrame + ss.ShooterDecreaseFrame / 2)
 	weapon.Primary.Automatic = p.mTripleShotSpan == 0
 end
 
@@ -230,7 +230,9 @@ function ss.DefaultParams.weapon_splatoonsweps_splatling(weapon)
 end
 
 function ss.CustomPrimary.weapon_splatoonsweps_splatling(weapon)
+	local p = weapon.Parameters
 	ss.CustomPrimary.weapon_splatoonsweps_shooter(weapon)
+	weapon.Range = p.mInitVelSecondPeriodMaxCharge * (p.mStraightFrame + ss.ShooterDecreaseFrame / 2)
 end
 
 function ss.DefaultParams.weapon_splatoonsweps_charger(weapon)
@@ -366,7 +368,7 @@ function ss.CustomPrimary.weapon_splatoonsweps_roller(weapon)
 	local p = weapon.Parameters
 	weapon.Primary.Automatic = false
 	weapon.NPCDelay = p.mSwingLiftFrame
-	weapon.Range = p.mSplashInitSpeedBase * (p.mSplashStraightFrame + 2.5 * ss.FrameToSec)
+	weapon.Range = p.mSplashInitSpeedBase * (p.mSplashStraightFrame + ss.RollerDecreaseFrame / 2)
 end
 
 local SplatoonSWEPsMuzzleSplash = 0

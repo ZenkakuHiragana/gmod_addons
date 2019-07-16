@@ -193,4 +193,3 @@ hook.Add("Tick", "SplatoonSWEPs: Register ink clientside", function()
 end)
 
 hook.Add("PreDrawTranslucentRenderables", "SplatoonSWEPs: Draw ink", DrawMeshes)
-hook.Add("PreDrawTranslucentRenderables", "SplatoonSWEPs: Fix EyePos", EyePos)

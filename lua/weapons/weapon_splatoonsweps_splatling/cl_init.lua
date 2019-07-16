@@ -98,7 +98,7 @@ end
 
 function SWEP:DrawFourLines(t, spreadx, spready)
 	local frac = t.Trace.Fraction
-	local basecolor = t.IsSplatoon2 and t.Trace.Hit and self.Crosshair.color_nohit or color_white
+	local basecolor = color_white
 	local pos, dir = t.pos, t.dir
 	local w = t.Size.FourLine
 	local h = t.Size.FourLineWidth
@@ -107,9 +107,10 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 	local yaw = pitch:Cross(dir)
 	if t.IsSplatoon2 then
 		frac, range = 1, self.Range
+		dir = self:GetAimVector()
+		pos = self:GetShootPos()
 		if t.Trace.Hit then
-			dir = self:GetAimVector()
-			pos = self:GetShootPos()
+			basecolor = self.Crosshair.color_nohit
 		end
 	end
 
@@ -122,22 +123,23 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 
 		local endpos = pos + rot:Forward() * range * frac
 		local hit = endpos:ToScreen()
-		if not hit.visible then continue end
-		hit.x = hit.x - linesize * sgnx * (t.HitEntity and .8 or 1)
-		hit.y = hit.y - linesize * sgny * (t.HitEntity and .8 or 1)
+		if hit.visible then
+			hit.x = hit.x - linesize * sgnx * (t.HitEntity and .8 or 1)
+			hit.y = hit.y - linesize * sgny * (t.HitEntity and .8 or 1)
 
-		local dy = w / (2 * math.sqrt(2)) - h
-		local dx = w / math.sqrt(2) - h
-		for _, info in ipairs {
-			{Color = basecolor, Material = ss.Materials.Crosshair.Line},
-			{Color= ss.GetColor(self:GetNWInt "inkcolor"), Material = ss.Materials.Crosshair.LineColor},
-		} do
-			surface.SetDrawColor(info.Color)
-			surface.SetMaterial(info.Material)
-			surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
-			surface.DrawTexturedRectRotated(hit.x + sgnx * dx, hit.y - sgny * dy, w, h, 0)
-			surface.DrawTexturedRectRotated(hit.x - sgnx * dy, hit.y + sgny * dx, w, h, 90)
-			if not t.HitEntity then break end
+			local dy = w / (2 * math.sqrt(2)) - h
+			local dx = w / math.sqrt(2) - h
+			for _, info in ipairs {
+				{Color = basecolor, Material = ss.Materials.Crosshair.Line},
+				{Color= ss.GetColor(self:GetNWInt "inkcolor"), Material = ss.Materials.Crosshair.LineColor},
+			} do
+				surface.SetDrawColor(info.Color)
+				surface.SetMaterial(info.Material)
+				surface.DrawTexturedRectRotated(hit.x, hit.y, w, h, 90 * i - 45)
+				surface.DrawTexturedRectRotated(hit.x + sgnx * dx, hit.y - sgny * dy, w, h, 0)
+				surface.DrawTexturedRectRotated(hit.x - sgnx * dy, hit.y + sgny * dx, w, h, 90)
+				if not t.HitEntity then break end
+			end
 		end
 	end
 end
