@@ -326,7 +326,6 @@ local function SpawnGeneral(self, weapon, classname)
 	local npcdata = list.Get "NPC"
 	local spawndata = npcdata[classname]
 	local w = weapon
-	PrintTable(spawndata)
 	self.npc = ents.Create(spawndata.Class)
 
 	if w == "" or w == "none" then -- Setting default weapon
