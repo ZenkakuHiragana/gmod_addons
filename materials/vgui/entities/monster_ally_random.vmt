@@ -1,6 +1,6 @@
 "UnlitGeneric"
 {
-	"$basetexture" "entities/monster_ally_medic"
+	"$basetexture" "entities/monster_ally_random"
 	"$vertexcolor" 		1 
 	"$vertexalpha" 		1 
 	"$nolod" 			1 
