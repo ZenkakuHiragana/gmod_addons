@@ -1,6 +1,6 @@
 "UnlitGeneric"
 {
-	"$basetexture" "vgui/entities/monster_ct_random"
+	"$basetexture" "entities/monster_ct_random"
 	"$nolod" 1
 	"$vertexalpha" 1
 	"$vertexcolor" 1

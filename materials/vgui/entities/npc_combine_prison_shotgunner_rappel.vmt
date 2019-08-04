@@ -1,6 +1,6 @@
 "UnlitGeneric"
 {
-	"$basetexture" "entities/npc_combine_random"
+	"$basetexture" "entities/npc_combine_prison_shotgunner_rappel"
 	"$nolod" 1
 	"$vertexalpha" 1
 	"$vertexcolor" 1

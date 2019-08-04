@@ -1,6 +1,6 @@
 "UnlitGeneric"
 {
-	"$basetexture" "vgui/entities/rappel_sparbine"
+	"$basetexture" "entities/npc_combine_random_neon"
 	"$nolod" 1
 	"$vertexalpha" 1
 	"$vertexcolor" 1

@@ -1,6 +1,6 @@
 "UnlitGeneric"
 {
-	"$basetexture" "vgui/entities/rappel_prison"
+	"$basetexture" "entities/npc_combine_random_armored"
 	"$nolod" 1
 	"$vertexalpha" 1
 	"$vertexcolor" 1
