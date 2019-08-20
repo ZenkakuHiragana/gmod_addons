@@ -5,7 +5,9 @@ Commit messages are all Japanese.
 ## Branches  
 1 branch = 1 addon
 * master  
-Currently working on.
+Some old codes here.  
+* DecentVehicle  
+An NPC that drives vehicles automatically along paths.  
 * gm_flounder_heights  
 Compiled map, Flounder Heights in Splatoon.  
 * MadVehicle  
@@ -18,5 +20,7 @@ Tracer from Overwatch. Completed.
 An NPC slot that spawns random type of Combine Soldiers.  
 * splatoon_sweps  
 Splatoon weapons. Seems to be broken.  
+* splatoon_sweps_new  
+A rework of Splatoon SWEPs. Still work in progress.
 * super_metropolice  
 I wanted to make a Nextbot that fires bullets. So this was created.  
