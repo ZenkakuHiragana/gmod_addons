@@ -366,7 +366,7 @@ function ss.PostRender(w)
 	local vm = w:GetViewModel()
 	if not IsValid(vm) then return end
 	if not w:GetNWBool "usertscope" then
-		vm:SetSubMaterial(w.RTScopeNum - 1)
+		ss.SetSubMaterial_ShouldBeRemoved(vm, w.RTScopeNum - 1)
 		return
 	end
 
@@ -374,7 +374,7 @@ function ss.PostRender(w)
 	w.RTMaterial = w.RTMaterial or Material(w.RTName)
 	w.RTMaterial:SetTexture("$basetexture", w.RTScope)
 	w.RTAttachment = w.RTAttachment or vm:LookupAttachment "scope_end"
-	vm:SetSubMaterial(w.RTScopeNum - 1, w.RTName)
+	ss.SetSubMaterial_ShouldBeRemoved(vm, w.RTScopeNum - 1, w.RTName)
 	ss.RenderingRTScope = ss.sp
 	local alpha = 1 - w:GetScopedProgress(true)
 	local a = vm:GetAttachment(w.RTAttachment)

@@ -929,6 +929,30 @@ for hookname in pairs {CalcMainActivity = true, TranslateActivity = true} do
 	end))
 end
 
+
+------------------------------------------
+--			!!!WORKAROUND!!!			--
+--	This should be removed after		--
+--	Adv. Colour Tool fixed the bug!!	--
+------------------------------------------
+local AdvancedColourToolLoaded
+= file.Exists("weapons/gmod_tool/stools/adv_colour.lua", "LUA")
+local AdvancedColourToolReplacedSetSubMaterial
+= AdvancedColourToolLoaded and FindMetaTable "Entity"._OldSetSubMaterial
+if AdvancedColourToolReplacedSetSubMaterial then
+	function ss.SetSubMaterial_ShouldBeRemoved(ent, ...)
+		ent:_OldSetSubMaterial(...)
+	end
+else
+	function ss.SetSubMaterial_ShouldBeRemoved(ent, ...)
+		ent:SetSubMaterial(...)
+	end
+end
+------------------------------------------
+--			!!!WORKAROUND!!!			--
+------------------------------------------
+
+
 -- Inkling playermodels hull change fix
 if not isfunction(FindMetaTable "Player".SplatoonOffsets) then return end
 CreateConVar("splt_Colors", 1, {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_SERVER_CAN_EXECUTE}, "Toggles skin/eye colors on Splatoon playermodels.")
@@ -937,7 +961,7 @@ if SERVER then
 	hook.Remove("PlayerSpawn", "splt_Spawn")
 	hook.Remove("PlayerDeath", "splt_OnDeath")
 	hook.Add("PlayerSpawn", "SplatoonSWEPs: Fix PM change", function(ply)
-		ply:SetSubMaterial()
+		ss.SetSubMaterial_ShouldBeRemoved(ply)
 	end)
 else
 	hook.Remove("Tick", "splt_Offsets_cl")

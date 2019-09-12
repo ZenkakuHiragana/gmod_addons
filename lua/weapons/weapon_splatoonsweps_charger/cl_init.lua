@@ -37,7 +37,7 @@ function SWEP:Holster()
 	if not self.RTScope then return end
 	local vm = self:GetViewModel()
 	if not IsValid(vm) then return end
-	vm:SetSubMaterial(self.RTScopeNum - 1)
+	ss.SetSubMaterial_ShouldBeRemoved(vm, self.RTScopeNum - 1)
 end
 
 function SWEP:DisplayAmmo()
