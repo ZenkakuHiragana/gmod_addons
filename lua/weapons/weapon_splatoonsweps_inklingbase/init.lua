@@ -10,7 +10,7 @@ include "baseinfo.lua"
 include "ai_translations.lua"
 
 local function InvalidPlayer(Owner)
-	return Owner:IsPlayer() and not table.HasValue(ss.PlayersReady, Owner)
+	return not IsValid(Owner) or Owner:IsPlayer() and not table.HasValue(ss.PlayersReady, Owner)
 end
 
 function SWEP:ChangePlayermodel(data)
@@ -94,6 +94,16 @@ function SWEP:RemoveRagdoll()
 	ragdoll:Remove()
 end
 
+function SWEP:GetNPCBurstSettings()
+	local min, max, delay = ss.ProtectedCall(self.NPCBurstSettings, self)
+	return min or 3, max or 8, delay or self.NPCDelay
+end
+
+function SWEP:GetNPCRestTime()
+	local min, max = ss.ProtectedCall(self.NPCRestTime, self)
+	return min or self.NPCDelay, max or self.NPCDelay * 3
+end
+
 function SWEP:Initialize()
 	self:SetHolstering(true)
 	self:SetInInk(false)
@@ -112,11 +122,6 @@ function SWEP:Initialize()
 		self:SetSaveValue("m_fMinRange2", 0)
 		self:SetSaveValue("m_fMaxRange1", self.Range)
 		self:SetSaveValue("m_fMaxRange2", self.Range)
-		self:SetNPCMinBurst(3)
-		self:SetNPCMaxBurst(8)
-		self:SetNPCFireRate(self.NPCDelay)
-		self:SetNPCMinRest(self.NPCDelay)
-		self:SetNPCMaxRest(self.NPCDelay * 3)
 		self:Deploy()
 		local think = "SplatoonSWEPs: NPC Think function" .. self:EntIndex()
 		timer.Create(think, 0, 0, function()
@@ -228,6 +233,7 @@ function SWEP:Deploy()
 	self:SetInInk(false)
 	self:SetOnEnemyInk(false)
 	self:BackupInfo()
+	self.SafeOwner = self.Owner
 	self.Owner:SetMaxHealth(self:GetNWInt "MaxHealth") -- NPCs also have inkling's standard health.
 	if self.Owner:IsPlayer() then
 		local PMPath = ss.Playermodel[self:GetNWInt "playermodel"]
@@ -261,6 +267,16 @@ function SWEP:OnRemove()
 	self:EndRecording()
 	ss.ProtectedCall(self.ServerOnRemove, self)
 	ss.ProtectedCall(self.SharedOnRemove, self)
+end
+
+function SWEP:OnDrop()
+	local owner = self.Owner
+	self.Owner = self.SafeOwner
+	self.PMTable = nil
+	self:RestoreInfo()
+	ss.ProtectedCall(self.ServerHolster, self)
+	self:SharedHolsterBase()
+	self.Owner = owner
 end
 
 function SWEP:Holster()

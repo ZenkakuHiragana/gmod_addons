@@ -4,13 +4,15 @@ if not ss then return end
 AddCSLuaFile "shared.lua"
 include "shared.lua"
 
-function SWEP:ServerInit()
+function SWEP:NPCBurstSettings()
 	if self.Parameters.mTripleShotSpan > 0 then
-		self:SetNPCMinBurst(1)
-		self:SetNPCMaxBurst(1)
-		self:SetNPCMinRest(self.Parameters.mTripleShotSpan)
-		self:SetNPCMaxRest(self.Parameters.mTripleShotSpan)
+		return 1, 1, self.NPCDelay
 	end
+end
+
+function SWEP:NPCRestTimes()
+	local span = self.Parameters.mTripleShotSpan
+	if span > 0 then return span, span end
 end
 
 local TrailParams = {true, 3, 1, .5, .125, "sprites/physbeama"}

@@ -126,6 +126,7 @@ function SWEP:OwnerChanged()
 		self.Owner:Give(self.ClassName)
 		self:Remove()
 	else
+		self.SafeOwner = o
 		return self:PlayLoopSound()
 	end
 end
