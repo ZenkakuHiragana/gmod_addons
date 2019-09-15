@@ -117,6 +117,9 @@ end
 function HitEntity.weapon_splatoonsweps_shooter(ink, t)
 	local data, parameters, tr, weapon = ink.Data, ink.Parameters, ink.Trace, ink.Data.Weapon
 	local d, e, o = DamageInfo(), t.Entity, tr.filter
+	if ss.LastHitID[e] == data.ID then return end
+	ss.LastHitID[e] = data.ID -- Avoid multiple damages at once
+
 	local decay_start = data.DamageMaxDistance or parameters.mGuideCheckCollisionFrame
 	local decay_end = data.DamageMinDistance or parameters.mDamageMinFrame
 	local damage_max = data.DamageMax or parameters.mDamageMax
@@ -291,6 +294,9 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t)
 	local LifeTime = math.max(0, CurTime() - FrameTime() - ink.InitTime)
 	local d, e, o = DamageInfo(), t.Entity, ink.Trace.filter
 	if LifeTime > data.StraightFrame then return end
+	if ss.LastHitID[e] == data.ID then return end
+	ss.LastHitID[e] = data.ID -- Avoid multiple damages at once
+
 	local damage_full = parameters.mFullChargeDamage
 	local damage_max = parameters.mMaxChargeDamage
 	local damage_min = parameters.mMinChargeDamage
@@ -647,7 +653,8 @@ function ss.MakeBlasterExplosion(ink)
 	local rfar = parameters.mCollisionRadiusFar * rmul
 	for _, e in ipairs(ents.FindInSphere(tr.endpos, rfar)) do
 		local target_weapon = ss.IsValidInkling(e)
-		if IsValid(e) and e:Health() > 0 and (not ss.IsAlly(target_weapon, data.Color) or hurtowner and e == tr.filter) then
+		if IsValid(e) and e:Health() > 0 and ss.LastHitID[e] ~= data.ID
+		and (not ss.IsAlly(target_weapon, data.Color) or hurtowner and e == tr.filter) then
 			local dist = Vector()
 			local maxs, mins = e:OBBMaxs(), e:OBBMins()
 			local origin = e:LocalToWorld(e:OBBCenter())
@@ -670,6 +677,7 @@ function ss.MakeBlasterExplosion(ink)
 					if CLIENT and e ~= tr.filter then damagedealt = true break end
 				end
 
+				ss.LastHitID[e] = data.ID -- Avoid multiple damages at once
 				damagedealt = damagedealt or ss.sp or e == tr.filter
 				dist = dist:Length()
 

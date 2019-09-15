@@ -210,6 +210,7 @@ function SWEP:Move(ply)
 		Color = self:GetNWInt "inkcolor",
 		ColRadiusEntity = colradius,
 		ColRadiusWorld = colradius,
+		ID = CurTime() + self:EntIndex(),
 		InitPos = pos,
 		InitVel = dir * self:GetInkVelocity(),
 		IsCharger = true,

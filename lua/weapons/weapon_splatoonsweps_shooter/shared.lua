@@ -155,6 +155,7 @@ function SWEP:CreateInk()
 	ang:RotateAroundAxis(right, ry)
 	table.Merge(self.Projectile, {
 		Color = self:GetNWInt "inkcolor",
+		ID = CurTime() + self:EntIndex(),
 		InitPos = pos,
 		InitVel = ang:Forward() * self:GetInitVelocity(),
 		SplashInit = self.SplashInitTable[self:GetSplashInitMul()],

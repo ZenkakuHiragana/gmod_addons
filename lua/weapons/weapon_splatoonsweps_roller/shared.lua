@@ -64,6 +64,7 @@ function SWEP:CreateInk(skipnum)
 		Color = self:GetNWInt "inkcolor",
 		ColRadiusEntity = p.mSplashCollisionRadiusForPlayer,
 		ColRadiusWorld = p.mSplashCollisionRadiusForField,
+		ID = CurTime() + self:EntIndex(),
 		PaintFarDistance = p.mSplashPaintFarD,
 		PaintFarRadius = p.mSplashPaintFarR,
 		PaintNearDistance = p.mSplashPaintNearD,

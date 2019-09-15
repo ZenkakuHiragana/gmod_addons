@@ -9,6 +9,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	BSP = {},
 	CrosshairColors = {},
 	Displacements = {},
+	LastHitID = {},
 	Models = {},
 	NoCollide = {},
 	NumInkEntities = 0,
