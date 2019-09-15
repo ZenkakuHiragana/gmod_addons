@@ -13,7 +13,7 @@ local d = sp or CLIENT
 local dcolor = "greatzenkakuman.debug.DColor(%s,%s,%s,%s,1)"
 local daxis = "greatzenkakuman.debug.DAxis(Vector(%f,%f,%f),Angle(%f,%f,%f),%s,%f)"
 local dline = "greatzenkakuman.debug.DLine(Vector(%f,%f,%f),Vector(%f,%f,%f),%s,1)"
-local dtext = "greatzenkakuman.debug.DText(Vector(%f,%f,%f),%s,%s)"
+local dtext = "greatzenkakuman.debug.DText(Vector(%f,%f,%f),\"%s\",%s)"
 local dtri = "greatzenkakuman.debug.DTri(Vector(%f,%f,%f),Vector(%f,%f,%f),Vector(%f,%f,%f),%s,1)"
 local dplane = "greatzenkakuman.debug.DPlane(Vector(%f,%f,%f),Vector(%f,%f,%f),%s,1)"
 local dpoint = "greatzenkakuman.debug.DPoint(Vector(%f,%f,%f),%s,1)"
@@ -107,7 +107,7 @@ function DPoint(v, z, sv)
 end
 
 function DSText(u, v, x, sv)
-	x = tostring(x)
+	v = tostring(v)
 	if d then
 		debugoverlay.ScreenText(u, v, x, t, sv and csv or ccl)
 	else

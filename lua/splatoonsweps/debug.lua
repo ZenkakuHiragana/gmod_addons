@@ -12,14 +12,14 @@ local sd = ss.Debug
 
 function d.DLoop() end
 if CLIENT then hook.Remove("CreateMove", "Test") end
-local ShowInkChecked = false -- Draws ink boundary.
-local ShowInkDrawn = false -- When ink hits, show ink surface painted by it.
-local MovedOnly = false -- ShowInkDrawn but only for surfaces with "moved" tag.
-local ShowBlasterRadius = false -- Shows where blaster explosion will be.
-local ChargeQuarter = false -- Press Shift to fire any charger at 25% charge.
-local DrawInkUVMap = false -- Press Shift to draw ink UV map.
-local DrawInkUVBounds = false -- Also draws UV boundary.
-local ShowInkSurface = false -- Press E for serverside, Shift for clientside, draws ink surface nearby player #1.
+local ShowInkChecked     = false -- Draws ink boundary.
+local ShowInkDrawn       = false -- When ink hits, show ink surface painted by it.
+local MovedOnly          = false -- ShowInkDrawn but only for surfaces with "moved" tag.
+local ShowBlasterRadius  = false -- Shows where blaster explosion will be.
+local ChargeQuarter      = false -- Press Shift to fire any charger at 25% charge.
+local DrawInkUVMap       = false -- Press Shift to draw ink UV map.
+local DrawInkUVBounds    = false -- Also draws UV boundary.
+local ShowInkSurface     = false -- Press E for serverside, Shift for clientside, draws ink surface nearby player #1.
 local ShowInkChecked_ServerTime = CurTime()
 function sd.ShowInkChecked(r, surf, i)
     if not ShowInkChecked then return end
