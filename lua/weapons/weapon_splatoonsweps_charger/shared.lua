@@ -216,7 +216,7 @@ function SWEP:Move(ply)
 		IsCharger = true,
 		SplashInit = self:GetSplashInitMul() % p.mSplashSplitNum,
 		Type = ss.GetDropType(),
-		Yaw = ply:GetAngles().yaw,
+		Yaw = self:GetAimVector():Angle().yaw,
 	})
 	
 	if self:IsFirstTimePredicted() then

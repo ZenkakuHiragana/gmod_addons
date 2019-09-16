@@ -100,9 +100,11 @@ local function ProcessPaintQueue()
 		Benchmark = SysTime()
 		for time, queuetable in SortedPairs(ss.PaintQueue) do
 			for id, q in SortedPairs(queuetable) do
-				local angle, origin, normal, moved = Angles[q.n], Origins[q.n], Normals[q.n], Moved[q.n]
+				local angle, origin, normal, moved = Angle(Angles[q.n]), Origins[q.n], Normals[q.n], Moved[q.n]
+				if moved then angle:RotateAroundAxis(normal, -90) end
 				local pos2d = ss.To2D(q.pos, origin, angle) * ss.UnitsToPixels
 				local bound = Bounds[q.n] * ss.UnitsToPixels
+				if moved then bound.x, bound.y = bound.y, bound.x end
 				local color = ss.GetColor(q.c)
 				local r = math.Round(q.r * ss.UnitsToPixels)
 				local uvorg = Vector(u[q.n], v[q.n]) * ss.UVToPixels

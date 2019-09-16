@@ -427,8 +427,6 @@ end,
 		local maxs = -mins
 		for k = 0, #full2d do -- Remove collinear and concave components
 			local v2, v3 = full2d[k], fullverts[k]
-			local _next, prev = full2d[(k + 1) % nf], full2d[(k + nf - 1) % nf]
-			local sin = (prev - v2):GetNormalized():Cross((_next - v2):GetNormalized()).z
 			mins = ss.MinVector(mins, v3) -- Calculate bounding box
 			maxs = ss.MaxVector(maxs, v3)
 			v2d[#v2d + 1] = v2

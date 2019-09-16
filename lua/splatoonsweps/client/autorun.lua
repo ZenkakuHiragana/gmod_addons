@@ -144,8 +144,6 @@ function ss.PrepareInkSurface(write)
 		for sortedID, k in ipairs(sortedsurfs) do
 			if half and sortedID >= half.id then -- If current polygon is moved
 				local bu = surf.Bounds[k].x / convertunit * divuv
-				surf.Angles[k]:RotateAroundAxis(surf.Normals[k], -90)
-				surf.Bounds[k].x, surf.Bounds[k].y = surf.Bounds[k].y, surf.Bounds[k].x
 				surf.u[k], surf.v[k] = surf.v[k] - dv, 1 - surf.u[k] - bu
 				surf.Moved[k] = true
 				for _, vertex in ipairs(surf.Vertices[k]) do
@@ -214,8 +212,7 @@ function ss.PrepareInkSurface(write)
 	net.WriteString(LocalPlayer():SteamID64())
 	net.SendToServer()
 	ss.WeaponRecord[LocalPlayer()] = util.JSONToTable(
-	util.Decompress(file.Read "splatoonsweps/record/stats.txt"
-	or "") or "") or {
+	util.Decompress(file.Read "splatoonsweps/record/stats.txt" or "") or "") or {
 		Duration = {},
 		Inked = {},
 		Recent = {},

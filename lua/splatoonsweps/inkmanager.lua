@@ -9,6 +9,7 @@ local Angle = Angle
 local BSPPairs = ss.BSPPairs
 local CLIENT = CLIENT
 local CollisionAABB = ss.CollisionAABB
+local cos = math.cos
 local Either = Either
 local floor = math.floor
 local GetBoundingBox = ss.GetBoundingBox
@@ -25,10 +26,12 @@ local net_WriteUInt = net.WriteUInt
 local NormalizeAngle = math.NormalizeAngle
 local next = next
 local pairs = pairs
+local rad = math.rad
 local Round = math.Round
 local select = select
 local SequentialSurfaces = ss.SequentialSurfaces
 local SERVER = SERVER
+local sin = math.sin
 local sort = table.sort
 local sp = ss.sp
 local SuppressHostEvents = SuppressHostEvents
@@ -40,6 +43,7 @@ local util_Effect = util.Effect
 local Vector = Vector
 local vector_one = ss.vector_one
 local vector_origin = vector_origin
+local vector_half = vector_one / 2
 local WorldToLocal = WorldToLocal
 local function CheckBounds(v) return next(v.bounds) end
 local eff = EffectData()
@@ -56,75 +60,48 @@ for i = 1, circle_polys do
 end
 
 -- Internal function to record a new ink to ink history.
+local gridsize = 12
+local griddivision = 1 / gridsize
 function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, surf)
-	local radius_ratio = radius * ratio
-	local boundsize = radius_ratio * boundsizescale
-	local axis = Vector(0, 1) axis:Rotate(Angle(0, -localang))
-	local radius_axis = radius * axis
-	local pos2d = To2D(pos, surf.Origins[id], surf.Angles[id])
-	local t, bounds = radius_ratio, {} -- 0 <= t <= 2 * radius, step radius * ratio
-	while t <= radius * 2 - radius_ratio do
-		local p = pos2d - axis * (radius - t)
-		bounds[{p.x - boundsize, p.y - boundsize, p.x + boundsize, p.y + boundsize}] = true
-		t = t + radius_ratio
-	end
-
-	if ratio < .75 then
-		t = pos2d + axis * (radius - radius_ratio)
-		bounds[{t.x - boundsize, t.y - boundsize, t.x + boundsize, t.y + boundsize}] = true
-	end
-
+	local pos2d = To2D(pos, surf.Origins[id], surf.Angles[id]) * griddivision
+	local x0, y0 = pos2d.x, pos2d.y
 	local ink = surf.InkCircles[id]
-	local newink = {
-		angle = localang,
-		bounds = bounds,
-		color = color,
-		pos = pos2d,
-		radius = radius,
-		ratio = ratio,
-		texid = inktype,
-	}
-
-	for nb in pairs(bounds) do
-		local n1, n2, n3, n4 = unpack(nb) -- xmin, ymin, xmax, ymax
-		for i = 1, #ink do
-			local r = ink[i]
-			local rb = r.bounds
-			if inktype < 10 or r.texid < 10 then
-				for b in pairs(rb) do
-					local b1, b2, b3, b4 = unpack(b)
-					local w, h = b3 - b1, b4 - b2
-					if min(w, h) < 10 or w * h < 100 then
-						rb[b] = nil
-					elseif not (n1 > b3 or n3 < b1 or n2 > b4 or n4 < b2) then
-						local x1, x2 = n1, n3 if x1 > x2 then x1, x2 = x2, x1 end
-						local x3, x4 = b1, b3 if x3 > x4 then x3, x4 = x4, x3 end
-						local y1, y2 = n2, n4 if y1 > y2 then y1, y2 = y2, y1 end
-						local y3, y4 = b2, b4 if y3 > y4 then y3, y4 = y4, y3 end
-						if x1 > x3 then x1, x3 = x3, x1 end
-						if x2 > x4 then x2, x4 = x4, x2 end
-						if x2 > x3 then x2, x3 = x3, x2 end
-						if y1 > y3 then y1, y3 = y3, y1 end
-						if y2 > y4 then y2, y4 = y4, y2 end
-						if y2 > y3 then y2, y3 = y3, y2 end
-						rb[b] = nil
-						rb[{x1, y1, x2, y2}] = b1 < x2 and b3 > x1 and b2 < y2 and b4 > y1 and (n1 >= x2 or n3 <= x1 or n2 >= y2 or n4 <= y1) or nil
-						rb[{x2, y1, x3, y2}] = b1 < x3 and b3 > x2 and b2 < y2 and b4 > y1 and (n1 >= x3 or n3 <= x2 or n2 >= y2 or n4 <= y1) or nil
-						rb[{x3, y1, x4, y2}] = b1 < x4 and b3 > x3 and b2 < y2 and b4 > y1 and (n1 >= x4 or n3 <= x3 or n2 >= y2 or n4 <= y1) or nil
-						rb[{x1, y2, x2, y3}] = b1 < x2 and b3 > x1 and b2 < y3 and b4 > y2 and (n1 >= x2 or n3 <= x1 or n2 >= y3 or n4 <= y2) or nil
-						rb[{x2, y2, x3, y3}] = b1 < x3 and b3 > x2 and b2 < y3 and b4 > y2 and (n1 >= x3 or n3 <= x2 or n2 >= y3 or n4 <= y2) or nil
-						rb[{x3, y2, x4, y3}] = b1 < x4 and b3 > x3 and b2 < y3 and b4 > y2 and (n1 >= x4 or n3 <= x3 or n2 >= y3 or n4 <= y2) or nil
-						rb[{x1, y3, x2, y4}] = b1 < x2 and b3 > x1 and b2 < y4 and b4 > y3 and (n1 >= x2 or n3 <= x1 or n2 >= y4 or n4 <= y3) or nil
-						rb[{x2, y3, x3, y4}] = b1 < x3 and b3 > x2 and b2 < y4 and b4 > y3 and (n1 >= x3 or n3 <= x2 or n2 >= y4 or n4 <= y3) or nil
-						rb[{x3, y3, x4, y4}] = b1 < x4 and b3 > x3 and b2 < y4 and b4 > y3 and (n1 >= x4 or n3 <= x3 or n2 >= y4 or n4 <= y3) or nil
-					end
+	local t = ss.InkShotMaterials[inktype]
+	local w, h = t.width, t.height
+	local dy = radius * griddivision
+	local dx = ratio * dy
+	local y_const = dy * 2 / h
+	local x_const = ratio * dy * 2 / w
+	local ang = rad(-localang)
+	local sind, cosd = sin(ang), cos(ang)
+	local area = 0
+	
+	-- local wr, hr = 1 / w, 1 / h -- Reciprocal number of width and height
+	-- local halfratio = ratio / 2
+	-- local p = Vector(x, y)
+	-- p.x = p.x * wr * ratio - halfratio -- -ratio / 2 <= x <= ratio / 2
+	-- p.y = p.y * hr - 0.5 -- -0.5 <= y <= 0.5
+	-- p = p * 2 * radius
+	-- p:Rotate(Angle(0, -localang, 0))
+	-- p = (p + pos2d) * griddivision
+	for x = 0, w - 1 do
+		local tx = t[x]
+		if tx then
+			local p = x * x_const - dx
+			for y = 0, h - 1 do
+				if tx[y] then
+					local q = y * y_const - dy
+					local i = floor(p * cosd - q * sind + x0)
+					local k = floor(p * sind + q * cosd + y0)
+					ink[i] = ink[i] or {}
+					if ink[i][k] ~= color then area = area + 1 end
+					ink[i][k] = color
 				end
 			end
 		end
 	end
 
-	tableremove(ink, CheckBounds)
-	ink[#ink + 1] = newink
+	return area
 end
 
 -- Draws ink.
@@ -145,6 +122,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	eff:SetMagnitude(ratio)
 	eff:SetOrigin(pos)
 
+	local area = 0
 	local ang, polys = normal:Angle(), {}
 	local ignoreprediction = not ply:IsPlayer() and SERVER and mp or nil
 	ang.roll = abs(normal.z) > MAX_COS_DEG_DIFF and angle * normal.z or ang.yaw
@@ -163,12 +141,10 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			if angdiff > MAX_COS_DEG_DIFF / div and CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then
 				local localang = select(2, WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle()))
 				localang = ang.yaw - localang.roll + surf.DefaultAngles[i]
-				if CLIENT and surf.Moved[i] then localang = localang + 90 end
-
 				eff:SetScale(SERVER and index or i * (ss.Displacements[i] and -1 or 1))
-				eff:SetStart(Vector(radius, localang))
+				eff:SetStart(Vector(radius, localang + (CLIENT and surf.Moved[i] and 90 or 0)))
 				util_Effect("SplatoonSWEPsDrawInk", eff, true, ignoreprediction)
-				AddInkRectangle(color, i, inktype, localang, pos, radius, ratio, surf)
+				area = area + AddInkRectangle(color, i, inktype, localang, pos, radius, ratio, surf)
 			end
 		end
 	end
@@ -176,7 +152,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	if ply:IsPlayer() and mp and SERVER then SuppressHostEvents() end
 	if not ply:IsPlayer() then return end
 
-	ss.WeaponRecord[ply].Inked[classname] = (ss.WeaponRecord[ply].Inked[classname] or 0) - radius^2 * math.pi * ratio
+	ss.WeaponRecord[ply].Inked[classname] = (ss.WeaponRecord[ply].Inked[classname] or 0) - area
 	if sp and SERVER then
 		net_Start "SplatoonSWEPs: Send turf inked"
 		net_WriteDouble(ss.WeaponRecord[ply].Inked[classname])
@@ -191,7 +167,6 @@ end
 -- Returning:
 --   number			| The ink color of the specified position.
 --   nil			| If there is no ink, returns nil.
-local vector_half = vector_one / 2
 function ss.GetSurfaceColor(tr)
 	if not tr.Hit then return end
 	local pos = tr.HitPos
@@ -203,26 +178,10 @@ function ss.GetSurfaceColor(tr)
 			if angdiff > MAX_COS_DEG_DIFF / div and CollisionAABB(pos - POINT_BOUND, pos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then
 				local p2d = To2D(pos, surf.Origins[i], surf.Angles[i])
 				local ink = surf.InkCircles[i]
-				for k = #ink, 1, -1 do
-					local r = ink[k]
-					if r then
-						local t = ss.InkShotMaterials[r.texid]
-						local w, h = t.width, t.height
-						local p = (p2d - r.pos) / r.radius
-						p:Rotate(Angle(0, r.angle)) -- (-1, -1) <= (x, y) <= (1, 1)
-						if ss.Debug then ss.Debug.ShowInkChecked(r, surf, i) end
-						if -1 < p.x and p.x < 1 and -1 < p.y and p.y < 1 then
-							p = p / 2 + vector_half -- (0, 0) <= (x, y) <= (1, 1)
-							p.y = p.y * h -- 0 <= y <= h
-							p.x = p.x + r.ratio / 2 - .5 -- 0 <= x <= r.ratio
-							p.x = p.x / r.ratio * w -- 0 <= x <= w
-							p.x, p.y = Round(p.x), Round(p.y)
-							if 0 < p.x and p.x < w and 0 < p.y and p.y < h and t[p.x] and t[p.x][p.y] then
-								return r.color
-							end
-						end
-					end
-				end
+				local x, y = floor(p2d.x * griddivision), floor(p2d.y * griddivision)
+				local colorid = ink[x] and ink[x][y]
+				if ss.Debug then ss.Debug.ShowInkStateMesh(Vector(x, y), i, surf) end
+				return colorid
 			end
 		end
 	end

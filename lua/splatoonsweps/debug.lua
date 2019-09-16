@@ -20,6 +20,7 @@ local ChargeQuarter      = false -- Press Shift to fire any charger at 25% charg
 local DrawInkUVMap       = false -- Press Shift to draw ink UV map.
 local DrawInkUVBounds    = false -- Also draws UV boundary.
 local ShowInkSurface     = false -- Press E for serverside, Shift for clientside, draws ink surface nearby player #1.
+local ShowInkStateMesh   = false -- New ink algorithm attempts!  Shows the mesh to determine ink color of surface.
 local ShowInkChecked_ServerTime = CurTime()
 function sd.ShowInkChecked(r, surf, i)
     if not ShowInkChecked then return end
@@ -63,6 +64,25 @@ function sd.ShowInkDrawn(s, c, b, surf, q, moved)
     local v = {}
     for i, w in ipairs(surf.Vertices[q.n]) do v[i] = w.pos end
     d.DPoly(v)
+end
+
+local gridsize = 12 -- [Hammer Units]
+local ShowInkStatePos = Vector()
+local ShowInkStateID = 0
+local ShowInkStateSurf = {}
+function sd.ShowInkStateMesh(pos, id, surf)
+    if not ShowInkStateMesh then return end
+    ShowInkStatePos = pos
+    ShowInkStateID = id
+    ShowInkStateSurf = surf
+    if SERVER ~= player.GetByID(1):KeyDown(IN_ATTACK2) then return end
+    local ink = surf.InkCircles[id]
+    local colorid = ink[pos.x] and ink[pos.x][pos.y]
+    local c = ss.GetColor(colorid) or color_white
+    local p = ss.To3D(pos * gridsize, surf.Origins[id], surf.Angles[id])
+    d.DTick()
+    d.DColor(c.r, c.g, c.b, colorid and 64 or 16)
+    d.DABox(p, vector_origin, Vector(0, gridsize - 1, gridsize - 1), surf.Angles[id])
 end
 
 if ShowBlasterRadius then
@@ -193,6 +213,37 @@ if ShowInkSurface then
                 local v = {}
                 for k, w in ipairs(surf.Vertices[i]) do v[k] = SERVER and w or w.pos end
                 d.DPoly(v)
+            end
+        end
+    end
+end
+
+if ShowInkStateMesh then
+    local key = SERVER and IN_USE or IN_SPEED
+    function d.DLoop()
+        local ply = player.GetByID(1)
+        if not IsValid(ply) then return end
+        if not ply:KeyPressed(key) then return end
+        local pos = ShowInkStatePos
+        local id = ShowInkStateID
+        local surf = ShowInkStateSurf
+        local ink = surf.InkCircles[id]
+        local colorid = ink[pos.x] and ink[pos.x][pos.y]
+        local c = ss.GetColor(colorid) or color_white
+        local p = ss.To3D(pos * gridsize, surf.Origins[id], surf.Angles[id])
+        local sw, sh = surf.Bounds[id].x, surf.Bounds[id].y
+        local gw, gh = math.ceil(sw / gridsize), math.ceil(sh / gridsize)
+        d.DShort()
+        d.DColor(c.r, c.g, c.b, colorid and 64 or 16)
+        d.DPoint(surf.Origins[id])
+        for x = 0, gw do
+            for y = 0, gh do
+                local p = Vector(x, y) * gridsize
+                local org = ss.To3D(p, surf.Origins[id], surf.Angles[id])
+                local colorid = ink[x] and ink[x][y]
+                local c = ss.GetColor(colorid) or color_white
+                d.DColor(c.r, c.g, c.b, colorid and 64 or 16)
+                d.DABox(org, vector_origin, Vector(0, gridsize - 1, gridsize - 1), surf.Angles[id])
             end
         end
     end
