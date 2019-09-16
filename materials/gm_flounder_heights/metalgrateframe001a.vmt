@@ -2,6 +2,7 @@
 {
 	// For gm_flounder_heights, metalwall with metalgrate property
 	"$basetexture" "Metal/metalwall030a"
+	"%compilepassbullets" 1
 	"$surfaceprop"  "metalgrate"
 	"$detail" "detail\metal_detail_01"
 	"$detailscale" "4.283"
