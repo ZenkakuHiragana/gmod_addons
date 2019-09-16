@@ -1,0 +1,14 @@
+"LightmappedGeneric"
+{
+	// For gm_flounder_heights, metalfence with no metalgrate property
+	"$AlphaTest" "1"
+	"$AlphaTestReference" "0.35"
+
+	"$basetexture" "Metal/metalfence007a"
+	"$detail" "detail\metal_detail_01"
+	"$detailscale" "4.283"
+	"$detailblendfactor" .8
+	"$detailblendmode" "0"
+	"$surfaceprop" "chainlink"
+	"%keywords" "c17downtown"
+}
