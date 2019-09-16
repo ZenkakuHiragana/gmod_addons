@@ -1,0 +1,7 @@
+"LightmappedGeneric"
+{
+	"$basetexture" "gm_flounder_heights/ssstone"
+	"$bumpmap" "gm_flounder_heights/ssstone_bump"
+	"$surfaceprop" "Rock"
+	"$ssbump" 1
+}

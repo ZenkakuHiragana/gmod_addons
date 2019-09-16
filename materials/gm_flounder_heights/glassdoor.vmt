@@ -1,0 +1,9 @@
+"LightmappedGeneric"
+{
+	"$basetexture" "gm_flounder_heights/glassdoor"
+	"$envmap" "env_cubemap"
+	"$surfaceprop" "Glass"
+	"$envmapcontrast" 1
+	"$envmapsaturation" 1
+	"$translucent" 1
+}

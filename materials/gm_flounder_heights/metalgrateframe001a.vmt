@@ -1,0 +1,10 @@
+"LightmappedGeneric"
+{
+	// For gm_flounder_heights, metalwall with metalgrate property
+	"$basetexture" "Metal/metalwall030a"
+	"$surfaceprop"  "metalgrate"
+	"$detail" "detail\metal_detail_01"
+	"$detailscale" "4.283"
+	"$detailblendfactor" .8
+	"$detailblendmode" "0"
+}
