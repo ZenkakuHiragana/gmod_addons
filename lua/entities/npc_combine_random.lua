@@ -267,6 +267,9 @@ local CVarGrenades = CreateConVar("random_combine_grenades", -20, CVarFlags,
 
 local RopeTexture = "cable/cable_metalwinch01.vmt" -- Rope texture for rappelling
 local ZipSound = "npc/combine_soldier/zipline%s.wav"
+if not IsMounted "ep2" then
+	RopeTexture = "cable/cable2.vmt"
+end
 
 -- Weapon skills are also randomly selected.
 local skills = {
