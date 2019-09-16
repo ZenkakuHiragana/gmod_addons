@@ -144,10 +144,10 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 	local onourink = self:GetGroundColor() == c
 
 	self:SetInWallInk(self:Crouching() and (
-	ss.GetSurfaceColor(util.QuickTrace(p, fw - right, filter)) == c or
-	ss.GetSurfaceColor(util.QuickTrace(p, fw + right, filter)) == c or
-	ss.GetSurfaceColor(util.QuickTrace(p,-fw - right, filter)) == c or
-	ss.GetSurfaceColor(util.QuickTrace(p,-fw + right, filter)) == c))
+	ss.GetSurfaceColor(util.TraceLine {start = p, endpos = p + fw - right, filter = filter, mask = MASK_SHOT}) == c or
+	ss.GetSurfaceColor(util.TraceLine {start = p, endpos = p + fw + right, filter = filter, mask = MASK_SHOT}) == c or
+	ss.GetSurfaceColor(util.TraceLine {start = p, endpos = p - fw - right, filter = filter, mask = MASK_SHOT}) == c or
+	ss.GetSurfaceColor(util.TraceLine {start = p, endpos = p - fw + right, filter = filter, mask = MASK_SHOT}) == c))
 
 	self:SetInInk(self:Crouching() and (onink and onourink or self:GetInWallInk()))
 	self:SetOnEnemyInk(onink and not onourink)
