@@ -8,7 +8,7 @@ local function ItemTintInit(self, mat, values)
 end
 
 for _, a in ipairs(engine.GetAddons()) do
-	if a.wsid == "135491961" then
+	if a.wsid == "135491961" and a.mounted then
 		include "matproxy/tf2itempaint.lua" -- Hat Painter & Crit Glow Tools conflicts
 		ItemTintInit = matproxy.ProxyList.ItemTintColor.init -- So take some workaround
 		OldItemTintBind = matproxy.ProxyList.ItemTintColor.bind
