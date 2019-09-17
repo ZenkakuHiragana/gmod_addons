@@ -99,45 +99,49 @@ local function ProcessPaintQueue()
 	while not rt.Ready do coroutine.yield() end
 	while true do
 		Benchmark = SysTime()
-		for time, queuetable in SortedPairs(ss.PaintQueue) do
+		for time, queuetable in SortedPairs(ss.PaintQueue, true) do
 			for id, q in SortedPairs(queuetable) do
 				local angle, origin, normal, moved = Angle(Angles[q.n]), Origins[q.n], Normals[q.n], Moved[q.n]
 				if moved then angle:RotateAroundAxis(normal, -90) end
 				local pos2d = ss.To2D(q.pos, origin, angle) * ss.UnitsToPixels
-				local bound = Bounds[q.n] * ss.UnitsToPixels
-				if moved then bound.x, bound.y = bound.y, bound.x end
+				local bx = Bounds[q.n].x * ss.UnitsToPixels
+				local by = Bounds[q.n].y * ss.UnitsToPixels
+				if moved then bx, by = by, bx end
 				local color = ss.GetColor(q.c)
 				local r = math.Round(q.r * ss.UnitsToPixels)
-				local uvorg = Vector(u[q.n], v[q.n]) * ss.UVToPixels
+				local up = u[q.n] * ss.UVToPixels
+				local vp = v[q.n] * ss.UVToPixels
 				local lightorg = q.pos - normal * (normal:Dot(q.pos - origin) - 1) * q.dispflag
 				local light = GetLight(lightorg, normal)
 				local settexture = texturename:format(q.t)
-				local vrad = ss.vector_one * r
-				if moved then pos2d.x, pos2d.y = -pos2d.x, bound.y - pos2d.y end
-				local b = Vector(math.ceil(uvorg.x + bound.x) + 1, math.ceil(uvorg.y + bound.y) + 1) -- ScissorRect end
-				local c = Vector(math.Round(pos2d.x + uvorg.x), math.Round(pos2d.y + uvorg.y)) -- 2D center position
-				local s = Vector(math.floor(uvorg.x) - 1, math.floor(uvorg.y) - 1) -- ScissorRect start
-				if ss.CollisionAABB2D(s, b, c - vrad, c + vrad) then
+				if moved then pos2d.x, pos2d.y = -pos2d.x, by - pos2d.y end
+				local cx = math.Round(pos2d.x + up) -- 2D center position
+				local cy = math.Round(pos2d.y + vp)
+				local sx = math.floor(up) - 1 -- ScissorRect start
+				local sy = math.floor(vp) - 1
+				local tx = math.ceil(up + bx) + 1 -- ScissorRect end
+				local ty = math.ceil(vp + by) + 1
+				if ss.CollisionAABB2D(Vector(sx, sy) , Vector(tx, ty), Vector(cx - r, cy - r), Vector(cx + r, cy + r)) then
 					if ss.Debug then ss.Debug.ShowInkDrawn(s, c, b, surf, q, moved) end
 					inkmaterial:SetTexture("$basetexture", settexture)
 					normalmaterial:SetTexture("$basetexture", settexture .. "n")
 					render.PushRenderTarget(rt.BaseTexture)
-					render.SetScissorRect(s.x, s.y, b.x, b.y, true)
+					render.SetScissorRect(sx, sy, tx, ty, true)
 					cam.Start2D()
 					surface.SetDrawColor(color)
 					surface.SetMaterial(inkmaterial)
-					surface.DrawTexturedRectRotated(c.x, c.y, 2 * r * q.ratio, 2 * r, q.inkangle)
+					surface.DrawTexturedRectRotated(cx, cy, 2 * r * q.ratio, 2 * r, q.inkangle)
 					cam.End2D()
 					render.SetScissorRect(0, 0, 0, 0, false)
 					render.PopRenderTarget()
 
 					--Draw on normal map
 					render.PushRenderTarget(rt.Normalmap)
-					render.SetScissorRect(s.x, s.y, b.x, b.y, true)
+					render.SetScissorRect(sx, sy, tx, ty, true)
 					cam.Start2D()
 					surface.SetDrawColor(color_white)
 					surface.SetMaterial(normalmaterial)
-					surface.DrawTexturedRectRotated(c.x, c.y, 2 * r * q.ratio, 2 * r, q.inkangle)
+					surface.DrawTexturedRectRotated(cx, cy, 2 * r * q.ratio, 2 * r, q.inkangle)
 					cam.End2D()
 					render.SetScissorRect(0, 0, 0, 0, false)
 					render.PopRenderTarget()
@@ -147,18 +151,18 @@ local function ProcessPaintQueue()
 					local num = 7
 					local frac = num / 7
 					render.PushRenderTarget(rt.Lightmap)
-					render.SetScissorRect(s.x, s.y, b.x, b.y, true)
+					render.SetScissorRect(sx, sy, tx, ty, true)
 					cam.Start2D()
 					surface.SetDrawColor(light:ToColor())
 					surface.SetMaterial(lightmapmaterial)
-					surface.DrawTexturedRect(c.x - r * frac, c.y - r * frac, 2 * r * frac, 2 * r * frac)
+					surface.DrawTexturedRect(cx - r * frac, cy - r * frac, 2 * r * frac, 2 * r * frac)
 					frac = math.rad(360 / num)
 					for i = 1, num do
 						local rx = math.cos(frac * i) * r * (moved and -1 or 1)
 						local ry = math.sin(frac * i) * r
 						local rv = Vector(rx, ry) * ss.PixelsToUnits
 						surface.SetDrawColor(GetLight(ss.To3D(rv, lightorg, angle), normal):ToColor())
-						surface.DrawTexturedRect(math.floor(rx + c.x - r), math.floor(ry + c.y - r), 2 * r, 2 * r)
+						surface.DrawTexturedRect(math.floor(rx + cx - r), math.floor(ry + cy - r), 2 * r, 2 * r)
 					end
 					cam.End2D()
 					render.SetScissorRect(0, 0, 0, 0, false)

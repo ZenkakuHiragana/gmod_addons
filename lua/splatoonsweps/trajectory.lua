@@ -293,6 +293,7 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t)
 	local data, parameters = ink.Data, ink.Parameters
 	local LifeTime = math.max(0, CurTime() - FrameTime() - ink.InitTime)
 	local d, e, o = DamageInfo(), t.Entity, ink.Trace.filter
+	local weapon = ss.IsValidInkling(o)
 	if LifeTime > data.StraightFrame then return end
 	if ss.LastHitID[e] == data.ID then return end
 	ss.LastHitID[e] = data.ID -- Avoid multiple damages at once
@@ -313,7 +314,7 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t)
 	d:SetMaxDamage(damage_full)
 	d:SetReportedPosition(t.HitPos)
 	d:SetAttacker(IsValid(o) and o or game.GetWorld())
-	d:SetInflictor(IsValid(ink.Inflictor) and ink.Inflictor or game.GetWorld())
+	d:SetInflictor(IsValid(weapon) and weapon or game.GetWorld())
 	d:ScaleDamage(ss.ToHammerHealth)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end

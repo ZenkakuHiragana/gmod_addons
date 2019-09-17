@@ -171,28 +171,20 @@ end
 function ss.GetSurfaceColor(tr)
 	if not tr.Hit then return end
 	local pos = tr.HitPos
-	local surf_to_check = nil
-	local index_to_check = nil
-	local maxcos = -1
 	for node in BSPPairs {pos - tr.HitNormal} do
 		local surf = SERVER and node.Surfaces or SequentialSurfaces
 		for i, index in pairs(SERVER and surf.Indices or node.Surfaces) do
 			local angdiff = surf.Normals[i]:Dot(tr.HitNormal)
 			local div = Either(SERVER, isnumber(index) and index < 0, ss.Displacements[i]) and 2 or 1
-			if maxcos < angdiff and angdiff > MAX_COS_DEG_DIFF / div
+			if angdiff > MAX_COS_DEG_DIFF / div
 			and CollisionAABB(pos - POINT_BOUND, pos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then
-				surf_to_check = surf
-				index_to_check = i
-				maxcos = angdiff
+				local p2d = To2D(pos, surf.Origins[i], surf.Angles[i])
+				local ink = surf.InkCircles[i]
+				local x, y = floor(p2d.x * griddivision), floor(p2d.y * griddivision)
+				local colorid = ink[x] and ink[x][y]
+				if ss.Debug then ss.Debug.ShowInkStateMesh(Vector(x, y), i, surf) end
+				if colorid then return colorid end
 			end
 		end
 	end
-
-	if not surf_to_check then return end
-	local p2d = To2D(pos, surf_to_check.Origins[index_to_check], surf_to_check.Angles[index_to_check])
-	local ink = surf_to_check.InkCircles[index_to_check]
-	local x, y = floor(p2d.x * griddivision), floor(p2d.y * griddivision)
-	local colorid = ink[x] and ink[x][y]
-	if ss.Debug then ss.Debug.ShowInkStateMesh(Vector(x, y), index_to_check, surf_to_check) end
-	return colorid
 end
