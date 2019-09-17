@@ -90,7 +90,7 @@ local TranslateType = {
 function GetValue(t, ply)
 	local servervalue = t.sv and t.sv:GetString()
 	local override = tonumber(servervalue)
-	local translate = TranslateType[t.options.type]
+	local translate = TranslateType[t.options.type] or t.options.typeconversion
 	if override and override ~= -1 or SERVER and not (IsValid(ply) and ply:IsPlayer()) then
 		return not translate and servervalue or translate(servervalue)
 	elseif not t.options.serverside then
@@ -128,11 +128,12 @@ function IteratePreferences(root)
 	local t = root and GetCVarTable(root) or cvarlist
 	local function f(root)
 		for p, pt in pairs(root or t) do
-			if not istable(pt) then continue end
-			if pt.iscvarlayer then
-				f(pt)
-			elseif pt.cl or pt.sv then
-				coroutine.yield(p, pt)
+			if istable(pt) then
+				if pt.iscvarlayer then
+					f(pt)
+				elseif pt.cl or pt.sv then
+					coroutine.yield(p, pt)
+				end
 			end
 		end
 	end
@@ -163,25 +164,26 @@ end
 
 -- PreferenceTable -> pt, IsEnabledPanel -> e
 local idprefix = "GreatZenkakuMan's Module: CVarTree"
-local function EnablePanel(pt, e)
-	if not pt.paneladmin then return end
-	pt.paneladmin:SetEnabled(e)
-	for _, c in ipairs(pt.paneladmin:GetChildren()) do c:SetEnabled(e) end
+local function EnablePanel(panel, type, enabled, func)
+	panel:SetEnabled(enabled)
+	for _, c in ipairs(panel:GetChildren()) do c:SetEnabled(enabled) end
 
-	if pt.options.type == "number" then
-		local s = e and "Dark" or "Default"
-		local l, t = pt.paneladmin.Label, pt.paneladmin:GetTextArea()
+	if type == "number" then
+		local s = enabled and "Dark" or "Default"
+		local l, t = panel.Label, panel:GetTextArea()
 		l:SetTextColor(l:GetSkin().Colours.Label[s])
 		t:SetTextColor(t:GetSkin().Colours.Label[s])
-		for _, c in ipairs(pt.paneladmin:GetChildren()) do
-			c:SetMouseInputEnabled(e)
-			c:SetKeyboardInputEnabled(e)
+		for _, c in ipairs(panel:GetChildren()) do
+			c:SetMouseInputEnabled(enabled)
+			c:SetKeyboardInputEnabled(enabled)
 		end
+	elseif isfunction(func) then
+		func(panel, enabled)
 	end
 end
 
 local waitafterchange = .1
-local function GetOnChange(pt)
+local function GetCVarOnChange(pt)
 	if pt.options.type == "boolean" then
 		return function(convar, old, new)
 			if not (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin()) then return end
@@ -194,12 +196,13 @@ local function GetOnChange(pt)
 			if pt.panel and not pt.panel:IsEditing() then pt.panel:SetValue(tonumber(new)) end
 			if pt.paneladmin and not pt.paneladmin:IsEditing() then pt.paneladmin:SetValue(tonumber(new)) end
 		end
+	elseif isfunction(pt.options.cvaronchange) then
+		return pt.options.cvaronchange(pt)
 	end
 end
 
 local function GetDermaPanelOnChange(pt)
 	if not pt.paneladmin then return end
-	local name, getvalue
 	if pt.options.type == "boolean" then
 		function pt.paneladmin:OnChange(value)
 			net.Start "greatzenkakuman.cvartree.adminchange"
@@ -219,6 +222,8 @@ local function GetDermaPanelOnChange(pt)
 		end
 
 		return pt.paneladmin.OnValueChanged
+	elseif isfunction(pt.options.dermaonchange) then
+		return pt.options.dermaonchange(pt)
 	end
 end
 
@@ -237,6 +242,8 @@ local function MakeElement(p, admin, pt)
 		pt[panel]:SetDecimals(pt.options.decimals or 0)
 		pt[panel]:SetValue(cvar:GetInt())
 		pt[panel].Label:SetTextColor(pt[panel].Label:GetSkin().Colours.Label.Dark)
+	elseif isfunction(pt.options.makepanel) then
+		pt[panel] = pt.options.makepanel(p, pt, cvar, admin)
 	end
 
 	pt[panel].CVarName = cvar:GetName()
@@ -244,12 +251,12 @@ local function MakeElement(p, admin, pt)
 
 	local override
 	if admin then
-		local onchange = GetDermaPanelOnChange(pt)
-		cvars.AddChangeCallback(pt[panel].CVarName, GetOnChange(pt))
+		local dermaonchange = GetDermaPanelOnChange(pt)
+		cvars.AddChangeCallback(pt[panel].CVarName, GetCVarOnChange(pt))
 
 		if not pt.options.serverside then
 			local checked = cvar:GetInt() ~= -1
-			EnablePanel(pt, checked)
+			EnablePanel(pt.paneladmin, pt.options.type, checked)
 			override = vgui.Create("DCheckBox", p)
 			override:SetTooltip(OverrideHelpText)
 			override:SetValue(checked)
@@ -257,28 +264,35 @@ local function MakeElement(p, admin, pt)
 				if not (IsValid(LocalPlayer()) and LocalPlayer():IsAdmin()) then return end
 				local checked = tonumber(new) ~= -1
 				override:SetChecked(checked)
-				EnablePanel(pt, checked)
+				EnablePanel(pt.paneladmin, pt.options.type, checked)
 			end)
 
 			function override:OnChange(checked)
-				EnablePanel(pt, checked)
-				onchange(pt.paneladmin, pt.cl:GetDefault())
+				EnablePanel(pt.paneladmin, pt.options.type, checked)
+				dermaonchange(pt.paneladmin, pt.cl:GetDefault())
 				net.Start "greatzenkakuman.cvartree.adminchange"
 				net.WriteString(pt[panel].CVarName)
 				net.WriteString(checked and pt.cl:GetDefault() or "-1")
 				net.SendToServer()
 			end
 		end
-	else
+	elseif isfunction(pt[panel].SetConVar) then
 		pt[panel]:SetConVar(cvar:GetName())
 	end
 
+	if not admin and pt.sv then
+		pt[panel].Think = function()
+			EnablePanel(pt[panel], pt.options.type, pt.sv:GetInt() == -1, pt.options.enablepanel)
+		end
+	end
+	
 	p:AddItem(override or pt[panel], override and pt[panel])
 	if override then
 		local t = (pt[panel]:GetTall() - 15) / 2
 		local b = t + (t > math.floor(t) and 1 or 0)
 		override:DockMargin(0, math.floor(t), 0, b)
 		override:SetWidth(15)
+		pt[panel].CheckBox = override
 		pt[panel]:Dock(TOP)
 		pt[panel]:DockMargin(10, 0, 0, 0)
 	end
@@ -288,25 +302,29 @@ local function MakeElement(p, admin, pt)
 end
 
 local function MakeGUI(p, nametable, admin)
-	local categories, ordered, preferences = {}, {}, {}
+	local categories, sorted, sortedlast, preferences = {}, {}, {}, {}
 	for name, pt in pairs(GetCVarTable(nametable)) do
-		if name:StartWith "__" then continue end
-		if not istable(pt) then continue end
-		pt.printname = pt.printname or pt.options and pt.options.printname or name
-		if pt.iscvarlayer then
-			categories[name] = pt
-		elseif pt.options and not pt.options.hidden then
-			if pt.options.order then
-				pt.order = pt.options.order
-				ordered[name] = pt
-			else
-				preferences[name] = pt
+		if not name:StartWith "__" and istable(pt) then
+			pt.printname = pt.printname or pt.options and pt.options.printname or name
+			if pt.iscvarlayer then
+				categories[name] = pt
+			elseif pt.options and not pt.options.hidden then
+				if pt.options.order then
+					pt.order = pt.options.order
+					sorted[name] = pt
+				elseif pt.options.bottomorder then
+					pt.bottomorder = pt.options.bottomorder
+					sortedlast[name] = pt
+				else
+					preferences[name] = pt
+				end
 			end
 		end
 	end
 
-	for _, pt in SortedPairsByMemberValue(ordered, "order") do MakeElement(p, admin, pt) end
+	for _, pt in SortedPairsByMemberValue(sorted, "order") do MakeElement(p, admin, pt) end
 	for _, pt in SortedPairsByMemberValue(preferences, "printname") do MakeElement(p, admin, pt) end
+	for _, pt in SortedPairsByMemberValue(sortedlast, "bottomorder", true) do MakeElement(p, admin, pt) end
 	for name, pt in SortedPairs(categories) do
 		if pt.options.subcategory then
 			pt.panel = p
@@ -316,6 +334,10 @@ local function MakeGUI(p, nametable, admin)
 		else
 			pt.panel = vgui.Create("ControlPanel", p)
 			pt.panel:SetLabel(pt.printname)
+			if pt.options.closed then
+				pt.panel:SetExpanded(false)
+			end
+			
 			p:AddPanel(pt.panel)
 		end
 

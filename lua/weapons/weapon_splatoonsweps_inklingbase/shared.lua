@@ -62,7 +62,7 @@ function SWEP:GetSquidSpeed()
 end
 
 function SWEP:GetInkColor()
-	return ss.GetColor(self:GetNWInt "inkcolor") or ss.GetColor(ss.GetNPCInkColor(self.Owner))
+	return ss.GetColor(self:GetNWInt "inkcolor")
 end
 
 -- Returns the owner ping in seconds.
@@ -80,19 +80,22 @@ function SWEP:GetFOV()
 	return self.Owner:GetFOV()
 end
 
-function SWEP:GetOptions(opt, getopt)
-	if not self:IsMine() then return end
-	local gc = greatzenkakuman.cvartree
-	for name, pt in gc.IteratePreferences "splatoonsweps" do
-		if pt.options and pt.options.serverside then continue end
-		if #pt.location > 1 then
-			if pt.location[2] ~= self.Base then continue end
-			if #pt.location > 2 and pt.location[3] ~= self.ClassName then continue end
-		end
+local function RetrieveOption(self, name, pt)
+	if pt.options and pt.options.serverside then return end
+	if #pt.location > 1 then
+		if pt.location[2] ~= self.Base then return end
+		if #pt.location > 2 and pt.location[3] ~= self.ClassName then return end
+	end
 
-		local value = gc.GetValue(pt, self.Owner)
-		if isbool(value) and self:GetNWBool(name) ~= value then self:SetNWBool(name, value) end
-		if isnumber(value) and self:GetNWInt(name) ~= value then self:SetNWInt(name, value) end
+	local value = greatzenkakuman.cvartree.GetValue(pt, self.Owner)
+	if isbool(value) and self:GetNWBool(name) ~= value then self:SetNWBool(name, value) end
+	if isnumber(value) and self:GetNWInt(name) ~= value then self:SetNWInt(name, value) end
+end
+
+function SWEP:GetOptions()
+	if not self:IsMine() then return end
+	for name, pt in greatzenkakuman.cvartree.IteratePreferences "splatoonsweps" do
+		RetrieveOption(self, name, pt)
 	end
 
 	if self.Owner:IsPlayer() then return end
@@ -176,15 +179,17 @@ function SWEP:SetWeaponAnim(act, index)
 	if not self:IsFirstTimePredicted() then return end
 	if not (IsValid(self.Owner) and self.Owner:IsPlayer()) then return end
 	for i = 1, 2 do
-		if index and i ~= index then continue end
-		local vm = self.Owner:GetViewModel(i)
-		if not IsValid(vm) then continue end
-		-- Entity:GetSequenceCount() returns nil on an invalid viewmodel
-		if (vm:GetSequenceCount() or 0) < 1 then continue end
-		local seq = vm:SelectWeightedSequence(act)
-		if seq == -1 then continue end
-		vm:SendViewModelMatchingSequence(seq)
-		vm:SetPlaybackRate(rate or 1)
+		if not (index and i ~= index) then
+			-- Entity:GetSequenceCount() returns nil on an invalid viewmodel
+			local vm = self.Owner:GetViewModel(i)
+			if IsValid(vm) and (vm:GetSequenceCount() or 0) > 0 then
+				local seq = vm:SelectWeightedSequence(act)
+				if seq > -1 then
+					vm:SendViewModelMatchingSequence(seq)
+					vm:SetPlaybackRate(rate or 1)
+				end
+			end
+		end
 	end
 end
 

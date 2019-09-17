@@ -374,19 +374,6 @@ local function GeneratePreferenceTab(tab)
 	tab.Preference.LabelColor:SetTextColor(tab.Preference.LabelColor:GetSkin().Colours.Label.Dark)
 	tab.Preference.LabelColor:SizeToContents()
 
-	-- Color picker
-	tab.Preference.ColorSelector = tab.Preference.Panel:Add "DColorPalette"
-	tab.Preference.ColorSelector:Dock(TOP)
-	tab.Preference.ColorSelector:SetWide(ScrW() * .16)
-	tab.Preference.ColorSelector:SetColorButtons(ss.InkColors)
-	tab.Preference.ColorSelector:SetButtonSize(
-	math.Round(tab.Preference.ColorSelector:GetWide() / math.ceil(ss.MAX_COLORS / 3)))
-	for _, color in pairs(tab.Preference.ColorSelector:GetChildren()) do
-		local i = color:GetID()
-		color:SetToolTip(ss.Text.ColorNames[i])
-		function color:DoClick() SendValue("inkcolor", i) end
-	end
-
 	-- "Playermodel:" Label
 	tab.Preference.LabelModel = tab.Preference.Panel:Add "DLabel"
 	tab.Preference.LabelModel:Dock(TOP)

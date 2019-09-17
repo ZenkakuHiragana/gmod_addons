@@ -136,16 +136,17 @@ function ss.GetNPCInkColor(n)
 		[CLASS_PLAYER_BIOWEAPON] = "player",
 		[CLASS_ALIEN_BIOWEAPON] = "alien",
 	}
+	local cvar = ss.GetOption "npcinkcolor"
 	local colors = {
-		others = 1,
-		player = 2,
-		citizen = 3,
-		antlion = 4,
-		barnacle = 5,
-		combine = 6,
-		military = 7,
-		zombie = 8,
-		alien = 9,
+		citizen = cvar "citizen",
+		combine = cvar "combine",
+		military = cvar "military",
+		zombie = cvar "zombie",
+		antlion = cvar "antlion",
+		alien = cvar "alien",
+		barnacle = cvar "barnacle",
+		player = ss.GetOption "inkcolor",
+		others = cvar "others",
 	}
 	return colors[factions[class]] or colors.others
 end

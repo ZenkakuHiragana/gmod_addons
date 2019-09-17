@@ -26,6 +26,16 @@ return {CVars = {
     MoveViewmodel = "壁を避けて狙う時、ビューモデルを動かす。 (1: 有効 0: 無効)",
     NewStyleCrosshair = "照準の動き方をスプラトゥーン2に合わせる。 (1: 有効 0: 無効)",
     NoRefract = "インクの屈折エフェクトを描画しないようにする。 (1: 描画しない 0: 描画する)",
+    NPCInkColor = {
+        Citizen = "市民のインクの色。",
+        Combine = "コンバインのインクの色。",
+		Military = "「軍隊」に属するNPCのインクの色。",
+		Zombie = "ゾンビのインクの色。",
+		Antlion = "アントライオンのインクの色。",
+		Alien = "エイリアンのインクの色。",
+		Barnacle = "バーナクルのインクの色。",
+        Others = "その他のNPCのインクの色。",
+    },
     Playermodel = "三人称モデル。使用可能な値は以下の通り。:\n",
     RTResolution = [[インクの描画システムで用いるRenderTargetの設定。
 この変更を反映するにはGMODの再起動を必要とする。

@@ -8,24 +8,104 @@ local prefix = "Splatoon SWEPs: "
 
 gc.OverrideHelpText = ss.Text.OverrideHelpText
 gc.SetCVarPrefix("splatoonsweps", {printname = ss.Text.Category})
+
+local function SendValue(cvarname, value)
+	if ss.sp or cvarname:StartWith "sv_" then
+		net.Start "greatzenkakuman.cvartree.adminchange"
+		net.WriteString(cvarname)
+		net.WriteString(tostring(value))
+		net.SendToServer()
+	elseif not GetGlobalBool "SplatoonSWEPs: IsDedicated" and LocalPlayer():IsAdmin() then
+		net.Start "greatzenkakuman.cvartree.sendchange"
+		net.WriteString(cvarname)
+		net.WriteString(tostring(value))
+		net.SendToServer()
+	else
+		print(cvarname)
+		local cvar = GetConVar(cvarname)
+		if not cvar then return end
+		cvar:SetInt(value)
+	end
+end
+
+local function MakeColorGUI(parent_panel, paneltable, cvar, admin)
+	local cvarname = cvar:GetName()
+	local element = vgui.Create("DPanel", parent_panel)
+	local label = Label(paneltable.printname, element)
+	local colorpicker = vgui.Create("DIconLayout", element)
+	local overridable = admin and not paneltable.options.serverside
+	element:DockPadding(4, 0, 4, 4)
+	label:Dock(TOP)
+	label:SetTextColor(label:GetSkin().Colours.Label.Dark)
+	colorpicker:Dock(FILL)
+	colorpicker:SetSpaceX(5)
+	colorpicker:SetSpaceY(5)
+	colorpicker:SetStretchHeight(true)
+	for i, c in ipairs(ss.InkColors) do
+		local item = colorpicker:Add "DColorButton"
+		item:SetSize(32, 32)
+		item:SetColor(c)
+		item:SetToolTip(ss.Text.ColorNames[i])
+		item:SetContentAlignment(5)
+		local l, t, r, b = item:GetDockMargin()
+		function item:Think() item:SetText(i == cvar:GetInt() and "X" or "") end
+		function item:DoClick()
+			SendValue(cvarname, i)
+		end
+	end
+
+	colorpicker:Layout()
+	function element:PerformLayout()
+		colorpicker:InvalidateLayout(true)
+		self:SizeToChildren(false, true)
+		if not self.CheckBox then return end
+		self.CheckBox:DockMargin(0, 4, 0, self:GetTall() - 15 - 4)
+	end
+
+	return element
+end
+
+local function MakeOnChangeDerma(paneltable)
+	return function(self, value)
+		SendValue(self.CVarName, value)
+	end
+end
+
+local function MakeOnChangeCVar(paneltable)
+	return function(convar, old, new)
+	end
+end
+
 local function RegisterConVars(opt, helptext, guitext)
 	for cvarname, cvartable in pairs(opt) do
-		if cvarname:StartWith "__" then continue end
-		if not istable(cvartable) then cvartable = {cvartable} end
-		if cvartable[1] ~= nil then
-			local options = table.Copy(cvartable)
-			options.printname, options[1] = guitext[cvarname]
-			options.helptext = guitext[cvarname .. "_help"]
-			gc.AddCVar(cvarname, cvartable[1], prefix .. helptext[cvarname], options)
-		else
-			gc.AddCVarPrefix(cvarname, {
-				subcategory = cvartable.__subcategory,
-				printname = ss.Text.CategoryNames[cvarname]
-				or ss.Text.PrintNames[cvarname] or guitext[cvarname].__printname,
-			})
+		if not cvarname:StartWith "__" then
+			if not istable(cvartable) then cvartable = {cvartable} end
+			if cvartable[1] ~= nil then
+				local options = table.Copy(cvartable)
+				options.printname, options[1] = guitext[cvarname]
+				options.helptext = guitext[cvarname .. "_help"]
+				if options.type == "color" then
+					options.cvaronchange = MakeOnChangeCVar
+					options.dermaonchange = MakeOnChangeDerma
+					options.enablepanel = nil
+					options.makepanel = MakeColorGUI
+					options.typeconversion = tonumber
+				end
 
-			RegisterConVars(cvartable, helptext[cvarname], guitext[cvarname])
-			gc.RemoveCVarPrefix()
+				gc.AddCVar(cvarname, cvartable[1], prefix .. helptext[cvarname], options)
+			else
+				gc.AddCVarPrefix(cvarname, {
+					subcategory = cvartable.__subcategory,
+					closed = cvartable.__closed,
+					printname =
+					ss.Text.CategoryNames[cvarname] -- Weapon category name (Shooters, Rollers, etc.)
+					or ss.Text.PrintNames[cvarname] -- Weapon name (.52 Gallon, etc.)
+					or guitext[cvarname].__printname, -- Other categories (Gain, NPC ink color, etc.)
+				})
+
+				RegisterConVars(cvartable, helptext[cvarname], guitext[cvarname])
+				gc.RemoveCVarPrefix()
+			end
 		end
 	end
 end
@@ -45,6 +125,7 @@ function ss.GetConVarName(name, serverside)
 end
 
 function ss.GetConVar(name, serverside)
+	if name ~= "norefract" then print(name, serverside) end
 	local prefix = serverside == nil and "cl" or ""
 	return GetConVar(prefix .. ss.GetConVarName(name, serverside))
 end

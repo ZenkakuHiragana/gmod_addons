@@ -26,6 +26,16 @@ return {CVars = {
     MoveViewmodel = "Move viewmodel when avoid setting is enabled. (1: enabled, 0: disabled)",
     NewStyleCrosshair = "Make crosshair act like Splatoon 2. (1: enabled, 0: disabled)",
     NoRefract = "Don't draw the refraction effect of ink. (1: don't draw, 0: draw)",
+    NPCInkColor = {
+        Citizen = "Ink color for citizen.",
+        Combine = "Ink color for Combine forces.",
+		Military = "Ink color for military forces.",
+		Zombie = "Ink color for zombies.",
+		Antlion = "Ink color for antlions.",
+		Alien = "Ink color for aliens.",
+		Barnacle = "Ink color for barnacles.",
+        Others = "Ink color for other NPCs.",
+    },
     Playermodel = "Your thirdperson model.  Available values are:\n",
     RTResolution = [[The resolution of RenderTarget used in ink system.
 To apply the change, restart your GMOD client.
