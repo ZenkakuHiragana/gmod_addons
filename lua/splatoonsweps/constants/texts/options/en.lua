@@ -28,6 +28,8 @@ return {Options = {
         ReloadSpeedInk = "Reload speed [%] (In ink)",
         ReloadSpeedStand = "Reload speed [%] (Out of ink)",
     },
+    HideInk = "Hide ink in map",
+    HideInk_help = "If checked, the whole ink in the map becomes invisible.",
     LeftHand = "Left hand mode",
     LeftHand_help = "If checked, the view model will be placed on the left.",
     MoveViewmodel = "Move viewmodel to avoid walls",
@@ -35,6 +37,7 @@ return {Options = {
     NewStyleCrosshair = "Use Splatoon 2 crosshair",
     NoRefract = "Suppress ink refraction",
     NoRefract_help = "Disables the refraction effect of ink.  Check if you feel a performance issue.",
+    TakeFallDamage = "Enable fall damage",
     ToggleADS = "Toggle ADS instead of holding",
 	weapon_splatoonsweps_blaster_base = {
 		HurtOwner = "Explosion hurts its owner",

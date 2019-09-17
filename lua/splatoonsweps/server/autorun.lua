@@ -151,7 +151,8 @@ function ss.GetNPCInkColor(n)
 end
 
 function ss.GetFallDamage(self, ply, speed)
-	return 0 -- TODO: Make an option whether to take fall damage.
+	if ss.GetOption "takefalldamage" then return end
+	return 0
 end
 
 -- Parse the map and store the result to txt, then send it to the client.

@@ -17,6 +17,7 @@ local rt = ss.RenderTarget
 local surf = ss.SequentialSurfaces
 local world = game.GetWorld()
 local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
+	if ss.GetOption "hideink" then return end
 	if not rt.Ready or bDrawingSkybox or CVarWireframe:GetBool() or CVarMinecraft:GetBool() then return end
 	local hdrscale = render.GetToneMappingScaleLinear()
 	render.SetToneMappingScaleLinear(inkhdrscale) -- Set HDR scale for custom lightmap

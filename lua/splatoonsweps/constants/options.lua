@@ -10,7 +10,7 @@ return {
 	DrawCrosshair = true,
 	DrawInkOverlay = true,
 	Enabled = {true, order = 1, serverside = true},
-	FF = {false, order = 2, serverside = true},
+	FF = {false, order = 3, serverside = true},
 	Gain = {
 		HealSpeedInk = {100, min = 1, max = 500, decimals = 0, order = 4, serverside = true},
 		HealSpeedStand = {100, min = 1, max = 500, decimals = 0, order = 3, serverside = true},
@@ -19,6 +19,7 @@ return {
 		ReloadSpeedInk = {100, min = 1, max = 500, decimals = 0, order = 6, serverside = true},
 		ReloadSpeedStand = {100, min = 1, max = 500, decimals = 0, order = 5, serverside = true},
 	},
+	HideInk = {false, order = 2, serverside = true},
 	InkColor = {1, hidden = true},
 	LeftHand = false,
 	MoveViewmodel = true,
@@ -26,6 +27,7 @@ return {
 	NoRefract = {false, order = 1, clientside = true},
 	Playermodel = {1, hidden = true},
 	RTResolution = {1, hidden = true},
+	TakeFallDamage = {false, order = 4, serverside = true},
 	ToggleADS = false,
 	weapon_splatoonsweps_blaster_base = {
 		HurtOwner = {false, order = 1, serverside = true},

@@ -28,6 +28,8 @@ return {Options = {
         ReloadSpeedInk = "インク回復速度[%] (インク内)",
         ReloadSpeedStand = "インク回復速度[%] (インク外)",
     },
+    HideInk = "マップ上のインクを非表示にする",
+    HideInk_help = "チェックすると、マップ上に塗られたインクが非表示になる。",
     LeftHand = "左利き",
     LeftHand_help = "一人称視点でブキが左側に表示される。",
     MoveViewmodel = "壁を避けて狙うとき、ビューモデルを動かす",
@@ -35,6 +37,7 @@ return {Options = {
     NewStyleCrosshair = "Splatoon 2風の照準",
     NoRefract = "インクの屈折を描画しない",
     NoRefract_help = "インクの下の地面が歪まなくなる。描画が重い場合のオプション。",
+    TakeFallDamage = "落下ダメージを有効化",
     ToggleADS = "アイアンサイト切り替え",
 	weapon_splatoonsweps_blaster_base = {
 		HurtOwner = "自爆を有効化",

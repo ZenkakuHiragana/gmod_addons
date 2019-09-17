@@ -20,7 +20,8 @@ return {CVars = {
         ReloadSpeedInk = "A multiplier of reloading speed when you're in ink.  200 means 200%, twice faster reloading speed.",
         ReloadSpeedStand = "A multiplier of reloading speed when you're out of ink.  200 means 200%, twice faster reloading speed.",
     },
-    InkColor = "Your ink color.  Available values are:\n",
+    HideInk = "Hide painted ink in the map. (1: enabled, 0: disabled)",
+    InkColor = "Your ink color.  Available values are as follows:\n",
     LeftHand = "Use left hand to hold weapons. (1: enabled, 0: disabled)",
     MoveViewmodel = "Move viewmodel when avoid setting is enabled. (1: enabled, 0: disabled)",
     NewStyleCrosshair = "Make crosshair act like Splatoon 2. (1: enabled, 0: disabled)",
@@ -43,6 +44,7 @@ Make sure your graphics card has enough space of video memory.
 6: 2x16384x16384, 4GB.
 7: 32768x32768, 8GB.
 8: 2x32768x32768, 16GB.]],
+    TakeFallDamage = "Whether to take fall damage when you equip a Splatoon weapon. (1: do, 0: do not)",
     ToggleADS = "Aim down sight mode. (1: toggle, 0: hold)",
 	weapon_splatoonsweps_blaster_base = {
 		HurtOwner = "If enabled, inkling will be injured by his/her blaster's explosion. (1: enabled, 0: disabled)",
