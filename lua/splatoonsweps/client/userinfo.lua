@@ -367,13 +367,6 @@ local function GeneratePreferenceTab(tab)
 	tab.Preference.Panel:DockMargin(8, 8, 8, 8)
 	tab.Preference.Panel:DockPadding(8, 8, 8, 8)
 
-	-- "Ink color:" Label
-	tab.Preference.LabelColor = tab.Preference.Panel:Add "DLabel"
-	tab.Preference.LabelColor:Dock(TOP)
-	tab.Preference.LabelColor:SetText(ss.Text.InkColor)
-	tab.Preference.LabelColor:SetTextColor(tab.Preference.LabelColor:GetSkin().Colours.Label.Dark)
-	tab.Preference.LabelColor:SizeToContents()
-
 	-- "Playermodel:" Label
 	tab.Preference.LabelModel = tab.Preference.Panel:Add "DLabel"
 	tab.Preference.LabelModel:Dock(TOP)
