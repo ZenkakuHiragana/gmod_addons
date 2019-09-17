@@ -1847,23 +1847,25 @@ function ss.MoveHook(w, p, m)
 		if not v then continue end
 		local speed, vz = v:Length2D(), v.z -- Horizontal speed, Z component
 		if w:GetInWallInk() and mv:KeyDown(WALLCLIMB_KEYS) then
-			vz = math.max(math.abs(vz) * -.75, vz + math.min(
-			12 + (mv:KeyPressed(IN_JUMP) and maxspeed / 4 or 0), maxspeed))
-			if ply:OnGround() then
-				local t = {
-					start = ply:GetShootPos(), endpos = ply:GetShootPos() + ply:GetAimVector() * 32768,
-					mask = ss.SquidSolidMask, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT, filter = ply,
-				}
-				local fw = util.TraceLine(t)
-				t.endpos = ply:GetShootPos() - ply:GetAimVector() * 32768
-				local bk = util.TraceLine(t)
-				t.endpos = ply:GetShootPos() + ply:GetRight() * 32768
-				local right = util.TraceLine(t)
-				t.endpos = ply:GetShootPos() - ply:GetRight() * 32768
-				local left = util.TraceLine(t)
-				if math.min(fw.Fraction, bk.Fraction) < math.min(right.Fraction, left.Fraction)
-				and fw.Fraction < bk.Fraction == mv:KeyDown(IN_FORWARD) then
-					mv:AddKey(IN_JUMP)
+			local sp = ply:GetShootPos()
+			local t = {
+				start = sp, endpos = sp + ply:GetForward() * 32768,
+				mask = ss.SquidSolidMask, collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT, filter = ply,
+			}
+			local fw = util.TraceLine(t)
+			t.endpos = sp - ply:GetForward() * 32768
+			local bk = util.TraceLine(t)
+			if fw.Fraction < bk.Fraction == mv:KeyDown(IN_FORWARD) then
+				vz = math.max(math.abs(vz) * -.75, vz + math.min(
+				12 + (mv:KeyPressed(IN_JUMP) and maxspeed / 4 or 0), maxspeed))
+				if ply:OnGround() then
+					t.endpos = sp + ply:GetRight() * 32768
+					local r = util.TraceLine(t)
+					t.endpos = sp - ply:GetRight() * 32768
+					local l = util.TraceLine(t)
+					if math.min(fw.Fraction, bk.Fraction) < math.min(r.Fraction, l.Fraction) then
+						mv:AddKey(IN_JUMP)
+					end
 				end
 			end
 		end

@@ -61,6 +61,7 @@ end
 
 -- Internal function to record a new ink to ink history.
 local gridsize = 12
+local gridarea = gridsize * gridsize
 local griddivision = 1 / gridsize
 function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, surf)
 	local pos2d = To2D(pos, surf.Origins[id], surf.Angles[id]) * griddivision
@@ -68,34 +69,34 @@ function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, su
 	local ink = surf.InkCircles[id]
 	local t = ss.InkShotMaterials[inktype]
 	local w, h = t.width, t.height
+	local surfsize = surf.Bounds[id] * griddivision
+	local sw, sh = floor(surfsize.x), floor(surfsize.y)
 	local dy = radius * griddivision
 	local dx = ratio * dy
 	local y_const = dy * 2 / h
 	local x_const = ratio * dy * 2 / w
 	local ang = rad(-localang)
 	local sind, cosd = sin(ang), cos(ang)
+	local pointcount = {}
 	local area = 0
-	
-	-- local wr, hr = 1 / w, 1 / h -- Reciprocal number of width and height
-	-- local halfratio = ratio / 2
-	-- local p = Vector(x, y)
-	-- p.x = p.x * wr * ratio - halfratio -- -ratio / 2 <= x <= ratio / 2
-	-- p.y = p.y * hr - 0.5 -- -0.5 <= y <= 0.5
-	-- p = p * 2 * radius
-	-- p:Rotate(Angle(0, -localang, 0))
-	-- p = (p + pos2d) * griddivision
-	for x = 0, w - 1 do
-		local tx = t[x]
+	for x = 0, w - 1, 0.5 do
+		local tx = t[floor(x)]
 		if tx then
-			local p = x * x_const - dx
-			for y = 0, h - 1 do
-				if tx[y] then
+			for y = 0, h - 1, 0.5 do
+				if tx[floor(y)] then
+					local p = x * x_const - dx
 					local q = y * y_const - dy
 					local i = floor(p * cosd - q * sind + x0)
 					local k = floor(p * sind + q * cosd + y0)
-					ink[i] = ink[i] or {}
-					if ink[i][k] ~= color then area = area + 1 end
-					ink[i][k] = color
+					if 0 <= i and i <= sw and 0 <= k and k <= sh then
+						pointcount[i] = pointcount[i] or {}
+						pointcount[i][k] = (pointcount[i][k] or 0) + 1
+						if pointcount[i][k] > 3 then
+							ink[i] = ink[i] or {}
+							if ink[i][k] ~= color then area = area + 1 end
+							ink[i][k] = color
+						end
+					end
 				end
 			end
 		end
@@ -152,7 +153,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	if ply:IsPlayer() and mp and SERVER then SuppressHostEvents() end
 	if not ply:IsPlayer() then return end
 
-	ss.WeaponRecord[ply].Inked[classname] = (ss.WeaponRecord[ply].Inked[classname] or 0) - area
+	ss.WeaponRecord[ply].Inked[classname] = (ss.WeaponRecord[ply].Inked[classname] or 0) - area * gridarea
 	if sp and SERVER then
 		net_Start "SplatoonSWEPs: Send turf inked"
 		net_WriteDouble(ss.WeaponRecord[ply].Inked[classname])
@@ -170,19 +171,28 @@ end
 function ss.GetSurfaceColor(tr)
 	if not tr.Hit then return end
 	local pos = tr.HitPos
-	for node in BSPPairs {pos} do
+	local surf_to_check = nil
+	local index_to_check = nil
+	local maxcos = -1
+	for node in BSPPairs {pos - tr.HitNormal} do
 		local surf = SERVER and node.Surfaces or SequentialSurfaces
 		for i, index in pairs(SERVER and surf.Indices or node.Surfaces) do
 			local angdiff = surf.Normals[i]:Dot(tr.HitNormal)
 			local div = Either(SERVER, isnumber(index) and index < 0, ss.Displacements[i]) and 2 or 1
-			if angdiff > MAX_COS_DEG_DIFF / div and CollisionAABB(pos - POINT_BOUND, pos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then
-				local p2d = To2D(pos, surf.Origins[i], surf.Angles[i])
-				local ink = surf.InkCircles[i]
-				local x, y = floor(p2d.x * griddivision), floor(p2d.y * griddivision)
-				local colorid = ink[x] and ink[x][y]
-				if ss.Debug then ss.Debug.ShowInkStateMesh(Vector(x, y), i, surf) end
-				return colorid
+			if maxcos < angdiff and angdiff > MAX_COS_DEG_DIFF / div
+			and CollisionAABB(pos - POINT_BOUND, pos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then
+				surf_to_check = surf
+				index_to_check = i
+				maxcos = angdiff
 			end
 		end
 	end
+
+	if not surf_to_check then return end
+	local p2d = To2D(pos, surf_to_check.Origins[index_to_check], surf_to_check.Angles[index_to_check])
+	local ink = surf_to_check.InkCircles[index_to_check]
+	local x, y = floor(p2d.x * griddivision), floor(p2d.y * griddivision)
+	local colorid = ink[x] and ink[x][y]
+	if ss.Debug then ss.Debug.ShowInkStateMesh(Vector(x, y), index_to_check, surf_to_check) end
+	return colorid
 end

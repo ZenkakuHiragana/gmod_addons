@@ -224,6 +224,7 @@ if ShowInkStateMesh then
         local ply = player.GetByID(1)
         if not IsValid(ply) then return end
         if not ply:KeyPressed(key) then return end
+        if not ShowInkStatePos then return end
         local pos = ShowInkStatePos
         local id = ShowInkStateID
         local surf = ShowInkStateSurf
@@ -232,7 +233,7 @@ if ShowInkStateMesh then
         local c = ss.GetColor(colorid) or color_white
         local p = ss.To3D(pos * gridsize, surf.Origins[id], surf.Angles[id])
         local sw, sh = surf.Bounds[id].x, surf.Bounds[id].y
-        local gw, gh = math.ceil(sw / gridsize), math.ceil(sh / gridsize)
+        local gw, gh = math.floor(sw / gridsize), math.floor(sh / gridsize)
         d.DShort()
         d.DColor(c.r, c.g, c.b, colorid and 64 or 16)
         d.DPoint(surf.Origins[id])

@@ -100,7 +100,7 @@ function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 		local length2d = (t.HitPos - data.InitPos):Length2D()
 		if length2d < min then data.Type = ss.GetDropType() end
 		length2d = math.Clamp(length2d, min, max)
-		ratio = 1 / math.Remap(length2d, min, max, 1.5, 3)
+		ratio = 1 / math.Remap(length2d, min, max, 1, 3)
 	else
 		data.Type = ss.GetDropType()
 		ratio = data.Ratio or 1

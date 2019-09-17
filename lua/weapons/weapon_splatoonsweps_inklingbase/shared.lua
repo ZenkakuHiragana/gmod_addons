@@ -131,24 +131,33 @@ function SWEP:OwnerChanged()
 	end
 end
 
-local InkTraceLength = 20
+local InkTraceLength = 24
 local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:UpdateInkState() -- Set if player is in ink
 	local ang = Angle(0, self.Owner:GetAngles().yaw)
 	local c = self:GetNWInt "inkcolor"
 	local filter = {self, self.Owner}
-	local p = self.Owner:WorldSpaceCenter()
+	local org = self.Owner:GetPos()
+	local center = self.Owner:WorldSpaceCenter()
+	local mean = (center + org) / 2
 	local fw, right = ang:Forward() * InkTraceLength, ang:Right() * InkTraceLength
-	self:SetGroundColor(ss.GetSurfaceColor(util.QuickTrace(self.Owner:GetPos(), InkTraceDown, filter)) or -1)
-	local onink = self:GetGroundColor() >= 0
-	local onourink = self:GetGroundColor() == c
+	local ink_t = {start = org, endpos = org + InkTraceDown, filter = filter, mask = MASK_SHOT}
+	local groundcolor = ss.GetSurfaceColor(util.TraceLine(ink_t)) or -1
+	local onink = groundcolor >= 0
+	local onourink = groundcolor == c
+	
+	ink_t.start = center
+	ink_t.endpos = mean + fw - right
+	local inink = ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
+	ink_t.endpos = mean + fw + right
+	inink = inink or ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
+	ink_t.endpos = center - fw - right
+	inink = inink or ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
+	ink_t.endpos = center - fw + right
+	inink = inink or ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
 
-	self:SetInWallInk(self:Crouching() and (
-	ss.GetSurfaceColor(util.TraceLine {start = p, endpos = p + fw - right, filter = filter, mask = MASK_SHOT}) == c or
-	ss.GetSurfaceColor(util.TraceLine {start = p, endpos = p + fw + right, filter = filter, mask = MASK_SHOT}) == c or
-	ss.GetSurfaceColor(util.TraceLine {start = p, endpos = p - fw - right, filter = filter, mask = MASK_SHOT}) == c or
-	ss.GetSurfaceColor(util.TraceLine {start = p, endpos = p - fw + right, filter = filter, mask = MASK_SHOT}) == c))
-
+	self:SetGroundColor(groundcolor)
+	self:SetInWallInk(self:Crouching() and inink)
 	self:SetInInk(self:Crouching() and (onink and onourink or self:GetInWallInk()))
 	self:SetOnEnemyInk(onink and not onourink)
 
