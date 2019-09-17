@@ -338,36 +338,21 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 end
 -- End of predicted hooks
 
-local NetworkVarNotifyNOTCalledOnClient = true
+-- Set up by NetworkVarNotify.  Called when SetInInk() is executed.
 function SWEP:ChangeInInk(name, old, new)
-	if not IsValid(self.Owner) or self:GetHolstering() then return end
-	local outofink, intoink = old and not new, not old and new
-	if not intoink then self:SetOldSpeed(self.Owner:GetVelocity().z) end
 	if old == new then return end
-	if intoink and self:IsFirstTimePredicted() then
-		if self.Owner:IsPlayer() then self.Owner:SetDSP(14) end
-		local velocity = math.abs(self:GetOldSpeed())
-		local e, f = EffectData(), (velocity - 100) / 600
-		local t = util.QuickTrace(self.Owner:GetPos(), -vector_up * 16384, {self, self.Owner})
-		e:SetAngles(t.HitNormal:Angle())
-		e:SetAttachment(10)
-		e:SetColor(self:GetNWInt "inkcolor")
-		e:SetEntity(self)
-		e:SetFlags((f > .5 and 7 or 3) + (CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0))
-		e:SetOrigin(t.HitPos)
-		e:SetRadius(Lerp(f, 25, 50))
-		e:SetScale(.5)
-		util.Effect("SplatoonSWEPsMuzzleSplash", e, true,
-		not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
-	elseif outofink and self.Owner:IsPlayer() then
-		self.Owner:SetDSP(1)
-	end
+	if not IsValid(self.Owner) or self:GetHolstering() then return end
+	if not self.Owner:IsPlayer() then return end
+	local intoink = not old and new
+	local dsp = intoink and 14 or 1
+	self.Owner:SetDSP(dsp)
 end
 
+-- Set up by NetworkVarNotify.  Called when SetOnEnemyInk() is executed.
 function SWEP:ChangeOnEnemyInk(name, old, new)
-	if self:GetHolstering() then return end
 	if old == new then return end
-	local outofink, intoink = old and not new, not old and new
+	if self:GetHolstering() then return end
+	local intoink = not old and new
 	if intoink then
 		self.EnemyInkSound:ChangeVolume(1, .5)
 		if self:IsFirstTimePredicted() then
@@ -378,29 +363,32 @@ function SWEP:ChangeOnEnemyInk(name, old, new)
 
 		if CLIENT then return end
 		self:AddSchedule(200 / ss.GetMaxHealth() * ss.FrameToSec, function(self, schedule)
-			if not self:GetOnEnemyInk() then return true end -- Enemy ink damage
+			if not self:GetOnEnemyInk() then return true end -- End schedule when out of ink
+			if self.Owner:Health() < self.Owner:GetMaxHealth() / 2 then return end
 			local d = DamageInfo()
 			d:SetAttacker(game.GetWorld())
-			d:SetDamage(self.Owner:Health() > self.Owner:GetMaxHealth() / 2 and 1 or 0)
+			d:SetDamage(1)
 			d:SetInflictor(self)
-			self.Owner:TakeDamageInfo(d)
+			self.Owner:TakeDamageInfo(d) -- Enemy ink damage
 		end)
 	else
 		self.EnemyInkSound:ChangeVolume(0, .5)
 	end
 end
 
+-- Set up by NetworkVarNotify.  Called when SetThrowing() is executed.
 function SWEP:ChangeThrowing(name, old, new)
+	if old == new then return end
 	if self:GetHolstering() then return end
 	local start, stop = not old and new, old and not new
-	if start == stop then return end
-	self.WorldModel = self.ModelPath .. (start and "w_left.mdl" or "w_right.mdl")
 
+	-- Changes the world model on serverside and local player
+	self.WorldModel = self.ModelPath .. (start and "w_left.mdl" or "w_right.mdl")
 	if CLIENT then return end
 	net.Start "SplatoonSWEPs: Change throwing"
 	net.WriteEntity(self)
 	net.WriteBool(start)
-	net.Send(ss.PlayersReady)
+	net.Send(ss.PlayersReady) -- Properly changes it on other clients
 end
 
 function SWEP:SetupDataTables()
@@ -473,8 +461,8 @@ function SWEP:SetupDataTables()
 		schedule:SetDelay(0)
 	end)
 
+	ss.ProtectedCall(self.CustomDataTables, self)
 	self:NetworkVarNotify("InInk", self.ChangeInInk)
 	self:NetworkVarNotify("OnEnemyInk", self.ChangeOnEnemyInk)
 	self:NetworkVarNotify("Throwing", self.ChangeThrowing)
-	ss.ProtectedCall(self.CustomDataTables, self)
 end

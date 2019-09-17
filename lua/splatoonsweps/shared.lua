@@ -678,8 +678,8 @@ function ss.GetTimeScale(ply)
 	return IsValid(ply) and ply:IsPlayer() and ply:GetLaggedMovementValue() or 1
 end
 
--- Get inkling's desired maximum health
--- Get the maximum amount of an ink tank.
+-- ss.GetMaxHealth() - Get inkling's desired maximum health
+-- ss.GetMaxInkAmount() - Get the maximum amount of an ink tank.
 local gain = ss.GetOption "gain"
 function ss.GetMaxHealth() return gain "maxhealth" end
 function ss.GetMaxInkAmount() return gain "inkamount" end
@@ -776,10 +776,28 @@ function ss.KeyRelease(self, ply, key)
 	ss.ProtectedCall(Either(SERVER, self.ServerSecondaryAttack, self.ClientSecondaryAttack), self, able)
 end
 
+function ss.OnPlayerHitGround(self, ply, inWater, onFloater, speed)
+	if not self:GetInInk() then return end
+	if not self:IsFirstTimePredicted() then return end
+	local e = EffectData()
+	local f = (speed - 100) / 600
+	local t = util.QuickTrace(ply:GetPos(), -vector_up * 16384, {self, ply})
+	e:SetAngles(t.HitNormal:Angle())
+	e:SetAttachment(10)
+	e:SetColor(self:GetNWInt "inkcolor")
+	e:SetEntity(self)
+	e:SetFlags((f > .5 and 7 or 3) + (CLIENT and self:IsCarriedByLocalPlayer() and 128 or 0))
+	e:SetOrigin(t.HitPos)
+	e:SetRadius(Lerp(f, 25, 50))
+	e:SetScale(.5)
+	util.Effect("SplatoonSWEPsMuzzleSplash", e, true)
+end
+
 hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", ss.hook "PlayerFootstep")
 hook.Add("UpdateAnimation", "SplatoonSWEPs: Adjust TPS animation speed", ss.hook "UpdateAnimation")
 hook.Add("KeyPress", "SplatoonSWEPs: Check a valid key", ss.hook "KeyPress")
 hook.Add("KeyRelease", "SplatoonSWEPs: Throw sub weapon", ss.hook "KeyRelease")
+hook.Add("OnPlayerHitGround", "Splatoon SWEPs: Play diving sound", ss.hook "OnPlayerHitGround")
 
 local weaponslot = {
 	weapon_splatoonsweps_roller = 0,

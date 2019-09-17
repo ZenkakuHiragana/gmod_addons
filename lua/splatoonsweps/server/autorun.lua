@@ -93,7 +93,65 @@ end
 --   number color		| The ink color for the given NPC.
 function ss.GetNPCInkColor(n)
 	if not IsValid(n) then return 1 end
-	return 1
+	if not isfunction(n.Classify) then
+		return n.SplatoonSWEPsInkColor or 1
+	end
+
+	local class = n:Classify()
+	local factions = {
+		[CLASS_NONE] = "others",
+		[CLASS_PLAYER] = "player",
+		[CLASS_PLAYER_ALLY] = "citizen",
+		[CLASS_PLAYER_ALLY_VITAL] = "citizen",
+		[CLASS_ANTLION] = "antlion",
+		[CLASS_BARNACLE] = "barnacle",
+		[CLASS_BULLSEYE] = "others",
+		[CLASS_CITIZEN_PASSIVE] = "citizen",
+		[CLASS_CITIZEN_REBEL] = "citizen",
+		[CLASS_COMBINE] = "combine",
+		[CLASS_COMBINE_GUNSHIP] = "combine",
+		[CLASS_CONSCRIPT] = "others",
+		[CLASS_HEADCRAB] = "zombie",
+		[CLASS_MANHACK] = "combine",
+		[CLASS_METROPOLICE] = "combine",
+		[CLASS_MILITARY] = "military",
+		[CLASS_SCANNER] = "combine",
+		[CLASS_STALKER] = "combine",
+		[CLASS_VORTIGAUNT] = "citizen",
+		[CLASS_ZOMBIE] = "zombie",
+		[CLASS_PROTOSNIPER] = "combine",
+		[CLASS_MISSILE] = "others",
+		[CLASS_FLARE] = "others",
+		[CLASS_EARTH_FAUNA] = "others",
+		[CLASS_HACKED_ROLLERMINE] = "citizen",
+		[CLASS_COMBINE_HUNTER] = "combine",
+		[CLASS_MACHINE] = "military",
+		[CLASS_HUMAN_PASSIVE] = "citizen",
+		[CLASS_HUMAN_MILITARY] = "military",
+		[CLASS_ALIEN_MILITARY] = "alien",
+		[CLASS_ALIEN_MONSTER] = "alien",
+		[CLASS_ALIEN_PREY] = "zombie",
+		[CLASS_ALIEN_PREDATOR] = "alien",
+		[CLASS_INSECT] = "others",
+		[CLASS_PLAYER_BIOWEAPON] = "player",
+		[CLASS_ALIEN_BIOWEAPON] = "alien",
+	}
+	local colors = {
+		others = 1,
+		player = 2,
+		citizen = 3,
+		antlion = 4,
+		barnacle = 5,
+		combine = 6,
+		military = 7,
+		zombie = 8,
+		alien = 9,
+	}
+	return colors[factions[class]] or colors.others
+end
+
+function ss.GetFallDamage(self, ply, speed)
+	return 0 -- TODO: Make an option whether to take fall damage.
 end
 
 -- Parse the map and store the result to txt, then send it to the client.
@@ -217,10 +275,7 @@ hook.Add("ShutDown", "SplatoonSWEPs: Save player data", function()
 	end
 end)
 
-hook.Add("GetFallDamage", "SplatoonSWEPs: Inklings don't take fall damage.", function(ply, speed)
-	return ss.IsValidInkling(ply) and 0 or nil
-end)
-
+hook.Add("GetFallDamage", "SplatoonSWEPs: Inklings don't take fall damage.", ss.hook "GetFallDamage")
 hook.Add("EntityTakeDamage", "SplatoonSWEPs: Ink damage manager", function(ent, dmg)
 	if ent:Health() <= 0 then return end
 	local w = ss.IsValidInkling(ent)
