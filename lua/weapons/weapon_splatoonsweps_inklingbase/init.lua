@@ -104,6 +104,10 @@ function SWEP:GetNPCRestTime()
 	return min or self.NPCDelay, max or self.NPCDelay * 3
 end
 
+function SWEP:CanBePickedUpByNPCs()
+	return true
+end
+
 function SWEP:Initialize()
 	self:SetHolstering(true)
 	self:SetInInk(false)
@@ -116,31 +120,6 @@ function SWEP:Initialize()
 		if IsValid(self.Owner) then return end
 		self:CreateRagdoll()
 	end)
-
-	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
-		self:SetSaveValue("m_fMinRange1", 0)
-		self:SetSaveValue("m_fMinRange2", 0)
-		self:SetSaveValue("m_fMaxRange1", self.Range)
-		self:SetSaveValue("m_fMaxRange2", self.Range)
-		self:Deploy()
-		local think = "SplatoonSWEPs: NPC Think function" .. self:EntIndex()
-		timer.Create(think, 0, 0, function()
-			if not (IsValid(self) and IsValid(self.Owner) and not self.Owner:IsPlayer()) then
-				return timer.Remove(think)
-			end
-
-			self:Think()
-		end)
-
-		local move = "SplatoonSWEPs: NPC Move function" .. self:EntIndex()
-		timer.Create(move, 0, 0, function()
-			if not (IsValid(self) and IsValid(self.Owner) and not self.Owner:IsPlayer()) then
-				return timer.Remove(move)
-			end
-
-			ss.ProtectedCall(self.Move, self, self.Owner)
-		end)
-	end
 	
 	self:AddSchedule(200 / ss.GetMaxHealth() * ss.FrameToSec, function(self, schedule)
 		if not self:GetOnEnemyInk() then return end
@@ -233,7 +212,34 @@ function SWEP:Equip(newowner)
 	self:RemoveRagdoll()
 	self:PlayLoopSound()
 	self.SafeOwner = self.Owner
-	if not self.Owner:IsPlayer() then return end
+
+	if IsValid(self.Owner) and not self.Owner:IsPlayer() then
+		self:SetSaveValue("m_fMinRange1", 0)
+		self:SetSaveValue("m_fMinRange2", 0)
+		self:SetSaveValue("m_fMaxRange1", self.Range)
+		self:SetSaveValue("m_fMaxRange2", self.Range)
+		self:Deploy()
+		local think = "SplatoonSWEPs: NPC Think function" .. self:EntIndex()
+		timer.Create(think, 0, 0, function()
+			if not (IsValid(self) and IsValid(self.Owner) and not self.Owner:IsPlayer()) then
+				return timer.Remove(think)
+			end
+
+			self:Think()
+		end)
+
+		local move = "SplatoonSWEPs: NPC Move function" .. self:EntIndex()
+		timer.Create(move, 0, 0, function()
+			if not (IsValid(self) and IsValid(self.Owner) and not self.Owner:IsPlayer()) then
+				return timer.Remove(move)
+			end
+
+			ss.ProtectedCall(self.Move, self, self.Owner)
+		end)
+
+		return
+	end
+
 	self:BackupInfo()
 end
 
