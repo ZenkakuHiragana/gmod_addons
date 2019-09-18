@@ -22,7 +22,11 @@ local mp = ss.mp
 local net_Send = net.Send
 local net_Start = net.Start
 local net_WriteDouble = net.WriteDouble
+local net_WriteEntity = net.WriteEntity
+local net_WriteFloat = net.WriteFloat
+local net_WriteInt = net.WriteInt
 local net_WriteUInt = net.WriteUInt
+local net_WriteVector = net.WriteVector
 local NormalizeAngle = math.NormalizeAngle
 local next = next
 local pairs = pairs
@@ -60,7 +64,7 @@ for i = 1, circle_polys do
 end
 
 -- Internal function to record a new ink to ink history.
-local gridsize = 12
+local gridsize = ss.InkGridSize
 local gridarea = gridsize * gridsize
 local griddivision = 1 / gridsize
 function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, surf)
@@ -142,9 +146,20 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			if angdiff > MAX_COS_DEG_DIFF / div and CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then
 				local localang = select(2, WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle()))
 				localang = ang.yaw - localang.roll + surf.DefaultAngles[i]
-				eff:SetScale(SERVER and index or i * (ss.Displacements[i] and -1 or 1))
-				eff:SetStart(Vector(radius, localang + (CLIENT and surf.Moved[i] and 90 or 0)))
-				util_Effect("SplatoonSWEPsDrawInk", eff, true, ignoreprediction)
+				local id = SERVER and index or i * (ss.Displacements[i] and -1 or 1)
+				local misc = Vector(radius, localang + (CLIENT and surf.Moved[i] and 90 or 0), ratio)
+				if SERVER then
+					net_Start "SplatoonSWEPs: Send an ink queue"
+					net_WriteInt(id, ss.SURFACE_ID_BITS)
+					net_WriteVector(misc)
+					net_WriteUInt(color, ss.COLOR_BITS)
+					net_WriteEntity(ply)
+					net_WriteUInt(inktype, ss.INK_TYPE_BITS)
+					net_WriteVector(pos)
+					net_Send(ss.PlayersReady)
+				else
+					ss.InkQueueReceiveFunction(id, misc, color, ply, inktype, pos)
+				end
 				area = area + AddInkRectangle(color, i, inktype, localang, pos, radius, ratio, surf)
 			end
 		end
@@ -157,7 +172,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	if sp and SERVER then
 		net_Start "SplatoonSWEPs: Send turf inked"
 		net_WriteDouble(ss.WeaponRecord[ply].Inked[classname])
-		net_WriteUInt(KeyFromValue(ss.WeaponClassNames, classname), 8)
+		net_WriteUInt(KeyFromValue(ss.WeaponClassNames, classname), ss.WEAPON_CLASSNAMES_BITS)
 		net_Send(ply)
 	end
 end

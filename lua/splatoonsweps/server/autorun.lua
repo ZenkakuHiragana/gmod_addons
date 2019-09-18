@@ -91,6 +91,44 @@ end
 --   Entity n			| The NPC
 -- Returnings:
 --   number color		| The ink color for the given NPC.
+local NPCFactions = {
+	[CLASS_NONE] = "others",
+	[CLASS_PLAYER] = "player",
+	[CLASS_PLAYER_ALLY] = "citizen",
+	[CLASS_PLAYER_ALLY_VITAL] = "citizen",
+	[CLASS_ANTLION] = "antlion",
+	[CLASS_BARNACLE] = "barnacle",
+	[CLASS_BULLSEYE] = "others",
+	[CLASS_CITIZEN_PASSIVE] = "citizen",
+	[CLASS_CITIZEN_REBEL] = "citizen",
+	[CLASS_COMBINE] = "combine",
+	[CLASS_COMBINE_GUNSHIP] = "combine",
+	[CLASS_CONSCRIPT] = "others",
+	[CLASS_HEADCRAB] = "zombie",
+	[CLASS_MANHACK] = "combine",
+	[CLASS_METROPOLICE] = "combine",
+	[CLASS_MILITARY] = "military",
+	[CLASS_SCANNER] = "combine",
+	[CLASS_STALKER] = "combine",
+	[CLASS_VORTIGAUNT] = "citizen",
+	[CLASS_ZOMBIE] = "zombie",
+	[CLASS_PROTOSNIPER] = "combine",
+	[CLASS_MISSILE] = "others",
+	[CLASS_FLARE] = "others",
+	[CLASS_EARTH_FAUNA] = "others",
+	[CLASS_HACKED_ROLLERMINE] = "citizen",
+	[CLASS_COMBINE_HUNTER] = "combine",
+	[CLASS_MACHINE] = "military",
+	[CLASS_HUMAN_PASSIVE] = "citizen",
+	[CLASS_HUMAN_MILITARY] = "military",
+	[CLASS_ALIEN_MILITARY] = "alien",
+	[CLASS_ALIEN_MONSTER] = "alien",
+	[CLASS_ALIEN_PREY] = "zombie",
+	[CLASS_ALIEN_PREDATOR] = "alien",
+	[CLASS_INSECT] = "others",
+	[CLASS_PLAYER_BIOWEAPON] = "player",
+	[CLASS_ALIEN_BIOWEAPON] = "alien",
+}
 function ss.GetNPCInkColor(n)
 	if not IsValid(n) then return 1 end
 	if not isfunction(n.Classify) then
@@ -98,44 +136,6 @@ function ss.GetNPCInkColor(n)
 	end
 
 	local class = n:Classify()
-	local factions = {
-		[CLASS_NONE] = "others",
-		[CLASS_PLAYER] = "player",
-		[CLASS_PLAYER_ALLY] = "citizen",
-		[CLASS_PLAYER_ALLY_VITAL] = "citizen",
-		[CLASS_ANTLION] = "antlion",
-		[CLASS_BARNACLE] = "barnacle",
-		[CLASS_BULLSEYE] = "others",
-		[CLASS_CITIZEN_PASSIVE] = "citizen",
-		[CLASS_CITIZEN_REBEL] = "citizen",
-		[CLASS_COMBINE] = "combine",
-		[CLASS_COMBINE_GUNSHIP] = "combine",
-		[CLASS_CONSCRIPT] = "others",
-		[CLASS_HEADCRAB] = "zombie",
-		[CLASS_MANHACK] = "combine",
-		[CLASS_METROPOLICE] = "combine",
-		[CLASS_MILITARY] = "military",
-		[CLASS_SCANNER] = "combine",
-		[CLASS_STALKER] = "combine",
-		[CLASS_VORTIGAUNT] = "citizen",
-		[CLASS_ZOMBIE] = "zombie",
-		[CLASS_PROTOSNIPER] = "combine",
-		[CLASS_MISSILE] = "others",
-		[CLASS_FLARE] = "others",
-		[CLASS_EARTH_FAUNA] = "others",
-		[CLASS_HACKED_ROLLERMINE] = "citizen",
-		[CLASS_COMBINE_HUNTER] = "combine",
-		[CLASS_MACHINE] = "military",
-		[CLASS_HUMAN_PASSIVE] = "citizen",
-		[CLASS_HUMAN_MILITARY] = "military",
-		[CLASS_ALIEN_MILITARY] = "alien",
-		[CLASS_ALIEN_MONSTER] = "alien",
-		[CLASS_ALIEN_PREY] = "zombie",
-		[CLASS_ALIEN_PREDATOR] = "alien",
-		[CLASS_INSECT] = "others",
-		[CLASS_PLAYER_BIOWEAPON] = "player",
-		[CLASS_ALIEN_BIOWEAPON] = "alien",
-	}
 	local cvar = ss.GetOption "npcinkcolor"
 	local colors = {
 		citizen = cvar "citizen",
@@ -148,7 +148,7 @@ function ss.GetNPCInkColor(n)
 		player = ss.GetOption "inkcolor",
 		others = cvar "others",
 	}
-	return colors[factions[class]] or colors.others
+	return colors[NPCFactions[class]] or colors.others or 1
 end
 
 function ss.GetFallDamage(self, ply, speed)

@@ -10,10 +10,10 @@ util.AddNetworkString "SplatoonSWEPs: Ready to splat"
 util.AddNetworkString "SplatoonSWEPs: Redownload ink data"
 util.AddNetworkString "SplatoonSWEPs: Send a sound"
 util.AddNetworkString "SplatoonSWEPs: Send an error message"
+util.AddNetworkString "SplatoonSWEPs: Send an ink queue"
 util.AddNetworkString "SplatoonSWEPs: Send ink cleanup"
 util.AddNetworkString "SplatoonSWEPs: Send player data"
 util.AddNetworkString "SplatoonSWEPs: Send turf inked"
-util.AddNetworkString "SplatoonSWEPs: Send weapon settings"
 util.AddNetworkString "SplatoonSWEPs: Strip weapon"
 net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 	ss.PlayersReady[#ss.PlayersReady + 1] = ply
@@ -61,7 +61,8 @@ net.Receive("SplatoonSWEPs: Send ink cleanup", function(_, ply)
 end)
 
 net.Receive("SplatoonSWEPs: Strip weapon", function(_, ply)
-	local weaponClass = ss.WeaponClassNames[net.ReadUInt(8)]
+	local weaponID = net.ReadUInt(ss.WEAPON_CLASSNAMES_BITS)
+	local weaponClass = ss.WeaponClassNames[weaponID]
 	if not weaponClass then return end
 	local weapon = ply:GetWeapon(weaponClass)
 	if not IsValid(weapon) then return end

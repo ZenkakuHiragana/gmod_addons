@@ -62,3 +62,31 @@ net.Receive("SplatoonSWEPs: Send turf inked", function()
 	local classname = assert(ss.WeaponClassNames[net.ReadUInt(8)], "SplatoonSWEPs: Invalid classname!")
 	ss.WeaponRecord[LocalPlayer()].Inked[classname] = inked
 end)
+
+-- misc = Vector(Radius, Inkangle, Ratio)
+function ss.InkQueueReceiveFunction(id, misc, color, ply, inktype, pos)
+	local i = math.abs(id)
+	local t = ss.PaintQueue[CurTime()] or {}
+	ss.PaintQueue[CurTime()], t[#t + 1] = t, {
+		c = color,
+		dispflag = id < 0 and 0 or 1,
+		done = 0,
+		inkangle = misc.y,
+		n = i,
+		owner = ply,
+		pos = pos,
+		r = misc.x,
+		ratio = misc.z,
+		t = inktype,
+	}
+end
+
+net.Receive("SplatoonSWEPs: Send an ink queue", function()
+	local id = net.ReadInt(ss.SURFACE_ID_BITS)
+	local misc = net.ReadVector()
+	local color = net.ReadUInt(ss.COLOR_BITS)
+	local ply = net.ReadEntity()
+	local inktype = net.ReadUInt(ss.INK_TYPE_BITS)
+	local pos = net.ReadVector()
+	ss.InkQueueReceiveFunction(id, misc, color, ply, inktype, pos)
+end)

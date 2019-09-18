@@ -143,7 +143,9 @@ function SWEP:Initialize()
 	end
 	
 	self:AddSchedule(200 / ss.GetMaxHealth() * ss.FrameToSec, function(self, schedule)
-		if self:GetOnEnemyInk() and self.Owner:Health() > self.Owner:GetMaxHealth() / 2 then
+		if not self:GetOnEnemyInk() then return end
+		self.HealSchedule:SetDelay(ss.HealDelay)
+		if self.Owner:Health() > self.Owner:GetMaxHealth() / 2 then
 			local d = DamageInfo()
 			d:SetAttacker(game.GetWorld())
 			d:SetDamage(1)
@@ -276,7 +278,6 @@ function SWEP:OnRemove()
 	self:StopLoopSound()
 	self:EndRecording()
 	ss.ProtectedCall(self.ServerOnRemove, self)
-	ss.ProtectedCall(self.SharedOnRemove, self)
 end
 
 function SWEP:OnDrop()

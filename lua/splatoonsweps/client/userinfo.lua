@@ -290,7 +290,7 @@ local function GenerateWeaponIcons(tab)
 		function icon:DoClick()
 			if LocalPlayer():HasWeapon(self:GetSpawnName()) then
 				net.Start "SplatoonSWEPs: Strip weapon"
-				net.WriteUInt(self.ClassID, 8)
+				net.WriteUInt(self.ClassID, ss.WEAPON_CLASSNAMES_BITS)
 				net.SendToServer()
 			else
 				self:Click()
