@@ -287,12 +287,6 @@ function SWEP:ViewModelDrawn(vm)
 	end
 end
 
-function SWEP:GetBombMeterPosition(ink)
-	local x = -11.9 + ink * .17 * ss.MaxInkAmount / ss.GetMaxInkAmount()
-	self.BombMeterPosition = Vector(x)
-	return self.BombMeterPosition
-end
-
 function SWEP:DrawWorldModel()
 	if IsValid(self.Owner) then
 		if self:GetHolstering() then return end
@@ -351,7 +345,7 @@ function SWEP:DrawWorldModelTranslucent()
 			local fraction = math.Clamp(self.JustUsableTime + 0.15 - CurTime(), 0, 0.15)
 			local size = -1600 * (fraction - 0.075)^2 + 20
 			v.size = {x = size, y = size}
-			v.hide = not IsValid(self.WElements["inktank"].modelEnt) or self:GetInk() < self.Secondary.TakeAmmo
+			v.hide = not IsValid(self.WElements["inktank"].modelEnt) or self:GetInk() < self.Secondary.TakeAmmo * 100
 		elseif name == "inktank" and IsValid(self.Owner) then
 			bone_ent = self.Owner
 		end
@@ -406,7 +400,8 @@ function SWEP:DrawWorldModelTranslucent()
 
 			if v.inktank then
 				-- Sub weapon usable meter
-				model:ManipulateBonePosition(model:LookupBone "bip_inktank_bombmeter", self.BombMeterPosition)
+				local BombPos = Vector(math.min(-11.9 + self.Secondary.TakeAmmo * 17 * ss.MaxInkAmount / ss.GetMaxInkAmount(), 5.1))
+				model:ManipulateBonePosition(model:LookupBone "bip_inktank_bombmeter", BombPos)
 				-- Ink remaining
 				local ink = -17 + .17 * self:GetInk() * ss.MaxInkAmount / ss.GetMaxInkAmount()
 				model:ManipulateBonePosition(model:LookupBone "bip_inktank_ink_core", Vector(ink, 0, 0))

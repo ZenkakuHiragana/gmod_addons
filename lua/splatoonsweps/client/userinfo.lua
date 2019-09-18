@@ -152,7 +152,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 			end
 
 			function self.Weapon:GetInkColorProxy()
-				return self.Weapon:GetInkColorProxy()
+				return ss.IsValidInkling(LocalPlayer()):GetInkColorProxy()
 			end
 
 			if w.Base == "weapon_splatoonsweps_roller" then

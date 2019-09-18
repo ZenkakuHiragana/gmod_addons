@@ -144,6 +144,7 @@ end
 if SERVER then
 	util.AddNetworkString "greatzenkakuman.cvartree.adminchange"
 	util.AddNetworkString "greatzenkakuman.cvartree.sendchange"
+	util.AddNetworkString "greatzenkakuman.cvartree.synchronizeconvars"
 	net.Receive("greatzenkakuman.cvartree.adminchange", function(_, ply)
 		if not ply:IsAdmin() then return end
 		local cvar = GetConVar(net.ReadString())
@@ -159,8 +160,23 @@ if SERVER then
 		cvar:SetString(net.ReadString())
 	end)
 
+	net.Receive("greatzenkakuman.cvartree.synchronizeconvars", function(_, ply)
+		for cvarname, cvartable in IteratePreferences() do
+			if cvartable.options and cvartable.options.serverside then
+				local str = cvartable.sv:GetString() -- It's really hacky way
+				cvartable.sv:SetString(str .. "*") -- to synchronize CVars,
+				cvartable.sv:SetString(str) -- but whatever.
+			end
+		end
+	end)
+
 	return
 end
+
+hook.Add("PlayerConnect", "greatzenkakuman.cvartree.synchronizeconvars", function(name, ply)
+	net.Start "greatzenkakuman.cvartree.synchronizeconvars"
+	net.SendToServer()
+end)
 
 -- PreferenceTable -> pt, IsEnabledPanel -> e
 local idprefix = "GreatZenkakuMan's Module: CVarTree"
