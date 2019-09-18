@@ -227,12 +227,18 @@ function SWEP:RestoreInfo()
 	end
 end
 
-function SWEP:Equip()
+function SWEP:Equip(newowner)
+	self.Owner = newowner
 	if InvalidPlayer(self.Owner) then return end
+	self:RemoveRagdoll()
+	self:PlayLoopSound()
+	self.SafeOwner = self.Owner
+	if not self.Owner:IsPlayer() then return end
 	self:BackupInfo()
 end
 
 function SWEP:Deploy()
+	self.Owner = self:GetOwner()
 	if not IsValid(self.Owner) then return true end
 	if InvalidPlayer(self.Owner) then
 		ss.SendError("LocalPlayerNotReadyToSplat", self.Owner)
@@ -281,13 +287,12 @@ function SWEP:OnRemove()
 end
 
 function SWEP:OnDrop()
-	local owner = self.Owner
 	self.Owner = self.SafeOwner
 	self.PMTable = nil
 	self:RestoreInfo()
 	ss.ProtectedCall(self.ServerHolster, self)
 	self:SharedHolsterBase()
-	self.Owner = owner
+	self:CreateRagdoll()
 end
 
 function SWEP:Holster()

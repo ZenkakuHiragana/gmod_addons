@@ -221,7 +221,7 @@ end
 if ShowInkStateMesh then
     local key = SERVER and IN_USE or IN_SPEED
     function d.DLoop()
-        local ply = player.GetByID(1)
+        local ply = SERVER and player.GetByID(1) or LocalPlayer()
         if not IsValid(ply) then return end
         if not ply:KeyPressed(key) then return end
         if not ShowInkStatePos then return end

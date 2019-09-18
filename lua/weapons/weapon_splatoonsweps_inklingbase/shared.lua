@@ -109,31 +109,6 @@ function SWEP:ApplySkinAndBodygroups()
 	end
 end
 
--- When NPC weapon is picked up by player.
-function SWEP:OwnerChanged()
-	local o = self.Owner
-	local isvalid = IsValid(o)
-	local isplayer = isvalid and o:IsPlayer()
-	self.IgnorePrediction = SERVER and ss.mp and not isplayer or nil
-	if not isvalid then
-		if SERVER then
-			self:CreateRagdoll()
-			timer.Simple(5, function()
-				if not IsValid(self) or IsValid(self.Owner) then return end
-				self:Remove()
-			end)
-		end
-
-		return self:StopLoopSound()
-	elseif IsValid(self.Ragdoll) and isplayer then
-		self.Owner:Give(self.ClassName)
-		self:Remove()
-	else
-		self.SafeOwner = o
-		return self:PlayLoopSound()
-	end
-end
-
 local InkTraceLength = 24
 local InkTraceDown = -vector_up * InkTraceLength
 function SWEP:UpdateInkState() -- Set if player is in ink
@@ -257,6 +232,7 @@ function SWEP:SharedDeployBase()
 	self.OnEnemyInkSpeed = ss.OnEnemyInkSpeed
 	self.JumpPower = ss.InklingJumpPower
 	self.OnEnemyInkJumpPower = ss.OnEnemyInkJumpPower
+	self.IgnorePrediction = SERVER and ss.mp and not self.Owner:IsPlayer() or nil
 	self.Owner:SetHealth(self.Owner:Health() * self:GetNWInt "MaxHealth" / self:GetNWInt "BackupMaxHealth")
 	if self.Owner:IsPlayer() then
 		self.Owner:SetJumpPower(self.JumpPower)
