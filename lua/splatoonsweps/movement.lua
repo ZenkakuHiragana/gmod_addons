@@ -1816,9 +1816,9 @@ function ss.MoveHook(w, p, m)
 
 	ply, mv = p, m
 	ss.ProtectedCall(w.Move, w, p, m)
-	w.EnemyInkPreventCrouching = w.EnemyInkPreventCrouching and w:GetOnEnemyInk() and ply:KeyDown(IN_DUCK)
-	w.PreventCrouching = not w.CannotStandup and w:GetKey() ~= 0 and w:GetKey() ~= IN_DUCK or CurTime() < w:GetCooldown()
-	if w.PreventCrouching or w.EnemyInkPreventCrouching then
+	w.PreventCrouching = not w.CannotStandup and w:GetKey() ~= 0 and w:GetKey() ~= IN_DUCK
+	or CurTime() < w:GetCooldown() or CurTime() > w:GetEnemyInkTouchTime() + 20 * ss.FrameToSec and ply:KeyDown(IN_DUCK)
+	if w.PreventCrouching then
 		mv:SetButtons(bit.band(mv:GetButtons(), DuckMask))
 		crouching = false
 	end
@@ -1890,12 +1890,6 @@ function ss.MoveHook(w, p, m)
 			if IsFirstTimePredicted() then
 				w:EmitSound "SplatoonSWEPs_Player.ToSquid"
 			end
-		end
-
-		if w:GetOnEnemyInk() then
-			w:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)
-				self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
-			end)
 		end
 	elseif infence then -- Cannot stand while in fence
 		mv:AddKey(IN_DUCK) -- it's not correct behavior though

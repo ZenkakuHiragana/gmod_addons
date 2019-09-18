@@ -148,21 +148,34 @@ function SWEP:UpdateInkState() -- Set if player is in ink
 	local groundcolor = ss.GetSurfaceColor(util.TraceLine(ink_t)) or -1
 	local onink = groundcolor >= 0
 	local onourink = groundcolor == c
+	local onenemyink = onink and not onourink
 	
 	ink_t.start = center
 	ink_t.endpos = mean + fw - right
-	local inink = ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
+	local onwallink = ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
 	ink_t.endpos = mean + fw + right
-	inink = inink or ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
+	onwallink = onwallink or ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
 	ink_t.endpos = center - fw - right
-	inink = inink or ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
+	onwallink = onwallink or ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
 	ink_t.endpos = center - fw + right
-	inink = inink or ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
+	onwallink = onwallink or ss.GetSurfaceColor(util.TraceLine(ink_t)) == c
+	
+	local inwallink = self:Crouching() and onwallink
+	local inink = self:Crouching() and (onink and onourink or self:GetInWallInk())
+	if onenemyink and not self:GetOnEnemyInk() then self.EnemyInkSound:ChangeVolume(1, .5) end
+	if not onenemyink and self:GetOnEnemyInk() then self.EnemyInkSound:ChangeVolume(0, .5) end
+	if inink and not self:GetInInk() then self.Owner:SetDSP(14) end
+	if not inink and self:GetInInk() then self.Owner:SetDSP(1) end
+	if self.Owner:IsPlayer() then
+		if not (self:GetOnEnemyInk() and self.Owner:KeyDown(IN_DUCK)) then
+			self:SetEnemyInkTouchTime(CurTime())
+		end
+	end
 
 	self:SetGroundColor(groundcolor)
-	self:SetInWallInk(self:Crouching() and inink)
-	self:SetInInk(self:Crouching() and (onink and onourink or self:GetInWallInk()))
-	self:SetOnEnemyInk(onink and not onourink)
+	self:SetInWallInk(inwallink)
+	self:SetInInk(inink)
+	self:SetOnEnemyInk(onenemyink)
 
 	self:GetOptions()
 	self:SetInkColorProxy(self:GetInkColor():ToVector())
@@ -343,44 +356,6 @@ function SWEP:SecondaryAttack() -- Use sub weapon
 end
 -- End of predicted hooks
 
--- Set up by NetworkVarNotify.  Called when SetInInk() is executed.
-function SWEP:ChangeInInk(name, old, new)
-	if old == new then return end
-	if not IsValid(self.Owner) or self:GetHolstering() then return end
-	if not self.Owner:IsPlayer() then return end
-	local intoink = not old and new
-	local dsp = intoink and 14 or 1
-	self.Owner:SetDSP(dsp)
-end
-
--- Set up by NetworkVarNotify.  Called when SetOnEnemyInk() is executed.
-function SWEP:ChangeOnEnemyInk(name, old, new)
-	if old == new then return end
-	if self:GetHolstering() then return end
-	local intoink = not old and new
-	if intoink then
-		self.EnemyInkSound:ChangeVolume(1, .5)
-		if self:IsFirstTimePredicted() then
-			self:AddSchedule(20 * ss.FrameToSec, 1, function(self, schedule)
-				self.EnemyInkPreventCrouching = self:GetOnEnemyInk()
-			end)
-		end
-
-		if CLIENT then return end
-		self:AddSchedule(200 / ss.GetMaxHealth() * ss.FrameToSec, function(self, schedule)
-			if not self:GetOnEnemyInk() then return true end -- End schedule when out of ink
-			if self.Owner:Health() < self.Owner:GetMaxHealth() / 2 then return end
-			local d = DamageInfo()
-			d:SetAttacker(game.GetWorld())
-			d:SetDamage(1)
-			d:SetInflictor(self)
-			self.Owner:TakeDamageInfo(d) -- Enemy ink damage
-		end)
-	else
-		self.EnemyInkSound:ChangeVolume(0, .5)
-	end
-end
-
 -- Set up by NetworkVarNotify.  Called when SetThrowing() is executed.
 function SWEP:ChangeThrowing(name, old, new)
 	if old == new then return end
@@ -407,6 +382,7 @@ function SWEP:SetupDataTables()
 	self:AddNetworkVar("Bool", "Throwing") -- Is about to use sub weapon.
 	self:AddNetworkVar("Entity", "NPCTarget") -- Target entity for NPC.
 	self:AddNetworkVar("Float", "Cooldown") -- Cannot crouch, fire, or use sub weapon.
+	self:AddNetworkVar("Float", "EnemyInkTouchTime") -- Delay timer to force to stand up.
 	self:AddNetworkVar("Float", "Ink") -- Ink remainig. 0 to ss.GetMaxInkAmount()
 	self:AddNetworkVar("Float", "OldSpeed") -- Old Z-velocity of the player.
 	self:AddNetworkVar("Float", "ThrowAnimTime") -- Time to adjust throw anim. speed.
@@ -467,7 +443,5 @@ function SWEP:SetupDataTables()
 	end)
 
 	ss.ProtectedCall(self.CustomDataTables, self)
-	self:NetworkVarNotify("InInk", self.ChangeInInk)
-	self:NetworkVarNotify("OnEnemyInk", self.ChangeOnEnemyInk)
 	self:NetworkVarNotify("Throwing", self.ChangeThrowing)
 end

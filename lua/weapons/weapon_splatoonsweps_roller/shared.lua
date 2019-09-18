@@ -42,6 +42,7 @@ function SWEP:CreateInk(skipnum)
 	local width = p.mSplashPositionWidth
 	local insiderate = p.mSplashInsideDamageRate
 	local insidenum = math.floor(splashnum * insiderate)
+	local IsLP = self:IsMine()
 	if splashnum % 1 ~= insidenum % 1 then
 		insidenum = insidenum - 1
 	end
@@ -215,29 +216,32 @@ function SWEP:Move(ply, mv)
 				local knockback = false
 				local keys = {}
 				for i, v in ipairs(victims) do
-					keys[v] = true
-					local health = v:Health()
-					if not self.RunoverExceptions[v] and health > 0 then
-						local d = DamageInfo()
-						local effectpos = center + dir * dir:Dot(v:GetPos() - center)
-						if self:IsMine() then
-							ss.CreateHitEffect(color, 0, effectpos, -forward)
-						end
-					
-						if SERVER then
-							d:SetDamage(p.mCoreDamage)
-							d:SetDamageForce(forward)
-							d:SetDamagePosition(effectpos)
-							d:SetDamageType(DMG_GENERIC)
-							d:SetMaxDamage(p.mCoreDamage)
-							d:SetReportedPosition(effectpos)
-							d:SetAttacker(self.Owner)
-							d:SetInflictor(self)
-							d:ScaleDamage(ss.ToHammerHealth)
-							ss.ProtectedCall(v.TakeDamageInfo, v, d)
-							knockback = knockback or v:Health() > 0
-						else
-							knockback = knockback or health > p.mCoreDamage * ss.ToHammerHealth
+					if v ~= self.Owner then
+						keys[v] = true
+						local health = v:Health()
+						if not self.RunoverExceptions[v] and health > 0 then
+							local d = DamageInfo()
+							local effectpos = center + dir * dir:Dot(v:GetPos() - center)
+							if self:IsMine() then
+								ss.CreateHitEffect(color, 0, effectpos, -forward)
+							end
+						
+							print(v)
+							if SERVER then
+								d:SetDamage(p.mCoreDamage)
+								d:SetDamageForce(forward)
+								d:SetDamagePosition(effectpos)
+								d:SetDamageType(DMG_GENERIC)
+								d:SetMaxDamage(p.mCoreDamage)
+								d:SetReportedPosition(effectpos)
+								d:SetAttacker(self.Owner)
+								d:SetInflictor(self)
+								d:ScaleDamage(ss.ToHammerHealth)
+								ss.ProtectedCall(v.TakeDamageInfo, v, d)
+								knockback = knockback or v:Health() > 0
+							else
+								knockback = knockback or health > p.mCoreDamage * ss.ToHammerHealth
+							end
 						end
 					end
 				end
