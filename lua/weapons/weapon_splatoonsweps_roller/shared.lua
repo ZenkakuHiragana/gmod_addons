@@ -7,7 +7,7 @@ SWEP.MODE = {READY = 0, ATTACK = 1, PAINT = 2}
 SWEP.CollapseRollTime = 10 * ss.FrameToSec
 SWEP.PreSwingTime = 10 * ss.FrameToSec
 SWEP.SwingAnimTime = 10 * ss.FrameToSec
-SWEP.SwingBackWait = 20 * ss.FrameToSec
+SWEP.SwingBackWait = 24 * ss.FrameToSec
 
 function SWEP:AddPlaylist(p)
 	p[#p + 1] = self.EmptyRollSound
@@ -172,6 +172,10 @@ function SWEP:Move(ply, mv)
 			self:SetStartTime(CurTime())
 			if self:IsFirstTimePredicted() then
 				self:EmitSound "SplatoonSWEPs.RollerHolster"
+			end
+
+			if CLIENT then
+				self.NextCrosshairDrawTime = CurTime() + self.CrosshairDrawDelay
 			end
 		end
 

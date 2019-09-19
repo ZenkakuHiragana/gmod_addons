@@ -181,17 +181,18 @@ function ss.PrepareInkSurface(write)
 			else
 				for t, v in ipairs(surf.Vertices[k]) do
 					v.u, v.v = v.u / divuv, v.v / divuv
-					if t < 3 then continue end
-					for _, i in ipairs {t - 1, t, 1} do
-						local v = surf.Vertices[k][i]
-						mesh.Normal(surf.Normals[k])
-						mesh.Position(v.pos)
-						mesh.TexCoord(0, v.u, v.v)
-						mesh.TexCoord(1, v.u, v.v)
-						mesh.AdvanceVertex()
-					end
+					if t > 2 then
+						for _, i in ipairs {t - 1, t, 1} do
+							local v = surf.Vertices[k][i]
+							mesh.Normal(surf.Normals[k])
+							mesh.Position(v.pos)
+							mesh.TexCoord(0, v.u, v.v)
+							mesh.TexCoord(1, v.u, v.v)
+							mesh.AdvanceVertex()
+						end
 
-					ContinueMesh()
+						ContinueMesh()
+					end
 				end
 			end
 
@@ -386,6 +387,63 @@ function ss.PostRender(w)
 	ss.ProtectedCall(w.HideRTScope, w, alpha)
 	render.PopRenderTarget()
 	ss.RenderingRTScope = nil
+end
+
+-- Draws V-shaped crosshair used by Rollers, Sloshers, etc
+-- The weapon needs these fields:
+-- table self.Crosshair ... a table of CurTime()-based times
+-- number self.Parameters.mTargetEffectScale -- a scale for width
+-- number self.Parameters.mTargetEffectVelRate -- a scale for depth
+local EaseInOut = math.EaseInOut
+local delay = 20 * ss.FrameToSec
+local duration = 72 * ss.FrameToSec
+local max = math.max
+local mat = Material "debug/debugtranslucentvertexcolor"
+local Remap = math.Remap
+local vector_one = ss.vector_one
+function ss.DrawVCrosshair(self, dodraw, isfirstperson)
+	local aim = self:GetAimVector()
+	local ang = aim:Angle()
+	local alphastart = 0.8
+	local alphaend = 1 - alphastart
+	local colorstart = 0.25
+	local colorend = 1 - colorstart
+	local degstart = isfirstperson and 0 or 0.4
+	local degend = 1 - degstart
+	local inkcolor = self:GetInkColorProxy()
+	local rot = ang:Up()
+	local degbase = isfirstperson and 6 or 14
+	local deg = degbase * self.Parameters.mTargetEffectScale
+	local degmulstart = isfirstperson and 0.6 or 1
+	local dz = 8
+	local width = isfirstperson and 0.25 or 0.5
+	ang:RotateAroundAxis(ang:Right(), 4)
+	render.SetMaterial(mat)
+
+	local org = self:GetShootPos() - rot * dz
+	for i, v in ipairs(self.Crosshair) do
+		local linearfrac = (CurTime() - v) / duration
+		local alphafrac = EaseInOut(Remap(max(linearfrac, alphastart), alphastart, 1, 0, 1), 0, 1)
+		local colorfrac = EaseInOut(Remap(max(linearfrac, colorstart), colorstart, 1, 0, 1), 0, 1)
+		local degfrac = EaseInOut(Remap(max(linearfrac, degstart), degstart, 1, 0, 1), 0, 1)
+		local movefrac = EaseInOut(linearfrac, 0, 1)
+		local radius = Lerp(movefrac, 40, 100 * self.Parameters.mTargetEffectVelRate)
+		local radiusside = radius * 0.85
+		local color = ColorAlpha(LerpVector(colorfrac, vector_one, inkcolor):ToColor(), Lerp(alphafrac, 255, 0))
+		local angleft = Angle(ang)
+		local angright = Angle(ang)
+		local degside = deg * Lerp(degfrac, degmulstart, 1.1)
+		angleft:RotateAroundAxis(rot, degside)
+		angright:RotateAroundAxis(rot, -degside)
+		local start = org + ang:Forward() * radius
+		local endleft = org + angleft:Forward() * radiusside
+		local endright = org + angright:Forward() * radiusside
+		if linearfrac > 1 then self.Crosshair[i] = nil end
+		if dodraw then
+			render.DrawBeam(start, endleft, width, 0, 1, color)
+			render.DrawBeam(start, endright, width, 0, 1, color)
+		end
+	end
 end
 
 hook.Add("PostPlayerDraw", "SplatoonSWEPs: Thirdperson player fadeout", ss.hook "PostPlayerDraw")

@@ -40,7 +40,7 @@ The aim of this rework is the following:
     * [x] Fling ink at a short range on +attack.
     * [x] Then, it'll be able to leave a trail of ink.
     * [x] Ability to "run over."
-    * [ ] Make a crosshair.
+    * [x] Make a crosshair.
     * [ ] Make a proper ink effect.
     
 ## Upcoming features

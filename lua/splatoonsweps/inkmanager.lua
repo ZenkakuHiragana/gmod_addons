@@ -3,7 +3,6 @@
 
 local ss = SplatoonSWEPs
 if not ss then return end
-local TimerCycle = util.TimerCycle
 local abs = math.abs
 local Angle = Angle
 local BSPPairs = ss.BSPPairs
@@ -16,8 +15,6 @@ local GetBoundingBox = ss.GetBoundingBox
 local ipairs = ipairs
 local isnumber = isnumber
 local KeyFromValue = table.KeyFromValue
-local max = math.max
-local min = math.min
 local mp = ss.mp
 local net_Send = net.Send
 local net_Start = net.Start
@@ -28,35 +25,23 @@ local net_WriteInt = net.WriteInt
 local net_WriteUInt = net.WriteUInt
 local net_WriteVector = net.WriteVector
 local NormalizeAngle = math.NormalizeAngle
-local next = next
 local pairs = pairs
 local rad = math.rad
-local Round = math.Round
-local select = select
 local SequentialSurfaces = ss.SequentialSurfaces
 local SERVER = SERVER
 local sin = math.sin
-local sort = table.sort
 local sp = ss.sp
 local SuppressHostEvents = SuppressHostEvents
-local tableremove = ss.tableremove
 local To2D = ss.To2D
 local To3D = ss.To3D
-local unpack = unpack
-local util_Effect = util.Effect
 local Vector = Vector
-local vector_one = ss.vector_one
 local vector_origin = vector_origin
-local vector_half = vector_one / 2
 local WorldToLocal = WorldToLocal
-local function CheckBounds(v) return next(v.bounds) end
-local eff = EffectData()
 local MAX_COS_DEG_DIFF = ss.MAX_COS_DEG_DIFF
 local MIN_BOUND = 20 -- Ink minimum bounding box scale
 local POINT_BOUND = ss.vector_one * .1
 local reference_polys = {}
 local reference_vert = Vector(1)
-local boundsizescale = math.sqrt(math.pi) * .375
 local circle_polys = 360 / 12
 for i = 1, circle_polys do
 	reference_polys[#reference_polys + 1] = Vector(reference_vert)
@@ -121,11 +106,6 @@ local AddInkRectangle = ss.AddInkRectangle
 function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classname)
 	inktype = floor(inktype)
 	angle = NormalizeAngle(angle)
-	eff:SetAttachment(color)
-	eff:SetEntity(ply)
-	eff:SetFlags(inktype)
-	eff:SetMagnitude(ratio)
-	eff:SetOrigin(pos)
 
 	local area = 0
 	local ang, polys = normal:Angle(), {}
@@ -144,7 +124,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 			local angdiff = surf.Normals[i]:Dot(normal)
 			local div = Either(SERVER, SERVER and index < 0, ss.Displacements[i]) and 2 or 1
 			if angdiff > MAX_COS_DEG_DIFF / div and CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then
-				local localang = select(2, WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle()))
+				local _, localang = WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle())
 				localang = ang.yaw - localang.roll + surf.DefaultAngles[i]
 				local id = SERVER and index or i * (ss.Displacements[i] and -1 or 1)
 				local misc = Vector(radius, localang + (CLIENT and surf.Moved[i] and 90 or 0), ratio)

@@ -210,9 +210,6 @@ end
 function SWEP:ViewModelDrawn(vm)
 	if self.SurpressDrawingVM or self:GetHolstering() or
 	not (IsValid(self) and IsValid(self.Owner)) then return end
-	local bone_ent = self.Owner
-	-- self:UpdateBonePositions(vm)
-
 	for k, name in ipairs(self.vRenderOrder) do
 		local v = self.VElements[name]
 		if not v then self.vRenderOrder = nil break end
@@ -257,7 +254,7 @@ function SWEP:ViewModelDrawn(vm)
 				render.SuppressEngineLighting(true)
 			end
 
-			ss.ProtectedCall(self.PreDrawViewModelElements, self, model, bone_ent, ang, pos, v, matrix)
+			ss.ProtectedCall(self.PreDrawViewModelElements, self, model, self.Owner, ang, pos, v, matrix)
 			model:EnableMatrix("RenderMultiply", matrix)
 			render.SetColorModulation(v.color.r / 255, v.color.g / 255, v.color.b / 255)
 			render.SetBlend(v.color.a / 255)
@@ -328,6 +325,7 @@ end
 
 function SWEP:DrawWorldModelTranslucent()
 	if IsValid(self.Owner) and self:GetHolstering() then return end
+	if ss.ProtectedCall(self.PreDrawWorldModelTranslucent, self) then return end
 	if IsValid(self.Owner) and self:Crouching() and (self:GetInInk()
 	or self:GetNWBool "becomesquid" and IsValid(self.Squid)) then return end
 
