@@ -173,10 +173,6 @@ function SWEP:Move(ply, mv)
 			if self:IsFirstTimePredicted() then
 				self:EmitSound "SplatoonSWEPs.RollerHolster"
 			end
-
-			if CLIENT then
-				self.NextCrosshairDrawTime = CurTime() + self.CrosshairDrawDelay
-			end
 		end
 
 		local s = self:GetInk() > 0 and self.RollingSound or self.EmptyRollSound

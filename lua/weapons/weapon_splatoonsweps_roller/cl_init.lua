@@ -107,8 +107,13 @@ local function DrawVCrosshair(self, isfirstperson)
 		self.NextCrosshairSpawnTime = CurTime() + (self.CrosshairSpawnDelay or delay)
 	end
 
+	if self.Mode ~= self.MODE.READY and self:GetMode() == self.MODE.READY then
+		self.NextCrosshairDrawTime = CurTime() + self.CrosshairDrawDelay
+	end
+
 	local dodraw = CurTime() > self.NextCrosshairDrawTime and self:GetMode() == self.MODE.READY
 	ss.DrawVCrosshair(self, dodraw, isfirstperson)
+	self.Mode = self:GetMode()
 end
 
 function SWEP:ClientInit()
