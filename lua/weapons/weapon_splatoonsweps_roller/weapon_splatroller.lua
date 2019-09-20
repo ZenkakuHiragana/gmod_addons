@@ -2,6 +2,7 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
+SWEP.Bodygroup = {nil, 0}
 SWEP.PreSwingSound = "SplatoonSWEPs.RollerPreSwing"
 SWEP.SwingSound = "SplatoonSWEPs.RollerSwing"
 SWEP.SplashSound = "SplatoonSWEPs.RollerSplashLight"
@@ -10,19 +11,21 @@ SWEP.Special = "killerwail"
 SWEP.Sub = "suctionbomb"
 SWEP.Variations = {
 	{
-		Customized = true,
 		Bodygroup = {nil, 1},
+		Customized = true,
 		Special = "kraken",
 		Sub = "squidbeakon",
 		Suffix = "krakon",
 	},
 	{
+		Bodygroup = {},
 		ClassName = "splatroller_corocoro",
 		SheldonsPicks = true,
 		Special = "inkzooka",
 		Sub = "splashwall",
 	},
 	{
+		Bodygroup = {},
 		ClassName = "heroroller",
 		IsHeroWeapon = true,
 	},

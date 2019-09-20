@@ -4,6 +4,7 @@ local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
 SWEP.ADSAngOffset = Angle(-2, 1.5, -45)
 SWEP.ADSOffset = Vector(-5, 0, -0.7)
+SWEP.Bodygroup = {0}
 SWEP.IronSightsPos = {
 	Vector(), -- right
 	Vector(), -- left

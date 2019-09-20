@@ -279,10 +279,6 @@ function SWEP:Move(ply, mv)
 		self:EmitSound(self.SwingSound)
 		self:EmitSound(self.SplashSound)
 		self:CreateInk(p.mSplashNum - splashnum)
-
-		local e = EffectData()
-		e:SetEntity(self)
-		util.Effect("SplatoonSWEPsRollerSplash", e, true, self.IgnorePrediction)
 	end
 
 	if (ss.sp or CLIENT) and not (self.NotEnoughInk or enoughink) then

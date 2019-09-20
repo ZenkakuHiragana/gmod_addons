@@ -2,6 +2,7 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
+SWEP.Bodygroup = {0, 0}
 SWEP.RTScopeNum = 4							-- Submaterial number for RT scope option.
 SWEP.ScopeAng = Angle()						-- Scoped viewmodel angles [deg]
 SWEP.ScopePos = Vector(-11.5, 3.1, 2.55)	-- Scoped viewmodel position [Hammer units]
@@ -11,14 +12,14 @@ SWEP.Special = "echolocator"
 SWEP.Sub = "burstbomb"
 SWEP.Variations = {
 	{
-		Bodygroup = {1},
+		Bodygroup = {1, 0},
 		Customized = true,
 		Special = "kraken",
 		Sub = "squidbeakon",
 		Suffix = "custom",
 	},
 	{
-		Bodygroup = {[2] = 1},
+		Bodygroup = {0, 1},
 		Scoped = true,
 		Suffix = "scope",
 	},

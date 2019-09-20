@@ -125,7 +125,7 @@ end
 function SWEP:ClientHolster() table.Empty(self.Crosshair) end
 function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	DrawVCrosshair(self, true)
-	self.VMBones = self.VMBones or {
+	self.VMBones = {
 		Neck = vm:LookupBone "neck_1",
 		Roll = vm:LookupBone "roll_root_1" or self:LookupBone "roll_1",
 		Root = vm:LookupBone "root_1",
@@ -147,7 +147,7 @@ function SWEP:PreViewModelDrawn(vm, weapon, ply)
 end
 
 function SWEP:PreDrawWorldModel(vm, weapon, ply)
-	self.Bones = self.Bones or {
+	self.Bones = {
 		Neck = self:LookupBone "neck_1",
 		Roll = self:LookupBone "roll_root_1" or self:LookupBone "roll_1",
 		Root = self:LookupBone "root_1",

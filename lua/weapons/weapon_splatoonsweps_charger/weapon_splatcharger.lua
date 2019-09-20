@@ -3,6 +3,7 @@ AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
 local ScopePos = Vector(-5, 5.98, 1.13)
+SWEP.Bodygroup = {0}
 SWEP.RTScopeNum = 10				-- Submaterial number for RT scope option.
 SWEP.ScopeAng = Angle()				-- Scoped viewmodel angles [deg]
 SWEP.ScopePos = Vector(-5, 6, 2.2)	-- Scoped viewmodel position [Hammer units]

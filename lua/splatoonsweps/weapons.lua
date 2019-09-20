@@ -371,12 +371,12 @@ function ss.CustomPrimary.weapon_splatoonsweps_roller(weapon)
 	weapon.Range = p.mSplashInitSpeedBase * (p.mSplashStraightFrame + ss.RollerDecreaseFrame / 2)
 end
 
+ss.DispatchEffect = {}
 local SplatoonSWEPsMuzzleSplash = 0
 local SplatoonSWEPsMuzzleRing = 1
 local SplatoonSWEPsMuzzleMist = 2
 local SplatoonSWEPsMuzzleFlash = 3
-
-ss.DispatchEffect = {}
+local SplatoonSWEPsRollerSplash = 4
 local sd, e = ss.DispatchEffect, EffectData()
 sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
 	local tpslag = self:IsCarriedByLocalPlayer()
@@ -460,4 +460,10 @@ sd[SplatoonSWEPsMuzzleFlash] = function(self, options, pos, ang)
 	e:SetFlags(1)
 	util.Effect("SplatoonSWEPsMuzzleFlash", e, true,
 	not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+end
+
+sd[SplatoonSWEPsRollerSplash] = function(self, options, pos, ang)
+	local e = EffectData()
+	e:SetEntity(self)
+	util.Effect("SplatoonSWEPsRollerSplash", e, true, self.IgnorePrediction)
 end

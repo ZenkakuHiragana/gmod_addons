@@ -4,6 +4,7 @@ local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
 SWEP.ADSAngOffset = Angle(5, 0, 0)
 SWEP.ADSOffset = Vector(-5, 0, 3.8)
+SWEP.Bodygroup = {[0] = 0}
 SWEP.ShootSound = "SplatoonSWEPs.L-3"
 SWEP.Special = "killerwail"
 SWEP.Sub = "disruptor"

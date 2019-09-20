@@ -247,7 +247,6 @@ function SWEP:Move(ply)
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:ResetCharge()
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
-	self:ResetSequence "fire"
 
 	if not ply:IsPlayer() then return end
 	ply:SetAnimation(PLAYER_ATTACK1)

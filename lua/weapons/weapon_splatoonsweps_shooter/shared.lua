@@ -165,7 +165,6 @@ function SWEP:CreateInk()
 	})
 
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
-	self:ResetSequence "fire"
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 	self:EmitSound(self.ShootSound)

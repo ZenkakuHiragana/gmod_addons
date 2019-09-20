@@ -4,18 +4,17 @@ local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
 SWEP.ADSAngOffset = Angle(0, 0, 0)
 SWEP.ADSOffset = Vector(0, 0, 1.5)
+SWEP.Bodygroup = {0}
 SWEP.ShootSound = "SplatoonSWEPs.Splash-o-matic"
 SWEP.Special = "bombrush"
 SWEP.Sub = "suctionbomb"
-SWEP.Variations = {
-	{
+SWEP.Variations = {{
 		Bodygroup = {1},
 		Customized = true,
 		Special = "inkzooka",
 		Sub = "burstbomb",
 		Suffix = "neo",
-	},
-}
+}}
 
 ss.SetPrimary(SWEP, {
 	mRepeatFrame = 5,

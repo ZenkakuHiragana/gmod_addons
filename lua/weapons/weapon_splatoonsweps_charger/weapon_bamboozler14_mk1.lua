@@ -2,6 +2,7 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
+SWEP.Bodygroup = {0}
 SWEP.IsBamboozler = true
 SWEP.ScopeAng = Angle(2, 0, 0)		-- Scoped viewmodel angles [deg]
 SWEP.ScopePos = Vector(-8.5, 6, 3)	-- Scoped viewmodel position [Hammer units]

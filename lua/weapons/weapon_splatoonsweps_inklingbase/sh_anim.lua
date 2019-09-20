@@ -78,9 +78,11 @@ end
 -- event = 5xyy, x = option index, yy = effect type
 -- yy = 0 : SplatoonSWEPsMuzzleSplash
 --     x = 0 : Attach to muzzle
---     x = 1 : Go backward (for charger's reverse splash)
+--     x = 1 : Go backward (for charger)
 -- yy = 1 : SplatoonSWEPsMuzzleRing
 -- yy = 2 : SplatoonSWEPsMuzzleMist
+-- yy = 3 : SplatoonSWEPsMuzzleFlash
+-- yy = 4 : SplatoonSWEPsRollerSplash
 function SWEP:FireAnimationEvent(pos, ang, event, options)
 	if 5000 <= event and event < 6000 then
 		event = event - 5000
