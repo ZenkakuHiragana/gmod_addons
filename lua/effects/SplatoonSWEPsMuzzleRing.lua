@@ -8,32 +8,51 @@ local DegStep = 90 / Division
 local mdl = Model "models/props_junk/PopCan01a.mdl"
 local mat = Material "splatoonsweps/effects/ring"
 local drawviewmodel = GetConVar "r_drawviewmodel"
-function EFFECT:Init(e)
-	self:SetModel(mdl)
-	self:SetMaterial(ss.Materials.Effects.Invisible)
-	self.Weapon = e:GetEntity()
-	if not IsValid(self.Weapon) then return end
-	local f = e:GetFlags()
-	self.Color = ss.GetColor(e:GetColor())
-	self.deg = e:GetScale()
-	self.rad = e:GetRadius()
-	self.LifeTime = e:GetAttachment() * ss.FrameToSec
-	self.UseRefract = bit.band(f, 1) > 0
-	self.curl = self.UseRefract and 3 or 2
-	self.tmax = self.rad / 3
-	self.tmin = self.rad / 6
-	self.InitTime = CurTime() - self.Weapon:Ping() * bit.band(f, 128) / 128
-	local pos, ang = self.Weapon:GetMuzzlePosition()
-	self:SetPos(pos)
-	self:SetAngles(ang)
-end
-
 local function AdvanceVertex(self, pos, norm, u, v, alpha)
 	mesh.Color(self.Color.r, self.Color.g, self.Color.b, alpha)
 	mesh.Normal(norm)
 	mesh.Position(pos)
 	mesh.TexCoord(0, u, v)
 	mesh.AdvanceVertex()
+end
+
+function EFFECT:Init(e)
+	self:SetModel(mdl)
+	self:SetMaterial(ss.Materials.Effects.Invisible)
+	self.Weapon = e:GetEntity()
+	if not IsValid(self.Weapon) then return end
+	local f = e:GetFlags()
+	local lag = bit.band(f, 128) > 0
+	local ping = lag and self.Weapon:Ping() or 0
+	self.Color = ss.GetColor(e:GetColor())
+	self.deg = e:GetScale()
+	self.rad = e:GetRadius()
+	self.LifeTime = e:GetAttachment() * ss.FrameToSec
+	self.IsRollerSwing = bit.band(f, 2) > 0
+	self.UseRefract = bit.band(f, 1) > 0
+	self.curl = self.UseRefract and 3 or 2
+	self.tmax = self.rad / 3
+	self.tmin = self.rad / 6
+	self.radmin = MinRadius
+	self.InitTime = CurTime() - ping
+	local pos, ang = self.Weapon:GetMuzzlePosition()
+	if self.IsRollerSwing and IsValid(self.Weapon.Owner) then
+		local forward = self.Weapon.Owner:GetForward()
+		local right = self.Weapon.Owner:GetRight()
+		local up = self.Weapon.Owner:GetUp()
+		local yaw = self.Weapon.Owner:GetAngles().yaw
+		pos:Add(forward * 60)
+		pos:Add(right * e:GetScale())
+		pos:Add(up * -20)
+		ang = Angle(0, yaw + 90, -135)
+		self.deg = 0
+		self.tmax = self.rad
+		self.tmin = self.rad
+		self.radmin = self.rad
+	end
+
+	self:SetPos(pos)
+	self:SetAngles(ang)
 end
 
 function EFFECT:Render()
@@ -52,20 +71,28 @@ function EFFECT:Render()
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	if not isvector(pos) then return end
 	if not isangle(ang) then return end
+	if self.IsRollerSwing then
+		pos = self:GetPos()
+		ang = self:GetAngles()
+	end
 
 	local g = physenv.GetGravity()
 	local norm = ang:Forward()
 	local mul = self.Weapon:IsTPS() and 1 or .5
 	local LifeTime = math.max(0, CurTime() - self.InitTime)
 	local f = LifeTime / self.LifeTime
-	pos:Add(norm * self.tmax * f + g / 2 * LifeTime^2)
-	self:SetPos(pos)
+	if self.IsRollerSwing then
+		ang.roll = Lerp(f, -157.5, -67.5)
+	else
+		pos:Add(norm * self.tmax * f + g / 2 * LifeTime^2)
+		self:SetPos(pos)
+	end
 
 	if self.UseRefract then render.UpdateRefractTexture() end
 	render.SetMaterial(self.UseRefract and ss.GetWaterMaterial() or mat)
-	local alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
+	local alpha = Lerp(math.EaseInOut(f, 0, 1), 255, 0)
 	local t = Lerp(f, self.tmax, self.tmin)
-	local r = Lerp(f, MinRadius, self.rad) * mul
+	local r = Lerp(f, self.radmin, self.rad) * mul
 	for x = 0, 2 do
 		mesh.Begin(MATERIAL_TRIANGLE_STRIP, Division * 2)
 		for i = 0, Division do

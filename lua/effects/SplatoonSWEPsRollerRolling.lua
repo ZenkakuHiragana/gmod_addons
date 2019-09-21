@@ -12,5 +12,5 @@ function EFFECT:Init(e)
     local a = ent:LookupAttachment "roll"
 	local p = CreateParticleSystem(ent, ss.Particles.RollerRolling, PATTACH_POINT_FOLLOW, a, vector_origin)
     p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, w:GetInkColorProxy())
-    p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * e:GetRadius())
+	p:AddControlPoint(2, game.GetWorld(), PATTACH_WORLDORIGIN, nil, vector_up * e:GetRadius())
 end

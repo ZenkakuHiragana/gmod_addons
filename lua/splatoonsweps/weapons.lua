@@ -379,8 +379,8 @@ local SplatoonSWEPsMuzzleFlash = 3
 local SplatoonSWEPsRollerSplash = 4
 local sd, e = ss.DispatchEffect, EffectData()
 sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
-	local tpslag = self:IsCarriedByLocalPlayer()
-	and self.Owner:ShouldDrawLocalPlayer() and 128 or 0
+	local tpslag = self:IsCarriedByLocalPlayer() and
+	self.Owner:ShouldDrawLocalPlayer() and 128 or 0
 	local ang, a, s, r = angle_zero, 7, 2, 25
 	if options[2] == "CHARGER" then
 		r, s = Lerp(self:GetFireAt(), 20, 60) / 2, 6
@@ -403,8 +403,8 @@ end
 sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 	local numpieces = options[1]
 	local da, r1, r2, t1, t2 = math.Rand(0, 360), 40, 30, 6, 13
-	local tpslag = self:IsCarriedByLocalPlayer()
-	and self.Owner:ShouldDrawLocalPlayer() and 128 or 0
+	local tpslag = self:IsCarriedByLocalPlayer() and
+	self.Owner:ShouldDrawLocalPlayer() and 128 or 0
 	e:SetColor(self:GetNWInt "inkcolor")
 	e:SetEntity(self)
 
@@ -417,16 +417,17 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 	end
 
 	for i = 0, 4 do
-		e:SetAttachment(t1)
+		e:SetAttachment(t1) -- Effect duration[frames]
 		e:SetFlags(tpslag + 1) -- 1: Refract effect
-		e:SetRadius(r1)
-		e:SetScale(i * 72 + da)
+		e:SetRadius(r1) -- Effect scale
+		e:SetScale(i * 72 + da) -- Initial rotation
 		util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
-		if i > numpieces then continue end
-		e:SetAttachment(t2)
-		e:SetFlags(tpslag) -- 0: Splash effect
-		e:SetRadius(r2)
-		util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
+		if i <= numpieces then
+			e:SetAttachment(t2)
+			e:SetFlags(tpslag) -- 0: Splash effect
+			e:SetRadius(r2)
+			util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
+		end
 	end
 end
 
@@ -439,7 +440,6 @@ sd[SplatoonSWEPsMuzzleMist] = function(self, options, pos, ang)
 		if self:GetADS() then dir = ang:Forward() end
 	end
 
-	local e = EffectData()
 	e:SetAttachment(self:LookupAttachment "muzzle")
 	e:SetColor(self:GetNWInt "inkcolor")
 	e:SetEntity(mdl)
@@ -451,14 +451,22 @@ sd[SplatoonSWEPsMuzzleMist] = function(self, options, pos, ang)
 end
 
 sd[SplatoonSWEPsMuzzleFlash] = function(self, options, pos, ang)
-	local e = EffectData()
 	e:SetEntity(self)
 	e:SetFlags(1)
 	util.Effect("SplatoonSWEPsMuzzleFlash", e, true, self.IgnorePrediction)
 end
 
 sd[SplatoonSWEPsRollerSplash] = function(self, options, pos, ang)
-	local e = EffectData()
 	e:SetEntity(self)
 	util.Effect("SplatoonSWEPsRollerSplash", e, true, self.IgnorePrediction)
+	
+	local color = self:GetNWInt "inkcolor"
+	e:SetAttachment(4)
+	e:SetColor(color)
+	e:SetFlags(2) -- 2: Roller's setup, don't follow the muzzle position
+	e:SetRadius(50)
+	for i = -3, 3 do
+		e:SetScale(10 * i) -- Roller's setup, initial position offset
+		util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
+	end
 end

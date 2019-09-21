@@ -140,7 +140,7 @@ function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	end
 
 	local ping = self:IsMine() and self:Ping() or 0
-	if CurTime() + ping < self:GetEndTime() then return end
+	if CurTime() + ping < self:GetEndTime() + self.SwingAnimTime then return end
 	local h = self.Owner:OBBMaxs().z
 	AdjustRollerAngles(self, 40, h / 2, Width, h * 2, vm)
 	RotateRoll(self, vm)
@@ -156,8 +156,9 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 	-- Animate the neck
 	local mode = self:GetMode()
 	local ct = CurTime() + (self:IsMine() and self:Ping() or 0)
-	local neck, start, duration, n1, n2 = 0, self:GetStartTime()
+	local neck, start = 0, self:GetStartTime()
 	if mode ~= self.MODE.PAINT then
+		local duration, n1, n2
 		if mode == self.MODE.READY then
 			duration = self.CollapseRollTime
 			n1, n2 = 0, -90
@@ -169,7 +170,7 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 		local f = math.TimeFraction(start, start + duration, ct)
 		neck = Lerp(math.EaseInOut(math.Clamp(f, 0, 1), .25, .25), n1, n2)
 		self:ManipulateBoneAngles(self.Bones.Root, angle_zero)
-	elseif ct > self:GetEndTime() then -- Adjust the angle
+	elseif ct > self:GetEndTime() + self.SwingAnimTime then -- Adjust the angle
 		local h = self.Owner:OBBMaxs().z
 		AdjustRollerAngles(self, 75, h, Width, h * 3)
 		RotateRoll(self)
