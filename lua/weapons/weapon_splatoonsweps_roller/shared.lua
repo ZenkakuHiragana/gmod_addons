@@ -8,6 +8,7 @@ SWEP.CollapseRollTime = 10 * ss.FrameToSec
 SWEP.PreSwingTime = 10 * ss.FrameToSec
 SWEP.SwingAnimTime = 10 * ss.FrameToSec
 SWEP.SwingBackWait = 24 * ss.FrameToSec
+SWEP.RollingEffectDelay = 12 * ss.FrameToSec
 
 function SWEP:AddPlaylist(p)
 	p[#p + 1] = self.EmptyRollSound
@@ -122,6 +123,7 @@ function SWEP:SharedInit()
 	self.RunoverExceptions = {}
 	self:SetStartTime(CurTime())
 	self:SetEndTime(CurTime())
+	self:SetNextRollingEffectTime(CurTime())
 	self:SetMode(self.MODE.READY)
 	self:AddSchedule(0, function(self, schedule)
 		self.Bodygroup[1] = self:GetInk() > 0 and 0 or 1
@@ -150,6 +152,7 @@ end
 function SWEP:CustomDataTables()
 	self:AddNetworkVar("Float", "StartTime")
 	self:AddNetworkVar("Float", "EndTime")
+	self:AddNetworkVar("Float", "NextRollingEffectTime")
 	self:AddNetworkVar("Float", "RunoverDelay")
 	self:AddNetworkVar("Int", "Mode")
 end
@@ -205,6 +208,18 @@ function SWEP:Move(ply, mv)
 				self:SetInk(math.max(self:GetInk() - p.mInkConsumeCore, 0))
 				ss.Paint(t.HitPos, t.HitNormal, width, color, yaw, inktype, .25, self.Owner, self.ClassName)
 
+				if CurTime() > self:GetNextRollingEffectTime() then
+					self:SetNextRollingEffectTime(CurTime() + self.RollingEffectDelay)
+					if self:IsFirstTimePredicted() then
+						if ss.mp and SERVER then SuppressHostEvents(self.Owner) end
+						local e = EffectData()
+						e:SetEntity(self)
+						e:SetRadius(v)
+						util.Effect("SplatoonSWEPsRollerRolling", e, true, self.IgnorePrediction)
+						if ss.mp and SERVER then SuppressHostEvents(NULL) end
+					end
+				end
+
 				local dir = self:GetRight()
 				local radius = p.mCoreColRadius / 2
 				local width = p.mCoreColWidthHalf
@@ -226,7 +241,6 @@ function SWEP:Move(ply, mv)
 								ss.CreateHitEffect(color, 0, effectpos, -forward)
 							end
 						
-							print(v)
 							if SERVER then
 								d:SetDamage(p.mCoreDamage)
 								d:SetDamageForce(forward)
@@ -273,6 +287,7 @@ function SWEP:Move(ply, mv)
 	self:SetInk(math.max(self:GetInk() - p.mInkConsumeSplash, 0))
 	self:SetMode(self.MODE.PAINT)
 	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
+	self:ResetSequence "fire2" -- This is needed in multiplayer to prevent delaying muzzle effects.
 
 	if not self:IsFirstTimePredicted() then return end
 	if enoughink or splashnum > 0 then

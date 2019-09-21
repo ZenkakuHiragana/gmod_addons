@@ -397,8 +397,7 @@ sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
 	e:SetFlags(tpslag) -- Splash mode
 	e:SetScale(s) -- Splash length
 	e:SetRadius(r) -- Splash radius
-	util.Effect("SplatoonSWEPsMuzzleSplash", e, true,
-	not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+	util.Effect("SplatoonSWEPsMuzzleSplash", e, true, self.IgnorePrediction)
 end
 
 sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
@@ -422,14 +421,12 @@ sd[SplatoonSWEPsMuzzleRing] = function(self, options, pos, ang)
 		e:SetFlags(tpslag + 1) -- 1: Refract effect
 		e:SetRadius(r1)
 		e:SetScale(i * 72 + da)
-		util.Effect("SplatoonSWEPsMuzzleRing", e, true,
-		not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+		util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
 		if i > numpieces then continue end
 		e:SetAttachment(t2)
 		e:SetFlags(tpslag) -- 0: Splash effect
 		e:SetRadius(r2)
-		util.Effect("SplatoonSWEPsMuzzleRing", e, true,
-		not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+		util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
 	end
 end
 
@@ -450,16 +447,14 @@ sd[SplatoonSWEPsMuzzleMist] = function(self, options, pos, ang)
 	e:SetOrigin(vector_origin)
 	e:SetScale(self:IsTPS() and 6 or 3)
 	e:SetStart(self:TranslateViewmodelPos(pos) + dir * 100)
-	util.Effect("SplatoonSWEPsMuzzleMist", e, true,
-	not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+	util.Effect("SplatoonSWEPsMuzzleMist", e, true, self.IgnorePrediction)
 end
 
 sd[SplatoonSWEPsMuzzleFlash] = function(self, options, pos, ang)
 	local e = EffectData()
 	e:SetEntity(self)
 	e:SetFlags(1)
-	util.Effect("SplatoonSWEPsMuzzleFlash", e, true,
-	not self.Owner:IsPlayer() and SERVER and ss.mp or nil)
+	util.Effect("SplatoonSWEPsMuzzleFlash", e, true, self.IgnorePrediction)
 end
 
 sd[SplatoonSWEPsRollerSplash] = function(self, options, pos, ang)
