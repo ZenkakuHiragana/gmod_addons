@@ -361,9 +361,9 @@ end
 
 -- A render function for rollers' splash, slosher's projectile, etc.
 local duration = 60 * ss.FrameToSec
-local rendertarget = ss.RenderTarget.InkSplash
-local rendermaterial = ss.RenderTarget.InkSplashMaterial
 function EFFECT:Render2()
+	local rendertarget = ss.RenderTarget.InkSplash
+	local rendermaterial = ss.RenderTarget.InkSplashMaterial
 	local t = math.max(CurTime() - self.Real.InitTime, 0)
 	local alpha = Lerp(math.EaseInOut(math.Clamp(t / duration, 0, 1), 0, 1), 0.01, 0.5)
 	local pos, tailpos = self:GetPos(), self.Tail.Trace.endpos
