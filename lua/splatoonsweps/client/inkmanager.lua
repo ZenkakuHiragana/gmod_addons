@@ -80,6 +80,16 @@ end
 
 local function ProcessPaintQueue()
 	while not rt.Ready do coroutine.yield() end
+	local NumRepetition = 5
+	local AlphaReferenceBase = NumRepetition + 1
+	local BlendFuncs = {
+		BLEND_ONE,
+		BLEND_ZERO,
+		BLENDFUNC_ADD,
+		BLEND_ONE,
+		BLEND_ONE,
+		BLENDFUNC_ADD,
+	}
 	local Benchmark = SysTime()
 	local texturename = "splatoonsweps/inkshot/shot%s"
 	local Angles = surf.Angles
@@ -110,8 +120,10 @@ local function ProcessPaintQueue()
 	local next = next
 	local PaintQueue = ss.PaintQueue
 	local rad = math.rad
+	local Recompute = inkmaterial.Recompute
 	local RotateAroundAxis = Angle().RotateAroundAxis
 	local Round = math.Round
+	local SetFloat = inkmaterial.SetFloat
 	local SetTexture = inkmaterial.SetTexture
 	local sin = math.sin
 	local SortedPairs = SortedPairs
@@ -119,11 +131,13 @@ local function ProcessPaintQueue()
 	local To2D = ss.To2D
 	local To3D = ss.To3D
 	local ToColor = Vector().ToColor
+	local unpack = unpack
 	local Vector = Vector
 	local yield = coroutine.yield
 
 	local Start2D = cam.Start2D
 	local End2D = cam.End2D
+	local OverrideBlend = render.OverrideBlend
 	local PushRenderTarget = render.PushRenderTarget
 	local PopRenderTarget = render.PopRenderTarget
 	local SetScissorRect = render.SetScissorRect
@@ -168,15 +182,27 @@ local function ProcessPaintQueue()
 				local sy = floor(vp) - 1
 				local tx = ceil(up + bx) + 1 -- ScissorRect end
 				local ty = ceil(vp + by) + 1
-				if CollisionAABB2D(Vector(sx, sy) , Vector(tx, ty), Vector(cx - r, cy - r), Vector(cx + r, cy + r)) then
+				if q.done == 0 then
+					q.draw = CollisionAABB2D(Vector(sx, sy) , Vector(tx, ty), Vector(cx - r, cy - r), Vector(cx + r, cy + r))
+				end
+
+				if q.draw then
+					local alphatestreference = 1 - q.done / AlphaReferenceBase
+					if 10 <= q.t and q.t <= 12 then alphatestreference = 0.0625 end
 					SetTexture(inkmaterial, "$basetexture", settexture)
 					SetTexture(normalmaterial, "$basetexture", settexture .. "n")
+					SetFloat(inkmaterial, "$alphatestreference", alphatestreference)
+					Recompute(inkmaterial)
+					SetFloat(normalmaterial, "$alphatestreference", alphatestreference)
+					Recompute(normalmaterial)
 					PushRenderTarget(BaseTexture)
 					SetScissorRect(sx, sy, tx, ty, true)
 					Start2D()
 					SetDrawColor(color)
 					SetMaterial(inkmaterial)
+					OverrideBlend(true, unpack(BlendFuncs))
 					DrawTexturedRectRotated(cx, cy, 2 * r * q.ratio, 2 * r, q.inkangle)
+					OverrideBlend(false)
 					End2D()
 					SetScissorRect(0, 0, 0, 0, false)
 					PopRenderTarget()
@@ -187,7 +213,9 @@ local function ProcessPaintQueue()
 					Start2D()
 					SetDrawColor(color_white)
 					SetMaterial(normalmaterial)
+					OverrideBlend(true, unpack(BlendFuncs))
 					DrawTexturedRectRotated(cx, cy, 2 * r * q.ratio, 2 * r, q.inkangle)
+					OverrideBlend(false)
 					End2D()
 					SetScissorRect(0, 0, 0, 0, false)
 					PopRenderTarget()
@@ -213,7 +241,7 @@ local function ProcessPaintQueue()
 					PopRenderTarget()
 
 					q.done = q.done + 1
-					if q.done > 5 then
+					if q.done > NumRepetition then
 						queuetable[id] = nil
 						if q.owner ~= LocalPlayer() then
 							AddInkRectangle(q.c, qn, q.t, q.inkangle, q.pos, q.r, q.ratio, surf)

@@ -5,11 +5,12 @@ if not ss then return end
 local MinRadius = 3
 local Division = 16
 local DegStep = 90 / Division
-local mdl = Model "models/props_junk/PopCan01a.mdl"
-local mat = Material "splatoonsweps/effects/ring"
 local drawviewmodel = GetConVar "r_drawviewmodel"
-local function AdvanceVertex(self, pos, norm, u, v, alpha)
-	mesh.Color(self.Color.r, self.Color.g, self.Color.b, alpha)
+local mdl = Model "models/props_junk/PopCan01a.mdl"
+local mattranslucent = Material "splatoonsweps/effects/inkring"
+local mat = Material "splatoonsweps/effects/inkring_alphatest"
+local function AdvanceVertex(self, pos, norm, u, v, a)
+	mesh.Color(self.Color.r, self.Color.g, self.Color.b, a)
 	mesh.Normal(norm)
 	mesh.Position(pos)
 	mesh.TexCoord(0, u, v)
@@ -71,28 +72,34 @@ function EFFECT:Render()
 	local pos, ang = self.Weapon:GetMuzzlePosition()
 	if not isvector(pos) then return end
 	if not isangle(ang) then return end
-	if self.IsRollerSwing then
-		pos = self:GetPos()
-		ang = self:GetAngles()
-	end
-
 	local g = physenv.GetGravity()
 	local norm = ang:Forward()
 	local mul = self.Weapon:IsTPS() and 1 or .5
 	local LifeTime = math.max(0, CurTime() - self.InitTime)
-	local f = LifeTime / self.LifeTime
+	local f = math.Clamp(LifeTime / self.LifeTime, 0, 1)
+	local t = Lerp(f, self.tmax, self.tmin)
+	local r = Lerp(f, self.radmin, self.rad) * mul
+	local alpha = 255
+
 	if self.IsRollerSwing then
+		pos = self:GetPos()
+		ang = self:GetAngles()
 		ang.roll = Lerp(f, -157.5, -67.5)
+		norm = ang:Forward()
+		mat = mattranslucent
+		alpha = Lerp(math.EaseInOut(f, 0, 1), 255, 0)
 	else
 		pos:Add(norm * self.tmax * f + g / 2 * LifeTime^2)
 		self:SetPos(pos)
+		if self.UseRefract then
+			mat = ss.GetWaterMaterial()
+			render.UpdateRefractTexture()
+		end
 	end
-
-	if self.UseRefract then render.UpdateRefractTexture() end
-	render.SetMaterial(self.UseRefract and ss.GetWaterMaterial() or mat)
-	local alpha = Lerp(math.EaseInOut(f, 0, 1), 255, 0)
-	local t = Lerp(f, self.tmax, self.tmin)
-	local r = Lerp(f, self.radmin, self.rad) * mul
+	
+	mat:SetFloat("$alphatestreference", Lerp(f, 0.1, 0.9))
+	mat:Recompute()
+	render.SetMaterial(mat)
 	for x = 0, 2 do
 		mesh.Begin(MATERIAL_TRIANGLE_STRIP, Division * 2)
 		for i = 0, Division do

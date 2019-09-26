@@ -271,6 +271,15 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 		CREATERENDERTARGETFLAGS_HDR,
 		IMAGE_FORMAT_RGBA8888 -- 8192x8192, 256MB
 	)
+	rt.InkSplash = GetRenderTargetEx( -- For flying ink effect, used by Rollers and Sloshers
+		rt.Name.InkSplash,
+		128, 128,
+		RT_SIZE_NO_CHANGE,
+		MATERIAL_RT_DEPTH_NONE,
+		rt.Flags.InkSplash,
+		CREATERENDERTARGETFLAGS_HDR,
+		IMAGE_FORMAT_RGBA8888
+	)
 	rt.Material = CreateMaterial(
 		rt.Name.RenderTarget,
 		"LightmappedGeneric",
@@ -279,8 +288,9 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 			["$bumpmap"] = rt.Name.Normalmap,
 			["$ssbump"] = "1",
 			["$nolod"] = "1",
-			["$alpha"] = ".975",
-			["$translucent"] = "1",
+			["$alpha"] = "0.9",
+			["$alphatest"] = "1",
+			["$alphatestreference"] = "0.0625",
 		}
 	)
 	rt.WaterMaterial = CreateMaterial(
@@ -292,6 +302,17 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 			["$bluramount"] = "2",
 			["$refractamount"] = ".125",
 			["$refracttint"] = "[1 1 1]",
+		}
+	)
+	rt.InkSplashMaterial = CreateMaterial(
+		rt.Name.InkSplashMaterial,
+		"UnlitGeneric",
+		{
+			["$basetexture"] = rt.Name.InkSplash,
+			["$nolod"] = "1",
+			["$alphatest"] = "1",
+			["$alphatestreference"] = "0.5",
+			["$vertexcolor"] = "1",
 		}
 	)
 

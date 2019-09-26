@@ -7,11 +7,20 @@ local Division = 16
 local DegStep = 360 / Division
 local RadStep = math.rad(DegStep)
 local LifeTime = 7 * ss.FrameToSec
-local mdl = Model "models/props_junk/PopCan01a.mdl"
-local mat = Material "splatoonsweps/effects/muzzlesplash.vmt"
+local drawviewmodel = GetConVar "r_drawviewmodel"
 local deep = "SplatoonSWEPs_Player.InkDiveDeep"
 local shallow = "SplatoonSWEPs_Player.InkDiveShallow"
-local drawviewmodel = GetConVar "r_drawviewmodel"
+local halfpi = math.pi / 2
+local mdl = Model "models/props_junk/PopCan01a.mdl"
+local mat = Material "splatoonsweps/effects/muzzlesplash_alphatest"
+local function AdvanceVertex(self, pos, norm, u, v)
+	mesh.Color(self.Color.r, self.Color.g, self.Color.b, 255)
+	mesh.Normal(norm)
+	mesh.Position(pos)
+	mesh.TexCoord(0, u, v)
+	mesh.AdvanceVertex()
+end
+
 function EFFECT:GetMuzzlePosition()
 	if not IsValid(self.Weapon) then return self.Pos, self.Angle end
 	local pos, ang = self.Weapon:GetMuzzlePosition()
@@ -32,8 +41,7 @@ function EFFECT:Init(e)
 	local f = e:GetFlags()
 	local ping = ss.mp and LocalPlayer():Ping() / 1000 or 0
 	self.Color = ss.GetColor(e:GetColor())
-	self.deg = math.Rand(0, 360)
-	self.deg2 = math.Rand(0, 360)
+	self.deg = {math.Rand(0, 360), math.Rand(0, 360)}
 	self.rad = e:GetRadius()
 	self.tmin = MinLength
 	self.tmax = self.rad * e:GetScale()
@@ -59,15 +67,6 @@ function EFFECT:Init(e)
 	end
 end
 
-local function AdvanceVertex(self, pos, norm, u, v, alpha)
-	mesh.Color(self.Color.r, self.Color.g, self.Color.b, alpha)
-	mesh.Normal(norm)
-	mesh.Position(pos)
-	mesh.TexCoord(0, u, v)
-	mesh.AdvanceVertex()
-end
-
-local halfpi = math.pi / 2
 function EFFECT:Render()
 	if not istable(self.Color) then return end
 	if not isnumber(self.Color.r) then return end
@@ -84,15 +83,16 @@ function EFFECT:Render()
 	local pos, ang = self:GetPosition()
 	local norm = ang:Forward()
 	local mul = self.IsTPS and 1 or .5
-	self:SetPos(pos)
-
-	render.SetMaterial(mat)
-	local f = (CurTime() - self.InitTime) / self.LifeTime
-	local alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
+	local f = math.Clamp((CurTime() - self.InitTime) / self.LifeTime, 0, 1)
 	local t = Lerp(f, self.tmin, self.tmax)
 	local r = Lerp(4 * f * (1 - f), self.rad / 5, self.rad) * mul
 	local u, v = {}, {}
-	for _, deg in ipairs {self.deg, self.deg2} do
+
+	self:SetPos(pos)
+	mat:SetFloat("$alphatestreference", Lerp(f, 0.1, 0.9))
+	mat:Recompute()
+	for _, deg in ipairs(self.deg) do
+		render.SetMaterial(mat)
 		mesh.Begin(MATERIAL_TRIANGLES, Division)
 		for i = 0, Division do
 			local a = Angle(ang) a:RotateAroundAxis(norm, deg + i * DegStep)
@@ -113,14 +113,13 @@ function EFFECT:Render()
 				v[n] = v[n] or q % 2 > 0 and (q == 1 and 1 or 0) or q == 2 and .5 - tan or .5 + tan
 			end
 
-			AdvanceVertex(self, pos, -norm, .5, .5, alpha)
-			AdvanceVertex(self, pos + p1, n, u[i], v[i], alpha)
-			AdvanceVertex(self, pos + p2, n2, u[i + 1], v[i + 1], alpha)
+			AdvanceVertex(self, pos, -norm, .5, .5)
+			AdvanceVertex(self, pos + p1, n, u[i], v[i])
+			AdvanceVertex(self, pos + p2, n2, u[i + 1], v[i + 1])
 		end
 		mesh.End()
 
 		f = f * 2
-		alpha = math.Clamp(Lerp(f^2, 512, 0), 0, 255)
 		t = Lerp(f * .7, self.tmin, self.tmax)
 		r = Lerp(4 * f * (1 - f), self.rad / 5, self.rad) * mul
 	end

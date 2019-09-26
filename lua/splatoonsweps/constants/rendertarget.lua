@@ -33,12 +33,14 @@ return {
 		[DULTRA ] = 40132,
 	},
 	Name = {
-		BaseTexture		= "splatoonsweps_basetexture",
-		Normalmap		= "splatoonsweps_normalmap",
-		Lightmap		= "splatoonsweps_lightmap",
-		RenderTarget	= "splatoonsweps_rendertarget",
-		WaterMaterial	= "splatoonsweps_watermaterial",
-		RTScope			= "splatoonsweps_rtscope",
+		BaseTexture			= "splatoonsweps_basetexture",
+		InkSplash			= "splatoonsweps_inksplash",
+		InkSplashMaterial	= "splatoonsweps_inksplashmaterial",
+		Lightmap			= "splatoonsweps_lightmap",
+		Normalmap			= "splatoonsweps_normalmap",
+		RenderTarget		= "splatoonsweps_rendertarget",
+		RTScope				= "splatoonsweps_rtscope",
+		WaterMaterial		= "splatoonsweps_watermaterial",
 	},
 	Flags = {
 		BaseTexture = bit.bor(
@@ -60,6 +62,15 @@ return {
 			TEXTUREFLAGS.SSBUMP
 		),
 		Lightmap = bit.bor(
+			TEXTUREFLAGS.NOMIP,
+			TEXTUREFLAGS.NOLOD,
+			TEXTUREFLAGS.ALL_MIPS,
+			TEXTUREFLAGS.PROCEDURAL,
+			TEXTUREFLAGS.RENDERTARGET,
+			TEXTUREFLAGS.NODEPTHBUFFER
+		),
+		InkSplash = bit.bor(
+			TEXTUREFLAGS.EIGHTBITALPHA,
 			TEXTUREFLAGS.NOMIP,
 			TEXTUREFLAGS.NOLOD,
 			TEXTUREFLAGS.ALL_MIPS,
