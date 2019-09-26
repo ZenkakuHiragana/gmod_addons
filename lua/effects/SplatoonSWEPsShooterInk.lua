@@ -7,8 +7,8 @@ local TrailLagTime = 20 * ss.FrameToSec
 local invisiblemat = ss.Materials.Effects.Invisible
 local mat = ss.Materials.Effects.Ink
 local mdl = Model "models/props_junk/PopCan01a.mdl"
-local splash = Material "splatoonsweps/effects/roller_ink"
-local splashfilter = Material "splatoonsweps/effects/roller_ink_filter"
+local filter1 = Material "splatoonsweps/effects/roller_ink"
+local filter2 = Material "splatoonsweps/effects/roller_ink_filter"
 local inksplash = Material "splatoonsweps/effects/muzzlesplash"
 local inkring = Material "splatoonsweps/effects/inkring"
 local inkring_alphatest = Material "splatoonsweps/effects/inkring_alphatest"
@@ -387,7 +387,7 @@ function EFFECT:Render2()
 	render.OverrideAlphaWriteEnable(false)
 	render.PopRenderTarget()
 	rendermaterial:SetFloat("$alphatestreference", alpha)
-	RTrendermaterialMat:Recompute()
+	rendermaterial:Recompute()
 	render.SetMaterial(rendermaterial)
 	render.DrawQuadEasy(self:GetPos(), self.Normal, self.Size, self.Size * 1.5, self.Color)
 end
