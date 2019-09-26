@@ -41,10 +41,18 @@ The aim of this rework is the following:
     * [x] Then, it'll be able to leave a trail of ink.
     * [x] Ability to "run over."
     * [x] Make a crosshair.
-    * [ ] Make a proper ink effect.
+    * [x] Make a proper ink effect.
+    * [ ] Test in singleplayer/multiplayer and fix bugs
+* Make Inkbrushes
+    * [ ] View models
+    * [ ] World models
+    * [ ] A script to swing
+    * [ ] A script to run
+    * [ ] Effects
+    * [ ] Set proper parameters
+    * [ ] Test and fix bugs
     
 ## Upcoming features
-* Inkbrushes
 * Sloshers
 * Sub weapons
 
