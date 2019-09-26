@@ -81,7 +81,6 @@ end
 local function ProcessPaintQueue()
 	while not rt.Ready do coroutine.yield() end
 	local NumRepetition = 5
-	local AlphaReferenceBase = NumRepetition + 1
 	local BlendFuncs = {
 		BLEND_ONE,
 		BLEND_ZERO,
@@ -117,6 +116,7 @@ local function ProcessPaintQueue()
 	local format = string.format
 	local GetColor = ss.GetColor
 	local LocalPlayer = LocalPlayer
+	local max = math.max
 	local next = next
 	local PaintQueue = ss.PaintQueue
 	local rad = math.rad
@@ -187,7 +187,7 @@ local function ProcessPaintQueue()
 				end
 
 				if q.draw then
-					local alphatestreference = 1 - q.done / AlphaReferenceBase
+					local alphatestreference = max(1 - q.done / NumRepetition, 0.0625)
 					if 10 <= q.t and q.t <= 12 then alphatestreference = 0.0625 end
 					SetTexture(inkmaterial, "$basetexture", settexture)
 					SetTexture(normalmaterial, "$basetexture", settexture .. "n")
