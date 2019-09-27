@@ -7,6 +7,7 @@ local Pitch = Angle(1, 0, 0)
 local LerpSpeed = 360 -- degs/sec
 local Width = 75
 local function AdjustRollerAngles(self, tracelength, traceheight, tracewidth, tracedown, vm)
+	if self.IsBrush then return end
 	local target = vm or self
 	local bone = vm and self.VMBones.Root or self.Bones.Root
 	local oldang = target:GetManipulateBoneAngles(bone)
@@ -61,6 +62,7 @@ local function AdjustRollerAngles(self, tracelength, traceheight, tracewidth, tr
 end
 
 local function RotateRoll(self, vm)
+	if self.IsBrush then return end
 	if not self.Owner:OnGround() then return end
 	local target = vm or self
 	local bone = vm and self.VMBones.Roll or self.Bones.Roll
@@ -73,6 +75,22 @@ local function RotateRoll(self, vm)
 	local p = oldang.p + math.deg(amount / diameter)
 	target:ManipulateBoneAngles(bone, math.NormalizeAngle(p) * Pitch)
 	self.RotateRollPos = self.Owner:GetPos()
+end
+
+local function DrawVCrosshair(self, isfirstperson)
+	if self.Owner ~= LocalPlayer() then return end
+	if CurTime() > self.NextCrosshairSpawnTime then
+		ss.tablepush(self.Crosshair, CurTime())
+		self.NextCrosshairSpawnTime = CurTime() + (self.CrosshairSpawnDelay or delay)
+	end
+
+	if self.Mode ~= self.MODE.READY and self:GetMode() == self.MODE.READY then
+		self.NextCrosshairDrawTime = CurTime() + self.CrosshairDrawDelay
+	end
+
+	local dodraw = CurTime() > self.NextCrosshairDrawTime and self:GetMode() == self.MODE.READY
+	ss.DrawVCrosshair(self, dodraw, isfirstperson)
+	self.Mode = self:GetMode()
 end
 
 SWEP.CrosshairDrawDelay = 20 * ss.FrameToSec
@@ -99,22 +117,6 @@ SWEP.IronSightsFlip = {
 	true,
 	false,
 }
-
-local function DrawVCrosshair(self, isfirstperson)
-	if self.Owner ~= LocalPlayer() then return end
-	if CurTime() > self.NextCrosshairSpawnTime then
-		ss.tablepush(self.Crosshair, CurTime())
-		self.NextCrosshairSpawnTime = CurTime() + (self.CrosshairSpawnDelay or delay)
-	end
-
-	if self.Mode ~= self.MODE.READY and self:GetMode() == self.MODE.READY then
-		self.NextCrosshairDrawTime = CurTime() + self.CrosshairDrawDelay
-	end
-
-	local dodraw = CurTime() > self.NextCrosshairDrawTime and self:GetMode() == self.MODE.READY
-	ss.DrawVCrosshair(self, dodraw, isfirstperson)
-	self.Mode = self:GetMode()
-end
 
 function SWEP:ClientInit()
 	self.Crosshair = {}
@@ -152,30 +154,33 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 		Roll = self:LookupBone "roll_root_1" or self:LookupBone "roll_1",
 		Root = self:LookupBone "root_1",
 	}
-
-	-- Animate the neck
+	
 	local mode = self:GetMode()
 	local ct = CurTime() + (self:IsMine() and self:Ping() or 0)
 	local neck, start = 0, self:GetStartTime()
 	if mode ~= self.MODE.PAINT then
-		local duration, n1, n2
-		if mode == self.MODE.READY then
-			duration = self.CollapseRollTime
-			n1, n2 = 0, -90
-		elseif mode == self.MODE.ATTACK then
-			duration = self.PreSwingTime
-			n1, n2 = -90, 0
+		if not self.IsBrush then
+			local duration, n1, n2 -- Animate the neck
+			if mode == self.MODE.READY then
+				duration = self.CollapseRollTime
+				n1, n2 = 0, -90
+			elseif mode == self.MODE.ATTACK then
+				duration = self.PreSwingTime
+				n1, n2 = -90, 0
+			end
+
+			local f = math.TimeFraction(start, start + duration, ct)
+			neck = Lerp(math.EaseInOut(math.Clamp(f, 0, 1), .25, .25), n1, n2)
 		end
 
-		local f = math.TimeFraction(start, start + duration, ct)
-		neck = Lerp(math.EaseInOut(math.Clamp(f, 0, 1), .25, .25), n1, n2)
 		self:ManipulateBoneAngles(self.Bones.Root, angle_zero)
-	elseif ct > self:GetEndTime() + self.SwingAnimTime then -- Adjust the angle
-		local h = self.Owner:OBBMaxs().z
+	elseif ct > self:GetEndTime() + self.SwingAnimTime then
+		local h = self.Owner:OBBMaxs().z -- Adjust the angle
 		AdjustRollerAngles(self, 75, h, Width, h * 3)
 		RotateRoll(self)
 	end
 
+	if self.IsBrush then return end
 	self:ManipulateBoneAngles(self.Bones.Neck, Angle(0, 0, neck))
 end
 
@@ -185,7 +190,8 @@ end
 
 function SWEP:GetMuzzlePosition()
 	local ent = self:IsTPS() and self or self:GetViewModel()
-	local a = ent:GetAttachment(ent:LookupAttachment "roll")
+	local i = self.IsBrush and ent:LookupAttachment "tip" or ent:LookupAttachment "roll"
+	local a = ent:GetAttachment(i)
 	return a.Pos, a.Ang
 end
 

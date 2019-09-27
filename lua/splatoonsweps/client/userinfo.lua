@@ -155,7 +155,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 				return ss.IsValidInkling(LocalPlayer()):GetInkColorProxy()
 			end
 
-			if w.Base == "weapon_splatoonsweps_roller" then
+			if w.IsRoller and not w.IsBrush then
 				self.Weapon:ManipulateBoneAngles(self.Weapon:LookupBone "neck_1", Angle(0, 0, -90))
 			end
 		end
