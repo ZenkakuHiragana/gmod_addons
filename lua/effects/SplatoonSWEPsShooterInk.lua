@@ -70,6 +70,7 @@ function EFFECT:Init(e)
 	local decreaseframe = ss.ShooterDecreaseFrame
 	local drawradius = IsBlasterSphereSplashDrop and p.mSphereSplashDropDrawRadius or p.mDrawRadius
 	if IsRoller then
+		local viewang = -LocalPlayer():GetViewEntity():GetAngles():Forward()
 		drawradius = IsRollerSubSplash and p.mSplashSubDrawRadius or p.mSplashDrawRadius
 		straightframe = IsRollerSubSplash and p.mSplashSubStraightFrame or p.mSplashStraightFrame
 		decreaseframe = ss.RollerDecreaseFrame
@@ -78,7 +79,7 @@ function EFFECT:Init(e)
 		self.FilterDU2 = math.random()
 		self.FilterDV2 = math.random()
 		self.Material = math.random() > 0.5 and inksplash or inkring
-		self.Normal = (VectorRand() / 4 - initdir):GetNormalized()
+		self.Normal = (viewang + VectorRand() / 4):GetNormalized()
 		self.Size = p.mSplashPaintNearR
 	elseif isdrop then
 		straightframe = 0

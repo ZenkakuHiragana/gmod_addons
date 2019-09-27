@@ -43,7 +43,7 @@ function SWEP:CreateInk(skipnum)
 	local width = p.mSplashPositionWidth
 	local insiderate = p.mSplashInsideDamageRate
 	local insidenum = math.floor(splashnum * insiderate)
-	local IsLP = self:IsMine()
+	local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
 	if splashnum % 1 ~= insidenum % 1 then
 		insidenum = insidenum - 1
 	end
