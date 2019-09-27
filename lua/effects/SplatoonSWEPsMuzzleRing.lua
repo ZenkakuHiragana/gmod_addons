@@ -7,8 +7,8 @@ local Division = 16
 local DegStep = 90 / Division
 local drawviewmodel = GetConVar "r_drawviewmodel"
 local mdl = Model "models/props_junk/PopCan01a.mdl"
-local mattranslucent = Material "splatoonsweps/effects/inkring"
-local mat = Material "splatoonsweps/effects/inkring_alphatest"
+local inkringtranslucent = Material "splatoonsweps/effects/inkring"
+local inkring = Material "splatoonsweps/effects/inkring_alphatest"
 local function AdvanceVertex(self, pos, norm, u, v, a)
 	mesh.Color(self.Color.r, self.Color.g, self.Color.b, a)
 	mesh.Normal(norm)
@@ -80,13 +80,14 @@ function EFFECT:Render()
 	local t = Lerp(f, self.tmax, self.tmin)
 	local r = Lerp(f, self.radmin, self.rad) * mul
 	local alpha = 255
+	local mat = inkring
 
 	if self.IsRollerSwing then
 		pos = self:GetPos()
 		ang = self:GetAngles()
 		ang.roll = Lerp(f, -157.5, -67.5)
 		norm = ang:Forward()
-		mat = mattranslucent
+		mat = inkringtranslucent
 		alpha = Lerp(math.EaseInOut(f, 0, 1), 255, 0)
 	else
 		pos:Add(norm * self.tmax * f + g / 2 * LifeTime^2)
@@ -94,11 +95,12 @@ function EFFECT:Render()
 		if self.UseRefract then
 			mat = ss.GetWaterMaterial()
 			render.UpdateRefractTexture()
+		else
+			inkring:SetFloat("$alphatestreference", Lerp(f, 0.1, 0.9))
+			inkring:Recompute()
 		end
 	end
 	
-	mat:SetFloat("$alphatestreference", Lerp(f, 0.1, 0.9))
-	mat:Recompute()
 	render.SetMaterial(mat)
 	for x = 0, 2 do
 		mesh.Begin(MATERIAL_TRIANGLE_STRIP, Division * 2)
