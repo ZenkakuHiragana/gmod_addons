@@ -34,15 +34,9 @@ The aim of this rework is the following:
 * All Chargers in Splatoon.
 * All Splatlings in Splatoon.
 * All Blasters in Splatoon.
+* All Rollers in Splatoon.
 
 ## Currently working on
-* Finish making Rollers
-    * [x] Fling ink at a short range on +attack.
-    * [x] Then, it'll be able to leave a trail of ink.
-    * [x] Ability to "run over."
-    * [x] Make a crosshair.
-    * [x] Make a proper ink effect.
-    * [ ] Test in singleplayer/multiplayer and fix bugs
 * Make Inkbrushes
     * [ ] View models
     * [ ] World models
