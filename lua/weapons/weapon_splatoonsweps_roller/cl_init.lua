@@ -7,7 +7,6 @@ local Pitch = Angle(1, 0, 0)
 local LerpSpeed = 360 -- degs/sec
 local Width = 75
 local function AdjustRollerAngles(self, tracelength, traceheight, tracewidth, tracedown, vm)
-	if self.IsBrush then return end
 	local target = vm or self
 	local bone = vm and self.VMBones.Root or self.Bones.Root
 	local oldang = target:GetManipulateBoneAngles(bone)
@@ -142,7 +141,7 @@ function SWEP:PreViewModelDrawn(vm, weapon, ply)
 	end
 
 	local ping = self:IsMine() and self:Ping() or 0
-	if CurTime() + ping < self:GetEndTime() + self.SwingAnimTime then return end
+	if CurTime() + ping < self:GetSwingStartTime() + self.SwingAnimTime then return end
 	local h = self.Owner:OBBMaxs().z
 	AdjustRollerAngles(self, 40, h / 2, Width, h * 2, vm)
 	RotateRoll(self, vm)
@@ -157,7 +156,7 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 	
 	local mode = self:GetMode()
 	local ct = CurTime() + (self:IsMine() and self:Ping() or 0)
-	local neck, start = 0, self:GetStartTime()
+	local neck, start = 0, self:GetMousePressedTime()
 	if mode ~= self.MODE.PAINT then
 		if not self.IsBrush then
 			local duration, n1, n2 -- Animate the neck
@@ -174,7 +173,7 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 		end
 
 		self:ManipulateBoneAngles(self.Bones.Root, angle_zero)
-	elseif ct > self:GetEndTime() + self.SwingAnimTime then
+	elseif ct > self:GetSwingStartTime() + self.SwingAnimTime then
 		local h = self.Owner:OBBMaxs().z -- Adjust the angle
 		AdjustRollerAngles(self, 75, h, Width, h * 3)
 		RotateRoll(self)

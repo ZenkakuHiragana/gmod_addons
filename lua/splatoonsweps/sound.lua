@@ -15,6 +15,7 @@ if not ss then return end
 -- SplatoonSWEPs_Player.ToSquid
 -- SplatoonSWEPs_Player.Swim
 
+local WeakShotLevel = 75
 local WeaponSoundLevel = 80
 local WeaponSoundVolume = 1
 local WeaponSoundPitch = {90, 110}
@@ -25,10 +26,13 @@ ss.BombAvailable = Sound "splatoonsweps/player/bombavailable.wav"
 ss.TakeDamage = Sound "splatoonsweps/player/takedamage.wav"
 ss.ChargerAim = Sound "splatoonsweps/weapons/charger/aim.wav"
 ss.ChargerBeep = Sound "splatoonsweps/weapons/charger/beep.mp3"
-ss.SplatRollerRoll = Sound "splatoonsweps/weapons/roller/splatroller_roll.wav"
 ss.CarbonRollerRoll = Sound "splatoonsweps/weapons/roller/carbonroller_roll.wav"
 ss.DynamoRollerRoll = Sound "splatoonsweps/weapons/roller/dynamoroller_roll.wav"
+ss.InkBrushRun = Sound "splatoonsweps/weapons/roller/inkbrush_run.wav"
+ss.OctoBrushRun = Sound "splatoonsweps/weapons/roller/octobrush_run.wav"
+ss.SplatRollerRoll = Sound "splatoonsweps/weapons/roller/splatroller_roll.wav"
 ss.EmptyRoll = Sound "splatoonsweps/weapons/roller/emptyroll.wav"
+ss.EmptyRun = Sound "splatoonsweps/weapons/roller/emptyrun.wav"
 
 sound.Add {
 	channel = CHAN_STATIC,
@@ -85,15 +89,6 @@ sound.Add {
 }
 
 sound.Add {
-	channel = CHAN_WEAPON,
-	name = "SplatoonSWEPs.EmptyShot",
-	level = 75,
-	sound = "splatoonsweps/player/emptyshot.wav",
-	volume = 1,
-	pitch = {85, 95},
-}
-
-sound.Add {
 	channel = CHAN_ITEM,
 	name = "SplatoonSWEPs.ChargerPreFire",
 	level = 75,
@@ -120,67 +115,18 @@ sound.Add {
 	pitch = WeaponSoundPitch,
 }
 
-for _, soundData in ipairs {
-	{
-		channel = CHAN_BODY,
-		name = "SplatoonSWEPs_Ink.HitWorld",
-		level = 75,
-		sound = "splatoonsweps/ink/hit",
-		volume = 1,
-		pitch = 100,
-	},
-	{
-		channel = CHAN_BODY,
-		name = "SplatoonSWEPs_Player.InkFootstep",
-		level = 75,
-		sound = "splatoonsweps/player/footsteps/slime",
-		volume = 1,
-		pitch = 80,
-	},
-	{
-		channel = CHAN_WEAPON,
-		name = "SplatoonSWEPs.RollerSplashLight",
-		level = 75,
-		sound = "splatoonsweps/weapons/roller/inkbrush",
-		volume = 1,
-		pitch = 100,
-	},
-	{
-		channel = CHAN_WEAPON,
-		name = "SplatoonSWEPs.RollerSplashMedium",
-		level = 75,
-		sound = "splatoonsweps/weapons/roller/octobrush",
-		volume = 1,
-		pitch = 100,
-	},
-	{
-		channel = CHAN_AUTO,
-		name = "SplatoonSWEPs.RollerSwing",
-		level = 75,
-		sound = "splatoonsweps/weapons/roller/swing",
-		volume = .8,
-		pitch = 100,
-	},
-	{
-		channel = CHAN_AUTO,
-		name = "SplatoonSWEPs.CarbonRollerSwing",
-		level = 75,
-		sound = "splatoonsweps/weapons/roller/swing",
-		volume = .6,
-		pitch = 120,
-	},
-} do
-	local soundtable = {}
-	local i, str = 1, soundData.sound .. "0.wav"
-	while file.Exists("sound/" .. str, "GAME") do
-		soundtable[#soundtable + 1] = Sound(str)
-		str = soundData.sound .. tostring(i) .. ".wav"
-		i = i + 1
-	end
+--------------------------------------------------------------------------------
+-- Shooter
+--------------------------------------------------------------------------------
 
-	soundData.sound = soundtable
-	sound.Add(soundData)
-end
+sound.Add {
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.EmptyShot",
+	level = WeakShotLevel,
+	sound = "splatoonsweps/weapons/shooter/emptyshot.wav",
+	volume = WeaponSoundVolume,
+	pitch = {85, 95},
+}
 
 sound.Add { -- .52 Gallon / Deco
 	channel = CHAN_WEAPON,
@@ -326,9 +272,10 @@ sound.Add { -- N-Zap 85 / 89 / 83
 	pitch = WeaponSoundPitch,
 }
 
--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Charger
+--------------------------------------------------------------------------------
 
-local WeakShotLevel = 75
 sound.Add { -- Splat Charger / Kelp / Bento
 	channel = CHAN_WEAPON,
 	name = "SplatoonSWEPs.SplatCharger",
@@ -392,7 +339,9 @@ sound.Add { -- Bamboozler Mk.I / Mk.II / MK.III, Fully charged
 	pitch = 100,
 }
 
------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Splatling
+--------------------------------------------------------------------------------
 
 sound.Add { -- Heavy Splatling / Deco / Remix, 1st spin-up
 	channel = CHAN_WEAPON,
@@ -475,7 +424,9 @@ sound.Add { -- Mini Splatling / Zink / Refurbished, Fully charged
 	pitch = 100,
 }
 
--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Roller
+--------------------------------------------------------------------------------
 
 sound.Add { -- Roller holster sound
 	channel = CHAN_WEAPON,
@@ -484,6 +435,15 @@ sound.Add { -- Roller holster sound
 	sound = "splatoonsweps/weapons/roller/holster.wav",
 	volume = WeaponSoundVolume,
 	pitch = 100,
+}
+
+sound.Add { -- Roller empty swing
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.EmptySwing",
+	level = WeaponSoundLevel,
+	sound = "splatoonsweps/weapons/roller/emptyswing.wav",
+	volume = WeaponSoundVolume,
+	pitch = 60,
 }
 
 sound.Add { -- Splat Roller / Krak-On / CoroCoro, Dynamo Roller / Gold / Tempered, Pre-swing
@@ -504,3 +464,64 @@ sound.Add { -- Carbon Roller / Deco, Pre-swing
 	pitch = 100,
 }
 
+for _, soundData in ipairs {
+	{
+		channel = CHAN_BODY,
+		name = "SplatoonSWEPs_Ink.HitWorld",
+		level = 75,
+		sound = "splatoonsweps/ink/hit",
+		volume = 1,
+		pitch = 100,
+	},
+	{
+		channel = CHAN_BODY,
+		name = "SplatoonSWEPs_Player.InkFootstep",
+		level = 75,
+		sound = "splatoonsweps/player/footsteps/slime",
+		volume = 1,
+		pitch = 80,
+	},
+	{
+		channel = CHAN_WEAPON,
+		name = "SplatoonSWEPs.RollerSplashLight",
+		level = 75,
+		sound = "splatoonsweps/weapons/roller/inkbrush",
+		volume = 1,
+		pitch = 100,
+	},
+	{
+		channel = CHAN_WEAPON,
+		name = "SplatoonSWEPs.RollerSplashMedium",
+		level = 75,
+		sound = "splatoonsweps/weapons/roller/octobrush",
+		volume = 1,
+		pitch = 100,
+	},
+	{
+		channel = CHAN_AUTO,
+		name = "SplatoonSWEPs.RollerSwing",
+		level = WeaponSoundLevel,
+		sound = "splatoonsweps/weapons/roller/swing",
+		volume = WeaponSoundVolume,
+		pitch = 100,
+	},
+	{
+		channel = CHAN_AUTO,
+		name = "SplatoonSWEPs.CarbonRollerSwing",
+		level = WeaponSoundLevel,
+		sound = "splatoonsweps/weapons/roller/swing",
+		volume = WeaponSoundVolume,
+		pitch = 120,
+	},
+} do
+	local soundtable = {}
+	local i, str = 1, soundData.sound .. "0.wav"
+	while file.Exists("sound/" .. str, "GAME") do
+		soundtable[#soundtable + 1] = Sound(str)
+		str = soundData.sound .. tostring(i) .. ".wav"
+		i = i + 1
+	end
+
+	soundData.sound = soundtable
+	sound.Add(soundData)
+end

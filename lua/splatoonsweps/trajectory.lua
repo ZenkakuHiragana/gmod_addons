@@ -6,7 +6,7 @@ ss.Simulate = {}
 local Simulate, HitPaint, HitEntity = {}, {}, {}
 local MAX_INK_SIM_AT_ONCE = 60 -- Calculating ink trajectory at once
 local SplashMinDistance = 50 * ss.ToHammerUnits -- Transition between drop and splash
-local SplashMaxDistance = 150 * ss.ToHammerUnits
+local SplashMaxDistance = 100 * ss.ToHammerUnits
 
 function ss.CreateHitEffect(color, flags, pos, normal)
 	if ss.mp and (SERVER or not IsFirstTimePredicted()) then return end
@@ -89,8 +89,11 @@ function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	local ratio = data.Ratio or 1
 	local lmin = data.PaintNearDistance or parameters.mPaintNearDistance
 	local lmax = data.PaintFarDistance or parameters.mPaintFarDistance
+	local rmin = data.PaintNearRadius
+	local rmax = data.PaintFarRadius
 	local length = math.Clamp(tr.LengthSum, lmin, lmax)
-	local radius = math.Remap(length, lmin, lmax, data.PaintNearRadius, data.PaintFarRadius)
+	local radius = math.Remap(length, lmin, lmax, rmin, rmax)
+	if length == lmin and lmin == lmax then radius = rmax end -- Avoid NaN
 	if not weapon.IsBlaster and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
 		local min = SplashMinDistance
 		local max = SplashMaxDistance

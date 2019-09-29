@@ -5,7 +5,7 @@ if not (ss and SWEP) then return end
 SWEP.PreSwingSound = "SplatoonSWEPs.RollerPreSwing"
 SWEP.SwingSound = "SplatoonSWEPs.RollerSwing"
 SWEP.SplashSound = "SplatoonSWEPs.RollerSplashMedium"
-SWEP.RollSound = ss.DynamoRollerRoll
+SWEP.RollSoundName = ss.DynamoRollerRoll
 SWEP.Special = "echolocator"
 SWEP.Sub = "sprinker"
 SWEP.Variations = {

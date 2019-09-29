@@ -2,10 +2,10 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
-SWEP.PreSwingSound = "SplatoonSWEPs.RollerPreSwing"
+SWEP.PreSwingSound = "SplatoonSWEPs.CarbonRollerPreSwing"
 SWEP.SwingSound = "SplatoonSWEPs.CarbonRollerSwing"
 SWEP.SplashSound = "SplatoonSWEPs.RollerSplashLight"
-SWEP.RollSound = ss.CarbonRollerRoll
+SWEP.RollSoundName = ss.CarbonRollerRoll
 SWEP.Special = "inkzooka"
 SWEP.Sub = "burstbomb"
 SWEP.Variations = {{
