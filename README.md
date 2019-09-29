@@ -37,14 +37,15 @@ The aim of this rework is the following:
 * All Rollers in Splatoon.
 
 ## Currently working on
-* Make Inkbrushes
-    * [ ] View models
-    * [ ] World models
-    * [ ] A script to swing
-    * [ ] A script to run
+* Make Inkbrush
+    * [x] View models
+    * [x] World models
+    * [x] A script to swing
+    * [x] A script to run
     * [ ] Effects
-    * [ ] Set proper parameters
+    * [x] Set proper parameters
     * [ ] Test and fix bugs
+    * [ ] Do the same for Octobrush as well
     
 ## Upcoming features
 * Sloshers
