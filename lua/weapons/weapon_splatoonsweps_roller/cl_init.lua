@@ -5,8 +5,10 @@ include "shared.lua"
 
 local Pitch = Angle(1, 0, 0)
 local LerpSpeed = 360 -- degs/sec
-local Width = 75
-local function AdjustRollerAngles(self, tracelength, traceheight, tracewidth, tracedown, vm)
+local function AdjustRollerAngles(self, tracelength, vm)
+	local traceheight = 32
+	local tracedown = 128
+	local tracewidth = self.Parameters.mCoreColWidthHalf * 2
 	local target = vm or self
 	local bone = vm and self.VMBones.Root or self.Bones.Root
 	local oldang = target:GetManipulateBoneAngles(bone)
@@ -15,30 +17,26 @@ local function AdjustRollerAngles(self, tracelength, traceheight, tracewidth, tr
 	local down = -vector_up * tracedown
 	local forward = ownerang:Forward() * tracelength
 	local right = ownerang:Right() * tracewidth / 2
-	local l = {
+	local trleft = util.TraceLine {
 		start = self:GetPos() + up,
 		endpos = self:GetPos() + up + forward + right,
 		filter = {self.Owner, self},
 	}
-	local r = {
+	local trright = util.TraceLine {
 		start = self:GetPos() + up,
 		endpos = self:GetPos() + up + forward - right,
 		filter = {self.Owner, self},
 	}
-	local trleft = util.TraceLine(l)
-	local trright = util.TraceLine(r)
-	l = {
+	trleft = util.TraceLine {
 		start = trleft.HitPos,
 		endpos = trleft.HitPos + down,
 		filter = {self.Owner, self},
 	}
-	r = {
+	trright = util.TraceLine {
 		start = trright.HitPos,
 		endpos = trright.HitPos + down,
 		filter = {self.Owner, self},
 	}
-	trleft = util.TraceLine(l)
-	trright = util.TraceLine(r)
 	target:ManipulateBoneAngles(bone, angle_zero)
 	target:SetupBones()
 
@@ -142,8 +140,7 @@ function SWEP:PreViewModelDrawn(vm, weapon, ply)
 
 	local ping = self:IsMine() and self:Ping() or 0
 	if CurTime() + ping < self:GetSwingStartTime() + self.SwingAnimTime then return end
-	local h = self.Owner:OBBMaxs().z
-	AdjustRollerAngles(self, 40, h / 2, Width, h * 2, vm)
+	AdjustRollerAngles(self, 40, vm)
 	RotateRoll(self, vm)
 end
 
@@ -174,8 +171,7 @@ function SWEP:PreDrawWorldModel(vm, weapon, ply)
 
 		self:ManipulateBoneAngles(self.Bones.Root, angle_zero)
 	elseif ct > self:GetSwingStartTime() + self.SwingAnimTime then
-		local h = self.Owner:OBBMaxs().z -- Adjust the angle
-		AdjustRollerAngles(self, 75, h, Width, h * 3)
+		AdjustRollerAngles(self, 75) -- Adjust the angle
 		RotateRoll(self)
 	end
 

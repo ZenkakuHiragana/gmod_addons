@@ -390,7 +390,7 @@ function EFFECT:Render2()
 	rendermaterial:SetFloat("$alphatestreference", alpha)
 	rendermaterial:Recompute()
 	render.SetMaterial(rendermaterial)
-	render.DrawQuadEasy(self:GetPos(), self.Normal, self.Size, self.Size * 1.5, self.Color)
+	render.DrawQuadEasy(self:GetPos(), self.Normal, self.Size, self.Size, self.Color)
 end
 
 hook.Remove("HUDPaint", "HUDPaint_DrawABox")

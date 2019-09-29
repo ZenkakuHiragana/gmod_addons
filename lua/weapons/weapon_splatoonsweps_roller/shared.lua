@@ -7,24 +7,110 @@ local randink = "SplatoonSWEPs: Shooter ink type"
 local randsplash = "Splatoon SWEPs: SplashNum"
 local randvel = "SplatoonSWEPs: Spread velocity"
 local function EndSwing(self)
+	self.NotEnoughInk = false
 	self:SetIsSecondSwing(false)
 	self:SetMode(self.MODE.READY)
 	self:SetWeaponAnim(ACT_VM_IDLE)
 	self:SetMousePressedTime(CurTime())
-	if self.IsBrush or not self:IsFirstTimePredicted() then return end
+	self.RollSound:ChangeVolume(0)
+	self.EmptyRollSound:ChangeVolume(0)
+	if self.IsBrush then return end
+	if not self:IsFirstTimePredicted() then return end
 	self:EmitSound "SplatoonSWEPs.RollerHolster"
 end
 
 local function PlaySwingSound(self, enoughink)
 	if enoughink then
-		if self.SwingSound then
-			self:EmitSound(self.SwingSound)
-		end
+		self:EmitSound(self.SplashSound)
+		if not self.SwingSound then return end
+		self:EmitSound(self.SwingSound)
 	else
 		self:EmitSound "SplatoonSWEPs.EmptySwing"
+		if self.NotEnoughInk then return end
+		if ss.mp and SERVER then return end
+		self.NotEnoughInk = true
+		ss.EmitSound(self.Owner, ss.TankEmpty)
+	end
+end
+
+local TraceLookStart = 20
+local TraceLookAhead = 45
+local TraceDown = 70
+local TraceUp = 8
+local function GetRollerTrace(self)
+	local forward = self:GetForward()
+	local pos = self:GetPos()
+	return util.TraceLine {
+		start = pos + forward * TraceLookStart + vector_up * TraceUp,
+		endpos = pos + forward * TraceLookAhead - vector_up * TraceDown,
+		filter = {self, self.Owner},
+		mask = ss.SquidSolidMask,
+	}
+end
+
+local function DoRollingEffect(self, velocity)
+	if CurTime() < self:GetNextRollingEffectTime() then return end
+	self:SetNextRollingEffectTime(CurTime() + self.RollingEffectDelay)
+	if not self:IsFirstTimePredicted() then return end
+
+	if self.IsBrush then return end -- TODO: Remove this when the effect for brushes is done.
+	if ss.mp and SERVER then SuppressHostEvents(self.Owner) end
+	local name = self.IsBrush and "SplatoonSWEPsBrushRolling" or "SplatoonSWEPsRollerRolling"
+	local e = EffectData()
+	e:SetEntity(self)
+	e:SetRadius(velocity)
+	util.Effect(name, e, true, self.IgnorePrediction)
+	if ss.sp or CLIENT then return end
+	SuppressHostEvents(NULL)
+end
+
+local function DoRunover(self, t)
+	local p = self.Parameters
+	local dir = self:GetRight()
+	local radius = p.mCoreColRadius / 2
+	local width = p.mCoreColWidthHalf
+	local bounds = ss.vector_one * radius
+	local center = t.HitPos + vector_up * radius
+	local left = center - dir * width
+	local right = center + dir * width
+	local victims = ents.FindAlongRay(left, right, -bounds, bounds)
+	local knockback = false
+	local keys = {}
+	local function dealdamage(i, v)
+		if v == self.Owner then return end
+		keys[v] = true
+		if self.RunoverExceptions[v] then return end
+		if v:Health() == 0 then return end
+		
+		local effectpos = center + dir * dir:Dot(v:GetPos() - center)
+		if self:IsMine() then
+			ss.CreateHitEffect(color, 0, effectpos, -forward)
+		end
+	
+		if SERVER then
+			local d = DamageInfo()
+			d:SetDamage(p.mCoreDamage)
+			d:SetDamageForce(forward)
+			d:SetDamagePosition(effectpos)
+			d:SetDamageType(DMG_GENERIC)
+			d:SetMaxDamage(p.mCoreDamage)
+			d:SetReportedPosition(effectpos)
+			d:SetAttacker(self.Owner)
+			d:SetInflictor(self)
+			d:ScaleDamage(ss.ToHammerHealth)
+			ss.ProtectedCall(v.TakeDamageInfo, v, d)
+			knockback = knockback or v:Health() > 0
+		else
+			knockback = knockback or v:Health() > p.mCoreDamage * ss.ToHammerHealth
+		end
 	end
 
-	self:EmitSound(self.SplashSound)
+	for i, v in ipairs(victims) do dealdamage(i, v) end
+	self.RunoverExceptions = keys
+	if not self.Owner:IsPlayer() then return end
+	if not knockback then return end
+	mv:SetVelocity(mv:GetVelocity() - self:GetForward() * ss.InklingBaseSpeed * 10)
+	self:SetRunoverDelay(CurTime() + ss.RollerRunoverStopFrame)
 end
 
 SWEP.Base = "weapon_splatoonsweps_inklingbase"
@@ -62,13 +148,13 @@ function SWEP:GetMiscParameters(issub)
 	local p = self.Parameters
 	if issub then
 		return p.mSplashSubStraightFrame,
-			   p.mSplashSubCollisionRadiusForField,
 			   p.mSplashSubCollisionRadiusForPlayer,
+			   p.mSplashSubCollisionRadiusForField,
 			   p.mSplashSubCoverApertureFreeFrame
 	else
 		return p.mSplashStraightFrame,
-			   p.mSplashCollisionRadiusForField,
 			   p.mSplashCollisionRadiusForPlayer,
+			   p.mSplashCollisionRadiusForField,
 			   p.mSplashCoverApertureFreeFrame
 	end
 end
@@ -91,10 +177,10 @@ end
 function SWEP:GetDamageParameters(t)
 	local p = self.Parameters
 	if t == "sub" then
-		return p.mSplashSubDamageMaxDist,
-			   p.mSplashSubDamageMinDist,
-			   p.mSplashSubDamageMaxValue,
+		return p.mSplashSubDamageMaxValue,
+			   p.mSplashSubDamageMaxDist,
 			   p.mSplashSubDamageMinValue,
+			   p.mSplashSubDamageMinDist,
 			   p.mSplashSubDamageRateBias
 	elseif t == "outside" then
 		return p.mSplashOutsideDamageMaxValue,
@@ -133,36 +219,12 @@ function SWEP:CreateInk(createnum)
 	local insiderate = p.mSplashInsideDamageRate
 	local insidenum = math.floor(splashnum * insiderate)
 	local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
-	if splashnum % 1 ~= insidenum % 1 then
-		insidenum = insidenum - 1
-	end
-
 	local randomorder, skiptable = {}, {}
-	for i = 1, splashnum do
-		table.insert(randomorder, i)
-	end
-
-	for i = 1, splashnum do
-		local k = math.Round(util.SharedRandom(randsplash, i, splashnum))
-		randomorder[i], randomorder[k] = randomorder[k], randomorder[i]
-	end
-
-	for i = 1, skipnum do
-		skiptable[randomorder[i]] = true
-	end
-
-	table.Merge(self.Projectile, {
-		Color = self:GetNWInt "inkcolor",
-		ID = CurTime() + self:EntIndex(),
-	})
-	
 	local ang = dir:Angle()
 	local angoffset = p.mPaintBrushRotYDegree
 	local angsign = self:GetIsSecondSwing() and 1 or -1
 	local insidestart = (splashnum - insidenum) / 2
 	local nextskip = 1
-	ang:RotateAroundAxis(ang:Up(), angoffset * angsign)
-
 	local function SpawnInk(self, i, t)
 		if not self:IsFirstTimePredicted() then return end
 		local issub = t == "sub"
@@ -208,6 +270,26 @@ function SWEP:CreateInk(createnum)
 		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
 	end
 
+	if splashnum % 1 ~= insidenum % 1 then
+		insidenum = insidenum - 1
+	end
+
+	for i = 1, splashnum do
+		randomorder[i] = i
+	end
+
+	for i = 1, splashnum do
+		local k = math.Round(util.SharedRandom(randsplash, i, splashnum))
+		randomorder[i], randomorder[k] = randomorder[k], randomorder[i]
+	end
+
+	for i = 1, skipnum do
+		skiptable[randomorder[i]] = true
+	end
+
+	ang:RotateAroundAxis(ang:Up(), angoffset * angsign)
+	self.Projectile.Color = self:GetNWInt "inkcolor"
+	self.Projectile.ID = CurTime() + self:EntIndex()
 	for i = 1, splashnum do
 		if nextskip < skipnum and skiptable[i] then
 			nextskip = nextskip + 1
@@ -241,6 +323,8 @@ function SWEP:SharedInit()
 end
 
 function SWEP:SharedHolster()
+	self.NotEnoughInk = false
+	self:SetIsSecondSwing(false)
 	self:SetMode(self.MODE.READY)
 end
 
@@ -257,6 +341,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	self:SetMode(self.MODE.ATTACK)
 	self:SetMousePressedTime(CurTime())
 	self:SetSwingStartTime(CurTime() + p.mSwingLiftFrame)
+	self:SetIsSecondSwingAnim(self:GetIsSecondSwing())
 	self:SetWeaponAnim(anim)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 	if self.IsBrush then return end
@@ -266,6 +351,7 @@ end
 
 function SWEP:CustomDataTables()
 	self:AddNetworkVar("Bool", "IsSecondSwing")
+	self:AddNetworkVar("Bool", "IsSecondSwingAnim")
 	self:AddNetworkVar("Float", "MousePressedTime")
 	self:AddNetworkVar("Float", "SwingStartTime")
 	self:AddNetworkVar("Float", "SwingEndTime")
@@ -274,10 +360,7 @@ function SWEP:CustomDataTables()
 	self:AddNetworkVar("Int", "Mode")
 end
 
-function SWEP:CustomActivity() return "melee2" end
 function SWEP:Move(ply, mv)
-	self.Primary.Automatic = false
-
 	local p = self.Parameters
 	local mode = self:GetMode()
 	local keyrelease = not (ply:IsPlayer() and self:GetKey() == IN_ATTACK)
@@ -288,113 +371,55 @@ function SWEP:Move(ply, mv)
 
 	if mode == self.MODE.PAINT then
 		if keyrelease and CurTime() > self:GetSwingStartTime() + self.SwingBackWait then
-			self.NotEnoughInk = false
 			EndSwing(self)
-		end
-	
-		local s = self:GetInk() > 0 and self.RollSound or self.EmptyRollSound
-		local s2 = self:GetInk() > 0 and self.EmptyRollSound or self.RollSound
-		local v = ply:OnGround() and 1 or 0
-		if ply:IsPlayer() then
-			v = v * math.abs(ply:GetVelocity():Dot(ply:GetForward())) / ply:GetMaxSpeed()
-		elseif ply:IsNPC() and isfunction(ply.IsMoving) then
-			v = v * (ply:IsMoving() and 1 or 0)
-		end
-		
-		s:ChangeVolume(v)
-		s2:ChangeVolume(0)
-		if v == 0 then return end
-		self:SetReloadDelay(p.mInkRecoverCoreStop)
-		self:SetCooldown(CurTime() + FrameTime())
-		if self:GetInk() > 0 then
-			local color = self:GetNWInt "inkcolor"
-			local forward = self:GetForward()
-			local inktype = util.SharedRandom(rand, 10, 12)
-			local pos = self:GetShootPos()
-			local widthmul = self.IsBrush and 1 or 0.67 -- This should be removed, I guess.
-			local width = Lerp(v, p.mCorePaintSlowMoveWidthHalf, p.mCorePaintWidthHalf) * widthmul
-			local yaw = self:GetAimVector():Angle().yaw + 90
-			local t = util.TraceLine {
-				start = pos + forward * 45,
-				endpos = pos + forward * 45 - vector_up * 80,
-				filter = {self, self.Owner},
-				mask = ss.SquidSolidMask,
-			}
-			self:SetInk(math.max(self:GetInk() - p.mInkConsumeCore, 0))
-			ss.Paint(t.HitPos, t.HitNormal, width, color, yaw, inktype, .25, self.Owner, self.ClassName)
-	
-			if CurTime() > self:GetNextRollingEffectTime() then
-				self:SetNextRollingEffectTime(CurTime() + self.RollingEffectDelay)
-				if self:IsFirstTimePredicted() then
-					if ss.mp and SERVER then SuppressHostEvents(self.Owner) end
-					local name = self.IsBrush and "SplatoonSWEPsRollerRolling" or "SplatoonSWEPsRollerRolling"
-					local e = EffectData()
-					e:SetEntity(self)
-					e:SetRadius(v)
-					if not self.IsBrush then -- Remove this after making the effect for brushes!
-						util.Effect(name, e, true, self.IgnorePrediction)
-					end
-	
-					if ss.mp and SERVER then SuppressHostEvents(NULL) end
-				end
-			end
-	
-			local dir = self:GetRight()
-			local radius = p.mCoreColRadius / 2
-			local width = p.mCoreColWidthHalf
-			local bounds = ss.vector_one * radius
-			local center = t.HitPos + vector_up * radius
-			local left = center - dir * width
-			local right = center + dir * width
-			local victims = ents.FindAlongRay(left, right, -bounds, bounds)
-			local knockback = false
-			local keys = {}
-			for i, v in ipairs(victims) do
-				if v ~= self.Owner then
-					keys[v] = true
-					local health = v:Health()
-					if not self.RunoverExceptions[v] and health > 0 then
-						local d = DamageInfo()
-						local effectpos = center + dir * dir:Dot(v:GetPos() - center)
-						if self:IsMine() then
-							ss.CreateHitEffect(color, 0, effectpos, -forward)
-						end
-					
-						if SERVER then
-							d:SetDamage(p.mCoreDamage)
-							d:SetDamageForce(forward)
-							d:SetDamagePosition(effectpos)
-							d:SetDamageType(DMG_GENERIC)
-							d:SetMaxDamage(p.mCoreDamage)
-							d:SetReportedPosition(effectpos)
-							d:SetAttacker(self.Owner)
-							d:SetInflictor(self)
-							d:ScaleDamage(ss.ToHammerHealth)
-							ss.ProtectedCall(v.TakeDamageInfo, v, d)
-							knockback = knockback or v:Health() > 0
-						else
-							knockback = knockback or health > p.mCoreDamage * ss.ToHammerHealth
-						end
-					end
-				end
-			end
-	
-			self.RunoverExceptions = keys
-			self.NotEnoughInkRoll = false
-			if self.Owner:IsPlayer() and knockback then
-				mv:SetVelocity(mv:GetVelocity() - forward * ss.InklingBaseSpeed * 10)
-				self:SetRunoverDelay(CurTime() + ss.RollerRunoverStopFrame)
-			end
-		elseif (ss.sp or CLIENT) and not self.NotEnoughInkRoll then
-			self.NotEnoughInkRoll = true
-			ss.EmitSound(ply, ss.TankEmpty)
+			return
 		end
 
+		local soundplay, soundstop = self.RollSound, self.EmptyRollSound
+		local velocity = 1
+		if ply:IsPlayer() then
+			velocity = math.abs(ply:GetVelocity():Dot(ply:GetForward())) / ply:GetMaxSpeed()
+		elseif ply:IsNPC() and isfunction(ply.IsMoving) then
+			velocity = ply:IsMoving() and 1 or 0
+		end
+
+		if ply:OnGround() and self:GetInk() == 0 then
+			soundplay, soundstop = soundstop, soundplay
+		end
+
+		soundplay:ChangeVolume(velocity * (ply:OnGround() and 1 or 0))
+		soundstop:ChangeVolume(0)
+		
+		if velocity < 0.01 then return end
+		self:SetReloadDelay(p.mInkRecoverCoreStop)
+
+		if not ply:OnGround() then return end
+		if self:GetInk() == 0 then
+			if ss.mp and SERVER then return end
+			if self.NotEnoughInkRoll then return end
+			self.NotEnoughInkRoll = true
+			ss.EmitSound(ply, ss.TankEmpty)
+			return
+		end
+		
+		local color = self:GetNWInt "inkcolor"
+		local inktype = util.SharedRandom(rand, 10, 12)
+		local widthmul = self.IsBrush and 1 or 0.67 -- This should be removed, I guess.
+		local width = Lerp(velocity, p.mCorePaintSlowMoveWidthHalf, p.mCorePaintWidthHalf) * widthmul
+		local yaw = self:GetAimVector():Angle().yaw + 90
+		local t = GetRollerTrace(self)
+		ss.Paint(t.HitPos, t.HitNormal, width, color, yaw, inktype, .25, self.Owner, self.ClassName)
+
+		DoRollingEffect(self, velocity)
+		DoRunover(self, t)
+		self.NotEnoughInkRoll = false
+
+		local inkconsumerate = FrameTime() / ss.FrameToSec
+		local inkconsume = p.mInkConsumeCore * inkconsumerate
+		self:SetInk(math.max(self:GetInk() - inkconsume, 0))
 		return
 	end
 
-	self.RollSound:ChangeVolume(0)
-	self.EmptyRollSound:ChangeVolume(0)
 	if mode == self.MODE.READY then return end
 	self:SetReloadDelay(p.mInkRecoverSplashStop)
 
@@ -407,6 +432,7 @@ function SWEP:Move(ply, mv)
 		self:SetInk(math.max(self:GetInk() - p.mInkConsumeSplash, 0))
 
 		if self.IsBrush then
+			self.NotEnoughInk = false
 			self:SetMode(self.MODE.ATTACK2)
 			self:SetCooldown(CurTime() + p.mPaintBrushSwingRepeatFrame)
 			self:SetSwingEndTime(CurTime() + self.SwingBackWait)
@@ -414,22 +440,18 @@ function SWEP:Move(ply, mv)
 		else
 			self:SetMode(self.MODE.PAINT)
 			self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
-			self:ResetSequence "fire2" -- This is needed in multiplayer to prevent delaying muzzle effects.
+			self:ResetSequence "fire2" -- This is needed in multiplayer to predict muzzle effects.
 		end
 
 		if not self:IsFirstTimePredicted() then return end
-		if enoughink or splashnum > 0 then
-			PlaySwingSound(self, enoughink)
-			self:CreateInk(splashnum)
-		end
+		PlaySwingSound(self, enoughink)
+		if not enoughink and splashnum == 0 then return end
+		self:CreateInk(splashnum)
+		return	
+	end
 
-		if (ss.sp or CLIENT) and not (self.NotEnoughInk or enoughink) then
-			self.NotEnoughInk = true
-			ss.EmitSound(ply, ss.TankEmpty)
-		end
-	elseif CurTime() < self:GetSwingEndTime() then
-		return
-	elseif keyrelease then
+	if CurTime() < self:GetSwingEndTime() then return end
+	if keyrelease then
 		EndSwing(self)
 	else
 		self:SetMode(self.MODE.PAINT)
@@ -437,26 +459,34 @@ function SWEP:Move(ply, mv)
 	end
 end
 
+function SWEP:CustomActivity() return "melee2" end
 function SWEP:UpdateAnimation(ply, velocity, maxseqspeed)
 	local mode = self:GetMode()
 	local ct = CurTime() + (self:IsMine() and self:Ping() or 0)
 	local start, duration, c1, c2
-	if mode == self.MODE.READY then
-		return
-	elseif mode == self.MODE.ATTACK then
-		start = self:GetMousePressedTime()
-		duration = self.PreSwingTime
-		c1, c2 = 0, .3
-	elseif mode == self.MODE.ATTACK2 then
-		start = self:GetMousePressedTime()
-		duration = self.PreSwingTime
-		c1, c2 = 3, 0.6125
+	if mode == self.MODE.READY then return end
+	if mode == self.MODE.ATTACK or mode == self.MODE.ATTACK2 then
+		if self.IsBrush then
+			start = self:GetMousePressedTime()
+			duration = self.PreSwingTime
+			c1, c2 = .3, .6125
+			if self:GetIsSecondSwingAnim() then
+				c1, c2 = c2, c1
+			end
+		else
+			start = self:GetMousePressedTime()
+			duration = self.PreSwingTime
+			c1, c2 = 0, .3
+		end
 	else
 		start = self:GetSwingStartTime()
 		duration = self.SwingAnimTime
 		c1, c2 = .3, .6125
+		if self:GetIsSecondSwingAnim() then
+			start = self:GetSwingEndTime()
+		end
 	end
-
+	
 	local f = math.TimeFraction(start, start + duration, ct)
 	local cycle = Lerp(math.EaseInOut(math.Clamp(f, 0, 1), 0, 1), c1, c2)
 	ply:AddVCDSequenceToGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD, ply:SelectWeightedSequence(ACT_HL2MP_GESTURE_RANGE_ATTACK_MELEE2), cycle, true)

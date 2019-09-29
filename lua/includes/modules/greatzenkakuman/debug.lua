@@ -184,10 +184,10 @@ function DTrace(v, z, sv)
 	end
 end
 
-hook.Add("Tick", "greatzenkakuman.debug.DLoop", function() if isfunction(DLoop) then DLoop() end end)
 timer.Simple(0, function()
 	sp = game.SinglePlayer()
 	d = sp or CLIENT
+	if isfunction(DLoop) then DLoop() end
 	if not concommand.GetTable().lua_watch then return end
 	RunConsoleCommand("lua_watch", "lua/do.lua", "lua_send_sh")
 end)

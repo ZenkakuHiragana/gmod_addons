@@ -797,7 +797,7 @@ hook.Add("PlayerFootstep", "SplatoonSWEPs: Ink footstep", ss.hook "PlayerFootste
 hook.Add("UpdateAnimation", "SplatoonSWEPs: Adjust TPS animation speed", ss.hook "UpdateAnimation")
 hook.Add("KeyPress", "SplatoonSWEPs: Check a valid key", ss.hook "KeyPress")
 hook.Add("KeyRelease", "SplatoonSWEPs: Throw sub weapon", ss.hook "KeyRelease")
-hook.Add("OnPlayerHitGround", "Splatoon SWEPs: Play diving sound", ss.hook "OnPlayerHitGround")
+hook.Add("OnPlayerHitGround", "SplatoonSWEPs: Play diving sound", ss.hook "OnPlayerHitGround")
 
 local weaponslot = {
 	weapon_splatoonsweps_roller = 0,

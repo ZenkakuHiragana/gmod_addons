@@ -21,13 +21,14 @@ local function SendValue(cvarname, value)
 		net.WriteString(tostring(value))
 		net.SendToServer()
 	else
-		print(cvarname)
 		local cvar = GetConVar(cvarname)
 		if not cvar then return end
 		cvar:SetInt(value)
 	end
 end
 
+local InkColors = ss.InkColors -- These are needed when the SWEPs
+local ColorNames = ss.Text.ColorNames -- are disabled.
 local function MakeColorGUI(parent_panel, paneltable, cvar, admin)
 	local cvarname = cvar:GetName()
 	local element = vgui.Create("DPanel", parent_panel)
@@ -41,11 +42,11 @@ local function MakeColorGUI(parent_panel, paneltable, cvar, admin)
 	colorpicker:SetSpaceX(5)
 	colorpicker:SetSpaceY(5)
 	colorpicker:SetStretchHeight(true)
-	for i, c in ipairs(ss.InkColors) do
+	for i, c in ipairs(InkColors) do
 		local item = colorpicker:Add "DColorButton"
 		item:SetSize(32, 32)
 		item:SetColor(c)
-		item:SetToolTip(ss.Text.ColorNames[i])
+		item:SetToolTip(ColorNames[i])
 		item:SetContentAlignment(5)
 		local l, t, r, b = item:GetDockMargin()
 		function item:Think() item:SetText(i == cvar:GetInt() and "X" or "") end

@@ -443,7 +443,7 @@ sound.Add { -- Roller empty swing
 	level = WeaponSoundLevel,
 	sound = "splatoonsweps/weapons/roller/emptyswing.wav",
 	volume = WeaponSoundVolume,
-	pitch = 60,
+	pitch = 90,
 }
 
 sound.Add { -- Splat Roller / Krak-On / CoroCoro, Dynamo Roller / Gold / Tempered, Pre-swing
