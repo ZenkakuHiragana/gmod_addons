@@ -45,7 +45,7 @@ The aim of this rework is the following:
     * [ ] Effects
     * [x] Set proper parameters
     * [ ] Test and fix bugs
-    * [ ] Do the same for Octobrush as well
+    * [x] Do the same for Octobrush as well
     
 ## Upcoming features
 * Sloshers
