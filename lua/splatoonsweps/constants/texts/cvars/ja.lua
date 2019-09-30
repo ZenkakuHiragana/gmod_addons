@@ -75,6 +75,7 @@ return {CVars = {
         },
     },
 	weapon_splatoonsweps_roller = {
+        AutomaticBrush = "自動的にフデを連打する。 (1: 有効, 0: 無効)",
 		weapon_splatoonsweps_heroroller = {
             Level = "ヒーローローラーレプリカのレベル。 (0, 1, 2, 3 → レベル 1, 2, 3, 4)",
         },

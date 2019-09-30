@@ -41,10 +41,11 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 	local model, exists = GetPlayermodel()
 	local issquid = ss.DrLilRobotPlayermodels[model]
 	local campos = issquid and 26 or 34
+	local dz = vector_up * 20
 	self.AnimTime = SysTime()
 	self:SetModel(model)
-	self:SetLookAt(Vector(1))
-	self:SetCamPos(vector_origin)
+	self:SetLookAt(Vector(1) + dz)
+	self:SetCamPos(dz)
 	self.Entity:SetPos(Vector(issquid and 130 or 160, 0, -campos))
 	self.Entity:SetSequence "idle_fist"
 	self.Entity.GetPlayerColor = GetColor
@@ -170,7 +171,7 @@ end
 
 local function GeneratePreview(tab)
 	tab.PreviewBase = vgui.Create("SplatoonSWEPs.DFrameChild", tab)
-	tab.PreviewBase:SetSize(360, 360)
+	tab.PreviewBase:SetSize(360, 540)
 	tab.PreviewBase:SetTitle(ss.Text.PreviewTitle)
 	tab.PreviewBase:SetDraggable(true)
 	tab.PreviewBase:SetSizable(true)

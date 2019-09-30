@@ -197,9 +197,8 @@ function SWEP:GetDamageParameters(t)
 	end
 end
 
-function SWEP:GetInitVelocity(i, splashnum, sb, sz, sx, sy)
+function SWEP:GetInitVelocity(i, splashnum, sb, sz, sx, sy, degmax)
 	local p = self.Parameters
-	local degmax = p.mSplashDeg
 	local frac = splashnum == 1 and 1 or (i - 1) / (splashnum - 1)
 	local deg = (frac * 2 - 1) * degmax
 	local forward = sb + util.SharedRandom(randvel, -sz, sz, i)
@@ -233,14 +232,17 @@ function SWEP:CreateInk(createnum)
 		local frac = splashnum == 1 and 1 or (i - 1) / (splashnum - 1)
 		local dp = right * (frac * 2 - 1) * width
 		local vf, vr, vu = self:GetInitVelocity(i, splashnum, self:GetVelocitySpread(issub))
+		local initvelocity = ang:Forward() * vf + ang:Right() * vr + ang:Up() * vu
+		local yaw = initvelocity:Angle().yaw
 		local dmax, dmaxdist, dmin, dmindist = self:GetDamageParameters(t)
 		local pfd, pfr, pnd, pnr = self:GetPaintParameters(issub)
 		local str, colent, colworld = self:GetMiscParameters(issub)
+		if initvelocity.x == 0 and initvelocity.y == 0 then yaw = ang.yaw end
 		table.Merge(self.Projectile, {
 			InitPos = pos + dp,
-			InitVel = ang:Forward() * vf + ang:Right() * vr + ang:Up() * vu,
+			InitVel = initvelocity,
 			Type = util.SharedRandom(randink, 4, 9, CurTime() * i),
-			Yaw = ang.yaw,
+			Yaw = yaw,
 
 			ColRadiusEntity = colent,
 			ColRadiusWorld = colworld,
@@ -316,6 +318,7 @@ function SWEP:SharedInit()
 	self:SetNextRollingEffectTime(CurTime())
 	self:SetMode(self.MODE.READY)
 	self:AddSchedule(0, function(self, schedule)
+		if self.IsBrush then return end
 		self.Bodygroup[1] = self:GetInk() > 0 and 0 or 1
 		if not self.IsHeroWeapon then return end
 		self.Skin = self:GetNWInt "level"
@@ -433,6 +436,7 @@ function SWEP:Move(ply, mv)
 
 		if self.IsBrush then
 			self.NotEnoughInk = false
+			self.Primary.Automatic = self:GetNWBool "automaticbrush"
 			self:SetMode(self.MODE.ATTACK2)
 			self:SetCooldown(CurTime() + p.mPaintBrushSwingRepeatFrame)
 			self:SetSwingEndTime(CurTime() + self.SwingBackWait)
@@ -450,7 +454,12 @@ function SWEP:Move(ply, mv)
 		return	
 	end
 
-	if CurTime() < self:GetSwingEndTime() then return end
+	if CurTime() < self:GetSwingEndTime() then
+		if self.Primary.Automatic then return end
+		self.Primary.Automatic = keyrelease
+		return
+	end
+
 	if keyrelease then
 		EndSwing(self)
 	else

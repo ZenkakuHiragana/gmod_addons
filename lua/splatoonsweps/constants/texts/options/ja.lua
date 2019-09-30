@@ -71,6 +71,7 @@ return {Options = {
         },
     },
 	weapon_splatoonsweps_roller = {
+        AutomaticBrush = "フデ: フルオート連打",
 		weapon_splatoonsweps_heroroller = {
             Level = "ヒーローローラーのレベル",
         },

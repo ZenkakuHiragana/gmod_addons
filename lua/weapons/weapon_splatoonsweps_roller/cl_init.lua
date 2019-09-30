@@ -5,6 +5,7 @@ include "shared.lua"
 
 local Pitch = Angle(1, 0, 0)
 local LerpSpeed = 360 -- degs/sec
+local drawhud = GetConVar "cl_drawhud"
 local function AdjustRollerAngles(self, tracelength, vm)
 	local traceheight = 32
 	local tracedown = 128
@@ -85,7 +86,8 @@ local function DrawVCrosshair(self, isfirstperson)
 		self.NextCrosshairDrawTime = CurTime() + self.CrosshairDrawDelay
 	end
 
-	local dodraw = CurTime() > self.NextCrosshairDrawTime and self:GetMode() == self.MODE.READY
+	local dodraw = drawhud:GetBool() and ss.GetOption "drawcrosshair"
+	and CurTime() > self.NextCrosshairDrawTime and self:GetMode() == self.MODE.READY
 	ss.DrawVCrosshair(self, dodraw, isfirstperson)
 	self.Mode = self:GetMode()
 end

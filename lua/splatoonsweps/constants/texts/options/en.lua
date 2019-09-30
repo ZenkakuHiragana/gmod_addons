@@ -71,6 +71,7 @@ return {Options = {
         },
     },
 	weapon_splatoonsweps_roller = {
+        AutomaticBrush = "Brushes: Fully-automatic",
 		weapon_splatoonsweps_heroroller = {
             Level = "Hero Roller Level",
         },
