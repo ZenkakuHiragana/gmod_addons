@@ -448,7 +448,9 @@ function SWEP:Move(ply, mv)
 		end
 
 		if not self:IsFirstTimePredicted() then return end
+		if SERVER then SuppressHostEvents(self.Owner) end
 		PlaySwingSound(self, enoughink)
+		if SERVER then SuppressHostEvents(NULL) end
 		if not enoughink and splashnum == 0 then return end
 		self:CreateInk(splashnum)
 		return	
