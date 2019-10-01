@@ -8,7 +8,7 @@ local randsplash = "Splatoon SWEPs: SplashNum"
 local randvel = "SplatoonSWEPs: Spread velocity"
 local function EndSwing(self)
 	self.NotEnoughInk = false
-	self:SetIsSecondSwing(not self:GetNWBool "lefthand")
+	self:SetIsSecondSwing(false)
 	self:SetMode(self.MODE.READY)
 	self:SetWeaponAnim(ACT_VM_IDLE)
 	self:SetMousePressedTime(CurTime())
@@ -68,8 +68,10 @@ local function DoRollingEffect(self, velocity)
 	SuppressHostEvents(NULL)
 end
 
-local function DoRunover(self, t)
+local function DoRunover(self, t, mv)
 	local p = self.Parameters
+	local color = self:GetNWInt "inkcolor"
+	local forward = self:GetForward()
 	local dir = self:GetRight()
 	local radius = p.mCoreColRadius / 2
 	local width = p.mCoreColWidthHalf
@@ -293,6 +295,7 @@ function SWEP:CreateInk(createnum)
 		skiptable[randomorder[i]] = true
 	end
 
+	if self:GetNWBool "lefthand" then angsign = -angsign end
 	ang:RotateAroundAxis(ang:Up(), angoffset * angsign)
 	self.Projectile.Color = self:GetNWInt "inkcolor"
 	self.Projectile.ID = CurTime() + self:EntIndex()
@@ -319,7 +322,7 @@ function SWEP:SharedInit()
 	self.RollSound = CreateSound(self, self.RollSoundName)
 	self.EmptyRollSound = CreateSound(self, self.IsBrush and ss.EmptyRun or ss.EmptyRoll)
 	self.RunoverExceptions = {}
-	self:SetIsSecondSwing(not self:GetNWBool "lefthand")
+	self:SetIsSecondSwing(false)
 	self:SetMousePressedTime(CurTime())
 	self:SetSwingStartTime(CurTime())
 	self:SetNextRollingEffectTime(CurTime())
@@ -334,7 +337,7 @@ end
 
 function SWEP:SharedDeploy()
 	if not self.IsBrush then return end
-	self:SetIsSecondSwing(not self:GetNWBool "lefthand")
+	self:SetIsSecondSwing(false)
 	self:SetMousePressedTime(CurTime())
 	self:SetSwingStartTime(CurTime())
 	self:SetNextRollingEffectTime(CurTime())
@@ -458,7 +461,7 @@ function SWEP:Move(ply, mv)
 		ss.Paint(t.HitPos, t.HitNormal, width, color, yaw, inktype, .25, self.Owner, self.ClassName)
 
 		DoRollingEffect(self, velocity)
-		DoRunover(self, t)
+		DoRunover(self, t, mv)
 		self.NotEnoughInkRoll = false
 
 		local inkconsumerate = FrameTime() / ss.FrameToSec

@@ -473,24 +473,22 @@ sd[SplatoonSWEPsRollerSplash] = function(self, options, pos, ang)
 	end
 end
 
-sd[SplatoonSWEPsBrushSwing1] = function(self, options, pos, ang)
+local function MakeSwingEffect(self, sign)
 	local color = self:GetNWInt "inkcolor"
+	local sign = self:GetNWInt "lefthand" and -sign or sign
 	e:SetEntity(self)
 	e:SetAttachment(18)
 	e:SetColor(color)
 	e:SetFlags(4) -- 4: Brush's setup
 	e:SetRadius(75)
-	e:SetScale(1)
+	e:SetScale(sign)
 	util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
 end
 
+sd[SplatoonSWEPsBrushSwing1] = function(self, options, pos, ang)
+	MakeSwingEffect(self, 1)
+end
+
 sd[SplatoonSWEPsBrushSwing2] = function(self, options, pos, ang)
-	local color = self:GetNWInt "inkcolor"
-	e:SetEntity(self)
-	e:SetAttachment(18)
-	e:SetColor(color)
-	e:SetFlags(4) -- 4: Brush's setup
-	e:SetRadius(75)
-	e:SetScale(-1) -- Brush's setup, inverse rotation
-	util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
+	MakeSwingEffect(self, -1)
 end
