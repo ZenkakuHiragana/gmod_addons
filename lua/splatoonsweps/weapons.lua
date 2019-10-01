@@ -460,6 +460,7 @@ end
 
 sd[SplatoonSWEPsRollerSplash] = function(self, options, pos, ang)
 	e:SetEntity(self)
+	e:SetFlags(0)
 	util.Effect("SplatoonSWEPsRollerSplash", e, true, self.IgnorePrediction)
 	
 	local color = self:GetNWInt "inkcolor"
@@ -483,6 +484,8 @@ local function MakeSwingEffect(self, sign)
 	e:SetRadius(75)
 	e:SetScale(sign)
 	util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
+	e:SetFlags(1) -- Particle effects for brushes
+	util.Effect("SplatoonSWEPsRollerSplash", e, true, self.IgnorePrediction)
 end
 
 sd[SplatoonSWEPsBrushSwing1] = function(self, options, pos, ang)

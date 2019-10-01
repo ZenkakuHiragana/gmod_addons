@@ -9,8 +9,14 @@ function EFFECT:Init(e)
 	local w = e:GetEntity()
 	if not IsValid(w) then return end
 	local ent = w:IsTPS() and w or w:GetViewModel()
+	local a = ent:LookupAttachment "roll"
 	local c = w:GetInkColorProxy() + ss.vector_one
-    local a = ent:LookupAttachment "roll"
-	local p = CreateParticleSystem(ent, ss.Particles.RollerSplash, PATTACH_POINT_FOLLOW, a, vector_origin)
+	local name = ss.Particles.RollerSplash
+	if e:GetFlags() > 0 then
+		a = ent:LookupAttachment "tip"
+		name = ss.Particles.BrushSplash
+	end
+
+	local p = CreateParticleSystem(ent, name, PATTACH_POINT_FOLLOW, a, vector_origin)
 	p:AddControlPoint(1, game.GetWorld(), PATTACH_WORLDORIGIN, nil, c / 2)
 end

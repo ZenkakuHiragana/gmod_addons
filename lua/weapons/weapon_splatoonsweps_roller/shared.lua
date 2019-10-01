@@ -54,16 +54,15 @@ end
 
 local function DoRollingEffect(self, velocity)
 	if CurTime() < self:GetNextRollingEffectTime() then return end
-	self:SetNextRollingEffectTime(CurTime() + self.RollingEffectDelay)
+	local delay = self.IsBrush and self.RunningEffectDelay or self.RollingEffectDelay
+	self:SetNextRollingEffectTime(CurTime() + delay)
 	if not self:IsFirstTimePredicted() then return end
-
-	if self.IsBrush then return end -- TODO: Remove this when the effect for brushes is done.
 	if ss.mp and SERVER then SuppressHostEvents(self.Owner) end
-	local name = self.IsBrush and "SplatoonSWEPsBrushRolling" or "SplatoonSWEPsRollerRolling"
 	local e = EffectData()
 	e:SetEntity(self)
+	e:SetFlags(self.IsBrush and 1 or 0)
 	e:SetRadius(velocity)
-	util.Effect(name, e, true, self.IgnorePrediction)
+	util.Effect("SplatoonSWEPsRollerRolling", e, true, self.IgnorePrediction)
 	if ss.sp or CLIENT then return end
 	SuppressHostEvents(NULL)
 end
@@ -127,6 +126,7 @@ SWEP.PreSwingTime = 10 * ss.FrameToSec
 SWEP.SwingAnimTime = 10 * ss.FrameToSec
 SWEP.SwingBackWait = 24 * ss.FrameToSec
 SWEP.RollingEffectDelay = 12 * ss.FrameToSec
+SWEP.RunningEffectDelay = 6 * ss.FrameToSec
 
 function SWEP:AddPlaylist(p)
 	p[#p + 1] = self.EmptyRollSound

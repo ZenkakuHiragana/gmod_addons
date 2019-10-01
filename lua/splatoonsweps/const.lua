@@ -93,6 +93,8 @@ ss.Materials = {
 
 ss.Particles = {
 	BlasterTrail = "splatoonsweps_blaster_trail",
+	BrushRunning = "splatoonsweps_roller_rolling_brush",
+	BrushSplash = "splatoonsweps_roller_splash_brush",
 	ChargerFlash = "splatoonsweps_charger_flash",
 	ChargerMuzzleFlash = "splatoonsweps_explosion_impact",
 	Explosion = "splatoonsweps_explosion",
