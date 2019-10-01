@@ -83,6 +83,8 @@ end
 -- yy = 2 : SplatoonSWEPsMuzzleMist
 -- yy = 3 : SplatoonSWEPsMuzzleFlash
 -- yy = 4 : SplatoonSWEPsRollerSplash
+-- yy = 5 : SplatoonSWEPsBrushSwing1
+-- yy = 6 : SplatoonSWEPsBrushSwing2
 function SWEP:FireAnimationEvent(pos, ang, event, options)
 	if 5000 <= event and event < 6000 then
 		event = event - 5000

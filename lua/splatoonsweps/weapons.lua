@@ -377,6 +377,8 @@ local SplatoonSWEPsMuzzleRing = 1
 local SplatoonSWEPsMuzzleMist = 2
 local SplatoonSWEPsMuzzleFlash = 3
 local SplatoonSWEPsRollerSplash = 4
+local SplatoonSWEPsBrushSwing1 = 5
+local SplatoonSWEPsBrushSwing2 = 6
 local sd, e = ss.DispatchEffect, EffectData()
 sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
 	local tpslag = self:IsCarriedByLocalPlayer() and
@@ -469,4 +471,26 @@ sd[SplatoonSWEPsRollerSplash] = function(self, options, pos, ang)
 		e:SetScale(10 * i) -- Roller's setup, initial position offset
 		util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
 	end
+end
+
+sd[SplatoonSWEPsBrushSwing1] = function(self, options, pos, ang)
+	local color = self:GetNWInt "inkcolor"
+	e:SetEntity(self)
+	e:SetAttachment(18)
+	e:SetColor(color)
+	e:SetFlags(4) -- 4: Brush's setup
+	e:SetRadius(75)
+	e:SetScale(1)
+	util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
+end
+
+sd[SplatoonSWEPsBrushSwing2] = function(self, options, pos, ang)
+	local color = self:GetNWInt "inkcolor"
+	e:SetEntity(self)
+	e:SetAttachment(18)
+	e:SetColor(color)
+	e:SetFlags(4) -- 4: Brush's setup
+	e:SetRadius(75)
+	e:SetScale(-1) -- Brush's setup, inverse rotation
+	util.Effect("SplatoonSWEPsMuzzleRing", e, true, self.IgnorePrediction)
 end

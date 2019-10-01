@@ -30,6 +30,7 @@ function EFFECT:Init(e)
 	self.rad = e:GetRadius()
 	self.LifeTime = e:GetAttachment() * ss.FrameToSec
 	self.IsRollerSwing = bit.band(f, 2) > 0
+	self.IsBrushSwing = bit.band(f, 4) > 0
 	self.UseRefract = bit.band(f, 1) > 0
 	self.curl = self.UseRefract and 3 or 2
 	self.tmax = self.rad / 3
@@ -37,19 +38,38 @@ function EFFECT:Init(e)
 	self.radmin = MinRadius
 	self.InitTime = CurTime() - ping
 	local pos, ang = self.Weapon:GetMuzzlePosition()
-	if self.IsRollerSwing and IsValid(self.Weapon.Owner) then
+	if IsValid(self.Weapon.Owner) then
 		local forward = self.Weapon.Owner:GetForward()
 		local right = self.Weapon.Owner:GetRight()
 		local up = self.Weapon.Owner:GetUp()
 		local yaw = self.Weapon.Owner:GetAngles().yaw
-		pos:Add(forward * 60)
-		pos:Add(right * e:GetScale())
-		pos:Add(up * -20)
-		ang = Angle(0, yaw + 90, -135)
-		self.deg = 0
-		self.tmax = self.rad
-		self.tmin = self.rad
-		self.radmin = self.rad
+		if self.IsRollerSwing then
+			pos:Add(forward * 60)
+			pos:Add(right * e:GetScale())
+			pos:Add(up * -20)
+			self.initang = Angle(0, yaw + 90, -157.5)
+			self.endang = Angle(0, yaw + 90, -67.5)
+			self.deg = 0
+			self.tmax = self.rad
+			self.tmin = self.rad
+			self.radmin = self.rad
+		elseif self.IsBrushSwing then
+			pos = self.Weapon:GetShootPos() + forward * 20 - up * 5
+			self.deg = 0
+			self.endang = Angle(100, yaw + 90, -120)
+			self.initang = Angle(100, yaw + 90, 30)
+			self.tmax = self.Weapon.Parameters.mCorePaintWidthHalf
+			self.tmin = self.Weapon.Parameters.mCorePaintWidthHalf
+			self.radmin = self.rad
+			if e:GetScale() < 0 then
+				self.initang, self.endang = self.endang, self.initang
+			end
+
+			if self.Weapon:IsTPS() then
+				self.tmax = self.tmax * 2
+				self.tmin = self.tmin * 2
+			end
+		end
 	end
 
 	self:SetPos(pos)
@@ -82,10 +102,9 @@ function EFFECT:Render()
 	local alpha = 255
 	local mat = inkring
 
-	if self.IsRollerSwing then
+	if self.IsRollerSwing or self.IsBrushSwing then
 		pos = self:GetPos()
-		ang = self:GetAngles()
-		ang.roll = Lerp(f, -157.5, -67.5)
+		ang = LerpAngle(math.EaseInOut(f, 0, 0.5), self.initang, self.endang)
 		norm = ang:Forward()
 		mat = inkringtranslucent
 		alpha = Lerp(math.EaseInOut(f, 0, 1), 255, 0)
