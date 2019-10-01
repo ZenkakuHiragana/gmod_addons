@@ -42,13 +42,22 @@ The aim of this rework is the following:
     * [x] World models
     * [x] A script to swing
     * [x] A script to run
-    * [ ] Effects
+    * [x] Effects
     * [x] Set proper parameters
-    * [ ] Test and fix bugs
+    * [x] Test and fix bugs
     * [x] Do the same for Octobrush as well
+* Make Slosher and Tri-Slosher
+    * [ ] View model for Slosher
+    * [ ] World model for Slosher
+    * [ ] A script to slosh
+    * [ ] Effects
+    * [ ] Set proper parameters
+    * [ ] Test and fix bugs
+    * [ ] Do the same for Tri-Slosher
+* Make Sloshing Machine
+    * Thinking how to implement...
     
 ## Upcoming features
-* Sloshers
 * Sub weapons
 
 ## I want to make the following, too
