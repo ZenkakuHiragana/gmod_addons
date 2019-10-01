@@ -76,6 +76,7 @@ return {CVars = {
     },
 	weapon_splatoonsweps_roller = {
         AutomaticBrush = "自動的にフデを連打する。 (1: 有効, 0: 無効)",
+        DropAtFeet = "バージョン2.8.0以降のように、連続で振り攻撃をした場合に足元にもインクが塗られるようにする。 (1: 有効, 0: 無効)",
 		weapon_splatoonsweps_heroroller = {
             Level = "ヒーローローラーレプリカのレベル。 (0, 1, 2, 3 → レベル 1, 2, 3, 4)",
         },

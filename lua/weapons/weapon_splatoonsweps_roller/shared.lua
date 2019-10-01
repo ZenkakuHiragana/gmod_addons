@@ -8,13 +8,17 @@ local randsplash = "Splatoon SWEPs: SplashNum"
 local randvel = "SplatoonSWEPs: Spread velocity"
 local function EndSwing(self)
 	self.NotEnoughInk = false
-	self:SetIsSecondSwing(false)
+	self:SetIsSecondSwing(not self:GetNWBool "lefthand")
 	self:SetMode(self.MODE.READY)
 	self:SetWeaponAnim(ACT_VM_IDLE)
 	self:SetMousePressedTime(CurTime())
 	self.RollSound:ChangeVolume(0)
 	self.EmptyRollSound:ChangeVolume(0)
-	if self.IsBrush then return end
+	if self.IsBrush then
+		self:SetSwingCount(self.SwingCountInit)
+		return
+	end
+
 	if not self:IsFirstTimePredicted() then return end
 	self:EmitSound "SplatoonSWEPs.RollerHolster"
 end
@@ -307,12 +311,15 @@ function SWEP:CreateInk(createnum)
 end
 
 function SWEP:SharedInit()
+	local p = self.Parameters
+	self.SwingCountInit = p.mPaintBrushNearestBulletLoopNum - p.mPaintBrushNearestBulletOrderNum
 	self.Bodygroup = table.Copy(self.Bodygroup or {})
 	self.IsBrush = self.Parameters.mPaintBrushType
 	self.Projectile.IsRoller = true
 	self.RollSound = CreateSound(self, self.RollSoundName)
 	self.EmptyRollSound = CreateSound(self, self.IsBrush and ss.EmptyRun or ss.EmptyRoll)
 	self.RunoverExceptions = {}
+	self:SetIsSecondSwing(not self:GetNWBool "lefthand")
 	self:SetMousePressedTime(CurTime())
 	self:SetSwingStartTime(CurTime())
 	self:SetNextRollingEffectTime(CurTime())
@@ -323,6 +330,16 @@ function SWEP:SharedInit()
 		if not self.IsHeroWeapon then return end
 		self.Skin = self:GetNWInt "level"
 	end)
+end
+
+function SWEP:SharedDeploy()
+	if not self.IsBrush then return end
+	self:SetIsSecondSwing(not self:GetNWBool "lefthand")
+	self:SetMousePressedTime(CurTime())
+	self:SetSwingStartTime(CurTime())
+	self:SetNextRollingEffectTime(CurTime())
+	self:SetMode(self.MODE.READY)
+	self:SetSwingCount(self.SwingCountInit)
 end
 
 function SWEP:SharedHolster()
@@ -337,7 +354,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	local p = self.Parameters
 	if mode == self.MODE.PAINT then return end
 	if mode == self.MODE.ATTACK then return end
-	if self:GetIsSecondSwing() then
+	if self.IsBrush and self:GetIsSecondSwing() then
 		anim = ACT_VM_SECONDARYATTACK
 	end
 
@@ -347,7 +364,33 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	self:SetIsSecondSwingAnim(self:GetIsSecondSwing())
 	self:SetWeaponAnim(anim)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
-	if self.IsBrush then return end
+	if self.IsBrush then
+		if not self:GetNWBool "dropatfeet" then return end
+		local p = self.Parameters
+		if self:GetInk() < p.mInkConsumeSplash then return end
+		local count = self:GetSwingCount() + 1
+		if count >= p.mPaintBrushNearestBulletLoopNum then
+			local dropdata = ss.MakeProjectileStructure()
+			table.Merge(dropdata, {
+				Color = self:GetNWInt "inkcolor",
+				DoDamage = false,
+				InitPos = self:GetShootPos(),
+				PaintFarDistance = 0,
+				PaintFarRadius = p.mPaintBrushNearestBulletRadius,
+				PaintNearDistance = 0,
+				PaintNearRadius = p.mPaintBrushNearestBulletRadius,
+				Weapon = self,
+				Yaw = self:GetAimVector():Angle().yaw,
+			})
+			
+			ss.AddInk(p, dropdata)
+			count = 0
+		end
+
+		self:SetSwingCount(count)
+		return
+	end
+
 	if not self:IsFirstTimePredicted() then return end
 	self:EmitSound(self.PreSwingSound)
 end
@@ -361,6 +404,7 @@ function SWEP:CustomDataTables()
 	self:AddNetworkVar("Float", "NextRollingEffectTime")
 	self:AddNetworkVar("Float", "RunoverDelay")
 	self:AddNetworkVar("Int", "Mode")
+	self:AddNetworkVar("Int", "SwingCount")
 end
 
 function SWEP:Move(ply, mv)
@@ -448,9 +492,9 @@ function SWEP:Move(ply, mv)
 		end
 
 		if not self:IsFirstTimePredicted() then return end
-		if SERVER then SuppressHostEvents(self.Owner) end
+		if ss.mp and SERVER then SuppressHostEvents(self.Owner) end
 		PlaySwingSound(self, enoughink)
-		if SERVER then SuppressHostEvents(NULL) end
+		if ss.mp and SERVER then SuppressHostEvents(NULL) end
 		if not enoughink and splashnum == 0 then return end
 		self:CreateInk(splashnum)
 		return	
@@ -504,6 +548,10 @@ function SWEP:UpdateAnimation(ply, velocity, maxseqspeed)
 end
 
 function SWEP:CustomMoveSpeed()
+	if self:GetMode() == self.MODE.ATTACK or self:GetMode() == self.MODE.ATTACK2 then
+		return self:GetInklingSpeed() / 2
+	end
+
 	if self:GetMode() ~= self.MODE.PAINT then return end
 	if not self.Owner:OnGround() then return end
 	if self:GetInk() > 0 then

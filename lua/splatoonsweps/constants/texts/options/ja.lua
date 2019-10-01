@@ -72,6 +72,8 @@ return {Options = {
     },
 	weapon_splatoonsweps_roller = {
         AutomaticBrush = "フデ: フルオート連打",
+        DropAtFeet = "フデ: 足元を塗る",
+        DropAtFeet_help = "連続で振り攻撃をした場合に、足元にもインクが塗られるようにする。",
 		weapon_splatoonsweps_heroroller = {
             Level = "ヒーローローラーのレベル",
         },

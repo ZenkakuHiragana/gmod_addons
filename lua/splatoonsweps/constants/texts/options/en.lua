@@ -72,6 +72,8 @@ return {Options = {
     },
 	weapon_splatoonsweps_roller = {
         AutomaticBrush = "Brushes: Fully-automatic",
+        DropAtFeet = "Brushes: Paint where the player stands",
+        DropAtFeet_help = "When repeatedly using swinging attacks, ink will also be painted where the player is standing.",
 		weapon_splatoonsweps_heroroller = {
             Level = "Hero Roller Level",
         },

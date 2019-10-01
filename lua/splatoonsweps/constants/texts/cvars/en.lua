@@ -76,6 +76,7 @@ Make sure your graphics card has enough space of video memory.
     },
 	weapon_splatoonsweps_roller = {
         AutomaticBrush = "Automatically swing brushes repeatedly. (1: enabled, 0: disabled)",
+        DropAtFeet = "Like version 2.8.0 or above, when repeatedly using swinging attacks, ink will also be painted where the player is standing. (1: enabled, 0: disabled)",
 		weapon_splatoonsweps_heroroller = {
             Level = "The level of Hero Roller Replica. (0, 1, 2, 3 -> Level 1, 2, 3, 4)",
         },
