@@ -20,7 +20,10 @@ local function EndSwing(self)
 	end
 
 	if not self:IsFirstTimePredicted() then return end
+	if ss.mp and SERVER then SuppressHostEvents(self.Owner) end
 	self:EmitSound "SplatoonSWEPs.RollerHolster"
+	if ss.sp or CLIENT then return end
+	SuppressHostEvents(NULL)
 end
 
 local function PlaySwingSound(self, enoughink)
@@ -357,17 +360,23 @@ function SWEP:SharedPrimaryAttack(able, auto)
 	local p = self.Parameters
 	if mode == self.MODE.PAINT then return end
 	if mode == self.MODE.ATTACK then return end
-	if self.IsBrush and self:GetIsSecondSwing() then
-		anim = ACT_VM_SECONDARYATTACK
-	end
+	local swingdelay = self.IsBrush and 4 or 0
+	local issecond = self.IsBrush and self:GetIsSecondSwing()
+	if issecond then anim = ACT_VM_SECONDARYATTACK end
 
 	self:SetMode(self.MODE.ATTACK)
 	self:SetMousePressedTime(CurTime())
 	self:SetSwingStartTime(CurTime() + p.mSwingLiftFrame)
 	self:SetIsSecondSwingAnim(self:GetIsSecondSwing())
 	self:SetWeaponAnim(anim)
-	self.Owner:SetAnimation(PLAYER_ATTACK1)
+	if not (self.IsBrush or issecond) then
+		self.Owner:SetAnimation(PLAYER_ATTACK1)
+	end
+
 	if self.IsBrush then
+		-- This is needed in multiplayer to predict muzzle effects.
+		self:ResetSequence(issecond and "fire2" or "fire")
+
 		if not self:GetNWBool "dropatfeet" then return end
 		local p = self.Parameters
 		if self:GetInk() < p.mInkConsumeSplash then return end

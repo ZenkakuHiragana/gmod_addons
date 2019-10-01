@@ -476,7 +476,7 @@ end
 
 local function MakeSwingEffect(self, sign)
 	local color = self:GetNWInt "inkcolor"
-	local sign = self:GetNWInt "lefthand" and -sign or sign
+	local sign = self:GetNWBool "lefthand" and -sign or sign
 	e:SetEntity(self)
 	e:SetAttachment(18)
 	e:SetColor(color)
