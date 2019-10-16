@@ -805,7 +805,7 @@ local weaponslot = {
 	weapon_splatoonsweps_blaster_base = 2,
 	weapon_splatoonsweps_splatling = 3,
 	weapon_splatoonsweps_charger = 4,
-	weapon_splatoonsweps_slosher = 5,
+	weapon_splatoonsweps_slosher_base = 5,
 }
 local function SetupIcons(SWEP)
 	if SERVER then return end
