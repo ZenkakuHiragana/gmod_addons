@@ -47,8 +47,8 @@ The aim of this rework is the following:
     * [x] Test and fix bugs
     * [x] Do the same for Octobrush as well
 * Make Slosher and Tri-Slosher
-    * [ ] View model for Slosher
-    * [ ] World model for Slosher
+    * [x] View model for Slosher
+    * [x] World model for Slosher
     * [ ] A script to slosh
     * [ ] Effects
     * [ ] Set proper parameters
