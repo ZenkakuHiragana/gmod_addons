@@ -136,6 +136,7 @@ local function SetPlayerModel(self) -- Apply changes to preview model
 		end
 
 		local sequences = {
+			weapon_splatoonsweps_slosher_base = "idle_crossbow",
 			weapon_splatoonsweps_splatling = "idle_crossbow",
 			weapon_splatoonsweps_roller = "idle_melee2",
 		}

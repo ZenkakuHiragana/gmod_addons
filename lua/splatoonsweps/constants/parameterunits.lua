@@ -352,6 +352,9 @@ local sloshers = {
     mShotRandomDegreeExceptBulletForGuide = "deg",
     mShotRandomBiasExceptBulletForGuide = "ratio",
 
+    mFreeStateGravity = "du/f", -- Added after update
+    mFreeStateAirResist = "ratio", -- Added after update
+
     mDropSplashDrawRadius = "du",
     mDropSplashColRadius = "du",
     mDropSplashPaintRadius = "du",
@@ -365,6 +368,9 @@ local sloshers = {
     mSpiralSplashGroup = "num",
     mSpiralSplashBulletNumInGroup = "num",
     mSpiralSplashInitSpeed = "du/f",
+    mSpiralSplashSpeedBaseDist = "du", -- Added after update
+    mSpiralSplashSpeedMaxDist = "du", -- Added after update
+    mSpiralSPlashSpeedMaxRate = "ratio", -- Added after update
     mSpiralSplashLifeFrame = "f",
     mSpiralSplashMinSpanFrame = "f",
     mSpiralSplashMinSpanBulletCounter = "num",
@@ -373,11 +379,11 @@ local sloshers = {
     mSpiralSplashSameTimeBulletNum = "num",
     mSpiralSplashRoundSplitNum = "num",
     mSpiralSplashColRadiusForField = "du",
-    mSpiralSplashColRadiusForPlayer = "du",
-    mSpiralSplashMaxDamage = "hp",
-    mSpiralSplashMinDamage = "hp",
-    mSpiralSplashMaxDamageDist = "du",
-    mSpiralSplashMinDamageDist = "du",
+    mSpiralSplashColRadiusForPlayer = "du", -- Removed after update
+    mSpiralSplashMaxDamage = "hp", -- Removed after update
+    mSpiralSplashMinDamage = "hp", -- Removed after update
+    mSpiralSplashMaxDamageDist = "du", -- Removed after update
+    mSpiralSplashMinDamageDist = "du", -- Removed after update
 
     mScatterSplashGroup = "num",
     mScatterSplashBulletNumInGroup = "num",
@@ -415,6 +421,13 @@ local sloshers = {
     mHitWallSplashBetweenLength = "du",
     mHitWallSplashMinusYRate = "ratio",
     mHitWallSplashDistanceRate = "ratio",
+
+    mHitPlayerDrapDrawRadius = "du", -- Added after update
+    mHitPlayerDrapCollisionRadius = "du", -- Added after update
+    mHitPlayerDrapPaintRadiusRate = "ratio", -- Added after update
+    mHitPlayerDrapHitPlayerOffset = "du", -- Added after update
+    mHitPlayerDrapHitObjectOffset = "du", -- Added after update
+    mPostDelayFrm_Main = "f", -- Added after update
 }
 local t = {}
 table.Merge(t, shooters)

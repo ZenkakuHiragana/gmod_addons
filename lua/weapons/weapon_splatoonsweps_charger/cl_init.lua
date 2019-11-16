@@ -143,8 +143,9 @@ function SWEP:RenderScreenspaceEffects()
 	MatRefScope:SetFloat("$refractamount", MatRefDefault)
 end
 
-function SWEP:DrawCrosshair(x, y, t)
+function SWEP:DrawCrosshair(x, y)
 	if self:GetCharge() == math.huge then return end
+	local t = self:SetupDrawCrosshair()
 	local p = self.Parameters
 	local dist = self.Scoped and p.mFullChargeDistanceScoped or p.mFullChargeDistance
 	t.EndPosScreen = (self:GetShootPos() + self:GetAimVector() * dist):ToScreen()

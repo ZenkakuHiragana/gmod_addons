@@ -489,8 +489,7 @@ function SWEP:DoDrawCrosshair(x, y)
 	if not ss.GetOption "drawcrosshair" then return end
 	x, y = self.Cursor.x, self.Cursor.y
 
-	return ss.ProtectedCall(self.DrawCrosshair, self, x, y,
-	ss.ProtectedCall(self.SetupDrawCrosshair, self, x, y))
+	return ss.ProtectedCall(self.DrawCrosshair, self, x, y)
 end
 
 local PUNCH_DAMPING = 9.0

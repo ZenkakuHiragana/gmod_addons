@@ -326,13 +326,17 @@ function SWEP:SetupDrawCrosshair()
 	return t
 end
 
-function SWEP:DrawCrosshair(x, y, t)
-	self:DrawFourLines(t, self:GetSpreadAmount())
-	self:DrawHitCrossBG(t)
-	self:DrawOuterCircle(t)
-	self:DrawHitCross(t)
-	self:DrawInnerCircle(t)
-	self:DrawCenterDot(t)
+function SWEP:DrawCrosshair(x, y)
+	local p = self.Parameters
+	for linenum = 1, p.mLineNum do
+		local t = self:SetupDrawCrosshair(linenum)
+		self:DrawFourLines(t, self:GetSpreadAmount())
+		self:DrawHitCrossBG(t)
+		self:DrawOuterCircle(t)
+		self:DrawHitCross(t)
+		self:DrawInnerCircle(t)
+		self:DrawCenterDot(t)
+	end
 
 	return true
 end

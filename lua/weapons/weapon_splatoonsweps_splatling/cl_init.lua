@@ -242,8 +242,9 @@ function SWEP:DrawCrosshairFlash(t)
 	surface.DrawTexturedRect(t.HitPosScreen.x - s / 2, t.HitPosScreen.y - s / 2, s, s)
 end
 
-function SWEP:DrawCrosshair(x, y, t)
+function SWEP:DrawCrosshair(x, y)
 	if self:GetCharge() == math.huge and self:GetFireInk() == 0 then return end
+	local t = self:SetupDrawCrosshair()
 	t.EndPosScreen = (self:GetShootPos() + self:GetAimVector() * self.Range):ToScreen()
 	t.CrosshairDarkColor = ColorAlpha(t.CrosshairColor, 192)
 	t.CrosshairDarkColor.r, t.CrosshairDarkColor.g, t.CrosshairDarkColor.b

@@ -525,6 +525,9 @@ function ss.DefaultParams.weapon_splatoonsweps_slosher_base(weapon)
 		mGuideSideCheckCollisionFrame = 8,
 		mShotRandomDegreeExceptBulletForGuide = 4.5,
 		mShotRandomBiasExceptBulletForGuide = 0.4,
+		
+		mFreeStateGravity = 0.5,
+		mFreeStateAirResist = 0.12,
 	
 		mDropSplashDrawRadius = 2,
 		mDropSplashColRadius = 2,
@@ -539,6 +542,9 @@ function ss.DefaultParams.weapon_splatoonsweps_slosher_base(weapon)
 		mSpiralSplashGroup = 0,
 		mSpiralSplashBulletNumInGroup = 1,
 		mSpiralSplashInitSpeed = 5,
+		mSpiralSplashSpeedBaseDist = -15,
+		mSpiralSplashSpeedMaxDist = -85,
+		mSpiralSplashSpeedMaxRate = 1,
 		mSpiralSplashLifeFrame = 7,
 		mSpiralSplashMinSpanFrame = 1,
 		mSpiralSplashMinSpanBulletCounter = 40,
@@ -589,6 +595,13 @@ function ss.DefaultParams.weapon_splatoonsweps_slosher_base(weapon)
 		mHitWallSplashBetweenLength = 13,
 		mHitWallSplashMinusYRate = 0.45,
 		mHitWallSplashDistanceRate = 1.3333,
+		
+		mHitPlayerDrapDrawRadius = 6,
+		mHitPlayerDrapCollisionRadius = 4,
+		mHitPlayerDrapPaintRadiusRate = 0,
+		mHitPlayerDrapHitPlayerOffset = 10,
+		mHitPlayerDrapHitObjectOffset = 0,
+		mPostDelayFrm_Main = 5,
 	}
 end
 

@@ -350,7 +350,8 @@ function SWEP:SetupDrawCrosshair()
 	return t
 end
 
-function SWEP:DrawCrosshair(x, y, t)
+function SWEP:DrawCrosshair(x, y)
+	local t = self:SetupDrawCrosshair()
 	self:DrawFourLines(t, self:GetSpreadAmount())
 	self:DrawHitCrossBG(t)
 	self:DrawOuterCircle(t)
