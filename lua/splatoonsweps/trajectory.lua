@@ -32,7 +32,7 @@ end
 function Simulate.weapon_splatoonsweps_shooter(ink)
 	local data, parameters, tr = ink.Data, ink.Parameters, ink.Trace
 
-	ss.Simulate.Shooter(ink)
+	ss.SimulateBullet(ink)
 	if not IsFirstTimePredicted() then return end
 	if data.SplashCount >= data.SplashNum then return end
 
@@ -144,7 +144,7 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t)
 end
 
 function Simulate.weapon_splatoonsweps_charger(ink)
-	ss.Simulate.Shooter(ink)
+	ss.SimulateBullet(ink)
 	if not (ink.Data.DoDamage and IsFirstTimePredicted()) then return end
 	local data, parameters, tr, weapon = ink.Data, ink.Parameters, ink.Trace, ink.Data.Weapon
 	local dropdata = ss.MakeProjectileStructure()
@@ -349,6 +349,9 @@ HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shoote
 Simulate.weapon_splatoonsweps_roller = Simulate.weapon_splatoonsweps_shooter
 HitPaint.weapon_splatoonsweps_roller = HitPaint.weapon_splatoonsweps_shooter
 HitEntity.weapon_splatoonsweps_roller = HitEntity.weapon_splatoonsweps_shooter
+Simulate.weapon_splatoonsweps_slosher = Simulate.weapon_splatoonsweps_shooter
+HitPaint.weapon_splatoonsweps_slosher = HitPaint.weapon_splatoonsweps_shooter
+HitEntity.weapon_splatoonsweps_slosher = HitEntity.weapon_splatoonsweps_shooter
 
 local function ProcessInkQueue(ply)
 	local Benchmark = SysTime()
@@ -470,10 +473,10 @@ end)
 -- Physics simulation for ink trajectory.
 -- The first some frames(1/60 sec.) ink flies without gravity.
 -- After that, ink decelerates horizontally and is affected by gravity.
-function ss.Simulate.Shooter(ink)
+function ss.SimulateBullet(ink)
 	local data, tr = ink.Data, ink.Trace
 	local gmul = data.IsRoller and ss.RollerGravityMul or ss.ShooterGravityMul
-	local g = physenv.GetGravity() * gmul
+	local g = ink.Parameters.mFreeStateGracity or physenv.GetGravity() * gmul
 	local t = math.max(CurTime() - ink.InitTime, 0)
 	tr.start:Set(tr.endpos)
 	tr.endpos:Set(data.InitPos)
@@ -481,12 +484,20 @@ function ss.Simulate.Shooter(ink)
 		local dec = data.IsRoller and ss.RollerDecreaseFrame or ss.ShooterDecreaseFrame
 		local a = data.InitVel / dec -- Deceleration
 		local tmax = data.StraightFrame
-		local tdec = data.IsCharger and 0 or dec
-		local tfall = tmax + tdec -- If it's charger's, then it immediately starts falling
+		local tdec = data.IsCharger and 0 or dec -- If it's charger's, then it immediately starts falling
+		local tfall = tmax + tdec -- Time to start falling
 		local tlim = math.min(t, tfall) -- 'Limited' time for straight movement
 		local t2 = math.max(tlim - tmax, 0)^2 / 2
 		local tg = math.max(t - tmax, 0)^2 / 2
 		tr.endpos:Add(data.InitVel * tlim - a * t2 + g * tg)
+
+		local mFreeStateAirResist = ink.Parameters.mFreeStateAirResist
+		if mFreeStateAirResist then -- For Slosher's projectile
+			-- Additional pos = integral from 0 to t of InitVel * mFreeStateAirResist^u du
+			local resist =  (mFreeStateAirResist^tfall - 1) / math.log(mFreeStateAirResist)
+			tr.endpos.x = tr.endpos.x + data.InitVel.x * resist
+			tr.endpos.y = tr.endpos.y + data.InitVel.y * resist
+		end
 	else -- It's a drop created by a bullet
 		tr.endpos:Add(g * t^2 / 2)
 		tr.LengthSum = tr.LengthSum + tr.start:Distance(tr.endpos)

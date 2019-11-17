@@ -153,18 +153,23 @@ function SWEP:GetVelocitySpread(issub)
 	end
 end
 
-function SWEP:GetMiscParameters(issub)
+function SWEP:GetStraightFrame(issub)
 	local p = self.Parameters
 	if issub then
-		return p.mSplashSubStraightFrame,
-			   p.mSplashSubCollisionRadiusForPlayer,
-			   p.mSplashSubCollisionRadiusForField,
-			   p.mSplashSubCoverApertureFreeFrame
+		return p.mSplashSubStraightFrame
 	else
-		return p.mSplashStraightFrame,
-			   p.mSplashCollisionRadiusForPlayer,
-			   p.mSplashCollisionRadiusForField,
-			   p.mSplashCoverApertureFreeFrame
+		return p.mSplashStraightFrame
+	end
+end
+
+function SWEP:GetCollisionRadii(issub)
+	local p = self.Parameters
+	if issub then
+		return p.mSplashSubCollisionRadiusForPlayer,
+			   p.mSplashSubCollisionRadiusForField
+	else
+		return p.mSplashCollisionRadiusForPlayer,
+			   p.mSplashCollisionRadiusForField
 	end
 end
 
@@ -245,7 +250,12 @@ function SWEP:CreateInk(createnum)
 		local yaw = initvelocity:Angle().yaw
 		local dmax, dmaxdist, dmin, dmindist = self:GetDamageParameters(t)
 		local pfd, pfr, pnd, pnr = self:GetPaintParameters(issub)
-		local str, colent, colworld = self:GetMiscParameters(issub)
+		local colent, colworld = self:GetCollisionRadii(issub)
+		local str = self:GetStraightFrame(issub)
+		local aperturefreeframe = issub -- Unknown parameter, unused for now
+		and p.mSplashSubCoverApertureFreeFrame
+		or p.mSplashCoverApertureFreeFrame
+		
 		if initvelocity.x == 0 and initvelocity.y == 0 then yaw = ang.yaw end
 		table.Merge(self.Projectile, {
 			InitPos = pos + dp,

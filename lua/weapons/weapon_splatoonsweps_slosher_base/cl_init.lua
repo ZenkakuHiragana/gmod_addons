@@ -85,7 +85,7 @@ function SWEP:GetCrosshairTrace(t)
 	local tr = ss.SquidTrace
 	tr.start, tr.endpos = t.pos, t.pos + t.dir * range
 	tr.filter = {self, self.Owner}
-	tr.maxs = ss.vector_one * self.Parameters.mFirstGroupBulletFirstCollsionRadiusForField
+	tr.maxs = ss.vector_one * self.Parameters.mFirstGroupBulletFirstCollisionRadiusForField
 	tr.mins = -tr.maxs
 
 	t.Trace = util.TraceHull(tr)

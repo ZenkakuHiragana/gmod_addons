@@ -52,6 +52,7 @@ function EFFECT:Init(e)
 	local IsCharger = self.Weapon.IsCharger
 	local IsRoller = self.Weapon.IsRoller
 	local IsRollerSubSplash = bit.band(f, 4) > 0
+	local IsSlosher = self.Weapon.IsSlosher
 	local ping = IsLP and self.Weapon:Ping() or 0
 	local prog = e:GetScale() -- For chargers
 	local splashinit = e:GetAttachment()
@@ -65,22 +66,22 @@ function EFFECT:Init(e)
 	local splashradius = IsCharger and Lerp(prog, p.mPaintNearR_WeakRate, 1) * p.mMaxChargeSplashPaintRadius * splashratio or 0
 	local splashlength = Either(IsCharger, splashrate * splashradius, p.mCreateSplashLength) or 0
 	local splashcolradius = Either(IsCharger, colradius, p.mSplashColRadius)
-	local splitnum = IsRoller and 1 or p.mSplashSplitNum
+	local splitnum = not IsRoller and p.mSplashSplitNum or 1
 	local straightframe = p.mStraightFrame
 	local decreaseframe = ss.ShooterDecreaseFrame
 	local drawradius = IsBlasterSphereSplashDrop and p.mSphereSplashDropDrawRadius or p.mDrawRadius
-	if IsRoller then
-		local viewang = -LocalPlayer():GetViewEntity():GetAngles():Forward()
+	if IsSlosher then
+		local misc = e:GetAttachment()
+		local bulletgroup = misc % 10
+		local spawncount = math.floor(misc / 10)
+		drawradius = 20
+		straightframe = p.mBulletStraightFrame
+		self.DrawSize = self.Weapon:GetDrawRadius(bulletgroup, spawncount) * 3
+	elseif IsRoller then
 		drawradius = IsRollerSubSplash and p.mSplashSubDrawRadius or p.mSplashDrawRadius
 		straightframe = IsRollerSubSplash and p.mSplashSubStraightFrame or p.mSplashStraightFrame
 		decreaseframe = ss.RollerDecreaseFrame
-		self.FilterDU = math.random()
-		self.FilterDV = math.random()
-		self.FilterDU2 = math.random()
-		self.FilterDV2 = math.random()
-		self.Material = math.random() > 0.5 and inksplash or inkring
-		self.Normal = (viewang + VectorRand() / 4):GetNormalized()
-		self.Size = p.mSplashPaintNearR
+		self.DrawSize = p.mSplashPaintNearR
 	elseif isdrop then
 		straightframe = 0
 		decreaseframe = 0
@@ -117,8 +118,9 @@ function EFFECT:Init(e)
 	self.IsCarriedByLocalPlayer = self.Weapon:IsCarriedByLocalPlayer()
 	self.IsDrop = isdrop
 	self.IsRoller = IsRoller
+	self.IsSlosher = IsSlosher
 	self.Range = range
-	self.Simulate = ss.Simulate.Shooter
+	self.Simulate = ss.SimulateBullet
 	self.SplashCount = 0
 	self.SplashColRadius = splashcolradius
 	self.SplashInit = splashradius + splashinit * self.CreateSplashLength / splitnum
@@ -185,7 +187,16 @@ function EFFECT:Init(e)
 
 	self:SetAngles(self.Apparent.Data.Angle)
 	self:SetPos(self.Apparent.Data.InitPos)
-	if self.IsRoller then self.Render = self.Render2 end
+	if self.IsRoller or self.IsSlosher then
+		local viewang = -LocalPlayer():GetViewEntity():GetAngles():Forward()
+		self.Render = self.Render2
+		self.FilterDU = math.random()
+		self.FilterDV = math.random()
+		self.FilterDU2 = math.random()
+		self.FilterDV2 = math.random()
+		self.Material = math.random() > 0.5 and inksplash or inkring
+		self.Normal = (viewang + VectorRand() / 4):GetNormalized()
+	end
 end
 
 function EFFECT:CreateDrops(tr) -- Creates ink drops
@@ -390,7 +401,7 @@ function EFFECT:Render2()
 	rendermaterial:SetFloat("$alphatestreference", alpha)
 	rendermaterial:Recompute()
 	render.SetMaterial(rendermaterial)
-	render.DrawQuadEasy(self:GetPos(), self.Normal, self.Size, self.Size, self.Color)
+	render.DrawQuadEasy(self:GetPos(), self.Normal, self.DrawSize, self.DrawSize, self.Color)
 end
 
 hook.Remove("HUDPaint", "HUDPaint_DrawABox")

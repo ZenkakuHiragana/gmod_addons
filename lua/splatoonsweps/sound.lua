@@ -464,6 +464,46 @@ sound.Add { -- Carbon Roller / Deco, Pre-swing
 	pitch = 100,
 }
 
+--------------------------------------------------------------------------------
+-- Slosher
+--------------------------------------------------------------------------------
+
+sound.Add {
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.Slosher",
+	level = WeaponSoundLevel,
+	sound = {
+		"splatoonsweps/weapons/slosher/slosher1.wav",
+		"splatoonsweps/weapons/slosher/slosher2.wav",
+	},
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add {
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.TriSlosher",
+	level = WeaponSoundLevel,
+	sound = {
+		"splatoonsweps/weapons/slosher/trislosher.wav",
+		"splatoonsweps/weapons/slosher/slosher2.wav",
+	},
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
+sound.Add {
+	channel = CHAN_WEAPON,
+	name = "SplatoonSWEPs.SloshingMachine",
+	level = WeaponSoundLevel,
+	sound = {
+		"splatoonsweps/weapons/slosher/machine1.wav",
+		"splatoonsweps/weapons/slosher/machine2.wav",
+	},
+	volume = WeaponSoundVolume,
+	pitch = 100,
+}
+
 for _, soundData in ipairs {
 	{
 		channel = CHAN_BODY,
