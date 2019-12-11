@@ -352,7 +352,7 @@ local sloshers = {
     mShotRandomDegreeExceptBulletForGuide = "deg",
     mShotRandomBiasExceptBulletForGuide = "ratio",
 
-    mFreeStateGravity = "du/f", -- Added after update
+    mFreeStateGravity = "du/f2", -- Added after update
     mFreeStateAirResist = "ratio", -- Added after update
 
     mDropSplashDrawRadius = "du",

@@ -47,7 +47,9 @@ function Simulate.weapon_splatoonsweps_shooter(ink)
 		ColRadiusEntity = parameters.mSplashColRadius,
 		ColRadiusWorld = parameters.mSplashColRadius,
 		DoDamage = false,
+		PaintFarDistance = parameters.mPaintFarDistance,
 		PaintFarRadius = parameters.mSplashPaintRadius,
+		PaintNearDistance = parameters.mPaintNearDistance,
 		PaintNearRadius = parameters.mSplashPaintRadius,
 		Weapon = data.Weapon,
 		Yaw = data.Yaw,
@@ -59,14 +61,12 @@ function Simulate.weapon_splatoonsweps_shooter(ink)
 		ss.AddInk(parameters, dropdata)
 
 		if data.Weapon.IsBlaster then
-			if ss.mp and SERVER and IsValid(tr.filter) and tr.filter:IsPlayer() then SuppressHostEvents(tr.filter) end
 			local e = EffectData()
 			e:SetColor(data.Color)
 			e:SetNormal(data.InitDir)
 			e:SetOrigin(dropdata.InitPos)
 			e:SetRadius(parameters.mCollisionRadiusNear / 2)
-			util.Effect("SplatoonSWEPsBlasterTrail", e)
-			if ss.mp and SERVER and IsValid(tr.filter) and tr.filter:IsPlayer() then SuppressHostEvents() end
+			ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterTrail", e)
 		end
 
 		if util.TraceLine {
@@ -86,21 +86,23 @@ end
 
 function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	local data, parameters, tr, weapon = ink.Data, ink.Parameters, ink.Trace, ink.Data.Weapon
-	local ratio = data.Ratio or 1
-	local lmin = data.PaintNearDistance or parameters.mPaintNearDistance
-	local lmax = data.PaintFarDistance or parameters.mPaintFarDistance
+	local lmin = data.PaintNearDistance
+	local lmin_ratio = data.PaintRatioNearDistance
+	local lmax = data.PaintFarDistance
+	local lmax_ratio = data.PaintRatioFarDistance
 	local rmin = data.PaintNearRadius
 	local rmax = data.PaintFarRadius
+	local ratio = data.Ratio or 1
+	local ratio_min = data.PaintNearRatio
+	local ratio_max = data.PaintFarRatio
 	local length = math.Clamp(tr.LengthSum, lmin, lmax)
 	local radius = math.Remap(length, lmin, lmax, rmin, rmax)
 	if length == lmin and lmin == lmax then radius = rmax end -- Avoid NaN
 	if not weapon.IsBlaster and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
-		local min = SplashMinDistance
-		local max = SplashMaxDistance
-		local length2d = (t.HitPos - data.InitPos):Length2D()
-		if length2d < min then data.Type = ss.GetDropType() end
-		length2d = math.Clamp(length2d, min, max)
-		ratio = 1 / math.Remap(length2d, min, max, 1, 3)
+		local l = (t.HitPos - data.InitPos):Length2D()
+		if l < lmin_ratio then data.Type = ss.GetDropType() end
+		l = math.Clamp(l, lmin_ratio, lmax_ratio)
+		ratio = 1 / math.Remap(l, lmin_ratio, lmax_ratio, ratio_min, ratio_max)
 	else
 		data.Type = ss.GetDropType()
 		ratio = data.Ratio or 1
@@ -119,18 +121,18 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t)
 	local d, e, o = DamageInfo(), t.Entity, tr.filter
 	if ss.LastHitID[e] == data.ID then return end
 	ss.LastHitID[e] = data.ID -- Avoid multiple damages at once
-
-	local decay_start = data.DamageMaxDistance or parameters.mGuideCheckCollisionFrame
-	local decay_end = data.DamageMinDistance or parameters.mDamageMinFrame
-	local damage_max = data.DamageMax or parameters.mDamageMax
-	local damage_min = data.DamageMin or parameters.mDamageMin
-	local value = weapon.IsRoller and tr.LengthSum or math.max(CurTime() - ink.InitTime, 0)
+	
+	local decay_start = data.DamageMaxDistance
+	local decay_end = data.DamageMinDistance
+	local damage_max = data.DamageMax
+	local damage_min = data.DamageMin
+	local value = weapon.IsShooter and math.max(CurTime() - ink.InitTime, 0) or tr.LengthSum
 	local frac = math.Remap(value, decay_start, decay_end, 0, 1)
 	if ink.IsCarriedByLocalPlayer then
 		ss.CreateHitEffect(data.Color, weapon.IsBlaster and 1 or 0, t.HitPos, t.HitNormal)
 		if ss.mp and CLIENT then return end
 	end
-
+	
 	d:SetDamage(Lerp(frac, damage_max, damage_min))
 	d:SetDamageForce(-t.HitNormal)
 	d:SetDamagePosition(t.HitPos)
@@ -349,9 +351,9 @@ HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shoote
 Simulate.weapon_splatoonsweps_roller = Simulate.weapon_splatoonsweps_shooter
 HitPaint.weapon_splatoonsweps_roller = HitPaint.weapon_splatoonsweps_shooter
 HitEntity.weapon_splatoonsweps_roller = HitEntity.weapon_splatoonsweps_shooter
-Simulate.weapon_splatoonsweps_slosher = Simulate.weapon_splatoonsweps_shooter
-HitPaint.weapon_splatoonsweps_slosher = HitPaint.weapon_splatoonsweps_shooter
-HitEntity.weapon_splatoonsweps_slosher = HitEntity.weapon_splatoonsweps_shooter
+Simulate.weapon_splatoonsweps_slosher_base = Simulate.weapon_splatoonsweps_shooter
+HitPaint.weapon_splatoonsweps_slosher_base = HitPaint.weapon_splatoonsweps_shooter
+HitEntity.weapon_splatoonsweps_slosher_base = HitEntity.weapon_splatoonsweps_shooter
 
 local function ProcessInkQueue(ply)
 	local Benchmark = SysTime()
@@ -476,27 +478,32 @@ end)
 function ss.SimulateBullet(ink)
 	local data, tr = ink.Data, ink.Trace
 	local gmul = data.IsRoller and ss.RollerGravityMul or ss.ShooterGravityMul
-	local g = ink.Parameters.mFreeStateGracity or physenv.GetGravity() * gmul
+	local g = physenv.GetGravity() * gmul
 	local t = math.max(CurTime() - ink.InitTime, 0)
 	tr.start:Set(tr.endpos)
 	tr.endpos:Set(data.InitPos)
 	if data.DoDamage then
-		local dec = data.IsRoller and ss.RollerDecreaseFrame or ss.ShooterDecreaseFrame
-		local a = data.InitVel / dec -- Deceleration
 		local tmax = data.StraightFrame
-		local tdec = data.IsCharger and 0 or dec -- If it's charger's, then it immediately starts falling
-		local tfall = tmax + tdec -- Time to start falling
-		local tlim = math.min(t, tfall) -- 'Limited' time for straight movement
-		local t2 = math.max(tlim - tmax, 0)^2 / 2
 		local tg = math.max(t - tmax, 0)^2 / 2
-		tr.endpos:Add(data.InitVel * tlim - a * t2 + g * tg)
-
 		local mFreeStateAirResist = ink.Parameters.mFreeStateAirResist
+		local mFreeStateGravity = ink.Parameters.mFreeStateGravity
 		if mFreeStateAirResist then -- For Slosher's projectile
-			-- Additional pos = integral from 0 to t of InitVel * mFreeStateAirResist^u du
-			local resist =  (mFreeStateAirResist^tfall - 1) / math.log(mFreeStateAirResist)
-			tr.endpos.x = tr.endpos.x + data.InitVel.x * resist
-			tr.endpos.y = tr.endpos.y + data.InitVel.y * resist
+			-- Additional pos = integral from tmax to t of InitVel * mFreeStateAirResist^u du (tmax < t)
+			local gf = -vector_up * mFreeStateGravity
+			local tlim = math.min(t, tmax) -- Time for straight movement
+			local fr = math.max(t - tmax, 0) * ss.SecToFrame
+			local ratio = 1 - mFreeStateAirResist
+			local resist = (ratio^fr - 1) / math.log(ratio) * ss.FrameToSec
+			tr.endpos:Add(data.InitVel * (tlim + resist) + gf * tg)
+		else
+			local dec = data.IsRoller and ss.RollerDecreaseFrame or ss.ShooterDecreaseFrame
+			local a = data.InitVel / dec -- Deceleration
+			local tdec = data.IsCharger and 0 or dec -- If it's charger's, then it immediately starts falling
+			local tfall = tmax + tdec -- Time to start falling
+			local tlim = math.min(t, tfall) -- Time for straight movement
+			local t2 = math.max(tlim - tmax, 0)^2 / 2
+			tr.endpos:Add(data.InitVel * tlim)
+			tr.endpos:Add(g * tg - a * t2)
 		end
 	else -- It's a drop created by a bullet
 		tr.endpos:Add(g * t^2 / 2)
@@ -579,15 +586,12 @@ function ss.MakeBlasterExplosion(ink)
 	
 	if ss.mp and not IsFirstTimePredicted() then return end
 
-	local ShouldSuppress = ss.mp and SERVER and IsValid(tr.filter) and tr.filter:IsPlayer()
-	if ShouldSuppress then SuppressHostEvents(tr.filter) end
 	local e = EffectData()
 	e:SetOrigin(tr.endpos)
 	e:SetColor(data.Color)
 	e:SetFlags(ink.HitWall and 1 or 0)
 	e:SetRadius(rfar)
-	util.Effect("SplatoonSWEPsBlasterExplosion", e, true, weapon.IgnorePrediction)
-	if ShouldSuppress then SuppressHostEvents() end
+	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterExplosion", e, true, weapon.IgnorePrediction)
 
 	local a = data.InitDir:Angle()
 	if ink.HitWall then a:RotateAroundAxis(a:Right(), -90) end
@@ -627,15 +631,14 @@ function ss.MakeBlasterExplosion(ink)
 		DoDamage = false,
 		InitPos = tr.endpos,
 		InitVel = vector_up * parameters.mSphereSplashDropInitSpeed,
+		PaintFarDistance = parameters.mPaintFarDistance,
 		PaintFarRadius = parameters.mSphereSplashDropPaintRadius,
+		PaintNearDistance = parameters.mPaintNearDistance,
 		PaintNearRadius = parameters.mSphereSplashDropPaintRadius,
 		Weapon = data.Weapon,
 		Yaw = data.Yaw,
 	})
 	
-	ss.AddInk(parameters, dropdata)
-	
-	if ShouldSuppress then SuppressHostEvents(tr.filter) end
 	local IsLP = CLIENT and weapon:IsCarriedByLocalPlayer() and 128 or 0
 	e:SetAttachment(0)
 	e:SetColor(dropdata.Color)
@@ -645,6 +648,6 @@ function ss.MakeBlasterExplosion(ink)
 	e:SetOrigin(dropdata.InitPos)
 	e:SetScale(0)
 	e:SetStart(dropdata.InitVel)
-	util.Effect("SplatoonSWEPsShooterInk", e, true, weapon.IgnorePrediction)
-	if ShouldSuppress then SuppressHostEvents() end
+	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsShooterInk", e, true, weapon.IgnorePrediction)
+	ss.AddInk(parameters, dropdata)
 end

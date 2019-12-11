@@ -173,17 +173,17 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 		DamageMaxDistance = dmaxdist,
 		DamageMin = dmin,
 		DamageMinDistance = dmindist,
+		PaintRatioFarDistance = pfardist,
 		PaintFarDistance = pfardist,
 		PaintFarRadius = pfarradius,
-		PaintFarRatio = pfarratio,
+		PaintFarRatio = pfarrate,
+		PaintRatioNearDistance = pneardist,
 		PaintNearDistance = pneardist,
 		PaintNearRadius = pnearradius,
-		PaintNearRatio = pnearratio,
+		PaintNearRatio = pnearrate,
 		StraightFrame = p.mBulletStraightFrame,
 	})
-
-	ss.AddInk(p, self.Projectile)
-	if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
+	
 	local e = EffectData()
 	e:SetAttachment(spawncount * 10 + number)
 	e:SetColor(self.Projectile.Color)
@@ -193,8 +193,8 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 	e:SetOrigin(self.Projectile.InitPos)
 	e:SetScale(0)
 	e:SetStart(self.Projectile.InitVel)
-	util.Effect("SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
-	if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
+	ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
+	ss.AddInk(p, self.Projectile)
 end
 
 function SWEP:SharedPrimaryAttack(able, auto)
@@ -205,6 +205,7 @@ function SWEP:SharedPrimaryAttack(able, auto)
 
 	local p = self.Parameters
 	local spawntimebase = CurTime() + p.mSwingLiftFrame
+	self:SetCooldown(spawntimebase + p.mPostDelayFrm_Main)
 	self:SetSpawnTimeBase(spawntimebase)
 	self:SetNextInkSpawnTime1(spawntimebase)
 	self:SetNextInkSpawnTime2(spawntimebase + p.mSecondGroupBulletFirstFrameOffset)
@@ -239,9 +240,12 @@ function SWEP:Move(ply)
 
 	if not self:GetIsBusy() then return end
 	if CurTime() < self:GetSpawnTimeBase() then return end
+	self.Projectile.ID = CurTime() + self:EntIndex()
 	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
 	self:SetIsBusy(false)
 	self:SetNextPrimaryFire(CurTime() + p.mPostDelayFrm_Main)
+	self:SetInk(math.max(self:GetInk() - p.mInkConsume, 0))
+	self:SetReloadDelay(p.mInkRecoverStop)
 	self:EmitSound(self.ShootSound)
 	self:SetSpawnRemaining1(p.mFirstGroupBulletNum)
 	self:SetSpawnRemaining2(p.mSecondGroupBulletNum)

@@ -279,20 +279,18 @@ function SWEP:Reload()
 	end
 end
 
-function SWEP:CheckCannotStandup()
+function SWEP:CheckCanStandup()
 	if not IsValid(self.Owner) then return end
 	if not self.Owner:IsPlayer() then return end
 	local plmins, plmaxs = self.Owner:GetHull()
-	self.CannotStandup = self:Crouching() and util.TraceHull {
+	return not (self:Crouching() and util.TraceHull {
 		start = self.Owner:GetPos(),
 		endpos = self.Owner:GetPos(),
 		mins = plmins, maxs = plmaxs,
 		filter = {self, self.Owner},
 		mask = MASK_PLAYERSOLID,
 		collisiongroup = COLLISION_GROUP_PLAYER_MOVEMENT,
-	} .Hit
-
-	return self.CannotStandup
+	} .Hit)
 end
 
 function SWEP:SetReloadDelay(delay)
@@ -304,13 +302,13 @@ end
 
 function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if self:GetHolstering() then return end
-	if self:CheckCannotStandup() then return end
 	if self:GetThrowing() then return end
+	if not self:CheckCanStandup() then return end
 	if auto and ss.sp and CLIENT then return end
 	if not auto and CurTime() < self:GetCooldown() then return end
 	if not auto and self.Owner:IsPlayer() and self:GetKey() ~= IN_ATTACK then return end
 	local hasink = self:GetInk() > 0
-	local able = hasink and not self.CannotStandup
+	local able = hasink and self:CheckCanStandup()
 	if SERVER and ss.mp then SuppressHostEvents(self.Owner) end
 	ss.ProtectedCall(self.SharedPrimaryAttack, self, able, auto)
 	ss.ProtectedCall(Either(SERVER, self.ServerPrimaryAttack, self.ClientPrimaryAttack), self, able, auto)
@@ -319,9 +317,9 @@ end
 
 function SWEP:SecondaryAttack() -- Use sub weapon
 	if self:GetHolstering() then return end
-	if self:CheckCannotStandup() then return end
-	if CurTime() < self:GetCooldown() then return end
 	if self:GetKey() ~= IN_ATTACK2 then return end
+	if CurTime() < self:GetCooldown() then return end
+	if not self:CheckCanStandup() then return end
 	self:SetThrowing(true)
 	self:SetWeaponAnim(ss.ViewModel.Throwing)
 	if not self:IsFirstTimePredicted() then return end

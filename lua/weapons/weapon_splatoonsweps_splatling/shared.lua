@@ -117,7 +117,13 @@ function SWEP:SharedInit()
 	table.Merge(self.Projectile, {
 		ColRadiusEntity = p.mColRadius,
 		ColRadiusWorld = p.mColRadius,
+		DamageMax = p.mDamageMax,
+		DamageMaxDistance = p.mDamageMinFrame, -- Swapped from shooters
+		DamageMin = p.mDamageMin,
+		DamageMinDistance = p.mGuideCheckCollisionFrame, -- Swapped from shooters
+		PaintFarDistance = p.mPaintFarDistance,
 		PaintFarRadius = p.mPaintFarRadius,
+		PaintNearDistance = p.mPaintNearDistance,
 		PaintNearRadius = p.mPaintNearRadius,
 		StraightFrame = p.mStraightFrame,
 	})
@@ -189,7 +195,7 @@ function SWEP:Move(ply)
 	end
 
 	if self:GetFireInk() > 0 then -- It's firing
-		if self:CheckCannotStandup() then return end
+		if not self:CheckCanStandup() then return end
 		if self:GetThrowing() then return end
 		if CLIENT and (ss.sp or not self:IsMine()) then return end
 		if self:GetNextPrimaryFire() > CurTime() then return end
@@ -238,7 +244,7 @@ function SWEP:Move(ply)
 		self:SetFireInk(math.floor(duration / p.mRepeatFrame) + 1)
 		self.TakeAmmo = p.mInkConsume * prog / self:GetFireInk()
 		self.Projectile.Charge = prog
-		self.Projectile.DamageMax = prog == 1 and p.mDamageMaxMaxCharge or nil
+		self.Projectile.DamageMax = prog == 1 and p.mDamageMaxMaxCharge or p.mDamageMax
 	end
 end
 

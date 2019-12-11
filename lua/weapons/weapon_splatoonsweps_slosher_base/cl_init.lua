@@ -41,7 +41,7 @@ SWEP.Crosshair = {
 	color_nohit = ColorAlpha(color_white, crosshairalpha),
 	Dot = 7, HitLine = 50, HitWidth = 2, Inner = 35, -- in pixel
 	Line = 8, LineWidth = 2, Middle = 44, Outer = 51, -- in pixel
-	HitLineSize = 44,
+	HitLineSize = 22,
 }
 
 function SWEP:ClientInit()
@@ -148,8 +148,10 @@ function SWEP:DrawHitCrossBG(t) -- Hit cross pattern, background
 	local p = self.Parameters
 	local mul = ss.ProtectedCall(self.GetScopedSize, self) or 1
 	local s = t.Size.Inner / 2 * mul
-	local frac = 1 + p.mPaintNearDistance / p.mPaintFarDistance
-	local lp = s + math.max(frac - (t.Distance / p.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
+	local near = p.mFirstGroupBulletFirstPaintNearD
+	local far = p.mFirstGroupBulletFirstPaintFarD
+	local frac = 1 + near / far
+	local lp = s + math.max(frac - (t.Distance / far)^.125, 0) * t.Size.ExpandHitLine -- Line position
 	local w, h = t.Size.HitLine * mul + hitcrossbg, t.Size.HitWidth * mul + hitcrossbg
 	for i = 1, 4 do
 		local dx, dy = lp * (i > 2 and 1 or -1), lp * (bit.band(i, 3) > 1 and 1 or -1)
@@ -182,8 +184,10 @@ function SWEP:DrawHitCross(t) -- Hit cross pattern, foreground
 	local s = t.Size.Inner / 2 * mul
 	local w, h = t.Size.HitLine * mul, t.Size.HitWidth * mul
 	local p = self.Parameters
-	local frac = 1 + p.mPaintNearDistance / p.mPaintFarDistance
-	local lp = s + math.max(frac - (t.Distance / p.mPaintFarDistance)^.125, 0) * t.Size.ExpandHitLine -- Line position
+	local near = p.mFirstGroupBulletFirstPaintNearD
+	local far = p.mFirstGroupBulletFirstPaintFarD
+	local frac = 1 + near / far
+	local lp = s + math.max(frac - (t.Distance / far)^.125, 0) * t.Size.ExpandHitLine -- Line position
 	for mat, col in pairs {
 		[""] = color_white,
 		Color = ss.GetColor(self:GetNWInt "inkcolor")

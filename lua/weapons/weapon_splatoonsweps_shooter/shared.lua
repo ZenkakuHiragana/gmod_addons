@@ -100,7 +100,13 @@ function SWEP:SharedInit()
 	table.Merge(self.Projectile, {
 		ColRadiusEntity = p.mColRadius,
 		ColRadiusWorld = p.mColRadius,
+		DamageMax = p.mDamageMax,
+		DamageMaxDistance = p.mGuideCheckCollisionFrame,
+		DamageMin = p.mDamageMin,
+		DamageMinDistance = p.mDamageMinFrame,
+		PaintFarDistance = p.mPaintFarDistance,
 		PaintFarRadius = p.mPaintFarRadius,
+		PaintNearDistance = p.mPaintNearDistance,
 		PaintNearRadius = p.mPaintNearRadius,
 		StraightFrame = p.mStraightFrame,
 	})
@@ -179,9 +185,6 @@ function SWEP:CreateInk()
 		local Recoil = 0.2
 		local rnda = Recoil * -1
 		local rndb = Recoil * math.Rand(-1, 1)
-		self.ViewPunch = Angle(rnda, rndb, rnda)
-
-		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
 		local e = EffectData()
 		local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
 		e:SetAttachment(self.Projectile.SplashInit)
@@ -192,9 +195,9 @@ function SWEP:CreateInk()
 		e:SetOrigin(self.Projectile.InitPos)
 		e:SetScale(self.Projectile.SplashNum)
 		e:SetStart(self.Projectile.InitVel)
-		util.Effect("SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
-		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
+		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
+		self.ViewPunch = Angle(rnda, rndb, rnda)
 	end
 end
 

@@ -38,7 +38,7 @@ end
 function SWEP:Move(ply)
     self:GetBase().Move(self, ply)
     if CurTime() < self:GetFireDelay() then return end
-    if self.CannotStandup then return end
+    if not self:CheckCanStandup() then return end
 
     local p = self.Parameters
     local ts = ss.GetTimeScale(ply)

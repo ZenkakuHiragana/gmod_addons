@@ -224,7 +224,6 @@ ss.ToHammerHealth = 100 -- Health is normalized in Splatoon (0--1)
 ss.FrameToSec = 1 / framepersec -- = 0.016667, Constants for time conversion
 ss.SecToFrame = framepersec -- = 60, Constants for time conversion
 ss.mDegRandomY = .5 -- Shooter spread angle, yaw (need to be validated)
-ss.SpreadJumpMaxVelocity = 32 -- Player's Z-speed threshold for shooter's spread angle expansion by jumping.
 ss.SquidSpeedOutofInk = .45 -- Squid speed coefficient when it goes out of ink.
 ss.CameraFadeDistance = 100^2 -- Thirdperson model fade distance[Hammer units^2]
 ss.SquidTrace = {
@@ -264,6 +263,7 @@ end
 ss.UnitsConverter = {
 	["du"] = ss.ToHammerUnits,
 	["du/f"] = ss.ToHammerUnitsPerSec,
+	["du/f2"] = ss.ToHammerUnitsPerSec * framepersec,
 	["f"] = ss.FrameToSec,
 	["ink"] = ss.MaxInkAmount,
 }

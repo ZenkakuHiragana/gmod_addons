@@ -75,8 +75,9 @@ function EFFECT:Init(e)
 		local bulletgroup = misc % 10
 		local spawncount = math.floor(misc / 10)
 		drawradius = 20
+		decreaseframe = ss.RollerDecreaseFrame
 		straightframe = p.mBulletStraightFrame
-		self.DrawSize = self.Weapon:GetDrawRadius(bulletgroup, spawncount) * 3
+		self.DrawSize = self.Weapon:GetDrawRadius(bulletgroup, spawncount)
 	elseif IsRoller then
 		drawradius = IsRollerSubSplash and p.mSplashSubDrawRadius or p.mSplashDrawRadius
 		straightframe = IsRollerSubSplash and p.mSplashSubStraightFrame or p.mSplashStraightFrame
@@ -401,7 +402,8 @@ function EFFECT:Render2()
 	rendermaterial:SetFloat("$alphatestreference", alpha)
 	rendermaterial:Recompute()
 	render.SetMaterial(rendermaterial)
-	render.DrawQuadEasy(self:GetPos(), self.Normal, self.DrawSize, self.DrawSize, self.Color)
+	render.DrawQuadEasy(pos, self.Normal, self.DrawSize, self.DrawSize, self.Color)
+	-- debugoverlay.Line(self.Apparent.Data.InitPos, pos, 0.2, Color(0, 255, 0))
 end
 
 hook.Remove("HUDPaint", "HUDPaint_DrawABox")

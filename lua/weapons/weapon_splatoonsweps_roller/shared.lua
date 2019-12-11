@@ -276,8 +276,6 @@ function SWEP:CreateInk(createnum)
 			StraightFrame = str,
 		})
 	
-		ss.AddInk(p, self.Projectile)
-		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
 		local e = EffectData()
 		e:SetAttachment(self.Projectile.SplashInit)
 		e:SetColor(self.Projectile.Color)
@@ -287,8 +285,8 @@ function SWEP:CreateInk(createnum)
 		e:SetOrigin(self.Projectile.InitPos)
 		e:SetScale(self.Projectile.SplashNum)
 		e:SetStart(self.Projectile.InitVel)
-		util.Effect("SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
-		if ss.mp and SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
+		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
+		ss.AddInk(p, self.Projectile)
 	end
 
 	if splashnum % 1 ~= insidenum % 1 then

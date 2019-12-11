@@ -703,6 +703,32 @@ function ss.EmitSound(ply, soundName, soundLevel, pitchPercent, volume, channel)
 	end
 end
 
+function ss.EmitSoundPredicted(ply, ent, ...)
+	ss.SuppressHostEventsMP(ply)
+	ent:EmitSound(...)
+	ss.EndSuppressHostEventsMP(ply)
+end
+
+function ss.UtilEffectPredicted(ply, ...)
+	ss.SuppressHostEventsMP(ply)
+	util.Effect(...)
+	ss.EndSuppressHostEventsMP(ply)
+end
+
+function ss.SuppressHostEventsMP(ply)
+	if ss.sp or CLIENT then return end
+	if IsValid(ply) and ply:IsPlayer() then
+		SuppressHostEvents(ply)
+	end
+end
+
+function ss.EndSuppressHostEventsMP(ply)
+	if ss.sp or CLIENT then return end
+	if IsValid(ply) and ply:IsPlayer() then
+		SuppressHostEvents(ply)
+	end
+end
+
 -- Play footstep sound of ink.
 function ss.PlayerFootstep(w, ply, pos, foot, soundName, volume, filter)
 	if SERVER and ss.mp then return end
@@ -771,7 +797,7 @@ function ss.KeyRelease(self, ply, key)
 	self:SetWeaponAnim(ss.ViewModel.Throw)
 
 	local hasink = self:GetInk() > 0
-	local able = hasink and not self:CheckCannotStandup()
+	local able = hasink and self:CheckCanStandup()
 	ss.ProtectedCall(self.SharedSecondaryAttack, self, able)
 	ss.ProtectedCall(Either(SERVER, self.ServerSecondaryAttack, self.ClientSecondaryAttack), self, able)
 end

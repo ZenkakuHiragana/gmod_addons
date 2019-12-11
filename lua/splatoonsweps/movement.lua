@@ -1816,9 +1816,9 @@ function ss.MoveHook(w, p, m)
 
 	ply, mv = p, m
 	ss.ProtectedCall(w.Move, w, p, m)
-	w.PreventCrouching = not w.CannotStandup and w:GetKey() ~= 0 and w:GetKey() ~= IN_DUCK
-	or CurTime() < w:GetCooldown() or CurTime() > w:GetEnemyInkTouchTime() + 20 * ss.FrameToSec and ply:KeyDown(IN_DUCK)
-	if w.PreventCrouching then
+	if w:CheckCanStandup() and w:GetKey() ~= 0 and w:GetKey() ~= IN_DUCK
+	or CurTime() > w:GetEnemyInkTouchTime() + 20 * ss.FrameToSec and ply:KeyDown(IN_DUCK)
+	or CurTime() < w:GetCooldown() then
 		mv:SetButtons(bit.band(mv:GetButtons(), DuckMask))
 		crouching = false
 	end
@@ -1885,10 +1885,13 @@ function ss.MoveHook(w, p, m)
 	if crouching then
 		w.SwimSound:ChangeVolume(math.Clamp(mv:GetVelocity():Length() / w.SquidSpeed * (w:GetInInk() and 1 or 0), 0, 1))
 		if not w:GetOldCrouching() then
-			ply:RemoveAllDecals()
 			w:SetWeaponAnim(ss.ViewModel.Squid)
+			if w:GetNWInt "playermodel" ~= ss.PLAYER.NOCHANGE then
+				ply:RemoveAllDecals()
+			end
+
 			if IsFirstTimePredicted() then
-				w:EmitSound "SplatoonSWEPs_Player.ToSquid"
+				ss.EmitSoundPredicted(ply, w, "SplatoonSWEPs_Player.ToSquid")
 			end
 		end
 	elseif infence then -- Cannot stand while in fence
@@ -1897,7 +1900,7 @@ function ss.MoveHook(w, p, m)
 		w.SwimSound:ChangeVolume(0)
 		w:SetWeaponAnim(w:GetThrowing() and ss.ViewModel.Throwing or ss.ViewModel.Standing)
 		if IsFirstTimePredicted() then
-			w:EmitSound "SplatoonSWEPs_Player.ToHuman"
+			ss.EmitSoundPredicted(ply, w, "SplatoonSWEPs_Player.ToHuman")
 		end
 	end
 
