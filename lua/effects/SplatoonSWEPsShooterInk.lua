@@ -14,6 +14,10 @@ local inkring = Material "splatoonsweps/effects/inkring"
 local inkring_alphatest = Material "splatoonsweps/effects/inkring_alphatest"
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
+local RenderFunctions = {
+	weapon_splatoonsweps_roller = "Render2",
+	weapon_splatoonsweps_slosher_base = "RenderBoth",
+}
 local function AdvanceVertex(color, pos, normal, u, v, alpha)
 	mesh.Color(unpack(color))
 	mesh.Normal(normal)
@@ -74,10 +78,10 @@ function EFFECT:Init(e)
 		local misc = e:GetAttachment()
 		local bulletgroup = misc % 10
 		local spawncount = math.floor(misc / 10)
-		drawradius = 20
+		self.DrawSize = self.Weapon:GetDrawRadius(bulletgroup, spawncount)
+		drawradius = self.DrawSize / 3
 		decreaseframe = ss.RollerDecreaseFrame
 		straightframe = p.mBulletStraightFrame
-		self.DrawSize = self.Weapon:GetDrawRadius(bulletgroup, spawncount)
 	elseif IsRoller then
 		drawradius = IsRollerSubSplash and p.mSplashSubDrawRadius or p.mSplashDrawRadius
 		straightframe = IsRollerSubSplash and p.mSplashSubStraightFrame or p.mSplashStraightFrame
@@ -121,6 +125,7 @@ function EFFECT:Init(e)
 	self.IsRoller = IsRoller
 	self.IsSlosher = IsSlosher
 	self.Range = range
+	self.Render = self[RenderFunctions[self.Weapon.Base] or "Render1"]
 	self.Simulate = ss.SimulateBullet
 	self.SplashCount = 0
 	self.SplashColRadius = splashcolradius
@@ -190,7 +195,6 @@ function EFFECT:Init(e)
 	self:SetPos(self.Apparent.Data.InitPos)
 	if self.IsRoller or self.IsSlosher then
 		local viewang = -LocalPlayer():GetViewEntity():GetAngles():Forward()
-		self.Render = self.Render2
 		self.FilterDU = math.random()
 		self.FilterDV = math.random()
 		self.FilterDU2 = math.random()
@@ -297,7 +301,7 @@ function EFFECT:Think()
 	return true
 end
 
-function EFFECT:Render()
+function EFFECT:Render1()
 	local t = math.max(CurTime() - self.Real.InitTime, 0)
 	if self.IsBlaster then
 		local r = self.Real.Parameters.mCollisionRadiusNear / 2
@@ -404,6 +408,11 @@ function EFFECT:Render2()
 	render.SetMaterial(rendermaterial)
 	render.DrawQuadEasy(pos, self.Normal, self.DrawSize, self.DrawSize, self.Color)
 	-- debugoverlay.Line(self.Apparent.Data.InitPos, pos, 0.2, Color(0, 255, 0))
+end
+
+function EFFECT:RenderBoth()
+	self:Render1()
+	self:Render2()
 end
 
 hook.Remove("HUDPaint", "HUDPaint_DrawABox")

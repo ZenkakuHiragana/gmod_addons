@@ -1837,6 +1837,13 @@ function ss.MoveHook(w, p, m)
 		ply:SetWalkSpeed(maxspeed)
 	end
 
+	if ss.PlayerShouldResetCamera[ply] then
+		local a = ply:GetAimVector():Angle()
+		a.p = math.NormalizeAngle(a.p) / 2
+		ply:SetEyeAngles(a)
+		ss.PlayerShouldResetCamera[ply] = math.abs(a.p) > 1
+	end
+
 	ply:SetJumpPower(w:GetOnEnemyInk() and w.OnEnemyInkJumpPower or w.JumpPower)
 	if CLIENT then w:UpdateInkState() end -- Ink state prediction
 

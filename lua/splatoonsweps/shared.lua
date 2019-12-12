@@ -973,11 +973,11 @@ for hookname in pairs {CalcMainActivity = true, TranslateActivity = true} do
 	end))
 end
 
-concommand.Add("+splatoonsweps_reset_camera", function(ply, cmd, args, argStr)
-	local a = ply:GetAimVector():Angle()
-	a.p = 0
-	ply:SetEyeAngles(a)
+concommand.Add("-splatoonsweps_reset_camera", function(ply) end, nil, ss.Text.CVars.ResetCamera)
+concommand.Add("+splatoonsweps_reset_camera", function(ply)
+	ss.PlayerShouldResetCamera[ply] = true
 end, nil, ss.Text.CVars.ResetCamera)
+
 ------------------------------------------
 --			!!!WORKAROUND!!!			--
 --	This should be removed after		--

@@ -19,6 +19,7 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	PaintSchedule = {},
 	PlayerHullChanged = {},
 	PlayerID = {},
+	PlayerShouldResetCamera = {},
 	PlayersReady = {},
 	RenderTarget = {},
 	WeaponRecord = {},

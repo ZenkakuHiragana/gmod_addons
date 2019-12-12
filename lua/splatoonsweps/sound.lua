@@ -440,10 +440,10 @@ sound.Add { -- Roller holster sound
 sound.Add { -- Roller empty swing
 	channel = CHAN_WEAPON,
 	name = "SplatoonSWEPs.EmptySwing",
-	level = WeaponSoundLevel,
+	level = 45,
 	sound = "splatoonsweps/weapons/roller/emptyswing.wav",
-	volume = WeaponSoundVolume,
-	pitch = 90,
+	volume = 0.5,
+	pitch = 35,
 }
 
 sound.Add { -- Splat Roller / Krak-On / CoroCoro, Dynamo Roller / Gold / Tempered, Pre-swing

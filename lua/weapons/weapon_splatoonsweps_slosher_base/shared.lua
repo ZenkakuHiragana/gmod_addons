@@ -244,6 +244,12 @@ function SWEP:Move(ply)
 	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
 	self:SetIsBusy(false)
 	self:SetNextPrimaryFire(CurTime() + p.mPostDelayFrm_Main)
+	if self:GetInk() < p.mInkConsume then
+		ss.EmitSound(ply, ss.TankEmpty)
+		self:EmitSound "SplatoonSWEPs.EmptySwing"
+		return
+	end
+
 	self:SetInk(math.max(self:GetInk() - p.mInkConsume, 0))
 	self:SetReloadDelay(p.mInkRecoverStop)
 	self:EmitSound(self.ShootSound)

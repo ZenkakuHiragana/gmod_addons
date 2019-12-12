@@ -2,38 +2,39 @@
 -- Clientside SplatoonSWEPs structure
 
 SplatoonSWEPs = SplatoonSWEPs or {
-	AmbientColor = color_white,	--
-	AreaBound = 0,				--
+	AmbientColor = color_white,
+	AreaBound = 0,
 	AspectSum = 0,				-- Sum of aspect ratios for each surface
 	AspectSumX = 0,				-- Sum of widths for each surface
 	AspectSumY = 0,				-- Sum of heights for each surface
-	CrosshairColors = {},		--
-	Displacements = {},			--
-	IMesh = {},					--
-	InkColors = {},				--
-	InkShotMaterials = {},		--
-	InkQueue = {},				--
-	LastHitID = {},				--
-	Models = {},				--
-	PaintQueue = {},			--
-	PaintSchedule = {},			--
-	PlayerHullChanged = {},		--
-	RenderTarget = {},			--
-	SequentialSurfaces = {		--
-		Angles = {},			--
-		Areas = {},				--
-		Bounds = {},			--
-		DefaultAngles = {},		--
-		InkCircles = {},		--
-		Maxs = {},				--
-		Mins = {},				--
-		Moved = {},				--
-		Normals = {},			--
-		Origins = {},			--
-		u = {}, v = {},			--
-		Vertices = {},			--
+	CrosshairColors = {},
+	Displacements = {},
+	IMesh = {},
+	InkColors = {},
+	InkShotMaterials = {},
+	InkQueue = {},
+	LastHitID = {},
+	Models = {},
+	PaintQueue = {},
+	PaintSchedule = {},
+	PlayerHullChanged = {},
+	PlayerShouldResetCamera = {},
+	RenderTarget = {},
+	SequentialSurfaces = {
+		Angles = {},
+		Areas = {},
+		Bounds = {},
+		DefaultAngles = {},
+		InkCircles = {},
+		Maxs = {},
+		Mins = {},
+		Moved = {},
+		Normals = {},
+		Origins = {},
+		u = {}, v = {},
+		Vertices = {},
 	},
-	WeaponRecord = {},			--
+	WeaponRecord = {},
 }
 
 include "splatoonsweps/const.lua"
