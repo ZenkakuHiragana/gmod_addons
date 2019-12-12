@@ -37,6 +37,7 @@ return {CVars = {
         Others = "その他のNPCのインクの色。",
     },
     Playermodel = "三人称モデル。使用可能な値は以下の通り。:\n",
+    ResetCamera = "スプラトゥーンのYボタンに相当するカメラリセットコマンド。",
     RTResolution = [[インクの描画システムで用いるRenderTargetの設定。
 この変更を反映するにはGMODの再起動を必要とする。
 また、高解像度になるほど多くのVRAM容量が要求される。

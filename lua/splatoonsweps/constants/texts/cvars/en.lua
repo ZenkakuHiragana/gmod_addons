@@ -37,6 +37,7 @@ return {CVars = {
         Others = "Ink color for other NPCs.",
     },
     Playermodel = "Your thirdperson model.  Available values are:\n",
+    ResetCamera = "Resets camera angle like Y button in Splatoon.",
     RTResolution = [[The resolution of RenderTarget used in ink system.
 To apply the change, restart your GMOD client.
 Higher option needs more VRAM.

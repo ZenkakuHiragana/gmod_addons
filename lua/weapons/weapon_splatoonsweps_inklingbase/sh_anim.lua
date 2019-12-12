@@ -55,6 +55,7 @@ local NPCHoldType = {
 	weapon_splatoonsweps_blaster_base = "smg",
 	weapon_splatoonsweps_charger = "smg",
 	weapon_splatoonsweps_shooter = "smg",
+	weapon_splatoonsweps_slosher_base = "smg",
 	weapon_splatoonsweps_splatling = "smg",
 	weapon_splatoonsweps_roller = "melee",
 }

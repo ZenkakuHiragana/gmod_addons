@@ -281,7 +281,7 @@ end
 
 function SWEP:CheckCanStandup()
 	if not IsValid(self.Owner) then return end
-	if not self.Owner:IsPlayer() then return end
+	if not self.Owner:IsPlayer() then return true end
 	local plmins, plmaxs = self.Owner:GetHull()
 	return not (self:Crouching() and util.TraceHull {
 		start = self.Owner:GetPos(),
