@@ -49,7 +49,7 @@ The aim of this rework is the following:
 * Make Slosher and Tri-Slosher
     * [x] View model for Slosher
     * [x] World model for Slosher
-    * [ ] A script to slosh
+    * [x] A script to slosh
     * [ ] Effects
     * [ ] Set proper parameters
     * [ ] Test and fix bugs
