@@ -2,7 +2,6 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
-local InflateTime = 4 * ss.FrameToSec
 local TrailLagTime = 20 * ss.FrameToSec
 local invisiblemat = ss.Materials.Effects.Invisible
 local mat = ss.Materials.Effects.Ink
@@ -301,6 +300,8 @@ function EFFECT:Think()
 	return true
 end
 
+local cbl = Material "splatoonsweps/crosshair/line"
+local cbltip = Material "splatoonsweps/crosshair/dot"
 function EFFECT:Render1()
 	local t = math.max(CurTime() - self.Real.InitTime, 0)
 	if self.IsBlaster then
@@ -320,60 +321,14 @@ function EFFECT:Render1()
 		return
 	end
 
-	local sizeinflate = self.IsDrop and 1 or math.Clamp(t / InflateTime, 0, 1)
-	local sizef = sizeinflate * self.DrawRadius
-	local sizeb = sizef * .75
-	local AppPos, AppAng = self:GetPos(), self:GetAngles()
-    local TailPos, TailAng = self.Tail.Trace.endpos, self.Tail.Data.Angle
-	if self.IsCharger then
-		AppAng = (AppPos - TailPos):Angle()
-		TailAng = Angle(AppAng)
-	end
-
-	local fore = AppPos + AppAng:Forward() * sizef
-	local back = TailPos - TailAng:Forward() * sizeb
-	local foreup, foreleft, foreright = Angle(AppAng), Angle(AppAng), Angle(AppAng)
-	local backdown, backleft, backright = Angle(TailAng), Angle(TailAng), Angle(TailAng)
-	local deg = CurTime() * self.Apparent.Data.InitSpeed / 10
-	foreup:RotateAroundAxis(AppAng:Forward(), deg)
-	foreleft:RotateAroundAxis(AppAng:Forward(), deg + 120)
-	foreright:RotateAroundAxis(AppAng:Forward(), deg - 120)
-	backdown:RotateAroundAxis(TailAng:Forward(), deg)
-	backleft:RotateAroundAxis(TailAng:Forward(), deg - 120)
-	backright:RotateAroundAxis(TailAng:Forward(), deg + 120)
-	foreup = AppPos + foreup:Up() * sizef
-	foreleft = AppPos + foreleft:Up() * sizef
-	foreright = AppPos + foreright:Up() * sizef
-	backdown = TailPos - backdown:Up() * sizeb
-	backleft = TailPos - backleft:Up() * sizeb
-	backright = TailPos - backright:Up() * sizeb
-	local MeshTable = {
-		{fore, foreleft, foreup},
-		{fore, foreup, foreright},
-		{fore, foreright, foreleft},
-		{foreup, backleft, backright},
-		{backleft, foreup, foreleft},
-		{foreleft, backdown, backleft},
-		{backdown, foreleft, foreright},
-		{foreright, backright, backdown},
-		{backright, foreright, foreup},
-		{back, backleft, backdown},
-		{back, backdown, backright},
-		{back, backright, backleft},
-	}
-
-	render.SetMaterial(mat)
-	mat:SetVector("$color", self.ColorVector)
-	DrawMesh(MeshTable, self.ColorTable)
-	if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then
-		mat:SetVector("$color", ss.vector_one)
-		return
-	end
-
-	render.PushFlashlightMode(true) -- Ink lit by player's flashlight or a projected texture
-	DrawMesh(MeshTable, self.ColorTable)
-	render.PopFlashlightMode()
-	mat:SetVector("$color", ss.vector_one)
+	local sizetip = self.DrawRadius * 0.8
+	local AppPos = self:GetPos()
+    local TailPos = self.Tail.Trace.endpos
+	render.SetMaterial(cbl)
+	render.DrawBeam(AppPos, TailPos, self.DrawRadius, 0.3, 0.7, self.Color)
+	render.SetMaterial(cbltip)
+	render.DrawSprite(AppPos, sizetip, sizetip, self.Color)
+	render.DrawSprite(TailPos, sizetip, sizetip, self.Color)
 end
 
 -- A render function for rollers' splash, slosher's projectile, etc.
@@ -381,7 +336,7 @@ local duration = 60 * ss.FrameToSec
 function EFFECT:Render2()
 	local rendertarget = ss.RenderTarget.InkSplash
 	local rendermaterial = ss.RenderTarget.InkSplashMaterial
-	local t = math.max(CurTime() - self.Real.InitTime, 0)
+	local t = math.max(CurTime() - self.Real.InitTime, 0) * (self.IsSlosher and 0 or 1)
 	local alpha = Lerp(math.EaseInOut(math.Clamp(t / duration, 0, 1), 0, 1), 0.01, 0.5)
 	local pos, tailpos = self:GetPos(), self.Tail.Trace.endpos
 	local ang, tailang = self:GetAngles(), self.Tail.Data.Angle
@@ -407,7 +362,6 @@ function EFFECT:Render2()
 	rendermaterial:Recompute()
 	render.SetMaterial(rendermaterial)
 	render.DrawQuadEasy(pos, self.Normal, self.DrawSize, self.DrawSize, self.Color)
-	-- debugoverlay.Line(self.Apparent.Data.InitPos, pos, 0.2, Color(0, 255, 0))
 end
 
 function EFFECT:RenderBoth()

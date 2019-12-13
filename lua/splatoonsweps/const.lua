@@ -131,7 +131,7 @@ ss.ViewModel = { -- Viewmodel animations
 -- This is a list of Splatoon maps available in Garry's Mod.
 -- They seem unusual and hide our ink.
 ss.SplatoonMapPorts = {
-	-- gm_arena_octostomp = true,
+	gm_arena_octostomp = true,
 	gm_blackbelly_skatepark = true,
 	gm_blackbelly_skatepark_night = true,
 	-- gm_camp_triggerfish_day_closegate = true,
@@ -140,15 +140,26 @@ ss.SplatoonMapPorts = {
 	-- gm_camp_triggerfish_night_opengate = true,
 	gm_flounder_heights_day = true,
 	gm_flounder_heights_night = true,
+	-- gm_inkopolis_b1 = true,
+	-- gm_inkopolis_plaza_day = true,
+	-- gm_inkopolis_plaza_fes_day = true,
+	-- gm_inkopolis_plaza_fes_night = true,
+	-- gm_inkopolis_plaza_night = true,
+	-- gm_inkopolis_square = true,
 	gm_kelp_dome = true,
 	gm_kelp_dome_fes = true,
 	-- gm_mako_mart = true,
 	-- gm_mako_mart_night = true,
+	-- gm_mc_princess_diaries = true,
 	gm_moray_towers = true,
 	gm_new_albacore_hotel = true,
 	-- gm_octo_showdown = true,
+	-- gm_octo_valley_hubworld = true,
+	-- gm_octo_valley_hubworld_night = true,
 	gm_skipper_pavilion_day = true,
 	gm_skipper_pavilion_night = true,
+	gm_shootingrange_splat1 = true,
+	gm_shootingrange_splat1_night = true,
 	-- gm_snapper_canal = true,
 	-- gm_snapper_canal_night = true,
 	-- gm_spawning_grounds_fog_high = true,
@@ -160,6 +171,10 @@ ss.SplatoonMapPorts = {
 	-- gm_spawning_grounds_night_low = true,
 	-- gm_spawning_grounds_night_normal = true,
 	-- gm_spawning_grounds_normal = true,
+	-- gm_tutorial = true,
+	-- gm_tutorial_night = true,
+	-- humpback_pump_track_day = true,
+	-- humpback_pump_track_night = true,
 }
 
 function ss.GetSquidmodel(pmid)
