@@ -126,13 +126,19 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t)
 	local decay_end = data.DamageMinDistance
 	local damage_max = data.DamageMax
 	local damage_min = data.DamageMin
-	local value = weapon.IsShooter and math.max(CurTime() - ink.InitTime, 0) or tr.LengthSum
+	local value = tr.LengthSum
+	if weapon.IsShooter then
+		value = math.max(CurTime() - ink.InitTime, 0)
+	elseif weapon.IsSlosher then
+		value = tr.endpos.z - data.InitPos.z
+	end
+
 	local frac = math.Remap(value, decay_start, decay_end, 0, 1)
 	if ink.IsCarriedByLocalPlayer then
 		ss.CreateHitEffect(data.Color, weapon.IsBlaster and 1 or 0, t.HitPos, t.HitNormal)
 		if ss.mp and CLIENT then return end
 	end
-	
+
 	d:SetDamage(Lerp(frac, damage_max, damage_min))
 	d:SetDamageForce(-t.HitNormal)
 	d:SetDamagePosition(t.HitPos)
@@ -143,6 +149,7 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t)
 	d:SetInflictor(IsValid(weapon) and weapon or game.GetWorld())
 	d:ScaleDamage(ss.ToHammerHealth)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
+	print(value, decay_start, decay_end, damage_max, damage_min, d:GetDamage())
 end
 
 function Simulate.weapon_splatoonsweps_charger(ink)

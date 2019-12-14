@@ -130,9 +130,12 @@ function SWEP:GetDamageParameters(number, spawncount)
 	local mindist = p.mBulletDamageMinDist
 	local max = p["m" .. order .. "GroupBulletFirstDamageMaxValue"]
 	local min = p["m" .. order .. "GroupBulletFirstDamageMinValue"]
-	local mul = p["m" .. order .. "GroupBulletAfterDamageRateOffset"]
-	mul = 1 + spawncount * mul
-	return mul * max, maxdist, mul * min, mindist
+	local mul = 1 + spawncount * p["m" .. order .. "GroupBulletAfterDamageRateOffset"]
+	local mulmax = mul * max
+	local mulmin = mul * min
+	if max < 1 then mulmax = math.min(mulmax, 0.99) end
+	if min < 1 then mulmin = math.min(mulmin, 0.99) end
+	return mulmax, maxdist, mulmin, mindist
 end
 
 function SWEP:GetDrawRadius(number, spawncount)
