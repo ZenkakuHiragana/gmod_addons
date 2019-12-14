@@ -196,7 +196,7 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 	})
 	
 	local e = EffectData()
-	e:SetAttachment(spawncount * 10 + number)
+	e:SetAttachment(spawncount * 4 + number)
 	e:SetColor(self.Projectile.Color)
 	e:SetEntity(self)
 	e:SetFlags(IsLP and 128 or 0)

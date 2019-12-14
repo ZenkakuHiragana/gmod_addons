@@ -75,8 +75,8 @@ function EFFECT:Init(e)
 	local drawradius = IsBlasterSphereSplashDrop and p.mSphereSplashDropDrawRadius or p.mDrawRadius
 	if IsSlosher then
 		local misc = e:GetAttachment()
-		local bulletgroup = misc % 10
-		local spawncount = math.floor(misc / 10)
+		local bulletgroup = misc % 4
+		local spawncount = math.floor(misc / 4)
 		self.DrawSize = self.Weapon:GetDrawRadius(bulletgroup, spawncount)
 		drawradius = self.DrawSize / 3
 		decreaseframe = ss.RollerDecreaseFrame
