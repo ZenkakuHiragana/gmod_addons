@@ -438,6 +438,98 @@ function ss.Lerp3(frac, min, max, full)
 	return frac < 1 and Lerp(frac, min, max) or full or max
 end
 
+-- Short for checking isfunction()
+-- Arguments:
+--   function func	| The function to call safely.
+--   vararg			| The arguments to give the function.
+-- Returns:
+--   vararg			| Returning values from the function.
+function ss.ProtectedCall(func, ...)
+	if isfunction(func) then return func(...) end
+end
+
+-- Checks if the given entity is a valid inkling (if it has a SplatoonSWEPs weapon).
+-- Argument:
+--   Entity ply		| The entity to be checked.  It is not always player.
+-- Returning:
+--   Entity			| The weapon the entity has.
+--   nil			| The entity is not an inkling.
+function ss.IsValidInkling(ply)
+	if not IsValid(ply) then return end
+	local w = ss.ProtectedCall(ply.GetActiveWeapon, ply)
+	return IsValid(w) and w.IsSplatoonWeapon and not w:GetHolstering() and w or nil
+end
+
+-- Checks if the given two colors are the same, considering FF setting.
+-- Arguments:
+--   number c1, c2 | The colors to be compared.  Can also be Splatoon weapons.
+-- Returning:
+--   bool          | The colors are the same.
+function ss.IsAlly(c1, c2)
+	if isentity(c1) and IsValid(c1) and isentity(c2) and IsValid(c2) and c1 == c2 then
+		return not ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
+	end
+
+	c1 = isentity(c1) and IsValid(c1) and c1:GetNWInt "inkcolor" or c1
+	c2 = isentity(c2) and IsValid(c2) and c2:GetNWInt "inkcolor" or c2
+	return not ss.GetOption "ff" and c1 == c2
+end
+
+-- Get player timescale.
+-- Argument:
+--   Entity ply    | Optional.
+-- Returning:
+--   number scale  | The game timescale.
+local host_timescale = GetConVar "host_timescale"
+function ss.GetTimeScale(ply)
+	return IsValid(ply) and ply:IsPlayer() and ply:GetLaggedMovementValue() or 1
+end
+
+-- Play a sound that can be heard only one player.
+-- Arguments:
+--   Player ply			| The player who can hear it.
+--   string soundName	| The sound to play.
+function ss.EmitSound(ply, soundName, soundLevel, pitchPercent, volume, channel)
+	if not (IsValid(ply) and ply:IsPlayer()) then return end
+	if SERVER and ss.mp then
+		net.Start "SplatoonSWEPs: Send a sound"
+		net.WriteString(soundName)
+		net.WriteUInt(soundLevel or 75, 9)
+		net.WriteUInt(pitchPercent or 100, 8)
+		net.WriteFloat(volume or 1)
+		net.WriteUInt((channel or CHAN_AUTO) + 1, 8)
+		net.Send(ply)
+	elseif CLIENT and IsFirstTimePredicted() or ss.sp then
+		ply:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
+	end
+end
+
+function ss.EmitSoundPredicted(ply, ent, ...)
+	ss.SuppressHostEventsMP(ply)
+	ent:EmitSound(...)
+	ss.EndSuppressHostEventsMP(ply)
+end
+
+function ss.UtilEffectPredicted(ply, ...)
+	ss.SuppressHostEventsMP(ply)
+	util.Effect(...)
+	ss.EndSuppressHostEventsMP(ply)
+end
+
+function ss.SuppressHostEventsMP(ply)
+	if ss.sp or CLIENT then return end
+	if IsValid(ply) and ply:IsPlayer() then
+		SuppressHostEvents(ply)
+	end
+end
+
+function ss.EndSuppressHostEventsMP(ply)
+	if ss.sp or CLIENT then return end
+	if IsValid(ply) and ply:IsPlayer() then
+		SuppressHostEvents(NULL)
+	end
+end
+
 include "debug.lua"
 include "text.lua"
 include "convars.lua"
@@ -632,103 +724,11 @@ function ss.AddTimerFramework(ent)
 	end
 end
 
--- Short for checking isfunction()
--- Arguments:
---   function func	| The function to call safely.
---   vararg			| The arguments to give the function.
--- Returns:
---   vararg			| Returning values from the function.
-function ss.ProtectedCall(func, ...)
-	if isfunction(func) then return func(...) end
-end
-
--- Checks if the given entity is a valid inkling (if it has a SplatoonSWEPs weapon).
--- Argument:
---   Entity ply		| The entity to be checked.  It is not always player.
--- Returning:
---   Entity			| The weapon the entity has.
---   nil			| The entity is not an inkling.
-function ss.IsValidInkling(ply)
-	if not IsValid(ply) then return end
-	local w = ss.ProtectedCall(ply.GetActiveWeapon, ply)
-	return IsValid(w) and w.IsSplatoonWeapon and not w:GetHolstering() and w or nil
-end
-
--- Checks if the given two colors are the same, considering FF setting.
--- Arguments:
---   number c1, c2 | The colors to be compared.  Can also be Splatoon weapons.
--- Returning:
---   bool          | The colors are the same.
-function ss.IsAlly(c1, c2)
-	if isentity(c1) and IsValid(c1) and isentity(c2) and IsValid(c2) and c1 == c2 then
-		return not ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
-	end
-
-	c1 = isentity(c1) and IsValid(c1) and c1:GetNWInt "inkcolor" or c1
-	c2 = isentity(c2) and IsValid(c2) and c2:GetNWInt "inkcolor" or c2
-	return not ss.GetOption "ff" and c1 == c2
-end
-
--- Get player timescale.
--- Argument:
---   Entity ply    | Optional.
--- Returning:
---   number scale  | The game timescale.
-local host_timescale = GetConVar "host_timescale"
-function ss.GetTimeScale(ply)
-	return IsValid(ply) and ply:IsPlayer() and ply:GetLaggedMovementValue() or 1
-end
-
 -- ss.GetMaxHealth() - Get inkling's desired maximum health
 -- ss.GetMaxInkAmount() - Get the maximum amount of an ink tank.
 local gain = ss.GetOption "gain"
 function ss.GetMaxHealth() return gain "maxhealth" end
 function ss.GetMaxInkAmount() return gain "inkamount" end
-
--- Play a sound that can be heard only one player.
--- Arguments:
---   Player ply			| The player who can hear it.
---   string soundName	| The sound to play.
-function ss.EmitSound(ply, soundName, soundLevel, pitchPercent, volume, channel)
-	if not (IsValid(ply) and ply:IsPlayer()) then return end
-	if SERVER and ss.mp then
-		net.Start "SplatoonSWEPs: Send a sound"
-		net.WriteString(soundName)
-		net.WriteUInt(soundLevel or 75, 9)
-		net.WriteUInt(pitchPercent or 100, 8)
-		net.WriteFloat(volume or 1)
-		net.WriteUInt((channel or CHAN_AUTO) + 1, 8)
-		net.Send(ply)
-	elseif CLIENT and IsFirstTimePredicted() or ss.sp then
-		ply:EmitSound(soundName, soundLevel, pitchPercent, volume, channel)
-	end
-end
-
-function ss.EmitSoundPredicted(ply, ent, ...)
-	ss.SuppressHostEventsMP(ply)
-	ent:EmitSound(...)
-	ss.EndSuppressHostEventsMP(ply)
-end
-
-function ss.UtilEffectPredicted(ply, ...)
-	ss.SuppressHostEventsMP(ply)
-	util.Effect(...)
-	ss.EndSuppressHostEventsMP(ply)
-end
-
-function ss.SuppressHostEventsMP(ply)
-	if ss.sp or CLIENT then return end
-	if IsValid(ply) and ply:IsPlayer() then
-		SuppressHostEvents(ply)
-	end
-end
-
-function ss.EndSuppressHostEventsMP(ply)
-	if ss.sp or CLIENT then return end
-	if IsValid(ply) and ply:IsPlayer() then
-		SuppressHostEvents(NULL)
-	end
-end
 
 -- Play footstep sound of ink.
 function ss.PlayerFootstep(w, ply, pos, foot, soundName, volume, filter)
