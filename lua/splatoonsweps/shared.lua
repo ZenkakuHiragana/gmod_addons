@@ -726,7 +726,7 @@ end
 function ss.EndSuppressHostEventsMP(ply)
 	if ss.sp or CLIENT then return end
 	if IsValid(ply) and ply:IsPlayer() then
-		SuppressHostEvents(ply)
+		SuppressHostEvents(NULL)
 	end
 end
 

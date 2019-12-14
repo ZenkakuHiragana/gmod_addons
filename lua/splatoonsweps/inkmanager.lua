@@ -10,6 +10,7 @@ local CLIENT = CLIENT
 local CollisionAABB = ss.CollisionAABB
 local cos = math.cos
 local Either = Either
+local EndSuppressHostEventsMP = ss.EndSuppressHostEventsMP
 local floor = math.floor
 local GetBoundingBox = ss.GetBoundingBox
 local ipairs = ipairs
@@ -31,7 +32,7 @@ local SequentialSurfaces = ss.SequentialSurfaces
 local SERVER = SERVER
 local sin = math.sin
 local sp = ss.sp
-local SuppressHostEvents = SuppressHostEvents
+local SuppressHostEventsMP = ss.SuppressHostEventsMP
 local To2D = ss.To2D
 local To3D = ss.To3D
 local Vector = Vector
@@ -115,9 +116,8 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 		polys[i] = To3D(v * radius, pos, ang)
 	end
 
+	SuppressHostEventsMP(ply)
 	local mins, maxs = GetBoundingBox(polys, MIN_BOUND)
-	if ply:IsPlayer() and mp and SERVER then SuppressHostEvents(ply) end
-
 	for node in BSPPairs(polys) do
 		local surf = SERVER and node.Surfaces or SequentialSurfaces
 		for i, index in pairs(SERVER and surf.Indices or node.Surfaces) do
@@ -145,7 +145,7 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 		end
 	end
 
-	if ply:IsPlayer() and mp and SERVER then SuppressHostEvents() end
+	EndSuppressHostEventsMP(ply)
 	if not ply:IsPlayer() then return end
 
 	ss.WeaponRecord[ply].Inked[classname] = (ss.WeaponRecord[ply].Inked[classname] or 0) - area * gridarea

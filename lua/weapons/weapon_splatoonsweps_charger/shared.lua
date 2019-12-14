@@ -108,13 +108,10 @@ function SWEP:SharedInit()
 
 			self.FullChargeFlag = true
 			if self.Scoped and self:IsMine() and not (CLIENT and self:IsTPS() and self:GetNWBool "usertscope") then return end
-			if SERVER and self.Owner:IsPlayer() then SuppressHostEvents(self.Owner) end
 			local e = EffectData()
 			e:SetEntity(self)
 			e:SetFlags(0)
-			util.Effect("SplatoonSWEPsMuzzleFlash", e)
-			if SERVER and self.Owner:IsPlayer() then SuppressHostEvents() end
-
+			ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsMuzzleFlash", e)
 			return
 		end
 
@@ -197,7 +194,7 @@ function SWEP:Move(ply)
 	if self:GetCharge() == math.huge then return end
 	if self:ShouldChargeWeapon() then return end
 	if CurTime() - self:GetCharge() < p.mMinChargeFrame then return end
-	if ply:IsPlayer() and SERVER and ss.mp then SuppressHostEvents(ply) end
+
 	local prog = self:GetChargeProgress()
 	local inkconsume = math.max(p.mMinChargeFrame / p.mMaxChargeFrame, prog) * p.mInkConsume
 	local ShootSound = prog > .75 and self.ShootSound2 or self.ShootSound
@@ -236,11 +233,11 @@ function SWEP:Move(ply)
 		e:SetOrigin(self.Projectile.InitPos)
 		e:SetScale(self.Projectile.Charge)
 		e:SetStart(self.Projectile.InitVel)
-		util.Effect("SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
+		ss.UtilEffectPredicted(ply, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
 	end
 
-	self:EmitSound(ShootSound, 80, pitch)
+	ss.EmitSoundPredicted(ply, self, ShootSound, 80, pitch)
 	self:SetCooldown(CurTime())
 	self:SetFireAt(prog)
 	self:SetInk(math.max(0, self:GetInk() - inkconsume))
@@ -251,7 +248,6 @@ function SWEP:Move(ply)
 
 	if not ply:IsPlayer() then return end
 	ply:SetAnimation(PLAYER_ATTACK1)
-	if SERVER and ss.mp then SuppressHostEvents() end
 end
 
 function SWEP:CustomDataTables()

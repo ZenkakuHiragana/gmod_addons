@@ -173,7 +173,7 @@ function SWEP:CreateInk()
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self:ResetSequence "fire" -- This is needed in multiplayer to prevent delaying muzzle effects.
-	self:EmitSound(self.ShootSound)
+	ss.EmitSoundPredicted(self.Owner, self, self.ShootSound)
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 
 	if self:GetSplashInitMul() > p.mSplashSplitNum then

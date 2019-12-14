@@ -64,7 +64,7 @@ end
 
 function SWEP:PlayChargeSound()
 	if ss.mp and CLIENT and not IsFirstTimePredicted() then return end
-	local prog = self:GetChargeProgress()
+	local prog = self:GetChargeProgress(SERVER)
 	if prog == 1 then
 		self.AimSound:Stop()
 		self.SpinupSound[1]:Stop()
@@ -199,7 +199,6 @@ function SWEP:Move(ply)
 		if self:GetThrowing() then return end
 		if CLIENT and (ss.sp or not self:IsMine()) then return end
 		if self:GetNextPrimaryFire() > CurTime() then return end
-		if ply:IsPlayer() and SERVER and ss.mp then SuppressHostEvents(ply) end
 
 		local ts = ss.GetTimeScale(ply)
 		local AlreadyAiming = CurTime() < self:GetAimTimer()
@@ -210,20 +209,17 @@ function SWEP:Move(ply)
 		self:SetInk(math.max(0, self:GetInk() - self.TakeAmmo))
 		self:SetReloadDelay(p.mInkRecoverStop)
 		self:SetCooldown(math.max(self:GetCooldown(), CurTime() + crouchdelay / ts))
+		self:CreateInk()
 
 		if CurTime() - self:GetJump() > p.mDegJumpBiasFrame then
 			if not AlreadyAiming then self:SetBiasVelocity(0) end
 			self:SetBiasVelocity(math.min(self:GetBiasVelocity() + p.mDegBiasKf, p.mInitVelSpeedBias))
 		end
 
-		if self:IsFirstTimePredicted() then
-			local e = EffectData()
-			e:SetEntity(self)
-			util.Effect("SplatoonSWEPsSplatlingMuzzleFlash", e, true, self.IgnorePrediction)
-		end
-
-		self:CreateInk()
-		if SERVER and ss.mp then SuppressHostEvents() end
+		if not self:IsFirstTimePredicted() then return end
+		local e = EffectData()
+		e:SetEntity(self)
+		ss.UtilEffectPredicted(ply, "SplatoonSWEPsSplatlingMuzzleFlash", e, true, self.IgnorePrediction)
 	else -- Just released MOUSE1
 		if self:GetCharge() == math.huge then return end
 		if self:ShouldChargeWeapon() then return end

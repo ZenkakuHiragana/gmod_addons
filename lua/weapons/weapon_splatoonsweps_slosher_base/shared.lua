@@ -244,15 +244,17 @@ function SWEP:Move(ply)
 	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
 	self:SetIsBusy(false)
 	self:SetNextPrimaryFire(CurTime() + p.mPostDelayFrm_Main)
+	self:SetReloadDelay(p.mInkRecoverStop)
 	if self:GetInk() < p.mInkConsume then
+		if not self:IsFirstTimePredicted() then return end
+		ss.EmitSoundPredicted(self.Owner, self, "SplatoonSWEPs.EmptySwing")
+		if ss.mp and SERVER then return end
 		ss.EmitSound(ply, ss.TankEmpty)
-		self:EmitSound "SplatoonSWEPs.EmptySwing"
 		return
 	end
 
+	ss.EmitSoundPredicted(self.Owner, self, self.ShootSound)
 	self:SetInk(math.max(self:GetInk() - p.mInkConsume, 0))
-	self:SetReloadDelay(p.mInkRecoverStop)
-	self:EmitSound(self.ShootSound)
 	self:SetSpawnRemaining1(p.mFirstGroupBulletNum)
 	self:SetSpawnRemaining2(p.mSecondGroupBulletNum)
 	self:SetSpawnRemaining3(p.mThirdGroupBulletNum)

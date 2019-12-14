@@ -309,10 +309,10 @@ function SWEP:PrimaryAttack(auto) -- Shoot ink.  bool auto | is a scheduled shot
 	if not auto and self.Owner:IsPlayer() and self:GetKey() ~= IN_ATTACK then return end
 	local hasink = self:GetInk() > 0
 	local able = hasink and self:CheckCanStandup()
-	if SERVER and ss.mp then SuppressHostEvents(self.Owner) end
+	ss.SuppressHostEventsMP(self.Owner)
 	ss.ProtectedCall(self.SharedPrimaryAttack, self, able, auto)
 	ss.ProtectedCall(Either(SERVER, self.ServerPrimaryAttack, self.ClientPrimaryAttack), self, able, auto)
-	if SERVER and ss.mp then SuppressHostEvents() end
+	ss.EndSuppressHostEventsMP(self.Owner)
 end
 
 function SWEP:SecondaryAttack() -- Use sub weapon

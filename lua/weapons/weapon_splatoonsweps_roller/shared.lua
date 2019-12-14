@@ -20,17 +20,14 @@ local function EndSwing(self)
 	end
 
 	if not self:IsFirstTimePredicted() then return end
-	if ss.mp and SERVER then SuppressHostEvents(self.Owner) end
-	self:EmitSound "SplatoonSWEPs.RollerHolster"
-	if ss.sp or CLIENT then return end
-	SuppressHostEvents(NULL)
+	ss.EmitSoundPredicted(self.Owner, self, "SplatoonSWEPs.RollerHolster")
 end
 
 local function PlaySwingSound(self, enoughink)
 	if enoughink then
-		self:EmitSound(self.SplashSound)
+		ss.EmitSoundPredicted(self.Owner, self, self.SplashSound)
 		if not self.SwingSound then return end
-		self:EmitSound(self.SwingSound)
+		ss.EmitSoundPredicted(self.Owner, self, self.SwingSound)
 	else
 		self:EmitSound "SplatoonSWEPs.EmptySwing"
 		if self.NotEnoughInk then return end
@@ -60,14 +57,11 @@ local function DoRollingEffect(self, velocity)
 	local delay = self.IsBrush and self.RunningEffectDelay or self.RollingEffectDelay
 	self:SetNextRollingEffectTime(CurTime() + delay)
 	if not self:IsFirstTimePredicted() then return end
-	if ss.mp and SERVER then SuppressHostEvents(self.Owner) end
 	local e = EffectData()
 	e:SetEntity(self)
 	e:SetFlags(self.IsBrush and 1 or 0)
 	e:SetRadius(velocity)
-	util.Effect("SplatoonSWEPsRollerRolling", e, true, self.IgnorePrediction)
-	if ss.sp or CLIENT then return end
-	SuppressHostEvents(NULL)
+	ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsRollerRolling", e, true, self.IgnorePrediction)
 end
 
 local function DoRunover(self, t, mv)
@@ -512,9 +506,7 @@ function SWEP:Move(ply, mv)
 		end
 
 		if not self:IsFirstTimePredicted() then return end
-		if ss.mp and SERVER then SuppressHostEvents(self.Owner) end
 		PlaySwingSound(self, enoughink)
-		if ss.mp and SERVER then SuppressHostEvents(NULL) end
 		if not enoughink and splashnum == 0 then return end
 		self:CreateInk(splashnum)
 		return	
