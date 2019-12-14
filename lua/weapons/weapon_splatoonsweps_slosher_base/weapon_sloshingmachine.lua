@@ -1,6 +1,4 @@
 
-do return end -- NOT IMPLEMENTED YET!!
-
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
