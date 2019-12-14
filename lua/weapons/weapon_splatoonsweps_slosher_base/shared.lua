@@ -156,9 +156,17 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 	local right = self.Owner:GetRight()
 	local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
 	local ang = dir:Angle()
+	local linenum = p.mLineNum
+	local centergroup = p.mGuideCenterGroup
+	if linenum == 2 then
+		ang:RotateAroundAxis(ang:Up(), p.mLineDegree * (number == centergroup and 0.5 or -0.5))
+	elseif linenum == 3 and number ~= centergroup then
+		local isside = p["m" .. order .. "GroupSideLine"]
+		ang:RotateAroundAxis(ang:Up(), p.mLineDegree * (isside and 1 or -1))
+	end
 	
 	local vforward, vright, vup = self:GetInitVelocity(number, spawncount)
-	local initvelocity = dir * vforward + ang:Right() * vright + ang:Up() * vup
+	local initvelocity = ang:Forward() * vforward + ang:Right() * vright + ang:Up() * vup
 	local yaw = initvelocity:Angle().yaw
 	local dmax, dmaxdist, dmin, dmindist = self:GetDamageParameters(number, spawncount)
 	local pfardist, pfarradius, pfarrate, pneardist, pnearradius, pnearrate = self:GetPaintParameters(number, spawncount)
