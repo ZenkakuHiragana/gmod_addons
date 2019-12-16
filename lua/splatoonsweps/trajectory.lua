@@ -147,7 +147,6 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t)
 	d:SetInflictor(IsValid(weapon) and weapon or game.GetWorld())
 	d:ScaleDamage(ss.ToHammerHealth)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
-	print(value, decay_start, decay_end, damage_max, damage_min, d:GetDamage())
 end
 
 function Simulate.weapon_splatoonsweps_charger(ink)
