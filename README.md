@@ -51,11 +51,15 @@ The aim of this rework is the following:
     * [x] World model for Slosher
     * [x] A script to slosh
     * [ ] Effects
-    * [ ] Set proper parameters
+    * [x] Set proper parameters
     * [ ] Test and fix bugs
-    * [ ] Do the same for Tri-Slosher
+    * [x] Do the same for Tri-Slosher
 * Make Sloshing Machine
-    * Thinking how to implement...
+    * [x] View model
+    * [x] World model
+    * [ ] Unique projectile
+    * [ ] Effects
+    * [ ] Test and fix bugs
     
 ## Upcoming features
 * Sub weapons
