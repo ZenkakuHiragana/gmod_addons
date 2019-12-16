@@ -69,22 +69,20 @@ function SWEP:GetSpreadAmount()
 end
 
 local OrdinalNumbers = {"First", "Second", "Third"}
-function SWEP:GetInitSpeed(number, spawncount)
+function SWEP:GetInitSpeed(number, spawncount, jumping)
+	jumping = jumping and "Jumping" or ""
 	local order = OrdinalNumbers[number]
 	local p = self.Parameters
-	local base = p["m" .. order .. "GroupBulletFirstInitSpeedBase"]
-	if not self.Owner:OnGround() then
-		base = p["m" .. order .. "GroupBulletFirstInitSpeedJumpingBase"]
-	end
-
+	local base = p["m" .. order .. "GroupBulletFirstInitSpeed" .. jumping .. "Base"]
 	return base + spawncount * p["m" .. order .. "GroupBulletAfterInitSpeedOffset"]
 end
 
 local randvel = "SplatoonSWEPs: Spread velocity"
-function SWEP:GetInitVelocity(number, spawncount)
+function SWEP:GetInitVelocity(number, spawncount, jumping)
+	if jumping == nil then jumping = self.Owner:OnGround() end
 	local order = OrdinalNumbers[number]
 	local p = self.Parameters
-	local base = self:GetInitSpeed(number, spawncount)
+	local base = self:GetInitSpeed(number, spawncount, jumping)
 	local x = p["m" .. order .. "GroupBulletInitSpeedRandomX"]
 	local z = p["m" .. order .. "GroupBulletInitSpeedRandomZ"]
 	local y = base * p["m" .. order .. "GroupBulletInitVecYRate"]
@@ -146,7 +144,9 @@ function SWEP:GetDrawRadius(number, spawncount)
 	return base + spawncount * offset
 end
 
+local randinit = "SpaltoonSWEPs: Slosher splash init rate"
 local randink = "SplatoonSWEPs: Shooter ink type"
+local randspread = "SplatoonSWEPs: Slosher random spread"
 function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 1, 2, ...)
 	if not self:IsFirstTimePredicted() then return end
 	local order = OrdinalNumbers[number]
@@ -155,29 +155,40 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 	local pos = self:GetShootPos()
 	local right = self.Owner:GetRight()
 	local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
-	local ang = dir:Angle()
-	local linenum = p.mLineNum
-	local centergroup = p.mGuideCenterGroup
-	if linenum == 2 then
-		ang:RotateAroundAxis(ang:Up(), p.mLineDegree * (number == centergroup and 0.5 or -0.5))
-	elseif linenum == 3 and number ~= centergroup then
-		local isside = p["m" .. order .. "GroupSideLine"]
-		ang:RotateAroundAxis(ang:Up(), p.mLineDegree * (isside and 1 or -1))
-	end
-	
+	local iscenter = p["m" .. order .. "GroupCenterLine"]
+	local isside = p["m" .. order .. "GroupSideLine"]
+	local splashcolradius = p["m" .. order .. "GroupSplashColRadius"]
+	local splashinitmin = p["m" .. order .. "GroupSplashFirstDropRandomRateMin"]
+	local splashinitmax = p["m" .. order .. "GroupSplashFirstDropRandomRateMax"]
+	local splashlength = p["m" .. order .. "GroupSplashBetween"]
+	local splashnum = p["m" .. order .. "GroupSplashMaxNum"]
+	local splashpaintradius = p["m" .. order .. "GroupSplashPaintRadius"]
+	local splashratio = p["m" .. order .. "GroupSplashDepthScaleRateByWidth"]
+	local spread = p.mShotRandomDegreeExceptBulletForGuide
+	local spreadbias = p.mShotRandomBiasExceptBulletForGuide
 	local vforward, vright, vup = self:GetInitVelocity(number, spawncount)
-	local initvelocity = ang:Forward() * vforward + ang:Right() * vright + ang:Up() * vup
-	local yaw = initvelocity:Angle().yaw
 	local dmax, dmaxdist, dmin, dmindist = self:GetDamageParameters(number, spawncount)
 	local pfardist, pfarradius, pfarrate, pneardist, pnearradius, pnearrate = self:GetPaintParameters(number, spawncount)
 	local colent, colworld = self:GetCollisionRadii(number, spawncount)
-	if initvelocity.x == 0 and initvelocity.y == 0 then yaw = ang.yaw end
+	local e = EffectData()
+	local function Do(ang)
+		local initvelocity = ang:Forward() * vforward + ang:Right() * vright + ang:Up() * vup
+		local yaw = initvelocity:Angle().yaw
+		if initvelocity.x == 0 and initvelocity.y == 0 then yaw = ang.yaw end
+		table.Merge(self.Projectile, {
+			InitVel = initvelocity,
+			Type = util.SharedRandom(randink, 1, 4, CurTime() * spawncount),
+			Yaw = yaw,
+		})
+		
+		e:SetStart(self.Projectile.InitVel)
+		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
+		ss.AddInk(p, self.Projectile)
+	end
+
 	table.Merge(self.Projectile, {
 		Color = self:GetNWInt "inkcolor",
 		InitPos = pos,
-		InitVel = initvelocity,
-		Type = util.SharedRandom(randink, 1, 4, CurTime() * spawncount),
-		Yaw = yaw,
 		ColRadiusEntity = colent,
 		ColRadiusWorld = colworld,
 		DamageMax = dmax,
@@ -192,10 +203,15 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 		PaintNearDistance = pneardist,
 		PaintNearRadius = pnearradius,
 		PaintNearRatio = pnearrate,
+		SplashColRadius = splashcolradius,
+		SplashInitRate = util.SharedRandom(randinit, splashinitmin, splashinitmax),
+		SplashLength = splashlength,
+		SplashNum = splashnum,
+		SplashPaintRadius = splashpaintradius,
+		SplashRatio = splashratio,
 		StraightFrame = p.mBulletStraightFrame,
 	})
 	
-	local e = EffectData()
 	e:SetAttachment(spawncount * 4 + number)
 	e:SetColor(self.Projectile.Color)
 	e:SetEntity(self)
@@ -203,9 +219,22 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 	e:SetMagnitude(self.Projectile.ColRadiusWorld)
 	e:SetOrigin(self.Projectile.InitPos)
 	e:SetScale(0)
-	e:SetStart(self.Projectile.InitVel)
-	ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
-	ss.AddInk(p, self.Projectile)
+	
+	local linenum = p.mLineNum - 1
+	local centerline = math.floor(p.mLineNum / 2)
+	for i = 0, linenum do
+		local ang = dir:Angle()
+		if linenum > 0 then
+			ang:RotateAroundAxis(ang:Up(), (i / linenum - 0.5) * p.mLineDegree)
+		end
+
+		local sgn = math.Round(util.SharedRandom(randspread, 0, 1, number + spawncount + i)) * 2 - 1
+		local sgnbias = spreadbias > util.SharedRandom(randspread, 0, 1, number + spawncount + i + 1)
+		local frac = util.SharedRandom(randspread, sgnbias and spreadbias or 0, sgnbias and 1 or spreadbias, number + spawncount + i + 1 + 2)
+		ang:RotateAroundAxis(ang:Up(), sgn * frac * spread)
+		if i == centerline and iscenter then Do(ang) end
+		if i ~= centerline and isside then Do(ang) end
+	end
 end
 
 function SWEP:SharedPrimaryAttack(able, auto)
@@ -242,10 +271,12 @@ function SWEP:Move(ply)
 		local SetRemaining = self["SetSpawnRemaining" .. number]
 		local SetTime = self["SetNextInkSpawnTime" .. number]
 		local frameoffset = p["m" .. order .. "GroupBulletAfterFrameOffset"]
-		if spawnremaining > 0 and CurTime() > spawntime then
-			SetRemaining(self, spawnremaining - 1)
-			SetTime(self, spawntime + frameoffset)
+		while spawnremaining > 0 and CurTime() > spawntime do
 			self:CreateInk(number, spawnmax - spawnremaining)
+			spawnremaining = spawnremaining - 1
+			spawntime = spawntime + frameoffset
+			SetRemaining(self, spawnremaining)
+			SetTime(self, spawntime)
 		end
 	end
 

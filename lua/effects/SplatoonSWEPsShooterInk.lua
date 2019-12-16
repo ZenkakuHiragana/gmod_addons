@@ -13,9 +13,11 @@ local inkring = Material "splatoonsweps/effects/inkring"
 local inkring_alphatest = Material "splatoonsweps/effects/inkring_alphatest"
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
-local RenderFunctions = {
+local RenderFuncs = {
 	weapon_splatoonsweps_roller = "Render2",
 	weapon_splatoonsweps_slosher_base = "RenderBoth",
+	weapon_splatoonsweps_sloshingmachine = "Render1",
+	weapon_splatoonsweps_sloshingmachine_neo = "Render1",
 }
 local function AdvanceVertex(color, pos, normal, u, v, alpha)
 	mesh.Color(unpack(color))
@@ -107,6 +109,7 @@ function EFFECT:Init(e)
 	local apparentrange = destination:Distance(pos)
 	local apparentspeed = speed * apparentrange / range
 	local apparentvel = Either(IsCharger, apparentdir * apparentspeed, (destination - pos) / fallingframe)
+	local renderfunc = RenderFuncs[self.Weapon.ClassName] or RenderFuncs[self.Weapon.Base] or "Render1"
 
 	self.Charge = prog
 	self.Color = color
@@ -124,7 +127,7 @@ function EFFECT:Init(e)
 	self.IsRoller = IsRoller
 	self.IsSlosher = IsSlosher
 	self.Range = range
-	self.Render = self[RenderFunctions[self.Weapon.Base] or "Render1"]
+	self.Render = self[renderfunc]
 	self.Simulate = ss.SimulateBullet
 	self.SplashCount = 0
 	self.SplashColRadius = splashcolradius

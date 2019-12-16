@@ -211,7 +211,7 @@ function SWEP:Move(ply)
 		InitPos = pos,
 		InitVel = dir * self:GetInkVelocity(),
 		IsCharger = true,
-		SplashInit = self:GetSplashInitMul() % p.mSplashSplitNum,
+		SplashInitRate = select(2, math.modf(self:GetSplashInitMul() / p.mSplashSplitNum)),
 		Type = ss.GetDropType(),
 		Yaw = self:GetAimVector():Angle().yaw,
 	})
@@ -225,7 +225,7 @@ function SWEP:Move(ply)
 
 		local e = EffectData()
 		local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
-		e:SetAttachment(self.Projectile.SplashInit)
+		e:SetAttachment(self.Projectile.SplashInitRate)
 		e:SetColor(self.Projectile.Color)
 		e:SetEntity(self)
 		e:SetFlags(IsLP and 128 or 0)

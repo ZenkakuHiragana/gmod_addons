@@ -271,7 +271,7 @@ function SWEP:CreateInk(createnum)
 		})
 	
 		local e = EffectData()
-		e:SetAttachment(self.Projectile.SplashInit)
+		e:SetAttachment(0)
 		e:SetColor(self.Projectile.Color)
 		e:SetEntity(self)
 		e:SetFlags(IsLP and 128 or 0)

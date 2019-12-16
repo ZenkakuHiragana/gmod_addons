@@ -36,21 +36,19 @@ function Simulate.weapon_splatoonsweps_shooter(ink)
 	if not IsFirstTimePredicted() then return end
 	if data.SplashCount >= data.SplashNum then return end
 
-	local splashlength = parameters.mCreateSplashLength
-	local splitnum = parameters.mSplashSplitNum
 	local DropDir = Vector(data.InitDir.x, data.InitDir.y, 0):GetNormalized()
 	local Length = (tr.endpos - data.InitPos):Length2D()
-	local NextLength = (data.SplashCount + data.SplashInit / splitnum) * splashlength
+	local NextLength = (data.SplashCount + data.SplashInitRate) * data.SplashLength
 	local dropdata = ss.MakeProjectileStructure()
 	table.Merge(dropdata, {
 		Color = data.Color,
-		ColRadiusEntity = parameters.mSplashColRadius,
-		ColRadiusWorld = parameters.mSplashColRadius,
+		ColRadiusEntity = data.SplashColRadius,
+		ColRadiusWorld = data.SplashColRadius,
 		DoDamage = false,
-		PaintFarDistance = parameters.mPaintFarDistance,
-		PaintFarRadius = parameters.mSplashPaintRadius,
-		PaintNearDistance = parameters.mPaintNearDistance,
-		PaintNearRadius = parameters.mSplashPaintRadius,
+		PaintFarRadius = data.SplashPaintRadius,
+		PaintFarRatio = data.SplashRatio,
+		PaintNearRadius = data.SplashPaintRadius,
+		PaintNearRatio = data.SplashRatio,
 		Weapon = data.Weapon,
 		Yaw = data.Yaw,
 	})
@@ -72,14 +70,14 @@ function Simulate.weapon_splatoonsweps_shooter(ink)
 		if util.TraceLine {
 			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 			start = dropdata.InitPos,
-			endpos = dropdata.InitPos + data.InitDir * splashlength,
+			endpos = dropdata.InitPos + data.InitDir * data.SplashLength,
 			filter = tr.filter,
 			mask = ss.SquidSolidMask,
 		} .Hit then
 			break
 		end
 
-		NextLength = NextLength + splashlength
+		NextLength = NextLength + data.SplashLength
 		data.SplashCount = data.SplashCount + 1
 	end
 end
@@ -166,8 +164,7 @@ function Simulate.weapon_splatoonsweps_charger(ink)
 	local t = math.max(0, CurTime() - ink.InitTime)
 	local lengthstep = Lerp(data.Charge, maxrate, minrate) * paintradius
 	local length = math.Clamp(data.InitSpeed * t, 0, data.Range)
-	local splitnum = parameters.mSplashSplitNum
-	local nextlength = (data.SplashCount + data.SplashInit / splitnum) * lengthstep
+	local nextlength = (data.SplashCount + data.SplashInitRate) * lengthstep
 	table.Merge(dropdata, {
 		Charge = data.Charge,
 		Color = data.Color,
@@ -176,7 +173,6 @@ function Simulate.weapon_splatoonsweps_charger(ink)
 		DoDamage = false,
 		Range = 0,
 		Ratio = data.Ratio,
-		SplashInit = data.SplashInit,
 		Weapon = weapon,
 		Yaw = data.Yaw,
 	})

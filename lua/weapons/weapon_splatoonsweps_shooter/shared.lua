@@ -108,6 +108,9 @@ function SWEP:SharedInit()
 		PaintFarRadius = p.mPaintFarRadius,
 		PaintNearDistance = p.mPaintNearDistance,
 		PaintNearRadius = p.mPaintNearRadius,
+		SplashColRadius = p.mSplashColRadius,
+		SplashLength = p.mCreateSplashLength,
+		SplashPaintRadius = p.mSplashPaintRadius,
 		StraightFrame = p.mStraightFrame,
 	})
 end
@@ -164,7 +167,7 @@ function SWEP:CreateInk()
 		ID = CurTime() + self:EntIndex(),
 		InitPos = pos,
 		InitVel = ang:Forward() * self:GetInitVelocity(),
-		SplashInit = self.SplashInitTable[self:GetSplashInitMul()],
+		SplashInitRate = self.SplashInitTable[self:GetSplashInitMul()] / p.mSplashSplitNum,
 		SplashNum = splashnum,
 		Type = util.SharedRandom(randinktype, 4, 9),
 		Yaw = ang.yaw,
@@ -187,7 +190,7 @@ function SWEP:CreateInk()
 		local rndb = Recoil * math.Rand(-1, 1)
 		local e = EffectData()
 		local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
-		e:SetAttachment(self.Projectile.SplashInit)
+		e:SetAttachment(self.Projectile.SplashInitRate)
 		e:SetColor(self.Projectile.Color)
 		e:SetEntity(self)
 		e:SetFlags(IsLP and 128 or 0)

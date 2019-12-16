@@ -125,6 +125,9 @@ function SWEP:SharedInit()
 		PaintFarRadius = p.mPaintFarRadius,
 		PaintNearDistance = p.mPaintNearDistance,
 		PaintNearRadius = p.mPaintNearRadius,
+		SplashColRadius = p.mSplashColRadius,
+		SplashLength = p.mCreateSplashLength,
+		SplashPaintRadius = p.mSplashPaintRadius,
 		StraightFrame = p.mStraightFrame,
 	})
 end

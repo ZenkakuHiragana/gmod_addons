@@ -2,6 +2,7 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
+SWEP.IsSloshingMachine = true
 SWEP.ADSAngOffset = Angle(1, 0, 0)
 SWEP.ADSOffset = Vector(-2, 0, 3)
 SWEP.ShootSound = "SplatoonSWEPs.SloshingMachine"
