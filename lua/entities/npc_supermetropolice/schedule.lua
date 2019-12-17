@@ -54,7 +54,10 @@ function ENT:HasInterrupt()
     local i = self.Interrupts[self.Schedule.CurrentSchedule]
     if not i then return end
     for c in pairs(i) do
-        if self:HasCondition(c) then return true end
+        if self:HasCondition(c) then
+            self:print("HasInterrupt", self:ConditionName(c))
+            return true
+        end
     end
 end
 
@@ -184,7 +187,7 @@ local function CombatSchedule(self)
             if self:HasCondition(c.COND_CAN_RAPPEL_FORWARD)
             and not self:HasCondition(c.COND_LOW_PRIMARY_AMMO) then
                 s = "RappelApproach"
-            elseif self:HasCondition(c.COND_ENEMY_FACING_ME) and self:HasCondition(c.COND_GOOD_TO_SLIDE) then
+            elseif self:HasCondition(c.COND_GOOD_TO_SLIDE) then
                 s = "CombatSlide"
             else
                 s = "ChaseEnemy"
@@ -213,7 +216,7 @@ local function CombatSchedule(self)
             s = "EstablishLineOfFire"
         end
     end
-    if not s then print(s) end
+    
     return s
 end
 
@@ -474,6 +477,17 @@ ENT.ScheduleList = {
     },
 }
 ENT.Interrupts = {
+    AlertStand = {
+        c.COND_NEW_ENEMY,
+	    c.COND_LIGHT_DAMAGE,
+	    c.COND_HEAVY_DAMAGE,
+	    c.COND_SEE_ENEMY,
+	    c.COND_CAN_RANGE_ATTACK1,
+	    c.COND_CAN_RANGE_ATTACK2,
+	    c.COND_CAN_MELEE_ATTACK1,
+	    c.COND_CAN_MELEE_ATTACK2,
+        c.COND_SEE_GRENADE,
+    },
     CombatStand = {
 	    c.COND_NEW_ENEMY,
 	    c.COND_LIGHT_DAMAGE,

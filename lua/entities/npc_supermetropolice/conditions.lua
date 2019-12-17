@@ -235,9 +235,9 @@ function ENT:UpdateConditions()
     self.ForceCrouch = false
 
     local params = self.WeaponParameters
+    local dz = vector_up * self.loco:GetStepHeight() / 2
     if not self:HasValidEnemy() or self:GetRangeSquaredTo(e) > 360000 then
         local dir = (vector_up + self:GetForward()) / 2
-        local dz = vector_up * self.loco:GetStepHeight() / 2
         local start = self:GetPos() + dz
         local trup = util.TraceHull {
             start = start,
@@ -269,7 +269,11 @@ function ENT:UpdateConditions()
     local ismelee = params and params.IsMelee
     local trleft = util.QuickTrace(targetpos, (self:GetRight() - e:GetForward()) * 160, {self, e})
     local trright = util.QuickTrace(targetpos, (-self:GetRight() - e:GetForward()) * 160, {self, e})
-    self:ManipulateCondition(canslide and goodrange and ismelee and not (trleft.Hit or trright.Hit), "COND_GOOD_TO_SLIDE")
+    trleft = not trleft.Hit and not util.TraceHull {start = self:GetPos() + dz, endpos = trleft.HitPos,
+    filter = self, mins = self:OBBMins(), maxs = self:OBBMaxs() - dz}.Hit
+    trright = not trright.Hit and not util.TraceHull {start = self:GetPos() + dz, endpos = trright.HitPos,
+    filter = self, mins = self:OBBMins(), maxs = self:OBBMaxs() - dz}.Hit
+    self:ManipulateCondition(canslide and goodrange and ismelee and trleft and trright, "COND_GOOD_TO_SLIDE")
     self:ManipulateCondition(self:Visible(e), "COND_HAVE_ENEMY_LOS")
     self:ManipulateCondition(not self:HasCondition(c.COND_HAVE_ENEMY_LOS), "COND_ENEMY_OCCLUDED")
     self:ManipulateCondition(self:HasCondition(c.COND_HAVE_ENEMY_LOS) and self:GetAimVector():Dot(toenemy) > 0.7, "COND_SEE_ENEMY")

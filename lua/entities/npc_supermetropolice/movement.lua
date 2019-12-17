@@ -132,7 +132,7 @@ function ENT:ComputePath(to)
             if area:IsBlocked() then return -1 end
             local areaID = area:GetID()
             local attr = area:GetAttributes()
-            if bit.band(attr, NAV_MESH_JUMP) then return -1 end
+            if bit.band(attr, NAV_MESH_JUMP) > 0 then return -1 end
             -- if areaID and IsValid(SuperMetropoliceBlockedNavAreas[areaID]) then return -1 end
             if not self.loco:IsAreaTraversable(area) then return -1 end
     
@@ -154,18 +154,22 @@ function ENT:ComputePath(to)
                 return -1 -- too far to drop
             end
             
-            if bit.band(attr, NAV_MESH_AVOID) then dist = dist * 500 end
-            return dist + fromArea:GetCostSoFar()
+            if bit.band(attr, NAV_MESH_AVOID) > 0 then dist = dist * 500 end
+            return dist
         end
     end
 
-    self.Path:Compute(self, to)
-    -- self.Path:Compute(self, to, PathGenerator)
+    -- local j = self.loco:GetJumpHeight()
+    -- local s = self.loco:GetStepHeight()
+    -- self.loco:SetJumpHeight(0)
+    -- self.loco:SetStepHeight(0)
+    -- self.Path:Compute(self, to)
+    -- self.loco:SetJumpHeight(j)
+    -- self.loco:SetStepHeight(s)
+    self.Path:Compute(self, to, PathGenerator)
     self.PathUpdateAngle = self:GetAngles()
 end
 
-local avoidstep = 10
-local avoidahead = 25
 function ENT:FixPath()
     if CurTime() < self.Time.CheckHull then return end
 
@@ -174,18 +178,21 @@ function ENT:FixPath()
         self.loco:SetVelocity(vector_up * self.loco:GetJumpHeight())
     end
     
+    local stucktime = math.max(CurTime() - self.Time.PathStuck, 0)
+    local mul = Lerp(stucktime, 0.25, 1)
+    local avoidstep = 10 * mul
+    local avoidahead = 25 * mul
     local fix = Vector()
     local forward = self:GetForward()
     local org = self:GetPos()
     local right = self:GetRight()
-    local stucktime = math.max(CurTime() - self.Time.PathStuck, 0)
     local posr = self:WorldSpaceCenter() + right * avoidstep - forward * avoidahead * .5
     local posl = self:WorldSpaceCenter() - right * avoidstep - forward * avoidahead * .5
     local yaw = math.abs(self:GetAngles().yaw) % 90
     if yaw > 45 then yaw = 90 - yaw end
     local ratio = math.Remap(yaw, 0, 45, 0.5, 1 / math.sqrt(2))
-    local mins = self:OBBMins() * ratio
-    local maxs = self:OBBMaxs() * ratio
+    local mins = self:OBBMins() * ratio * mul
+    local maxs = self:OBBMaxs() * ratio * mul
     maxs.z = 16
     local trr = util.TraceHull {
         start = posr,
@@ -272,8 +279,9 @@ function ENT:UpdatePath()
     -- local toohigh = dz and dz > self.loco:GetStepHeight() / 2
     -- local canjump = dz and dz < self.loco:GetJumpHeight()
     -- if canjump and toohigh or priorgoal and nextgoal and (priorgoal.type == 2 or priorgoal.type == 3) then
-        -- if not dz or dz^2 > self:GetRangeSquaredTo(goal.pos) then
-        -- self:RequestJump(goal.pos, goal.forward)
+    --     if not dz or dz^2 > self:GetRangeSquaredTo(goal.pos) then
+    --         self:RequestJump(goal.pos, goal.forward)
+    --     end
     -- end
 
     if see then self:SetAngles(ang) end

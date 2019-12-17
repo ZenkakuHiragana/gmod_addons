@@ -16,6 +16,7 @@ local config = {
     FindLOSAttemptAlt = false,
     fInterval = false,
     FixPath = true,
+    HasInterrupt = true,
     MoveAwayPath = true,
     ScheduleStart = true,
     SelectSchedule = false,

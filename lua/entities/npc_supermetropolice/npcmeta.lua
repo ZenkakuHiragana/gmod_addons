@@ -124,3 +124,9 @@ for name, value in pairs(NPCFunctions) do
         ENT[name] = function() return value end
     end
 end
+
+for name, value in pairs(FindMetaTable "NPC") do
+    if NPCFunctions[name] == nil and isfunction(value) then
+        ENT[name] = ENT[name] or value
+    end
+end
