@@ -70,6 +70,9 @@ return {Options = {
             Advanced = "オクタシューター: 上級タコゾネス仕様",
         },
     },
+    weapon_splatoonsweps_slosher_base = {
+        Automatic = "フルオート",
+    },
 	weapon_splatoonsweps_roller = {
         AutomaticBrush = "フデ: フルオート連打",
         DropAtFeet = "フデ: 足元を塗る",

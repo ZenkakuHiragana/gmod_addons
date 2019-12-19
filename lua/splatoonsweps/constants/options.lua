@@ -52,6 +52,9 @@ return {
 		weapon_splatoonsweps_heroshot = {Level = {0, min = 0, max = 3}, __subcategory = true},
 		weapon_splatoonsweps_octoshot = {Advanced = true, __subcategory = true},
 	},
+	weapon_splatoonsweps_slosher_base = {
+		Automatic = false,
+	},
 	weapon_splatoonsweps_roller = {
 		AutomaticBrush = false,
 		DropAtFeet = true,

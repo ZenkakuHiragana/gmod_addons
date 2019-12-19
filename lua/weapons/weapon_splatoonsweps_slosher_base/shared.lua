@@ -240,17 +240,17 @@ end
 
 function SWEP:SharedPrimaryAttack(able, auto)
 	if self:GetIsBusy() then return end
-	self:SetIsBusy(true)
-	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
-	self.Owner:SetAnimation(PLAYER_ATTACK1)
-
 	local p = self.Parameters
 	local spawntimebase = CurTime() + p.mSwingLiftFrame
+	self:SetIsBusy(true)
+	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
 	self:SetCooldown(spawntimebase + p.mPostDelayFrm_Main)
 	self:SetSpawnTimeBase(spawntimebase)
+	self:SetNextPrimaryFire(CurTime() + p.mSwingRepeatFrame)
 	self:SetNextInkSpawnTime1(spawntimebase)
 	self:SetNextInkSpawnTime2(spawntimebase + p.mSecondGroupBulletFirstFrameOffset)
 	self:SetNextInkSpawnTime3(spawntimebase + p.mThirdGroupBulletFirstFrameOffset)
+	self.Owner:SetAnimation(PLAYER_ATTACK1)
 end
 
 function SWEP:Move(ply)
@@ -283,10 +283,10 @@ function SWEP:Move(ply)
 
 	if not self:GetIsBusy() then return end
 	if CurTime() < self:GetSpawnTimeBase() then return end
+	self.Primary.Automatic = self:GetNWBool "automatic"
 	self.Projectile.ID = CurTime() + self:EntIndex()
 	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
 	self:SetIsBusy(false)
-	self:SetNextPrimaryFire(CurTime() + p.mPostDelayFrm_Main)
 	self:SetReloadDelay(p.mInkRecoverStop)
 	if self:GetInk() < p.mInkConsume then
 		if not self:IsFirstTimePredicted() then return end

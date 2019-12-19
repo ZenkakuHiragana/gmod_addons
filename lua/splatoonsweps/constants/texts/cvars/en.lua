@@ -75,6 +75,9 @@ Make sure your graphics card has enough space of video memory.
             Advanced = "Skin color for Octoshot Replica. (set to 0 for standard octalian's weapon color, 1 for elite octalian's)",
         },
     },
+    weapon_splatoonsweps_slosher_base = {
+        Automatic = "Automatically swing sloshers. (1: enabled, 0: disabled)",
+    },
 	weapon_splatoonsweps_roller = {
         AutomaticBrush = "Automatically swing brushes repeatedly. (1: enabled, 0: disabled)",
         DropAtFeet = "Like version 2.8.0 or above, when repeatedly using swinging attacks, ink will also be painted where the player is standing. (1: enabled, 0: disabled)",

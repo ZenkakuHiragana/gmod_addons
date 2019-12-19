@@ -70,6 +70,9 @@ return {Options = {
             Advanced = "Elite Octoshot",
         },
     },
+    weapon_splatoonsweps_slosher_base = {
+        Automatic = "Fully-automatic",
+    },
 	weapon_splatoonsweps_roller = {
         AutomaticBrush = "Brushes: Fully-automatic",
         DropAtFeet = "Brushes: Paint where the player stands",

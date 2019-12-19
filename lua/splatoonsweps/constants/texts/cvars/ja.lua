@@ -75,6 +75,9 @@ return {CVars = {
             Advanced = "オクタシューターレプリカのスキン。 (0: 通常タコゾネス, 1: ワカメ付きタコゾネス)",
         },
     },
+    weapon_splatoonsweps_slosher_base = {
+        Automatic = "自動的にスロッシャーを振る。 (1: 有効, 0: 無効)",
+    },
 	weapon_splatoonsweps_roller = {
         AutomaticBrush = "自動的にフデを連打する。 (1: 有効, 0: 無効)",
         DropAtFeet = "バージョン2.8.0以降のように、連続で振り攻撃をした場合に足元にもインクが塗られるようにする。 (1: 有効, 0: 無効)",
