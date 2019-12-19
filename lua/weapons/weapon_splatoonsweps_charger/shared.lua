@@ -111,7 +111,7 @@ function SWEP:SharedInit()
 			local e = EffectData()
 			e:SetEntity(self)
 			e:SetFlags(0)
-			ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsMuzzleFlash", e)
+			ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsMuzzleFlash")
 			return
 		end
 
@@ -223,17 +223,18 @@ function SWEP:Move(ply)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
 		self.ModifyWeaponSize = SysTime()
 
-		local e = EffectData()
-		local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
-		e:SetAttachment(self.Projectile.SplashInitRate)
-		e:SetColor(self.Projectile.Color)
-		e:SetEntity(self)
-		e:SetFlags(IsLP and 128 or 0)
-		e:SetMagnitude(colradius)
-		e:SetOrigin(self.Projectile.InitPos)
-		e:SetScale(self.Projectile.Charge)
-		e:SetStart(self.Projectile.InitVel)
-		ss.UtilEffectPredicted(ply, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
+		ss.SetEffectBulletCount(1)
+		ss.SetEffectBulletGroup(1)
+		ss.SetEffectChargeRate(self.Projectile.Charge)
+		ss.SetEffectColor(self.Projectile.Color)
+		ss.SetEffectColRadius(colradius)
+		ss.SetEffectDropInitRate(self.Projectile.SplashInitRate)
+		ss.SetEffectDropNum(0)
+		ss.SetEffectEntity(self)
+		ss.SetEffectFlags(self)
+		ss.SetEffectInitPos(self.Projectile.InitPos)
+		ss.SetEffectInitVel(self.Projectile.InitVel)
+		ss.UtilEffectPredicted(ply, "SplatoonSWEPsShooterInk", true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
 	end
 
@@ -244,10 +245,11 @@ function SWEP:Move(ply)
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:ResetCharge()
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
-	self:ResetSequence "fire" -- This is needed in multiplayer to prevent delaying muzzle effects.
 
-	if not ply:IsPlayer() then return end
+	ss.SuppressHostEventsMP(ply)
+	self:ResetSequence "fire" -- This is needed in multiplayer to prevent delaying muzzle effects.
 	ply:SetAnimation(PLAYER_ATTACK1)
+	ss.EndSuppressHostEventsMP(ply)
 end
 
 function SWEP:CustomDataTables()

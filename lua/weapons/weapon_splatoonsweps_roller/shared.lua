@@ -61,7 +61,7 @@ local function DoRollingEffect(self, velocity)
 	e:SetEntity(self)
 	e:SetFlags(self.IsBrush and 1 or 0)
 	e:SetRadius(velocity)
-	ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsRollerRolling", e, true, self.IgnorePrediction)
+	ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsRollerRolling", true, self.IgnorePrediction)
 end
 
 local function DoRunover(self, t, mv)
@@ -225,7 +225,6 @@ function SWEP:CreateInk(createnum)
 	local width = p.mSplashPositionWidth
 	local insiderate = p.mSplashInsideDamageRate
 	local insidenum = math.floor(splashnum * insiderate)
-	local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
 	local randomorder, skiptable = {}, {}
 	local ang = dir:Angle()
 	local angoffset = p.mPaintBrushRotYDegree
@@ -270,16 +269,18 @@ function SWEP:CreateInk(createnum)
 			StraightFrame = str,
 		})
 	
-		local e = EffectData()
-		e:SetAttachment(0)
-		e:SetColor(self.Projectile.Color)
-		e:SetEntity(self)
-		e:SetFlags(IsLP and 128 or 0)
-		e:SetMagnitude(self.Projectile.ColRadiusWorld)
-		e:SetOrigin(self.Projectile.InitPos)
-		e:SetScale(self.Projectile.SplashNum)
-		e:SetStart(self.Projectile.InitVel)
-		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
+		ss.SetEffectBulletCount(1)
+		ss.SetEffectBulletGroup(1)
+		ss.SetEffectChargeRate(0)
+		ss.SetEffectColor(self.Projectile.Color)
+		ss.SetEffectColRadius(self.Projectile.ColRadiusWorld)
+		ss.SetEffectEntity(self)
+		ss.SetEffectFlags(self)
+		ss.SetEffectDropInitRate(0)
+		ss.SetEffectDropNum(self.Projectile.SplashNum)
+		ss.SetEffectInitPos(self.Projectile.InitPos)
+		ss.SetEffectInitVel(self.Projectile.InitVel)
+		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
 	end
 

@@ -175,9 +175,11 @@ function SWEP:CreateInk()
 
 	self:SetSplashInitMul(self:GetSplashInitMul() + 1)
 	self:SetWeaponAnim(ACT_VM_PRIMARYATTACK)
-	self:ResetSequence "fire" -- This is needed in multiplayer to prevent delaying muzzle effects.
 	ss.EmitSoundPredicted(self.Owner, self, self.ShootSound)
+	ss.SuppressHostEventsMP(self.Owner)
+	self:ResetSequence "fire" -- This is needed in multiplayer to prevent delaying muzzle effects.
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
+	ss.EndSuppressHostEventsMP(self.Owner)
 
 	if self:GetSplashInitMul() > p.mSplashSplitNum then
 		self:SetSplashInitMul(1)
@@ -188,19 +190,21 @@ function SWEP:CreateInk()
 		local Recoil = 0.2
 		local rnda = Recoil * -1
 		local rndb = Recoil * math.Rand(-1, 1)
-		local e = EffectData()
-		local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
-		e:SetAttachment(self.Projectile.SplashInitRate)
-		e:SetColor(self.Projectile.Color)
-		e:SetEntity(self)
-		e:SetFlags(IsLP and 128 or 0)
-		e:SetMagnitude(self.Projectile.ColRadiusWorld)
-		e:SetOrigin(self.Projectile.InitPos)
-		e:SetScale(self.Projectile.SplashNum)
-		e:SetStart(self.Projectile.InitVel)
-		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
-		ss.AddInk(p, self.Projectile)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
+
+		ss.SetEffectBulletCount(1)
+		ss.SetEffectBulletGroup(1)
+		ss.SetEffectChargeRate(0)
+		ss.SetEffectColor(self.Projectile.Color)
+		ss.SetEffectColRadius(self.Projectile.ColRadiusWorld)
+		ss.SetEffectEntity(self)
+		ss.SetEffectFlags(self)
+		ss.SetEffectDropInitRate(self.Projectile.SplashInitRate)
+		ss.SetEffectDropNum(self.Projectile.SplashNum)
+		ss.SetEffectInitPos(self.Projectile.InitPos)
+		ss.SetEffectInitVel(self.Projectile.InitVel)
+		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", true, self.IgnorePrediction)
+		ss.AddInk(p, self.Projectile)
 	end
 end
 

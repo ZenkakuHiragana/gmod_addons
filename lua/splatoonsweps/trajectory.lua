@@ -64,7 +64,7 @@ function Simulate.weapon_splatoonsweps_shooter(ink)
 			e:SetNormal(data.InitDir)
 			e:SetOrigin(dropdata.InitPos)
 			e:SetRadius(parameters.mCollisionRadiusNear / 2)
-			ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterTrail", e)
+			ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterTrail")
 		end
 
 		if util.TraceLine {
@@ -593,7 +593,7 @@ function ss.MakeBlasterExplosion(ink)
 	e:SetColor(data.Color)
 	e:SetFlags(ink.HitWall and 1 or 0)
 	e:SetRadius(rfar)
-	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterExplosion", e, true, weapon.IgnorePrediction)
+	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterExplosion", true, weapon.IgnorePrediction)
 
 	local a = data.InitDir:Angle()
 	if ink.HitWall then a:RotateAroundAxis(a:Right(), -90) end
@@ -641,15 +641,17 @@ function ss.MakeBlasterExplosion(ink)
 		Yaw = data.Yaw,
 	})
 	
-	local IsLP = CLIENT and weapon:IsCarriedByLocalPlayer() and 128 or 0
-	e:SetAttachment(0)
-	e:SetColor(dropdata.Color)
-	e:SetEntity(dropdata.Weapon)
-	e:SetFlags(IsLP + 3)
-	e:SetMagnitude(dropdata.ColRadiusWorld)
-	e:SetOrigin(dropdata.InitPos)
-	e:SetScale(0)
-	e:SetStart(dropdata.InitVel)
-	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsShooterInk", e, true, weapon.IgnorePrediction)
+	ss.SetEffectBulletCount(1)
+	ss.SetEffectBulletGroup(1)
+	ss.SetEffectChargeRate(0)
+	ss.SetEffectColor(dropdata.Color)
+	ss.SetEffectDropInitRate(0)
+	ss.SetEffectDropNum(0)
+	ss.SetEffectEntity(dropdata.Weapon)
+	ss.SetEffectFlags(dropdata.Weapon, 3)
+	ss.SetEffectColRadius(dropdata.ColRadiusWorld)
+	ss.SetEffectInitPos(dropdata.InitPos)
+	ss.SetEffectInitVel(dropdata.InitVel)
+	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsShooterInk", true, weapon.IgnorePrediction)
 	ss.AddInk(parameters, dropdata)
 end

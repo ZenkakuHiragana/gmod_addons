@@ -154,7 +154,6 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 	local dir = self:GetAimVector()
 	local pos = self:GetShootPos()
 	local right = self.Owner:GetRight()
-	local IsLP = CLIENT and self:IsCarriedByLocalPlayer()
 	local iscenter = p["m" .. order .. "GroupCenterLine"]
 	local isside = p["m" .. order .. "GroupSideLine"]
 	local splashcolradius = p["m" .. order .. "GroupSplashColRadius"]
@@ -170,7 +169,6 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 	local dmax, dmaxdist, dmin, dmindist = self:GetDamageParameters(number, spawncount)
 	local pfardist, pfarradius, pfarrate, pneardist, pnearradius, pnearrate = self:GetPaintParameters(number, spawncount)
 	local colent, colworld = self:GetCollisionRadii(number, spawncount)
-	local e = EffectData()
 	local function Do(ang)
 		local initvelocity = ang:Forward() * vforward + ang:Right() * vright + ang:Up() * vup
 		local yaw = initvelocity:Angle().yaw
@@ -181,8 +179,8 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 			Yaw = yaw,
 		})
 		
-		e:SetStart(self.Projectile.InitVel)
-		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
+		ss.SetEffectInitVel(self.Projectile.InitVel)
+		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
 	end
 
@@ -212,13 +210,16 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 		StraightFrame = p.mBulletStraightFrame,
 	})
 	
-	e:SetAttachment(spawncount * 4 + number)
-	e:SetColor(self.Projectile.Color)
-	e:SetEntity(self)
-	e:SetFlags(IsLP and 128 or 0)
-	e:SetMagnitude(self.Projectile.ColRadiusWorld)
-	e:SetOrigin(self.Projectile.InitPos)
-	e:SetScale(0)
+	ss.SetEffectBulletCount(spawncount)
+	ss.SetEffectBulletGroup(number)
+	ss.SetEffectChargeRate(0)
+	ss.SetEffectColor(self.Projectile.Color)
+	ss.SetEffectColRadius(self.Projectile.ColRadiusWorld)
+	ss.SetEffectDropInitRate(0) -- self.Projectile.SplashInitRate
+	ss.SetEffectDropNum(0) -- self.Projectile.SplashNum
+	ss.SetEffectEntity(self)
+	ss.SetEffectFlags(self)
+	ss.SetEffectInitPos(self.Projectile.InitPos)
 	
 	local linenum = p.mLineNum - 1
 	local centerline = math.floor(p.mLineNum / 2)

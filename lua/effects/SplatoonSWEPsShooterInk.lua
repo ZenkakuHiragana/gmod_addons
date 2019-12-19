@@ -38,57 +38,78 @@ local function DrawMesh(MeshTable, color)
 	mesh.End()
 end
 
+local function GetSplashLength(p, prog)
+	if not prog then return p.mCreateSplashLength or 0 end
+	local minratio = p.mSplashDepthMinChargeScaleRateByWidth
+	local maxratio = p.mSplashDepthMaxChargeScaleRateByWidth
+	local minrate = p.mSplashBetweenMaxSplashPaintRadiusRate
+	local maxrate = p.mSplashBetweenMinSplashPaintRadiusRate
+	local maxradius = p.mMaxChargeSplashPaintRadius
+	local rate = Lerp(prog, minrate, maxrate)
+	local ratio = Lerp(prog, minratio, maxratio)
+	local weakrate = Lerp(prog, p.mPaintNearR_WeakRate, 1)
+	return rate * weakrate * maxradius * ratio
+end
+
+local OrdinalNumbers = {"First", "Second", "Third"}
 function EFFECT:Init(e)
 	self:SetModel(mdl)
 	self:SetMaterial(invisiblemat)
-	self.Weapon = e:GetEntity()
+	self.Weapon = ss.GetEffectEntity()
 	if not IsValid(self.Weapon) then return end
 	if not IsValid(self.Weapon.Owner) then return end
-	local c = e:GetColor()
-	local f = e:GetFlags()
+	local pos, ang = self.Weapon:GetMuzzlePosition()
 	local p = self.Weapon.Parameters
+	local c = ss.GetEffectColor()
+	local f = ss.GetEffectFlags()
+
 	local color = ss.GetColor(c)
-	local colradius = e:GetMagnitude()
-	local initpos = e:GetOrigin()
-	local initvel = e:GetStart()
-	local isdrop = bit.band(f, 1) > 0
-	local IsLP = bit.band(f, 128) > 0
+	local colradius = ss.GetEffectColRadius()
+	local initpos = ss.GetEffectInitPos()
+	local initvel = ss.GetEffectInitVel()
+	local bulletcount = ss.GetEffectBulletCount()
+	local bulletgroup = ss.GetEffectBulletGroup()
+	local order = OrdinalNumbers[bulletgroup]
+
+	local IsDrop = bit.band(f, 1) > 0
 	local IsBlasterSphereSplashDrop = bit.band(f, 2) > 0
+	local IsRollerSubSplash = bit.band(f, 4) > 0
+	local IsLP = bit.band(f, 128) > 0 -- IsCarriedByLocalPlayer
+
 	local IsCharger = self.Weapon.IsCharger
 	local IsRoller = self.Weapon.IsRoller
-	local IsRollerSubSplash = bit.band(f, 4) > 0
 	local IsSlosher = self.Weapon.IsSlosher
+
 	local ping = IsLP and self.Weapon:Ping() or 0
-	local prog = e:GetScale() -- For chargers
-	local splashinit = e:GetAttachment()
-	local splashnum = e:GetScale()
-	local pos, ang = self.Weapon:GetMuzzlePosition()
+	local prog = ss.GetEffectChargeRate() -- For chargers
+	local splashinit = ss.GetEffectDropInitRate()
+	local splashnum = ss.GetEffectDropNum()
+
 	local range = 0
 	local speed = initvel:Length()
 	local initdir = initvel:GetNormalized()
-	local splashratio = IsCharger and Lerp(prog, p.mSplashDepthMinChargeScaleRateByWidth, p.mSplashDepthMaxChargeScaleRateByWidth)
-	local splashrate = IsCharger and Lerp(prog, p.mSplashBetweenMaxSplashPaintRadiusRate, p.mSplashBetweenMinSplashPaintRadiusRate) or 0
-	local splashradius = IsCharger and Lerp(prog, p.mPaintNearR_WeakRate, 1) * p.mMaxChargeSplashPaintRadius * splashratio or 0
-	local splashlength = Either(IsCharger, splashrate * splashradius, p.mCreateSplashLength) or 0
+	local splashlength = GetSplashLength(p, IsCharger and prog)
 	local splashcolradius = Either(IsCharger, colradius, p.mSplashColRadius)
-	local splitnum = not IsRoller and p.mSplashSplitNum or 1
+
 	local straightframe = p.mStraightFrame
 	local decreaseframe = ss.ShooterDecreaseFrame
 	local drawradius = IsBlasterSphereSplashDrop and p.mSphereSplashDropDrawRadius or p.mDrawRadius
+	local renderfunc = RenderFuncs[self.Weapon.ClassName] or RenderFuncs[self.Weapon.Base] or "Render1"
+
 	if IsSlosher then
-		local misc = e:GetAttachment()
-		local bulletgroup = misc % 4
-		local spawncount = math.floor(misc / 4)
-		self.DrawSize = self.Weapon:GetDrawRadius(bulletgroup, spawncount)
+		self.DrawSize = self.Weapon:GetDrawRadius(bulletgroup, bulletcount)
 		drawradius = self.DrawSize / 3
 		decreaseframe = ss.RollerDecreaseFrame
 		straightframe = p.mBulletStraightFrame
+		splashlength = p["m" .. order .. "GroupSplashBetween"]
+		splashcolradius = p["m" .. order .. "GroupSplashColRadius"]
+		if IsDrop then renderfunc = "Render1" end
 	elseif IsRoller then
 		drawradius = IsRollerSubSplash and p.mSplashSubDrawRadius or p.mSplashDrawRadius
 		straightframe = IsRollerSubSplash and p.mSplashSubStraightFrame or p.mSplashStraightFrame
 		decreaseframe = ss.RollerDecreaseFrame
 		self.DrawSize = p.mSplashPaintNearR
-	elseif isdrop then
+	elseif IsDrop then
 		straightframe = 0
 		decreaseframe = 0
 	elseif IsCharger then
@@ -104,13 +125,14 @@ function EFFECT:Init(e)
 
 	local fallingframe = straightframe + decreaseframe
 	local destination = initpos + Either(IsCharger, initdir * range, initvel * fallingframe)
-	local trailoffset = -initdir * splashlength * (IsBlasterSphereSplashDrop and 0 or 1)
+	local trailoffset = initdir * splashlength * (IsBlasterSphereSplashDrop and 0 or 1)
 	local apparentdir = (destination - pos):GetNormalized()
 	local apparentrange = destination:Distance(pos)
 	local apparentspeed = speed * apparentrange / range
 	local apparentvel = Either(IsCharger, apparentdir * apparentspeed, (destination - pos) / fallingframe)
-	local renderfunc = RenderFuncs[self.Weapon.ClassName] or RenderFuncs[self.Weapon.Base] or "Render1"
 
+	self.BulletCount = bulletcount
+	self.BulletGroup = bulletgroup
 	self.Charge = prog
 	self.Color = color
 	self.ColorCode = c
@@ -120,10 +142,10 @@ function EFFECT:Init(e)
 	self.CreateSplashLength = splashlength
 	self.CreateSplashNum = splashnum
 	self.DrawRadius = drawradius
-	self.IsBlaster = not isdrop and self.Weapon.IsBlaster
+	self.IsBlaster = not IsDrop and self.Weapon.IsBlaster
 	self.IsCharger = IsCharger
 	self.IsCarriedByLocalPlayer = self.Weapon:IsCarriedByLocalPlayer()
-	self.IsDrop = isdrop
+	self.IsDrop = IsDrop
 	self.IsRoller = IsRoller
 	self.IsSlosher = IsSlosher
 	self.Range = range
@@ -131,11 +153,11 @@ function EFFECT:Init(e)
 	self.Simulate = ss.SimulateBullet
 	self.SplashCount = 0
 	self.SplashColRadius = splashcolradius
-	self.SplashInit = splashradius + splashinit * self.CreateSplashLength / splitnum
-
+	self.SplashInit = splashinit
+	
 	self.Real = ss.MakeInkQueueStructure()
 	self.Real.Data = table.Merge(ss.MakeProjectileStructure(), {
-		DoDamage = not isdrop,
+		DoDamage = not IsDrop,
 		InitPos = initpos,
 		InitVel = initvel,
 		IsCharger = IsCharger,
@@ -154,7 +176,7 @@ function EFFECT:Init(e)
 
 	self.Apparent = ss.MakeInkQueueStructure()
 	self.Apparent.Data = table.Merge(ss.MakeProjectileStructure(), {
-		DoDamage = not isdrop,
+		DoDamage = not IsDrop,
 		Angle = ang,
 		InitPos = pos,
 		InitVel = apparentvel,
@@ -172,7 +194,7 @@ function EFFECT:Init(e)
 	self.Apparent.Data.InitDir = self.Apparent.Data.InitVel:GetNormalized()
 	self.Apparent.Data.InitSpeed = self.Apparent.Data.InitVel:Length()
 	
-	if isdrop then
+	if IsDrop then
 		self.Apparent.Data.Angle = self.Real.Data.InitDir:Angle()
 		self.Apparent.Data.InitPos = self.Real.Data.InitPos
 		self.Apparent.Data.InitSpeed = 0
@@ -215,11 +237,11 @@ function EFFECT:CreateDrops(tr) -- Creates ink drops
 	local init = app.InitPos
 	local ischarger = self.IsCharger
 	local len = tr.HitPos - init
-	local nextlen = self.SplashCount * self.CreateSplashLength + self.SplashInit
+	local nextlen = (self.SplashCount + self.SplashInit) * self.CreateSplashLength
 	local num = self.CreateSplashNum
 	local range = self.Range
 	local realinit = self.Real.Data.InitVel
-
+	
 	len = ischarger and len:Length() or len:Length2D()
 	if not ischarger then
 		dir.z = 0 dir:Normalize()
@@ -231,14 +253,17 @@ function EFFECT:CreateDrops(tr) -- Creates ink drops
 			pos.z = Lerp(nextlen / len, init.z, tr.HitPos.z)
 		end
 		
-		e:SetAttachment(0)
-		e:SetColor(self.ColorCode)
-		e:SetEntity(self.Weapon)
-		e:SetFlags(1)
-		e:SetMagnitude(self.SplashColRadius)
-		e:SetOrigin(pos)
-		e:SetScale(ischarger and self.Charge or 0)
-		e:SetStart(ischarger and realinit or vector_origin)
+		ss.SetEffectBulletCount(self.BulletCount)
+		ss.SetEffectBulletGroup(self.BulletGroup)
+		ss.SetEffectChargeRate(ischarger and self.Charge or 0)
+		ss.SetEffectColor(self.ColorCode)
+		ss.SetEffectColRadius(self.SplashColRadius)
+		ss.SetEffectDropInitRate(0)
+		ss.SetEffectDropNum(0)
+		ss.SetEffectEntity(self.Weapon)
+		ss.SetEffectFlags(1)
+		ss.SetEffectInitPos(pos)
+		ss.SetEffectInitVel(ischarger and realinit or vector_origin)
 		util.Effect("SplatoonSWEPsShooterInk", e)
 		nextlen = nextlen + self.CreateSplashLength
 		self.SplashCount = self.SplashCount + 1
