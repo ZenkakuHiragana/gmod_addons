@@ -74,6 +74,15 @@ function ss.DoDropSplashes(ink)
 		local t = util.TraceHull(hull)
 		local mul = 1
 		dropdata.InitPos = t.HitPos
+		
+		if IsBlaster then
+			local e = EffectData()
+			e:SetColor(data.Color)
+			e:SetNormal(data.InitDir)
+			e:SetOrigin(dropdata.InitPos)
+			e:SetRadius(parameters.mCollisionRadiusNear / 2)
+			ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterTrail")
+		end
 
 		if IsCharger and data.SplashCount == 0 then
 			local paintlastmul = parameters.mPaintRateLastSplash
