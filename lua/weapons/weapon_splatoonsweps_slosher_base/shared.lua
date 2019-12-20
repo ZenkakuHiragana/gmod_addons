@@ -144,6 +144,14 @@ function SWEP:GetDrawRadius(number, spawncount)
 	return base + spawncount * offset
 end
 
+function SWEP:SharedInit()
+	local p = self.Parameters
+	table.Merge(self.Projectile, {
+		AirResist = p.mFreeStateAirResist,
+		Gravity = p.mFreeStateGravity,
+	})
+end
+
 local randinit = "SpaltoonSWEPs: Slosher splash init rate"
 local randink = "SplatoonSWEPs: Shooter ink type"
 local randspread = "SplatoonSWEPs: Slosher random spread"
@@ -210,16 +218,15 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 		StraightFrame = p.mBulletStraightFrame,
 	})
 	
-	ss.SetEffectBulletCount(spawncount)
-	ss.SetEffectBulletGroup(number)
-	ss.SetEffectChargeRate(0)
 	ss.SetEffectColor(self.Projectile.Color)
 	ss.SetEffectColRadius(self.Projectile.ColRadiusWorld)
-	ss.SetEffectDropInitRate(0) -- self.Projectile.SplashInitRate
-	ss.SetEffectDropNum(0) -- self.Projectile.SplashNum
+	ss.SetEffectDrawRadius(self:GetDrawRadius(number, spawncount))
 	ss.SetEffectEntity(self)
 	ss.SetEffectFlags(self)
 	ss.SetEffectInitPos(self.Projectile.InitPos)
+	ss.SetEffectSplash(Vector(self.Projectile.SplashColRadius, self.Projectile.SplashInitRate, self.Projectile.SplashLength))
+	ss.SetEffectSplashNum(0) -- self.Projectile.SplashNum
+	ss.SetEffectStraightFrame(self.Projectile.StraightFrame)
 	
 	local linenum = p.mLineNum - 1
 	local centerline = math.floor(p.mLineNum / 2)

@@ -94,9 +94,9 @@ function SWEP:ShouldChargeWeapon()
 end
 
 function SWEP:SharedInit()
+	local p = self.Parameters
 	self.AimSound = CreateSound(self, ss.ChargerAim)
-	self.AirTimeFraction = 1 - 1 / self.Parameters.mEmptyChargeTimes
-	self.Projectile.SplashColRadius = self.Parameters.mSplashColRadius
+	self.AirTimeFraction = 1 - 1 / p.mEmptyChargeTimes
 	self:SetAimTimer(CurTime())
 	self:ResetCharge()
 	self:AddSchedule(0, function()
@@ -118,6 +118,12 @@ function SWEP:SharedInit()
 
 		self.FullChargeFlag = prog == 1
 	end)
+
+	table.Merge(self.Projectile, {
+		AirResist = 1,
+		Gravity = 1 * ss.ToHammerUnitsPerSec2,
+		SplashColRadius = p.mSplashColRadius,
+	})
 end
 
 function SWEP:SharedPrimaryAttack()
@@ -224,7 +230,6 @@ function SWEP:Move(ply)
 		ID = CurTime() + self:EntIndex(),
 		InitPos = pos,
 		InitVel = dir * initspeed,
-		IsCharger = true,
 		PaintFarRadius = paintradius * paintlastmul,
 		PaintFarRatio = 1 / ratio,
 		PaintNearRadius = paintradius * paintlastmul,
@@ -247,17 +252,16 @@ function SWEP:Move(ply)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
 		self.ModifyWeaponSize = SysTime()
 
-		ss.SetEffectBulletCount(1)
-		ss.SetEffectBulletGroup(1)
-		ss.SetEffectChargeRate(self.Projectile.Charge)
 		ss.SetEffectColor(self.Projectile.Color)
-		ss.SetEffectColRadius(colradius)
-		ss.SetEffectDropInitRate(self.Projectile.SplashInitRate)
-		ss.SetEffectDropNum(0)
+		ss.SetEffectColRadius(self.Projectile.ColRadiusWorld)
+		ss.SetEffectDrawRadius(p.mDrawRadius) -- Shooter's default value
 		ss.SetEffectEntity(self)
 		ss.SetEffectFlags(self)
 		ss.SetEffectInitPos(self.Projectile.InitPos)
 		ss.SetEffectInitVel(self.Projectile.InitVel)
+		ss.SetEffectSplash(Vector(self.Projectile.SplashColRadius, self.Projectile.SplashInitRate, self.Projectile.SplashLength))
+		ss.SetEffectSplashNum(self.Projectile.SplashNum)
+		ss.SetEffectStraightFrame(self.Projectile.StraightFrame)
 		ss.UtilEffectPredicted(ply, "SplatoonSWEPsShooterInk", true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
 	end

@@ -233,8 +233,9 @@ ss.InkGridSize = 12 -- in Hammer Units
 ss.InklingJumpPower = 250
 ss.DisruptoredSpeed = .45 -- Disruptor's debuff factor
 ss.OnEnemyInkJumpPower = ss.InklingJumpPower * .75
-ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) -- = 3.53, Constants for unit conversion
-ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec -- = 212, Constants for unit conversion
+ss.ToHammerUnits = .1 * 3.28084 * 16 * (1.00965 / 1.5) -- = 3.53, Splatoon distance units -> Hammer distance units
+ss.ToHammerUnitsPerSec = ss.ToHammerUnits * framepersec -- = 212, Splatoon du/s -> Hammer du/s
+ss.ToHammerUnitsPerSec2 = ss.ToHammerUnitsPerSec * framepersec -- = 12720, Splatoon du/s^2 -> Hammer du/s^2
 ss.ToHammerHealth = 100 -- Health is normalized in Splatoon (0--1)
 ss.FrameToSec = 1 / framepersec -- = 0.016667, Constants for time conversion
 ss.SecToFrame = framepersec -- = 60, Constants for time conversion
@@ -278,7 +279,7 @@ end
 ss.UnitsConverter = {
 	["du"] = ss.ToHammerUnits,
 	["du/f"] = ss.ToHammerUnitsPerSec,
-	["du/f2"] = ss.ToHammerUnitsPerSec * framepersec,
+	["du/f2"] = ss.ToHammerUnitsPerSec2,
 	["f"] = ss.FrameToSec,
 	["ink"] = ss.MaxInkAmount,
 }

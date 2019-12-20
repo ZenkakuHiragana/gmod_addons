@@ -98,12 +98,14 @@ function SWEP:SharedInit()
 
 	local p = self.Parameters
 	table.Merge(self.Projectile, {
+		AirResist = 0.75,
 		ColRadiusEntity = p.mColRadius,
 		ColRadiusWorld = p.mColRadius,
 		DamageMax = p.mDamageMax,
 		DamageMaxDistance = p.mGuideCheckCollisionFrame,
 		DamageMin = p.mDamageMin,
 		DamageMinDistance = p.mDamageMinFrame,
+		Gravity = 1 * ss.ToHammerUnitsPerSec2,
 		PaintFarDistance = p.mPaintFarDistance,
 		PaintFarRadius = p.mPaintFarRadius,
 		PaintNearDistance = p.mPaintNearDistance,
@@ -191,18 +193,17 @@ function SWEP:CreateInk()
 		local rnda = Recoil * -1
 		local rndb = Recoil * math.Rand(-1, 1)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
-
-		ss.SetEffectBulletCount(1)
-		ss.SetEffectBulletGroup(1)
-		ss.SetEffectChargeRate(0)
+		
 		ss.SetEffectColor(self.Projectile.Color)
 		ss.SetEffectColRadius(self.Projectile.ColRadiusWorld)
+		ss.SetEffectDrawRadius(p.mDrawRadius)
 		ss.SetEffectEntity(self)
 		ss.SetEffectFlags(self)
-		ss.SetEffectDropInitRate(self.Projectile.SplashInitRate)
-		ss.SetEffectDropNum(self.Projectile.SplashNum)
 		ss.SetEffectInitPos(self.Projectile.InitPos)
 		ss.SetEffectInitVel(self.Projectile.InitVel)
+		ss.SetEffectSplash(Vector(self.Projectile.SplashColRadius, self.Projectile.SplashInitRate, self.Projectile.SplashLength))
+		ss.SetEffectSplashNum(self.Projectile.SplashNum)
+		ss.SetEffectStraightFrame(self.Projectile.StraightFrame)
 		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
 	end

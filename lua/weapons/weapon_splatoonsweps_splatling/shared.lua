@@ -115,12 +115,14 @@ function SWEP:SharedInit()
 	self:SetAimTimer(CurTime())
 	self:SharedDeploy()
 	table.Merge(self.Projectile, {
+		AirResist = 0.75,
 		ColRadiusEntity = p.mColRadius,
 		ColRadiusWorld = p.mColRadius,
 		DamageMax = p.mDamageMax,
 		DamageMaxDistance = p.mDamageMinFrame, -- Swapped from shooters
 		DamageMin = p.mDamageMin,
 		DamageMinDistance = p.mGuideCheckCollisionFrame, -- Swapped from shooters
+		Gravity = 1 * ss.ToHammerUnitsPerSec2,
 		PaintFarDistance = p.mPaintFarDistance,
 		PaintFarRadius = p.mPaintFarRadius,
 		PaintNearDistance = p.mPaintNearDistance,
@@ -206,13 +208,13 @@ function SWEP:Move(ply)
 		local ts = ss.GetTimeScale(ply)
 		local AlreadyAiming = CurTime() < self:GetAimTimer()
 		local crouchdelay = math.min(p.mRepeatFrame, ss.CrouchDelay)
+		self:CreateInk()
 		self:SetNextPrimaryFire(CurTime() + p.mRepeatFrame / ts)
 		self:SetAimTimer(CurTime() + ss.AimDuration)
 		self:SetFireInk(self:GetFireInk() - 1)
 		self:SetInk(math.max(0, self:GetInk() - self.TakeAmmo))
 		self:SetReloadDelay(p.mInkRecoverStop)
 		self:SetCooldown(math.max(self:GetCooldown(), CurTime() + crouchdelay / ts))
-		self:CreateInk()
 
 		if CurTime() - self:GetJump() > p.mDegJumpBiasFrame then
 			if not AlreadyAiming then self:SetBiasVelocity(0) end

@@ -531,24 +531,12 @@ end
 
 -- The function names of EffectData() don't make sense, renaming.
 do local e = EffectData()
-	function ss.GetEffectInitPos() return e:GetOrigin() end
-	function ss.SetEffectInitPos(pos) e:SetOrigin(pos) end
-	function ss.GetEffectInitVel() return e:GetStart() end
-	function ss.SetEffectInitVel(vel) e:SetStart(vel) end
-	function ss.GetEffectChargeRate() return e:GetMagnitude() end
-	function ss.SetEffectChargeRate(rate) e:SetMagnitude(rate) end
 	function ss.GetEffectColor() return e:GetColor() end
 	function ss.SetEffectColor(color) e:SetColor(color) end
 	function ss.GetEffectColRadius() return e:GetRadius() end
-	function ss.SetEffectColRadius(r) e:SetRadius(r) end
-	function ss.GetEffectDropInitRate() return e:GetScale() end
-	function ss.SetEffectDropInitRate(rate) e:SetScale(rate) end
-	function ss.GetEffectDropNum() return e:GetSurfaceProp() end
-	function ss.SetEffectDropNum(num) e:SetSurfaceProp(num) end
-	function ss.GetEffectBulletGroup() return e:GetAttachment() end
-	function ss.SetEffectBulletGroup(group) e:SetAttachment(group) end
-	function ss.GetEffectBulletCount() return e:GetMaterialIndex() end
-	function ss.SetEffectBulletCount(count) e:SetMaterialIndex(count) end
+	function ss.SetEffectColRadius(radius) e:SetRadius(radius) end
+	function ss.GetEffectDrawRadius() return e:GetMagnitude() end
+	function ss.SetEffectDrawRadius(radius) e:SetMagnitude(radius) end
 	function ss.GetEffectEntity() return e:GetEntity() end
 	function ss.SetEffectEntity(ent) e:SetEntity(ent) end
 	function ss.GetEffectFlags() return e:GetFlags() end
@@ -565,6 +553,18 @@ do local e = EffectData()
 
 		e:SetFlags(flags)
 	end
+
+	function ss.GetEffectInitPos() return e:GetOrigin() end
+	function ss.SetEffectInitPos(pos) e:SetOrigin(pos) end
+	function ss.GetEffectInitVel() return e:GetStart() end
+	function ss.SetEffectInitVel(vel) e:SetStart(vel) end
+	-- Vector(SplashColRadius, SplashInitRate, SplashLength)
+	function ss.GetEffectSplash() return e:GetNormal() end
+	function ss.SetEffectSplash(var) e:SetNormal(var) end
+	function ss.GetEffectSplashNum() return e:GetSurfaceProp() end
+	function ss.SetEffectSplashNum(num) e:SetSurfaceProp(num) end
+	function ss.GetEffectStraightFrame() return e:GetScale() end
+	function ss.SetEffectStraightFrame(frame) e:SetScale(frame) end
 
 	-- Dispatch an effect properly in a weapon predicted hook.
 	-- Arguments:

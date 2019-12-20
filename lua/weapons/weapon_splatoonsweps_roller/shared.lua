@@ -156,6 +156,15 @@ function SWEP:GetStraightFrame(issub)
 	end
 end
 
+function SWEP:GetDrawRadius(issub)
+	local p = self.Parameters
+	if issub then
+		return p.mSplashSubDrawRadius
+	else
+		return p.mSplashDrawRadius
+	end
+end
+
 function SWEP:GetCollisionRadii(issub)
 	local p = self.Parameters
 	if issub then
@@ -269,17 +278,16 @@ function SWEP:CreateInk(createnum)
 			StraightFrame = str,
 		})
 	
-		ss.SetEffectBulletCount(1)
-		ss.SetEffectBulletGroup(1)
-		ss.SetEffectChargeRate(0)
 		ss.SetEffectColor(self.Projectile.Color)
 		ss.SetEffectColRadius(self.Projectile.ColRadiusWorld)
+		ss.SetEffectDrawRadius(self:GetDrawRadius(issub))
 		ss.SetEffectEntity(self)
 		ss.SetEffectFlags(self)
-		ss.SetEffectDropInitRate(0)
-		ss.SetEffectDropNum(self.Projectile.SplashNum)
 		ss.SetEffectInitPos(self.Projectile.InitPos)
 		ss.SetEffectInitVel(self.Projectile.InitVel)
+		ss.SetEffectSplash(Vector(self.Projectile.SplashColRadius, self.Projectile.SplashInitRate, self.Projectile.SplashLength))
+		ss.SetEffectSplashNum(self.Projectile.SplashNum)
+		ss.SetEffectStraightFrame(self.Projectile.StraightFrame)
 		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
 	end
@@ -324,7 +332,6 @@ function SWEP:SharedInit()
 	self.SwingCountInit = p.mPaintBrushNearestBulletLoopNum - p.mPaintBrushNearestBulletOrderNum
 	self.Bodygroup = table.Copy(self.Bodygroup or {})
 	self.IsBrush = self.Parameters.mPaintBrushType
-	self.Projectile.IsRoller = true
 	self.RollSound = CreateSound(self, self.RollSoundName)
 	self.EmptyRollSound = CreateSound(self, self.IsBrush and ss.EmptyRun or ss.EmptyRoll)
 	self.RunoverExceptions = {}
@@ -339,6 +346,12 @@ function SWEP:SharedInit()
 		if not self.IsHeroWeapon then return end
 		self.Skin = self:GetNWInt "level"
 	end)
+
+	table.Merge(self.Projectile, {
+		AirResist = 0.15,
+		Gravity = 0.15 * ss.ToHammerUnitsPerSec2,
+		PaintRatioNearDistance = 25 * ss.ToHammerUnits,
+	})
 end
 
 function SWEP:SharedDeploy()

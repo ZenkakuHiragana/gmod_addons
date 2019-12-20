@@ -47,6 +47,7 @@ end
 
 function ss.MakeProjectileStructure()
 	return { -- Used in ss.AddInk(), describes how a projectile is.
+		AirResist = 0,
 		Charge = nil,
 		Color = 1,
 		ColRadiusEntity = 1,
@@ -56,11 +57,11 @@ function ss.MakeProjectileStructure()
 		DamageMaxDistance = nil,
 		DamageMin = nil,
 		DamageMinDistance = nil,
+		Gravity = 0,
 		InitDir = Vector(),
 		InitPos = Vector(),
 		InitSpeed = 0,
 		InitVel = Vector(),
-		IsCharger = nil,
 		PaintRatioFarDistance = 100 * ss.ToHammerUnits,
 		PaintFarDistance = 0,
 		PaintFarRadius = 0,
@@ -99,7 +100,6 @@ end
 
 function ss.MakeInkQueueStructure()
 	return {
-		Color = 1,
 		Data = {},
 		InitTime = CurTime(),
 		IsCarriedByLocalPlayer = false,
@@ -171,7 +171,7 @@ end
 function ss.CustomPrimary.weapon_splatoonsweps_shooter(weapon)
 	local p = weapon.Parameters
 	weapon.NPCDelay = p.mRepeatFrame
-	weapon.Range = p.mInitVel * (p.mStraightFrame + ss.ShooterDecreaseFrame / 2)
+	weapon.Range = p.mInitVel * p.mStraightFrame
 	weapon.Primary.Automatic = p.mTripleShotSpan == 0
 end
 
@@ -240,7 +240,7 @@ end
 function ss.CustomPrimary.weapon_splatoonsweps_splatling(weapon)
 	local p = weapon.Parameters
 	ss.CustomPrimary.weapon_splatoonsweps_shooter(weapon)
-	weapon.Range = p.mInitVelSecondPeriodMaxCharge * (p.mStraightFrame + ss.ShooterDecreaseFrame / 2)
+	weapon.Range = p.mInitVelSecondPeriodMaxCharge * p.mStraightFrame
 end
 
 function ss.DefaultParams.weapon_splatoonsweps_charger(weapon)
@@ -376,7 +376,7 @@ function ss.CustomPrimary.weapon_splatoonsweps_roller(weapon)
 	local p = weapon.Parameters
 	weapon.Primary.Automatic = false
 	weapon.NPCDelay = p.mSwingLiftFrame
-	weapon.Range = p.mSplashInitSpeedBase * (p.mSplashStraightFrame + ss.RollerDecreaseFrame / 2)
+	weapon.Range = p.mSplashInitSpeedBase * p.mSplashStraightFrame
 end
 
 function ss.DefaultParams.weapon_splatoonsweps_slosher_base(weapon)
@@ -615,9 +615,12 @@ end
 
 function ss.CustomPrimary.weapon_splatoonsweps_slosher_base(weapon)
 	local p = weapon.Parameters
+	local v1 = p.mFirstGroupBulletFirstInitSpeedBase
+	local v2 = p.mSecondGroupBulletFirstInitSpeedBase
+	local v3 = p.mThirdGroupBulletFirstInitSpeedBase
 	weapon.Primary.Automatic = false
 	weapon.NPCDelay = p.mSwingLiftFrame
-	weapon.Range = p.mFirstGroupBulletFirstInitSpeedBase * (p.mBulletStraightFrame + ss.RollerDecreaseFrame / 2)
+	weapon.Range = math.max(v1, v2, v3) * p.mBulletStraightFrame
 end
 
 ss.DispatchEffect = {}
