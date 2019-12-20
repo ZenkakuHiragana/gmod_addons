@@ -96,6 +96,7 @@ end
 function SWEP:SharedInit()
 	self.AimSound = CreateSound(self, ss.ChargerAim)
 	self.AirTimeFraction = 1 - 1 / self.Parameters.mEmptyChargeTimes
+	self.Projectile.SplashColRadius = self.Parameters.mSplashColRadius
 	self:SetAimTimer(CurTime())
 	self:ResetCharge()
 	self:AddSchedule(0, function()
@@ -202,6 +203,19 @@ function SWEP:Move(ply)
 	local pos, dir = self:GetFirePosition()
 	local ang = dir:Angle()
 	local colradius = self:GetColRadius()
+	
+	local maxrate = p.mSplashBetweenMaxSplashPaintRadiusRate
+	local minrate = p.mSplashBetweenMinSplashPaintRadiusRate
+	local maxratio = p.mSplashDepthMaxChargeScaleRateByWidth
+	local minratio = p.mSplashDepthMinChargeScaleRateByWidth
+	local paintlastmul = p.mPaintRateLastSplash
+	local paintmaxradius = p.mMaxChargeSplashPaintRadius
+	local paintratio = Lerp(prog, p.mPaintNearR_WeakRate, 1)
+	local ratio = Lerp(prog, minratio, maxratio)
+	local paintradius = paintratio * paintmaxradius * ratio
+	local range = self:GetRange()
+	local initspeed = self:GetInkVelocity()
+	
 	table.Merge(self.Projectile, {
 		Charge = prog,
 		Color = self:GetNWInt "inkcolor",
@@ -209,9 +223,19 @@ function SWEP:Move(ply)
 		ColRadiusWorld = colradius,
 		ID = CurTime() + self:EntIndex(),
 		InitPos = pos,
-		InitVel = dir * self:GetInkVelocity(),
+		InitVel = dir * initspeed,
 		IsCharger = true,
+		PaintFarRadius = paintradius * paintlastmul,
+		PaintFarRatio = 1 / ratio,
+		PaintNearRadius = paintradius * paintlastmul,
+		PaintNearRatio = 1 / ratio,
+		Range = range,
 		SplashInitRate = select(2, math.modf(self:GetSplashInitMul() / p.mSplashSplitNum)),
+		SplashLength = Lerp(prog, maxrate, minrate) * paintradius,
+		SplashNum = math.huge,
+		SplashPaintRadius = paintradius,
+		SplashRatio = 1 / ratio,
+		StraightFrame = range / initspeed,
 		Type = ss.GetDropType(),
 		Yaw = self:GetAimVector():Angle().yaw,
 	})
