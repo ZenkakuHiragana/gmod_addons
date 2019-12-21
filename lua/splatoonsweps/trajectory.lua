@@ -42,7 +42,7 @@ function ss.DoDropSplashes(ink, iseffect)
 	table.Merge(dropdata, {
 		Charge = data.Charge,
 		Color = data.Color,
-		aColRadiusEntity = data.SplashColRadius,
+		ColRadiusEntity = data.SplashColRadius,
 		ColRadiusWorld = data.SplashColRadius,
 		DoDamage = false,
 		Gravity = DropGravity,
@@ -80,25 +80,27 @@ function ss.DoDropSplashes(ink, iseffect)
 		dropdata.InitPos = t.HitPos
 		
 		if iseffect then
+			local e = EffectData()
 			if IsBlaster then
-				local e = EffectData()
 				e:SetColor(data.Color)
 				e:SetNormal(data.InitDir)
 				e:SetOrigin(dropdata.InitPos)
 				e:SetRadius(parameters.mCollisionRadiusNear / 2)
-				ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterTrail")
+				ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterTrail", e)
 			end
 			
-			ss.SetEffectColor(data.Color)
-			ss.SetEffectColRadius(data.SplashColRadius)
-			ss.SetEffectEntity(data.Weapon)
-			ss.SetEffectFlags(1)
-			ss.SetEffectInitPos(droppos)
-			ss.SetEffectInitVel(data.InitVel)
-			ss.SetEffectSplash(Vector(0, 0, data.SplashLength))
-			ss.SetEffectSplashNum(0)
-			ss.SetEffectStraightFrame(0)
-			ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsShooterInk")
+			ss.SetEffectColor(e, data.Color)
+			ss.SetEffectColRadius(e, data.SplashColRadius)
+			ss.SetEffectDrawRadius(e, data.SplashDrawRadius)
+			ss.SetEffectEntity(e, data.Weapon)
+			ss.SetEffectFlags(e, 1)
+			ss.SetEffectInitPos(e, droppos)
+			ss.SetEffectInitVel(e, data.InitVel)
+			ss.SetEffectSplash(e, Angle(0, 0, data.SplashLength))
+			ss.SetEffectSplashInitRate(e, Vector(0))
+			ss.SetEffectSplashNum(e, 0)
+			ss.SetEffectStraightFrame(e, 0)
+			ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsShooterInk", e)
 		else
 			if IsCharger and data.SplashCount == 0 then
 				local paintlastmul = parameters.mPaintRateLastSplash
@@ -556,7 +558,7 @@ function ss.MakeBlasterExplosion(ink)
 	e:SetColor(data.Color)
 	e:SetFlags(ink.HitWall and 1 or 0)
 	e:SetRadius(rfar)
-	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterExplosion", true, weapon.IgnorePrediction)
+	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterExplosion", e, true, weapon.IgnorePrediction)
 
 	-- Trace around and paint
 	local a = data.InitDir:Angle()
@@ -608,16 +610,17 @@ function ss.MakeBlasterExplosion(ink)
 		Yaw = data.Yaw,
 	})
 	
-	ss.SetEffectColor(dropdata.Color)
-	ss.SetEffectColRadius(dropdata.ColRadiusWorld)
-	ss.SetEffectDrawRadius(parameters.mSphereSplashDropDrawRadius)
-	ss.SetEffectEntity(dropdata.Weapon)
-	ss.SetEffectFlags(dropdata.Weapon, 3)
-	ss.SetEffectInitPos(dropdata.InitPos)
-	ss.SetEffectInitVel(dropdata.InitVel)
-	ss.SetEffectSplash(Vector(0, 0, 0))
-	ss.SetEffectSplashNum(0)
-	ss.SetEffectStraightFrame(0)
-	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsShooterInk", true, weapon.IgnorePrediction)
+	ss.SetEffectColor(e, dropdata.Color)
+	ss.SetEffectColRadius(e, dropdata.ColRadiusWorld)
+	ss.SetEffectDrawRadius(e, parameters.mSphereSplashDropDrawRadius)
+	ss.SetEffectEntity(e, dropdata.Weapon)
+	ss.SetEffectFlags(e, dropdata.Weapon, 3)
+	ss.SetEffectInitPos(e, dropdata.InitPos)
+	ss.SetEffectInitVel(e, dropdata.InitVel)
+	ss.SetEffectSplash(e, Angle(0, 0, 0))
+	ss.SetEffectSplashInitRate(e, Vector(0))
+	ss.SetEffectSplashNum(e, 0)
+	ss.SetEffectStraightFrame(e, 0)
+	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsShooterInk", e, true, weapon.IgnorePrediction)
 	ss.AddInk(parameters, dropdata)
 end

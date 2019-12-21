@@ -157,6 +157,7 @@ local randink = "SplatoonSWEPs: Shooter ink type"
 local randspread = "SplatoonSWEPs: Slosher random spread"
 function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 1, 2, ...)
 	if not self:IsFirstTimePredicted() then return end
+	local e = EffectData()
 	local order = OrdinalNumbers[number]
 	local p = self.Parameters
 	local dir = self:GetAimVector()
@@ -165,6 +166,7 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 	local iscenter = p["m" .. order .. "GroupCenterLine"]
 	local isside = p["m" .. order .. "GroupSideLine"]
 	local splashcolradius = p["m" .. order .. "GroupSplashColRadius"]
+	local splashdrawradius = p["m" .. order .. "GroupSplashDrawRadius"]
 	local splashinitmin = p["m" .. order .. "GroupSplashFirstDropRandomRateMin"]
 	local splashinitmax = p["m" .. order .. "GroupSplashFirstDropRandomRateMax"]
 	local splashlength = p["m" .. order .. "GroupSplashBetween"]
@@ -187,8 +189,8 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 			Yaw = yaw,
 		})
 		
-		ss.SetEffectInitVel(self.Projectile.InitVel)
-		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", true, self.IgnorePrediction)
+		ss.SetEffectInitVel(e, self.Projectile.InitVel)
+		ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
 	end
 
@@ -218,15 +220,16 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 		StraightFrame = p.mBulletStraightFrame,
 	})
 	
-	ss.SetEffectColor(self.Projectile.Color)
-	ss.SetEffectColRadius(self.Projectile.ColRadiusWorld)
-	ss.SetEffectDrawRadius(self:GetDrawRadius(number, spawncount))
-	ss.SetEffectEntity(self)
-	ss.SetEffectFlags(self)
-	ss.SetEffectInitPos(self.Projectile.InitPos)
-	ss.SetEffectSplash(Vector(self.Projectile.SplashColRadius, self.Projectile.SplashInitRate, self.Projectile.SplashLength))
-	ss.SetEffectSplashNum(0) -- self.Projectile.SplashNum
-	ss.SetEffectStraightFrame(self.Projectile.StraightFrame)
+	ss.SetEffectColor(e, self.Projectile.Color)
+	ss.SetEffectColRadius(e, self.Projectile.ColRadiusWorld)
+	ss.SetEffectDrawRadius(e, self:GetDrawRadius(number, spawncount))
+	ss.SetEffectEntity(e, self)
+	ss.SetEffectFlags(e, self)
+	ss.SetEffectInitPos(e, self.Projectile.InitPos)
+	ss.SetEffectSplash(e, Angle(self.Projectile.SplashColRadius, splashdrawradius, self.Projectile.SplashLength))
+	ss.SetEffectSplashInitRate(e, Vector(self.Projectile.SplashInitRate))
+	ss.SetEffectSplashNum(e, self.Projectile.SplashNum)
+	ss.SetEffectStraightFrame(e, self.Projectile.StraightFrame)
 	
 	local linenum = p.mLineNum - 1
 	local centerline = math.floor(p.mLineNum / 2)

@@ -112,7 +112,7 @@ function SWEP:SharedInit()
 			local e = EffectData()
 			e:SetEntity(self)
 			e:SetFlags(0)
-			ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsMuzzleFlash")
+			ss.UtilEffectPredicted(self.Owner, "SplatoonSWEPsMuzzleFlash", e)
 			return
 		end
 
@@ -252,17 +252,19 @@ function SWEP:Move(ply)
 		self.ViewPunch = Angle(rnda, rndb, rnda)
 		self.ModifyWeaponSize = SysTime()
 
-		ss.SetEffectColor(self.Projectile.Color)
-		ss.SetEffectColRadius(self.Projectile.ColRadiusWorld)
-		ss.SetEffectDrawRadius(p.mDrawRadius) -- Shooter's default value
-		ss.SetEffectEntity(self)
-		ss.SetEffectFlags(self)
-		ss.SetEffectInitPos(self.Projectile.InitPos)
-		ss.SetEffectInitVel(self.Projectile.InitVel)
-		ss.SetEffectSplash(Vector(self.Projectile.SplashColRadius, self.Projectile.SplashInitRate, self.Projectile.SplashLength))
-		ss.SetEffectSplashNum(self.Projectile.SplashNum)
-		ss.SetEffectStraightFrame(self.Projectile.StraightFrame)
-		ss.UtilEffectPredicted(ply, "SplatoonSWEPsShooterInk", true, self.IgnorePrediction)
+		local e = EffectData()
+		ss.SetEffectColor(e, self.Projectile.Color)
+		ss.SetEffectColRadius(e, self.Projectile.ColRadiusWorld)
+		ss.SetEffectDrawRadius(e, p.mDrawRadius) -- Shooter's default value
+		ss.SetEffectEntity(e, self)
+		ss.SetEffectFlags(e, self)
+		ss.SetEffectInitPos(e, self.Projectile.InitPos)
+		ss.SetEffectInitVel(e, self.Projectile.InitVel)
+		ss.SetEffectSplash(e, Angle(self.Projectile.SplashColRadius, p.mSplashDrawRadius, self.Projectile.SplashLength))
+		ss.SetEffectSplashInitRate(e, Vector(self.Projectile.SplashInitRate))
+		ss.SetEffectSplashNum(e, self.Projectile.SplashNum)
+		ss.SetEffectStraightFrame(e, self.Projectile.StraightFrame)
+		ss.UtilEffectPredicted(ply, "SplatoonSWEPsShooterInk", e, true, self.IgnorePrediction)
 		ss.AddInk(p, self.Projectile)
 	end
 

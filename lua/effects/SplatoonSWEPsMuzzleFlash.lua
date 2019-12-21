@@ -43,6 +43,7 @@ function EFFECT:Init(e)
 	if e:GetFlags() == 1 then
 		local scale = 15 * (self.Weapon:GetFireAt() + 1)
 		local function SetPos(p)
+			if not IsValid(ent) then return end
 			local att = ent:GetAttachment(a)
 			if att then
 				p:SetPos(att.Pos)

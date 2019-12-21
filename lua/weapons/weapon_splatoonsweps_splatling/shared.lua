@@ -224,7 +224,7 @@ function SWEP:Move(ply)
 		if not self:IsFirstTimePredicted() then return end
 		local e = EffectData()
 		e:SetEntity(self)
-		ss.UtilEffectPredicted(ply, "SplatoonSWEPsSplatlingMuzzleFlash", true, self.IgnorePrediction)
+		ss.UtilEffectPredicted(ply, "SplatoonSWEPsSplatlingMuzzleFlash", e, true, self.IgnorePrediction)
 	else -- Just released MOUSE1
 		if self:GetCharge() == math.huge then return end
 		if self:ShouldChargeWeapon() then return end

@@ -531,16 +531,28 @@ end
 
 -- The function names of EffectData() don't make sense, renaming.
 do local e = EffectData()
-	function ss.GetEffectColor() return e:GetColor() end
-	function ss.SetEffectColor(color) e:SetColor(color) end
-	function ss.GetEffectColRadius() return e:GetRadius() end
-	function ss.SetEffectColRadius(radius) e:SetRadius(radius) end
-	function ss.GetEffectDrawRadius() return e:GetMagnitude() end
-	function ss.SetEffectDrawRadius(radius) e:SetMagnitude(radius) end
-	function ss.GetEffectEntity() return e:GetEntity() end
-	function ss.SetEffectEntity(ent) e:SetEntity(ent) end
-	function ss.GetEffectFlags() return e:GetFlags() end
-	function ss.SetEffectFlags(weapon, flags)
+	ss.GetEffectSplash = e.GetAngles -- Angle(SplashColRadius, SplashDrawRadius, SplashLength)
+	ss.SetEffectSplash = e.SetAngles
+	ss.GetEffectColor = e.GetColor
+	ss.SetEffectColor = e.SetColor
+	ss.GetEffectColRadius = e.GetRadius
+	ss.SetEffectColRadius = e.SetRadius
+	ss.GetEffectDrawRadius = e.GetMagnitude
+	ss.SetEffectDrawRadius = e.SetMagnitude
+	ss.GetEffectEntity = e.GetEntity
+	ss.SetEffectEntity = e.SetEntity
+	ss.GetEffectInitPos = e.GetOrigin
+	ss.SetEffectInitPos = e.SetOrigin
+	ss.GetEffectInitVel = e.GetStart
+	ss.SetEffectInitVel = e.SetStart
+	ss.GetEffectSplashInitRate = e.GetNormal
+	ss.SetEffectSplashInitRate = e.SetNormal
+	ss.GetEffectSplashNum = e.GetSurfaceProp
+	ss.SetEffectSplashNum = e.SetSurfaceProp
+	ss.GetEffectStraightFrame = e.GetScale
+	ss.SetEffectStraightFrame = e.SetScale
+	ss.GetEffectFlags = e.GetFlags
+	function ss.SetEffectFlags(eff, weapon, flags)
 		if isnumber(weapon) and not flags then
 			flags, weapon = weapon
 		end
@@ -551,29 +563,16 @@ do local e = EffectData()
 			flags = flags + (IsLP and 128 or 0)
 		end
 
-		e:SetFlags(flags)
+		eff:SetFlags(flags)
 	end
-
-	function ss.GetEffectInitPos() return e:GetOrigin() end
-	function ss.SetEffectInitPos(pos) e:SetOrigin(pos) end
-	function ss.GetEffectInitVel() return e:GetStart() end
-	function ss.SetEffectInitVel(vel) e:SetStart(vel) end
-	-- Vector(SplashColRadius, SplashInitRate, SplashLength)
-	function ss.GetEffectSplash() return e:GetNormal() end
-	function ss.SetEffectSplash(var) e:SetNormal(var) end
-	function ss.GetEffectSplashNum() return e:GetSurfaceProp() end
-	function ss.SetEffectSplashNum(num) e:SetSurfaceProp(num) end
-	function ss.GetEffectStraightFrame() return e:GetScale() end
-	function ss.SetEffectStraightFrame(frame) e:SetScale(frame) end
 
 	-- Dispatch an effect properly in a weapon predicted hook.
 	-- Arguments:
 	--   Player ply        | The owner of the weapon
-	--   string effectname | Effect name
-	--   vararg            | The last two arguments of util.Effect()
-	function ss.UtilEffectPredicted(ply, effectname, ...)
+	--   vararg            | Arguments of util.Effect()
+	function ss.UtilEffectPredicted(ply, ...)
 		ss.SuppressHostEventsMP(ply)
-		util.Effect(effectname, e, ...)
+		util.Effect(...)
 		ss.EndSuppressHostEventsMP(ply)
 	end
 end
