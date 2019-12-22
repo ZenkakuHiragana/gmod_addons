@@ -13,10 +13,13 @@ function SWEP:GetPreFireDelay()
 end
 
 function SWEP:SharedInit()
+    local p = self.Parameters
     self:GetBase().SharedInit(self)
     table.Merge(self.Projectile, {
-        ColRadiusEntity = self.Parameters.mCollisionRadiusNear,
-        ColRadiusWorld = self.Parameters.mCollisionRadiusNear,
+        ColRadiusEntity = p.mCollisionRadiusNear,
+        ColRadiusWorld = p.mCollisionRadiusNear,
+        PaintNearRatio = 1,
+        PaintFarRatio = 1,
     })
 end
 

@@ -137,37 +137,113 @@ function Simulate.weapon_splatoonsweps_shooter(ink)
 	ss.AdvanceBullet(ink)
 	if not IsFirstTimePredicted() then return end
 	ss.DoDropSplashes(ink)
+
+	if not ink.Data.Weapon.IsBlaster then return end
+	if not ink.Data.DoDamage then return end
+
+	local tr = ink.Trace
+	if tr.LifeTime <= ink.Parameters.mExplosionFrame then return end
+	if ink.Hit or ink.Exploded then return end
+	ink.Exploded = true
+	tr.collisiongroup = COLLISION_GROUP_DEBRIS
+	ss.MakeBlasterExplosion(ink)
+end
+
+local function HitSmoke(ink, t) -- FIXME: Don't emit it twice
+	local data, weapon = ink.Data, ink.Data.Weapon
+	if weapon.IsBamboozler then return end
+	if not t.HitWorld or CurTime() - ink.InitTime > data.StraightFrame then return end
+	local e = EffectData()
+	e:SetAttachment(0)
+	e:SetColor(data.Color)
+	e:SetEntity(game.GetWorld())
+	e:SetFlags(PATTACH_ABSORIGIN)
+	e:SetOrigin(t.HitPos + t.HitNormal * 10)
+	e:SetScale(6)
+	e:SetStart(data.InitPos)
+	util.Effect("SplatoonSWEPsMuzzleMist", e, true, weapon.IgnorePrediction)
 end
 
 function HitPaint.weapon_splatoonsweps_shooter(ink, t)
 	local data, parameters, tr, weapon = ink.Data, ink.Parameters, ink.Trace, ink.Data.Weapon
+	local hitfloor = t.HitNormal.z > ss.MAX_COS_DEG_DIFF
 	local lmin = data.PaintNearDistance
 	local lmin_ratio = data.PaintRatioNearDistance
 	local lmax = data.PaintFarDistance
 	local lmax_ratio = data.PaintRatioFarDistance
 	local rmin = data.PaintNearRadius
 	local rmax = data.PaintFarRadius
-	local ratio = 1
+	local radiusmul = parameters.mPaintRateLastSplash
 	local ratio_min = data.PaintNearRatio
 	local ratio_max = data.PaintFarRatio
 	local length = math.Clamp(tr.LengthSum, lmin, lmax)
+	local length2d = math.Clamp((t.HitPos - data.InitPos):Length2D(), lmin_ratio, lmax_ratio)
 	local radius = math.Remap(length, lmin, lmax, rmin, rmax)
+	local ratio = math.Remap(length2d, lmin_ratio, lmax_ratio, ratio_min, ratio_max)
 	if length == lmin and lmin == lmax then radius = rmax end -- Avoid NaN
-	if not weapon.IsBlaster and t.HitNormal.z > ss.MAX_COS_DEG_DIFF then
-		local l = (t.HitPos - data.InitPos):Length2D()
-		if l < lmin_ratio then data.Type = ss.GetDropType() end
-		l = math.Clamp(l, lmin_ratio, lmax_ratio)
-		ratio = 1 / math.Remap(l, lmin_ratio, lmax_ratio, ratio_min, ratio_max)
-	else
-		data.Type = ss.GetDropType()
+	if length2d == lmin_ratio and lmin_ratio == lmax_ratio then ratio = ratio_max end
+	if length2d == lmin_ratio then data.Type = ss.GetDropType() end
+	if data.DoDamage then
+		if weapon.IsCharger then
+			HitSmoke(ink, t)
+			if hitfloor then radius = radius * radiusmul end
+			if tr.LengthSum < data.Range then
+				local cos = math.Clamp(-data.InitDir.z, ss.MAX_COS_DEG_DIFF, 1)
+				ratio = math.Remap(cos, ss.MAX_COS_DEG_DIFF, 1, ratio, 1)
+			end
+		elseif weapon.IsBlaster then
+			data.DoDamage = false
+			data.Type = ss.GetDropType()
+			if not ink.Exploded then
+				ink.HitWall = true
+				tr.endpos:Set(t.HitPos)
+				ss.MakeBlasterExplosion(ink)
+			end
+		end
 	end
 
+	if not hitfloor then ratio = 1 end
 	if (ss.sp or CLIENT and IsFirstTimePredicted()) and t.Hit and data.DoDamage then
 		sound.Play("SplatoonSWEPs_Ink.HitWorld", t.HitPos)
 	end
 	
-	ss.Paint(t.HitPos, t.HitNormal, radius / ratio, data.Color,
-	data.Yaw, data.Type, ratio, tr.filter, weapon.ClassName)
+	ss.Paint(t.HitPos, t.HitNormal, radius * ratio, data.Color,
+	data.Yaw, data.Type, 1 / ratio, tr.filter, weapon.ClassName)
+	
+	if not weapon.IsCharger then return end
+	if not data.DoDamage then return end
+	if hitfloor then return end
+	local radiuswall = rmin / radiusmul
+	local wallfrac = data.Charge / parameters.mMaxHitSplashNumChargeRate
+	local n = math.Round(Lerp(wallfrac, parameters.mMinChargeHitSplashNum, parameters.mMaxChargeHitSplashNum))
+	if not t.FractionPaintWall then t.FractionPaintWall = 0 end
+	for i = 1, n do
+		local pos = t.HitPos - vector_up * i * radiuswall * Lerp(wallfrac, 1, 1.25)
+		local tn = util.TraceLine {
+			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
+			endpos = pos - t.HitNormal,
+			filter = tr.filter,
+			mask = ss.SquidSolidMask,
+			start = data.InitPos,
+		}
+
+		if math.abs(tn.HitNormal.z) < ss.MAX_COS_DEG_DIFF
+		and t.FractionPaintWall < tn.Fraction
+		and not tn.StartSolid and tn.HitWorld then
+			ss.PaintSchedule[{
+				pos = tn.HitPos,
+				normal = tn.HitNormal,
+				radius = radiuswall,
+				color = data.Color,
+				angle = data.Yaw,
+				inktype = ss.GetDropType(),
+				ratio = 1,
+				Time = CurTime() + i * radiuswall / data.InitSpeed,
+				filter = tr.filter,
+				ClassName = data.Weapon.ClassName,
+			}] = true
+		end
+	end
 end
 
 function HitEntity.weapon_splatoonsweps_shooter(ink, t)
@@ -205,82 +281,6 @@ function HitEntity.weapon_splatoonsweps_shooter(ink, t)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
-local function HitSmoke(ink, t) -- FIXME: Don't emit it twice
-	local data, weapon = ink.Data, ink.Data.Weapon
-	if not data.DoDamage then return end
-	if weapon.IsBamboozler then return end
-	if not t.HitWorld or CurTime() - ink.InitTime > data.StraightFrame then return end
-	local e = EffectData()
-	e:SetAttachment(0)
-	e:SetColor(data.Color)
-	e:SetEntity(game.GetWorld())
-	e:SetFlags(PATTACH_ABSORIGIN)
-	e:SetOrigin(t.HitPos + t.HitNormal * 10)
-	e:SetScale(6)
-	e:SetStart(data.InitPos)
-	util.Effect("SplatoonSWEPsMuzzleMist", e, true, weapon.IgnorePrediction)
-end
-
-function HitPaint.weapon_splatoonsweps_charger(ink, t)
-	local data, parameters, trace, weapon = ink.Data, ink.Parameters, ink.Trace, ink.Data.Weapon
-	local hitfloor = t.HitNormal.z > ss.MAX_COS_DEG_DIFF
-	local ratio = hitfloor and data.PaintNearRatio or 1
-	local radius = data.PaintNearRadius * data.PaintNearRatio
-	local radiusmul = parameters.mPaintRateLastSplash
-	if data.DoDamage then
-		if not hitfloor then
-			radius = radius / radiusmul
-		end
-
-		if trace.LengthSum < data.Range then
-			local cos = math.Clamp(-data.InitDir.z, ss.MAX_COS_DEG_DIFF, 1)
-			ratio = math.Remap(cos, ss.MAX_COS_DEG_DIFF, 1, ratio, 1)
-		end
-	end
-
-	if (ss.sp or CLIENT and IsFirstTimePredicted()) and t.Hit and data.DoDamage then
-		sound.Play("SplatoonSWEPs_Ink.HitWorld", t.HitPos)
-	end
-
-	ss.Paint(t.HitPos, t.HitNormal, radius / ratio, data.Color,
-	data.Yaw, data.Type, ratio, trace.filter, weapon.ClassName)
-
-	HitSmoke(ink, t)
-	if not data.DoDamage then return end
-	if hitfloor then return end
-	local radiuswall = radius / radiusmul
-	local wallfrac = data.Charge / parameters.mMaxHitSplashNumChargeRate
-	local n = math.Round(Lerp(wallfrac, parameters.mMinChargeHitSplashNum, parameters.mMaxChargeHitSplashNum))
-	if not t.FractionPaintWall then t.FractionPaintWall = 0 end
-	for i = 1, n do
-		local pos = t.HitPos - vector_up * i * radiuswall * Lerp(wallfrac, 1, 1.25)
-		local tr = util.TraceLine {
-			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
-			endpos = pos - t.HitNormal,
-			filter = trace.filter,
-			mask = ss.SquidSolidMask,
-			start = data.InitPos,
-		}
-
-		if math.abs(tr.HitNormal.z) < ss.MAX_COS_DEG_DIFF
-		and t.FractionPaintWall < tr.Fraction
-		and not tr.StartSolid and tr.HitWorld then
-			ss.PaintSchedule[{
-				pos = tr.HitPos,
-				normal = tr.HitNormal,
-				radius = radiuswall,
-				color = data.Color,
-				angle = data.Yaw,
-				inktype = ss.GetDropType(),
-				ratio = 1,
-				Time = CurTime() + i * radiuswall / data.InitSpeed,
-				filter = trace.filter,
-				ClassName = data.Weapon.ClassName,
-			}] = true
-		end
-	end
-end
-
 function HitEntity.weapon_splatoonsweps_charger(ink, t)
 	HitSmoke(ink, t)
 	local data, parameters = ink.Data, ink.Parameters
@@ -312,40 +312,20 @@ function HitEntity.weapon_splatoonsweps_charger(ink, t)
 	ss.ProtectedCall(e.TakeDamageInfo, e, d)
 end
 
-function Simulate.weapon_splatoonsweps_blaster_base(ink)
-	local tr = ink.Trace
-	Simulate.weapon_splatoonsweps_shooter(ink)
-	if not ink.Data.DoDamage then return end
-	if tr.LifeTime <= ink.Parameters.mExplosionFrame then return end
-	if ink.Hit or ink.Exploded then return end
-	ink.Exploded = true
-	tr.collisiongroup = COLLISION_GROUP_DEBRIS
-	ss.MakeBlasterExplosion(ink)
-end
-
-function HitPaint.weapon_splatoonsweps_blaster_base(ink, t)
-	local data, parameters = ink.Data, ink.Parameters
-	if ink.Data.DoDamage and not ink.Exploded then
-		ink.HitWall = true
-		ink.Trace.endpos:Set(t.HitPos)
-		ss.MakeBlasterExplosion(ink)
-	end
-
-	ink.Data.DoDamage = false
-	HitPaint.weapon_splatoonsweps_shooter(ink, t)
-end
-
-Simulate.weapon_splatoonsweps_charger = Simulate.weapon_splatoonsweps_shooter
+Simulate.weapon_splatoonsweps_blaster_base = Simulate.weapon_splatoonsweps_shooter
 HitEntity.weapon_splatoonsweps_blaster_base = HitEntity.weapon_splatoonsweps_shooter
+HitPaint.weapon_splatoonsweps_blaster_base = HitPaint.weapon_splatoonsweps_shooter
+Simulate.weapon_splatoonsweps_charger = Simulate.weapon_splatoonsweps_shooter
+HitPaint.weapon_splatoonsweps_charger = HitPaint.weapon_splatoonsweps_shooter
+Simulate.weapon_splatoonsweps_slosher_base = Simulate.weapon_splatoonsweps_shooter
+HitPaint.weapon_splatoonsweps_slosher_base = HitPaint.weapon_splatoonsweps_shooter
+HitEntity.weapon_splatoonsweps_slosher_base = HitEntity.weapon_splatoonsweps_shooter
 Simulate.weapon_splatoonsweps_splatling = Simulate.weapon_splatoonsweps_shooter
 HitPaint.weapon_splatoonsweps_splatling = HitPaint.weapon_splatoonsweps_shooter
 HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shooter
 Simulate.weapon_splatoonsweps_roller = Simulate.weapon_splatoonsweps_shooter
 HitPaint.weapon_splatoonsweps_roller = HitPaint.weapon_splatoonsweps_shooter
 HitEntity.weapon_splatoonsweps_roller = HitEntity.weapon_splatoonsweps_shooter
-Simulate.weapon_splatoonsweps_slosher_base = Simulate.weapon_splatoonsweps_shooter
-HitPaint.weapon_splatoonsweps_slosher_base = HitPaint.weapon_splatoonsweps_shooter
-HitEntity.weapon_splatoonsweps_slosher_base = HitEntity.weapon_splatoonsweps_shooter
 
 local function ProcessInkQueue(ply)
 	local Benchmark = SysTime()

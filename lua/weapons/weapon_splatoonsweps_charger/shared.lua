@@ -214,11 +214,10 @@ function SWEP:Move(ply)
 	local minrate = p.mSplashBetweenMinSplashPaintRadiusRate
 	local maxratio = p.mSplashDepthMaxChargeScaleRateByWidth
 	local minratio = p.mSplashDepthMinChargeScaleRateByWidth
-	local paintlastmul = p.mPaintRateLastSplash
 	local paintmaxradius = p.mMaxChargeSplashPaintRadius
 	local paintratio = Lerp(prog, p.mPaintNearR_WeakRate, 1)
 	local ratio = Lerp(prog, minratio, maxratio)
-	local paintradius = paintratio * paintmaxradius * ratio
+	local paintradius = paintratio * paintmaxradius
 	local range = self:GetRange()
 	local initspeed = self:GetInkVelocity()
 	
@@ -230,16 +229,16 @@ function SWEP:Move(ply)
 		ID = CurTime() + self:EntIndex(),
 		InitPos = pos,
 		InitVel = dir * initspeed,
-		PaintFarRadius = paintradius * paintlastmul,
-		PaintFarRatio = 1 / ratio,
-		PaintNearRadius = paintradius * paintlastmul,
-		PaintNearRatio = 1 / ratio,
+		PaintFarRadius = paintradius,
+		PaintFarRatio = ratio,
+		PaintNearRadius = paintradius,
+		PaintNearRatio = ratio,
 		Range = range,
 		SplashInitRate = select(2, math.modf(self:GetSplashInitMul() / p.mSplashSplitNum)),
-		SplashLength = Lerp(prog, maxrate, minrate) * paintradius,
+		SplashLength = Lerp(prog, maxrate, minrate) * paintradius * ratio,
 		SplashNum = math.huge,
 		SplashPaintRadius = paintradius,
-		SplashRatio = 1 / ratio,
+		SplashRatio = ratio,
 		StraightFrame = range / initspeed,
 		Type = ss.GetDropType(),
 		Yaw = self:GetAimVector():Angle().yaw,
