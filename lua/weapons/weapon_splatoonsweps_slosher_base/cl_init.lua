@@ -81,7 +81,7 @@ function SWEP:GetMuzzlePosition()
 end
 
 function SWEP:GetCrosshairTrace(t)
-	local range = self:GetRange(true)
+	local range = self.Range
 	local tr = ss.SquidTrace
 	tr.start, tr.endpos = t.pos, t.pos + t.dir * range
 	tr.filter = {self, self.Owner}
@@ -102,7 +102,6 @@ function SWEP:GetCrosshairTrace(t)
 end
 
 function SWEP:DrawFourLines(t, spreadx, spready)
-	spreadx = math.max(spreadx, spready) -- Stupid workaround for Blasters' crosshair
 	local frac = t.Trace.Fraction
 	local basecolor = t.IsSplatoon2 and t.Trace.Hit and self.Crosshair.color_nohit or color_white
 	local pos, dir = t.pos, t.dir
@@ -119,13 +118,10 @@ function SWEP:DrawFourLines(t, spreadx, spready)
 	end
 
 	local linesize = t.Size.Outer * (1.5 - frac)
+	local rot = dir:Angle()
 	for i = 1, 4 do
-		local rot = dir:Angle()
 		local sgnx, sgny = i > 2 and 1 or -1, bit.band(i, 3) > 1 and 1 or -1
-		rot:RotateAroundAxis(yaw, spreadx * sgnx)
-		rot:RotateAroundAxis(pitch, spready * sgny)
-
-		local endpos = pos + rot:Forward() * self:GetRange() * frac
+		local endpos = pos + rot:Forward() * self.Range * frac
 		local hit = endpos:ToScreen()
 		if not hit.visible then continue end
 		hit.x = hit.x - linesize * sgnx * (t.HitEntity and .75 or 1)
@@ -334,7 +330,7 @@ function SWEP:DrawCrosshair(x, y)
 	local p = self.Parameters
 	for linenum = 1, p.mLineNum do
 		local t = self:SetupDrawCrosshair(linenum)
-		self:DrawFourLines(t, self:GetSpreadAmount())
+		self:DrawFourLines(t)
 		self:DrawHitCrossBG(t)
 		self:DrawOuterCircle(t)
 		self:DrawHitCross(t)

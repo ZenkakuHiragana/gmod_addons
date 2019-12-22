@@ -5,10 +5,9 @@ SWEP.Base = "weapon_splatoonsweps_inklingbase"
 SWEP.IsSlosher = true
 
 local FirePosition = 10
-function SWEP:GetRange() return self.Range end
 function SWEP:GetFirePosition(ping)
 	if not IsValid(self.Owner) then return self:GetPos(), self:GetForward(), 0 end
-	local aim = self:GetAimVector() * self:GetRange(ping)
+	local aim = self:GetAimVector() * self.Range
 	local ang = aim:Angle()
 	local shootpos = self:GetShootPos()
 	local col = ss.vector_one * self.Parameters.mFirstGroupBulletFirstCollisionRadiusForField
@@ -62,10 +61,6 @@ function SWEP:GetFirePosition(ping)
 	end
 
 	return min.pos, (tr.HitPos - min.pos):GetNormalized(), min.dir
-end
-
-function SWEP:GetSpreadAmount()
-	return 0, 0
 end
 
 local OrdinalNumbers = {"First", "Second", "Third"}

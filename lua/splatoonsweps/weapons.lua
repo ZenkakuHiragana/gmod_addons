@@ -615,12 +615,19 @@ end
 
 function ss.CustomPrimary.weapon_splatoonsweps_slosher_base(weapon)
 	local p = weapon.Parameters
-	local v1 = p.mFirstGroupBulletFirstInitSpeedBase
-	local v2 = p.mSecondGroupBulletFirstInitSpeedBase
-	local v3 = p.mThirdGroupBulletFirstInitSpeedBase
+	local airresist = p.mFreeStateAirResist
+	local gravity = p.mFreeStateGravity
+	local guideframe = p.mGuideCenterCheckCollisionFrame
+	local number = p.mGuideCenterGroup
+	local order = ({"First", "Second", "Third"})[number]
+	local spawncount = p.mGuideCenterBulletNumInGroup
+	local straightframe = p.mBulletStraightFrame
+	local base = p["m" .. order .. "GroupBulletFirstInitSpeedBase"]
+	local init = base + spawncount * p["m" .. order .. "GroupBulletAfterInitSpeedOffset"]
+	local offset = ss.GetBulletPos(Vector(init), straightframe, airresist, gravity, guideframe)
 	weapon.Primary.Automatic = false
 	weapon.NPCDelay = p.mSwingLiftFrame
-	weapon.Range = math.max(v1, v2, v3) * p.mBulletStraightFrame
+	weapon.Range = offset:Length()
 end
 
 ss.DispatchEffect = {}
