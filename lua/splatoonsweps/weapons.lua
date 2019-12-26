@@ -643,6 +643,7 @@ local SplatoonSWEPsMuzzleFlash = 3
 local SplatoonSWEPsRollerSplash = 4
 local SplatoonSWEPsBrushSwing1 = 5
 local SplatoonSWEPsBrushSwing2 = 6
+local SplatoonSWEPsSlosherSplash = 7
 local sd, e = ss.DispatchEffect, EffectData()
 sd[SplatoonSWEPsMuzzleSplash] = function(self, options, pos, ang)
 	local tpslag = self:IsCarriedByLocalPlayer() and
@@ -758,4 +759,10 @@ end
 
 sd[SplatoonSWEPsBrushSwing2] = function(self, options, pos, ang)
 	MakeSwingEffect(self, -1)
+end
+
+sd[SplatoonSWEPsSlosherSplash] = function(self, options, pos, ang)
+	e:SetEntity(self)
+	e:SetFlags(2) -- Particle effects for sloshers
+	util.Effect("SplatoonSWEPsRollerSplash", e, true, self.IgnorePrediction)
 end

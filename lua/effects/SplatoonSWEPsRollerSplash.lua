@@ -11,10 +11,14 @@ function EFFECT:Init(e)
 	local ent = w:IsTPS() and w or w:GetViewModel()
 	local a = ent:LookupAttachment "roll"
 	local c = w:GetInkColorProxy() + ss.vector_one
+	local f = e:GetFlags()
 	local name = ss.Particles.RollerSplash
-	if e:GetFlags() > 0 then
+	if bit.band(f, 1) > 0 then
 		a = ent:LookupAttachment "tip"
 		name = ss.Particles.BrushSplash
+	elseif bit.band(f, 2) > 0 then
+		a = ent:LookupAttachment "spout"
+		name = ss.Particles.RollerSplash
 	end
 
 	local p = CreateParticleSystem(ent, name, PATTACH_POINT_FOLLOW, a, vector_origin)

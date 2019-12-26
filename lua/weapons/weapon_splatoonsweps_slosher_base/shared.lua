@@ -295,6 +295,7 @@ function SWEP:Move(ply)
 	self.Primary.Automatic = self:GetNWBool "automatic"
 	self.Projectile.ID = CurTime() + self:EntIndex()
 	self:SetWeaponAnim(ACT_VM_SECONDARYATTACK)
+	self:ResetSequence "fire2" -- This is needed in multiplayer to predict muzzle effects.
 	self:SetIsBusy(false)
 	self:SetReloadDelay(p.mInkRecoverStop)
 	if self:GetInk() < p.mInkConsume then
