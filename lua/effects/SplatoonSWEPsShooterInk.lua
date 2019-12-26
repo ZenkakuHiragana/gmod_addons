@@ -15,10 +15,11 @@ local inkring_alphatest = Material "splatoonsweps/effects/inkring_alphatest"
 local inkmaterial = Material "splatoonsweps/splatoonink"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 local RenderFuncs = {
-	weapon_splatoonsweps_roller = "Render2",
-	weapon_splatoonsweps_slosher_base = "RenderBoth",
-	weapon_splatoonsweps_sloshingmachine = "Render1",
-	weapon_splatoonsweps_sloshingmachine_neo = "Render1",
+	weapon_splatoonsweps_blaster_base = "RenderBlaster",
+	weapon_splatoonsweps_roller = "RenderSplash",
+	weapon_splatoonsweps_slosher_base = "RenderSlosher",
+	weapon_splatoonsweps_sloshingmachine = "RenderSloshingMachine",
+	weapon_splatoonsweps_sloshingmachine_neo = "RenderSloshingMachine",
 }
 
 local OrdinalNumbers = {"First", "Second", "Third"}
@@ -60,14 +61,14 @@ function EFFECT:Init(e)
 	local SplashNum = ss.GetEffectSplashNum(e)
 	local StraightFrame = ss.GetEffectStraightFrame(e)
 	local DrawRadius = ss.GetEffectDrawRadius(e)
-	local RenderFunc = RenderFuncs[Weapon.ClassName] or RenderFuncs[Weapon.Base] or "Render1"
+	local RenderFunc = RenderFuncs[Weapon.ClassName] or RenderFuncs[Weapon.Base] or "RenderGeneral"
 	if IsSlosher then DrawRadius = DrawRadius / 3 end
 	if IsCharger then SplashNum = math.huge end
 	if IsDrop then
 		AirResist = 1
 		ApparentPos = InitPos
 		Gravity = 1 * ss.ToHammerUnitsPerSec2
-		RenderFunc = "Render1"
+		RenderFunc = "RenderGeneral"
 	end
 	
 	self.Ink = ss.MakeInkQueueStructure()
@@ -189,25 +190,7 @@ end
 
 local cable = Material "splatoonsweps/crosshair/line"
 local cabletip = Material "splatoonsweps/crosshair/dot"
-function EFFECT:Render1()
-	local t = math.max(CurTime() - self.Ink.InitTime, 0)
-	if self.IsBlaster then
-		local r = self.Ink.Parameters.mCollisionRadiusNear / 2
-		render.SetMaterial(mat)
-		mat:SetVector("$color", self.ColorVector)
-		render.DrawSphere(self:GetPos(), r, 8, 8, self.Color)
-		if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then
-			mat:SetVector("$color", ss.vector_one)
-			return
-		end
-
-		render.PushFlashlightMode(true) -- Ink lit by player's flashlight or a projected texture
-		render.DrawSphere(self:GetPos(), r, 8, 8, self.Color)
-		render.PopFlashlightMode()
-		mat:SetVector("$color", ss.vector_one)
-		return
-	end
-
+function EFFECT:RenderGeneral()
 	local sizetip = self.DrawRadius * 0.8
 	local AppPos = self:GetPos()
     local TailPos = self.TrailPos
@@ -220,7 +203,7 @@ end
 
 -- A render function for roller, slosher, etc.
 local duration = 60 * ss.FrameToSec
-function EFFECT:Render2()
+function EFFECT:RenderSplash()
 	local radius = self.DrawRadius * 5
 	local rendertarget = ss.RenderTarget.InkSplash
 	local rendermaterial = ss.RenderTarget.InkSplashMaterial
@@ -250,7 +233,27 @@ function EFFECT:Render2()
 	render.DrawQuadEasy(self:GetPos(), self.Normal, radius, radius, self.Color)
 end
 
-function EFFECT:RenderBoth()
-	self:Render1()
-	self:Render2()
+function EFFECT:RenderBlaster() -- Blaster bullet
+	local t = math.max(CurTime() - self.Ink.InitTime, 0)
+	render.SetMaterial(mat)
+	mat:SetVector("$color", self.ColorVector)
+	render.DrawSphere(self:GetPos(), self.DrawRadius, 8, 8, self.Color)
+	if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then
+		mat:SetVector("$color", ss.vector_one)
+		return
+	end
+
+	render.PushFlashlightMode(true) -- Ink lit by player's flashlight or a projected texture
+	render.DrawSphere(self:GetPos(), r, 8, 8, self.Color)
+	render.PopFlashlightMode()
+	mat:SetVector("$color", ss.vector_one)
+end
+
+function EFFECT:RenderSlosher()
+	self:RenderGeneral()
+	self:RenderSplash()
+end
+
+function EFFECT:RenderSloshingMachine()
+	self:RenderGeneral()
 end

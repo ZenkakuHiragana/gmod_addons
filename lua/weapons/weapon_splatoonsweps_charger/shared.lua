@@ -209,17 +209,21 @@ function SWEP:Move(ply)
 	local pos, dir = self:GetFirePosition()
 	local ang = dir:Angle()
 	local colradius = self:GetColRadius()
-	
+	local initspeed = self:GetInkVelocity()
 	local maxrate = p.mSplashBetweenMaxSplashPaintRadiusRate
 	local minrate = p.mSplashBetweenMinSplashPaintRadiusRate
 	local maxratio = p.mSplashDepthMaxChargeScaleRateByWidth
 	local minratio = p.mSplashDepthMinChargeScaleRateByWidth
+	local maxwallnum = p.mMaxChargeHitSplashNum
+	local minwallnum = p.mMinChargeHitSplashNum
 	local paintmaxradius = p.mMaxChargeSplashPaintRadius
 	local paintratio = Lerp(prog, p.mPaintNearR_WeakRate, 1)
-	local ratio = Lerp(prog, minratio, maxratio)
 	local paintradius = paintratio * paintmaxradius
+	local ratio = Lerp(prog, minratio, maxratio)
 	local range = self:GetRange()
-	local initspeed = self:GetInkVelocity()
+	local _, splashrate = math.modf(self:GetSplashInitMul() / p.mSplashSplitNum)
+	local wallpaintradius = paintradius / p.mPaintRateLastSplash
+	local wallfrac = prog / p.mMaxHitSplashNumChargeRate
 	
 	table.Merge(self.Projectile, {
 		Charge = prog,
@@ -234,13 +238,17 @@ function SWEP:Move(ply)
 		PaintNearRadius = paintradius,
 		PaintNearRatio = ratio,
 		Range = range,
-		SplashInitRate = select(2, math.modf(self:GetSplashInitMul() / p.mSplashSplitNum)),
+		SplashInitRate = splashrate,
 		SplashLength = Lerp(prog, maxrate, minrate) * paintradius * ratio,
 		SplashNum = math.huge,
 		SplashPaintRadius = paintradius,
 		SplashRatio = ratio,
 		StraightFrame = range / initspeed,
 		Type = ss.GetDropType(),
+		WallPaintFirstLength = wallpaintradius,
+		WallPaintLength = wallpaintradius,
+		WallPaintMaxNum = math.Round(Lerp(wallfrac, minwallnum, maxwallnum)),
+		WallPaintRadius = wallpaintradius,
 		Yaw = self:GetAimVector():Angle().yaw,
 	})
 	

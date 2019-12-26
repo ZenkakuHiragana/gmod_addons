@@ -80,6 +80,11 @@ function ss.MakeProjectileStructure()
 		SplashRatio = 1,
 		StraightFrame = 0,
 		Type = 1,
+		WallPaintFirstLength = 0,
+		WallPaintLength = 0,
+		WallPaintMaxNum = 0,
+		WallPaintRadius = 0,
+		WallPaintUseSplashNum = false,
 		Weapon = NULL,
 		Yaw = 0,
 	}

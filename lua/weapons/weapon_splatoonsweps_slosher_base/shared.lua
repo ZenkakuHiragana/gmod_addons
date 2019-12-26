@@ -213,6 +213,10 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 		SplashPaintRadius = splashpaintradius,
 		SplashRatio = splashratio,
 		StraightFrame = p.mBulletStraightFrame,
+		WallPaintFirstLength = p.mHitWallSplashFirstLength,
+		WallPaintLength = p.mHitWallSplashBetweenLength,
+		WallPaintRadius = p.mHitWallSplashBetweenLength, -- WORKAROUND!!
+		WallPaintUseSplashNum = true,
 	})
 	
 	ss.SetEffectColor(e, self.Projectile.Color)
