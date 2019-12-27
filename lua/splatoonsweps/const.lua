@@ -85,7 +85,7 @@ ss.Materials = {
 	},
 	Effects = {
 		Hit = Material "splatoonsweps/effects/splatling_muzzleflash",
-		HitCritical = Material "particle/sparkles",
+		HitCritical = Material "particle/particle_glow_04_additive",
 		Ink = Material "splatoonsweps/inkeffect",
 		Invisible = Material "splatoonsweps/weapons/primaries/shared/weapon_hider",
 	},

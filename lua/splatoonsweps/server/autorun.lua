@@ -257,7 +257,7 @@ hook.Add("PlayerAuthed", "SplatoonSWEPs: Store player ID", function(ply, id)
 end)
 
 local function SavePlayerData(ply)
-	ss.tableremove(ss.PlayersReady, function(v) return v ~= ply end)
+	ss.tableremovefunc(ss.PlayersReady, function(v) return v == ply end)
 	if not ss.WeaponRecord[ply] then return end
 	local id = ss.PlayerID[ply]
 	if not id then return end

@@ -13,9 +13,10 @@ local function Simulate(ink)
 	if not ink.Data.Weapon.IsBlaster then return end
 	if not ink.Data.DoDamage then return end
 
-	local tr = ink.Trace
-	if tr.LifeTime <= ink.Parameters.mExplosionFrame then return end
-	if ink.Hit or ink.Exploded then return end
+	local tr, p = ink.Trace, ink.Parameters
+	if tr.LifeTime <= p.mExplosionFrame then return end
+	if ink.Exploded then return end
+	ink.BlasterRemoval = p.mExplosionSleep
 	ink.Exploded = true
 	tr.collisiongroup = COLLISION_GROUP_DEBRIS
 	ss.MakeBlasterExplosion(ink)
@@ -37,7 +38,7 @@ local function HitSmoke(ink, t) -- FIXME: Don't emit it twice
 end
 
 local function HitPaint(ink, t)
-	local data, parameters, tr, weapon = ink.Data, ink.Parameters, ink.Trace, ink.Data.Weapon
+	local data, tr, weapon = ink.Data, ink.Trace, ink.Data.Weapon
 	local hitfloor = t.HitNormal.z > ss.MAX_COS_DEG_DIFF
 	local lmin = data.PaintNearDistance
 	local lmin_ratio = data.PaintRatioNearDistance
@@ -57,7 +58,7 @@ local function HitPaint(ink, t)
 	if data.DoDamage then
 		if weapon.IsCharger then
 			HitSmoke(ink, t)
-			local radiusmul = parameters.mPaintRateLastSplash
+			local radiusmul = ink.Parameters.mPaintRateLastSplash
 			if hitfloor then radius = radius * radiusmul end
 			if tr.LengthSum < data.Range then
 				local cos = math.Clamp(-data.InitDir.z, ss.MAX_COS_DEG_DIFF, 1)
@@ -67,10 +68,12 @@ local function HitPaint(ink, t)
 			data.DoDamage = false
 			data.Type = ss.GetDropType()
 			if not ink.Exploded then
-				ink.HitWall = true
+				ink.BlasterHitWall = true
 				tr.endpos:Set(t.HitPos)
 				ss.MakeBlasterExplosion(ink)
 			end
+		elseif weapon.IsRoller and not hitfloor then
+			data.Type = ss.GetDropType()
 		end
 	end
 
@@ -141,10 +144,12 @@ local function HitEntity(ink, t)
 
 		local frac = math.Remap(value, decay_start, decay_end, 0, 1)
 		damage = Lerp(frac, damage_max, damage_min)
+		print(damage * 100)
 	end
 
 	if ink.IsCarriedByLocalPlayer then
-		ss.CreateHitEffect(data.Color, data.IsCritical and 1 or 0, t.HitPos, t.HitNormal)
+		local te = util.TraceLine {start = t.HitPos, endpos = e:WorldSpaceCenter()}
+		ss.CreateHitEffect(data.Color, data.IsCritical and 1 or 0, te.HitPos, te.HitNormal)
 		if ss.mp and CLIENT then return end
 	end
 
@@ -165,41 +170,48 @@ local function ProcessInkQueue(ply)
 	while true do
 		repeat coroutine.yield() until IsFirstTimePredicted()
 		Benchmark = SysTime()
-		for ink in pairs(ss.InkQueue) do
-			local data, tr, weapon = ink.Data, ink.Trace, ink.Data.Weapon
-			if IsValid(tr.filter) and IsValid(data.Weapon) then
-				if not tr.filter:IsPlayer() or tr.filter == ply then
+		for inittime, inkgroup in SortedPairs(ss.InkQueue) do
+			local k = 1
+			for i = 1, #inkgroup do
+				local ink = inkgroup[i]
+				local data, tr, weapon = ink.Data, ink.Trace, ink.Data.Weapon
+				local removal = not (IsValid(tr.filter) and IsValid(data.Weapon))
+				if not removal and (not tr.filter:IsPlayer() or tr.filter == ply) then
 					Simulate(ink)
-					if tr.start and tr.endpos then
-						tr.maxs = ss.vector_one * data.ColRadiusWorld
-						tr.mins = -tr.maxs
-						tr.mask = ss.SquidSolidMaskBrushOnly
-						local trworld = util.TraceHull(tr)
-						tr.maxs = ss.vector_one * data.ColRadiusEntity
-						tr.mins = -tr.maxs
-						tr.mask = ss.SquidSolidMask
-						local trent = util.TraceHull(tr)
-						if not (trworld.Hit or ss.IsInWorld(trworld.HitPos)) then
-							ss.InkQueue[ink] = nil
-						elseif data.DoDamage and IsValid(trent.Entity) and trent.Entity:Health() > 0 then
-							local w = ss.IsValidInkling(trent.Entity) -- If ink hits someone
-							if not (w and ss.IsAlly(w, data.Color)) then HitEntity(ink, trent) end
-							ss.InkQueue[ink] = nil
-						elseif trworld.Hit then
-							HitPaint(ink, trworld)
-							ss.InkQueue[ink] = nil
-						end
+					tr.maxs = ss.vector_one * data.ColRadiusWorld
+					tr.mins = -tr.maxs
+					tr.mask = ss.SquidSolidMaskBrushOnly
+					local trworld = util.TraceHull(tr)
+					tr.maxs = ss.vector_one * data.ColRadiusEntity
+					tr.mins = -tr.maxs
+					tr.mask = ss.SquidSolidMask
+					local trent = util.TraceHull(tr)
+					if ink.BlasterRemoval or not (trworld.Hit or ss.IsInWorld(trworld.HitPos)) then
+						removal = true
+					elseif data.DoDamage and IsValid(trent.Entity) and trent.Entity:Health() > 0 then
+						local w = ss.IsValidInkling(trent.Entity) -- If ink hits someone
+						if not (w and ss.IsAlly(w, data.Color)) then HitEntity(ink, trent) end
+						removal = true
+					elseif trworld.Hit then
+						tr.endpos = trworld.HitPos - trworld.HitNormal * data.ColRadiusWorld * 2
+						HitPaint(ink, util.TraceLine(tr))
+						removal = true
+					end
 
-						if SysTime() - Benchmark > ss.FrameToSec then
-							coroutine.yield()
-							Benchmark = SysTime()
-						end
-					else
-						ss.InkQueue[ink] = nil
+					if SysTime() - Benchmark > ss.FrameToSec then
+						coroutine.yield()
+						Benchmark = SysTime()
 					end
 				end
-			else
-				ss.InkQueue[ink] = nil
+				
+				if removal then
+					inkgroup[i] = nil
+				else -- Move i's kept value to k's position, if it's not already there.
+					if i ~= k then inkgroup[k], inkgroup[i] = ink end
+					k = k + 1 -- Increment position of where we'll place the next kept value.
+				end
+
+				if #inkgroup == 0 then ss.InkQueue[inittime] = nil end
 			end
 		end
 
@@ -240,7 +252,7 @@ function ss.GetDropType() -- math.floor(1 <= x < 4) -> 1, 2, 3
 end
 
 function ss.DoDropSplashes(ink, iseffect)
-	local data, parameters, tr = ink.Data, ink.Parameters, ink.Trace
+	local data, tr, p = ink.Data, ink.Trace, ink.Parameters
 	if not data.DoDamage then return end
 	if data.SplashCount >= data.SplashNum then return end
 	local IsBamboozler = data.Weapon.IsBamboozler
@@ -296,7 +308,7 @@ function ss.DoDropSplashes(ink, iseffect)
 				e:SetColor(data.Color)
 				e:SetNormal(data.InitDir)
 				e:SetOrigin(dropdata.InitPos)
-				e:SetRadius(parameters.mCollisionRadiusNear / 2)
+				e:SetRadius(p.mCollisionRadiusNear / 2)
 				ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterTrail", e)
 			end
 			
@@ -314,9 +326,9 @@ function ss.DoDropSplashes(ink, iseffect)
 			ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsShooterInk", e)
 		else
 			if IsCharger and data.SplashCount == 0 then
-				local paintlastmul = parameters.mPaintRateLastSplash
+				local paintlastmul = p.mPaintRateLastSplash
 				local paintradius = data.PaintNearRadius / paintlastmul
-				local footpaintcharge = parameters.mSplashNearFootOccurChargeRate
+				local footpaintcharge = p.mSplashNearFootOccurChargeRate
 				local footpaint = IsBamboozler or data.Charge > footpaintcharge
 				mul = (footpaint and 1 or 0) / paintlastmul
 				dropdata.InitPos = dropdata.InitPos + data.InitDir * (1 - mul) * paintradius
@@ -331,7 +343,7 @@ function ss.DoDropSplashes(ink, iseffect)
 				dropdata.PaintFarRadius = data.SplashPaintRadius * mul
 				dropdata.PaintNearRadius = data.SplashPaintRadius * mul
 				dropdata.Type = ss.GetDropType()
-				ss.AddInk(parameters, dropdata)
+				ss.AddInk(p, dropdata)
 			end
 
 			hull.start = droppos
@@ -361,7 +373,10 @@ function ss.AddInk(parameters, data)
 	t.Data.InitDir = t.Data.InitVel:GetNormalized()
 	t.Data.InitSpeed = t.Data.InitVel:Length()
 	t.CurrentSpeed = t.Data.InitSpeed
-	ss.InkQueue[t] = true
+
+	local t0 = t.InitTime
+	local dest = ss.InkQueue[t0] or {}
+	ss.InkQueue[t0], dest[#dest + 1] = dest, t
 	return t
 end
 
@@ -420,18 +435,18 @@ local directions = {"GetForward", "GetRight", "GetUp"}
 function ss.MakeBlasterExplosion(ink)
 	local d = DamageInfo()
 	local damagedealt = false
-	local data, parameters, tr, weapon = ink.Data, ink.Parameters, ink.Trace, ink.Data.Weapon
+	local data, tr, p, weapon = ink.Data, ink.Trace, ink.Parameters, ink.Data.Weapon
 	local attacker = IsValid(tr.filter) and tr.filter or game.GetWorld()
 	local inflictor = ss.IsValidInkling(tr.filter) or game.GetWorld()
 	local hurtowner = ss.GetOption "weapon_splatoonsweps_blaster_base" "hurtowner"
-	local dmul = ink.HitWall and parameters.mShotCollisionHitDamageRate or 1
-	local dnear = parameters.mDamageNear * dmul
-	local dmid = parameters.mDamageMiddle * dmul
-	local dfar = parameters.mDamageFar * dmul
-	local rmul = ink.HitWall and parameters.mShotCollisionRadiusRate or 1
-	local rnear = parameters.mCollisionRadiusNear * rmul
-	local rmid = parameters.mCollisionRadiusMiddle * rmul
-	local rfar = parameters.mCollisionRadiusFar * rmul
+	local dmul = ink.BlasterHitWall and p.mShotCollisionHitDamageRate or 1
+	local dnear = p.mDamageNear * dmul
+	local dmid = p.mDamageMiddle * dmul
+	local dfar = p.mDamageFar * dmul
+	local rmul = ink.BlasterHitWall and p.mShotCollisionRadiusRate or 1
+	local rnear = p.mCollisionRadiusNear * rmul
+	local rmid = p.mCollisionRadiusMiddle * rmul
+	local rfar = p.mCollisionRadiusFar * rmul
 
 	-- Find entities within explosion and deal damage
 	for _, e in ipairs(ents.FindInSphere(tr.endpos, rfar)) do
@@ -493,13 +508,13 @@ function ss.MakeBlasterExplosion(ink)
 	local e = EffectData()
 	e:SetOrigin(tr.endpos)
 	e:SetColor(data.Color)
-	e:SetFlags(ink.HitWall and 1 or 0)
+	e:SetFlags(ink.BlasterHitWall and 1 or 0)
 	e:SetRadius(rfar)
 	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsBlasterExplosion", e, true, weapon.IgnorePrediction)
 
 	-- Trace around and paint
 	local a = data.InitDir:Angle()
-	if ink.HitWall then a:RotateAroundAxis(a:Right(), -90) end
+	if ink.BlasterHitWall then a:RotateAroundAxis(a:Right(), -90) end
 	local a2, a3 = Angle(a), Angle(a)
 	a2:RotateAroundAxis(a:Right(), 45)
 	a2:RotateAroundAxis(a:Up(), 45)
@@ -513,43 +528,42 @@ function ss.MakeBlasterExplosion(ink)
 		local t = util.TraceLine {
 			collisiongroup = COLLISION_GROUP_INTERACTIVE_DEBRIS,
 			start = tr.endpos,
-			endpos = tr.endpos + d * parameters.mMoveLength,
+			endpos = tr.endpos + d * p.mMoveLength,
 			filter = tr.filter,
 			mask = ss.SquidSolidMaskBrushOnly,
 		}
 
 		if t.Hit and not t.StartSolid then
 			local distance = (t.HitPos - t.StartPos):Length2D()
-			local frac = distance / parameters.mBoundPaintMinDistanceXZ
-			local radius = Lerp(frac, parameters.mBoundPaintMaxRadius, parameters.mBoundPaintMinRadius)
+			local frac = distance / p.mBoundPaintMinDistanceXZ
+			local radius = Lerp(frac, p.mBoundPaintMaxRadius, p.mBoundPaintMinRadius)
 			ss.Paint(t.HitPos, t.HitNormal, radius, data.Color, data.Yaw, ss.GetDropType(), 1, tr.filter, weapon.ClassName)
 		end
 	end
 
-	if parameters.mExplosionSleep then ss.InkQueue[ink] = nil end
-	if not parameters.mSphereSplashDropOn then return end
+	if not p.mSphereSplashDropOn then return end
 
 	-- Create a blaster's drop
 	local dropdata = ss.MakeProjectileStructure()
 	table.Merge(dropdata, {
 		Color = data.Color,
-		ColRadiusEntity = parameters.mSphereSplashDropCollisionRadius,
-		ColRadiusWorld = parameters.mSphereSplashDropCollisionRadius,
+		ColRadiusEntity = p.mSphereSplashDropCollisionRadius,
+		ColRadiusWorld = p.mSphereSplashDropCollisionRadius,
 		DoDamage = false,
 		Gravity = DropGravity,
 		InitPos = tr.endpos,
-		InitVel = vector_up * parameters.mSphereSplashDropInitSpeed,
-		PaintFarDistance = parameters.mPaintFarDistance,
-		PaintFarRadius = parameters.mSphereSplashDropPaintRadius,
-		PaintNearDistance = parameters.mPaintNearDistance,
-		PaintNearRadius = parameters.mSphereSplashDropPaintRadius,
+		InitVel = vector_up * p.mSphereSplashDropInitSpeed,
+		PaintFarDistance = p.mPaintFarDistance,
+		PaintFarRadius = p.mSphereSplashDropPaintRadius,
+		PaintNearDistance = p.mPaintNearDistance,
+		PaintNearRadius = p.mSphereSplashDropPaintRadius,
 		Weapon = data.Weapon,
 		Yaw = data.Yaw,
 	})
 	
 	ss.SetEffectColor(e, dropdata.Color)
 	ss.SetEffectColRadius(e, dropdata.ColRadiusWorld)
-	ss.SetEffectDrawRadius(e, parameters.mSphereSplashDropDrawRadius)
+	ss.SetEffectDrawRadius(e, p.mSphereSplashDropDrawRadius)
 	ss.SetEffectEntity(e, dropdata.Weapon)
 	ss.SetEffectFlags(e, dropdata.Weapon, 3)
 	ss.SetEffectInitPos(e, dropdata.InitPos)
@@ -559,5 +573,5 @@ function ss.MakeBlasterExplosion(ink)
 	ss.SetEffectSplashNum(e, 0)
 	ss.SetEffectStraightFrame(e, 0)
 	ss.UtilEffectPredicted(tr.filter, "SplatoonSWEPsShooterInk", e, true, weapon.IgnorePrediction)
-	ss.AddInk(parameters, dropdata)
+	ss.AddInk(p, dropdata)
 end

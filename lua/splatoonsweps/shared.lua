@@ -20,15 +20,28 @@ end
 
 -- Faster table.remove() function from stack overflow
 -- https://stackoverflow.com/questions/12394841/safely-remove-items-from-an-array-table-while-iterating
-function ss.tableremove(t, shouldkeep)
+function ss.tableremovefunc(t, toremove)
     local k = 1
     for i = 1, #t do
-        if shouldkeep(t[i]) then
-            -- Move i's kept value to k's position, if it's not already there.
+        if toremove(t[i]) then
+			t[i] = nil
+		else -- Move i's kept value to k's position, if it's not already there.
             if i ~= k then t[k], t[i] = t[i] end
             k = k + 1 -- Increment position of where we'll place the next kept value.
-        else
+        end
+    end
+
+    return t
+end
+
+function ss.tableremove(t, removal)
+    local k = 1
+    for i = 1, #t do
+        if i == removal then
             t[i] = nil
+        else -- Move i's kept value to k's position, if it's not already there.
+            if i ~= k then t[k], t[i] = t[i] end
+            k = k + 1 -- Increment position of where we'll place the next kept value.
         end
     end
 

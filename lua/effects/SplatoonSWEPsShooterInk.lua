@@ -11,9 +11,6 @@ local filter1 = Material "splatoonsweps/effects/roller_ink"
 local filter2 = Material "splatoonsweps/effects/roller_ink_filter"
 local inksplash = Material "splatoonsweps/effects/muzzlesplash"
 local inkring = Material "splatoonsweps/effects/inkring"
-local inkring_alphatest = Material "splatoonsweps/effects/inkring_alphatest"
-local inkmaterial = Material "splatoonsweps/splatoonink"
-local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 local RenderFuncs = {
 	weapon_splatoonsweps_blaster_base = "RenderBlaster",
 	weapon_splatoonsweps_roller = "RenderSplash",
@@ -138,6 +135,8 @@ end
 
 -- Called when the effect should think, return false to kill the effect.
 function EFFECT:Think()
+	if not self.Ink then return false end
+	if not self.Ink.Data then return false end
 	local Weapon = self.Ink.Data.Weapon
 	if not IsValid(Weapon) then return false end
 	if not IsValid(Weapon.Owner) then return false end
@@ -194,11 +193,11 @@ function EFFECT:RenderGeneral()
 	local sizetip = self.DrawRadius * 0.8
 	local AppPos = self:GetPos()
     local TailPos = self.TrailPos
+	render.SetMaterial(cabletip)
+	render.DrawSprite(TailPos, sizetip, sizetip, self.Color)
+	render.DrawSprite(AppPos, sizetip, sizetip, self.Color)
 	render.SetMaterial(cable)
 	render.DrawBeam(AppPos, TailPos, self.DrawRadius, 0.3, 0.7, self.Color)
-	render.SetMaterial(cabletip)
-	render.DrawSprite(AppPos, sizetip, sizetip, self.Color)
-	render.DrawSprite(TailPos, sizetip, sizetip, self.Color)
 end
 
 -- A render function for roller, slosher, etc.
@@ -238,15 +237,11 @@ function EFFECT:RenderBlaster() -- Blaster bullet
 	render.SetMaterial(mat)
 	mat:SetVector("$color", self.ColorVector)
 	render.DrawSphere(self:GetPos(), self.DrawRadius, 8, 8, self.Color)
-	if not LocalPlayer():FlashlightIsOn() and #ents.FindByClass "*projectedtexture*" == 0 then
-		mat:SetVector("$color", ss.vector_one)
-		return
+	if LocalPlayer():FlashlightIsOn() or #ents.FindByClass "*projectedtexture*" > 0 then
+		render.PushFlashlightMode(true) -- Ink lit by player's flashlight or a projected texture
+		render.DrawSphere(self:GetPos(), r, 8, 8, self.Color)
+		render.PopFlashlightMode()
 	end
-
-	render.PushFlashlightMode(true) -- Ink lit by player's flashlight or a projected texture
-	render.DrawSphere(self:GetPos(), r, 8, 8, self.Color)
-	render.PopFlashlightMode()
-	mat:SetVector("$color", ss.vector_one)
 end
 
 function EFFECT:RenderSlosher()
@@ -255,5 +250,12 @@ function EFFECT:RenderSlosher()
 end
 
 function EFFECT:RenderSloshingMachine()
+	if self.DrawRadius == 0 then return end
+	local ang = (self:GetPos() - self.TrailPos):Angle()
+	ang:RotateAroundAxis(ang:Up(), 45)
+	ang:RotateAroundAxis(ang:Right(), 45)
+	mat:SetVector("$color", self.ColorVector)
+	render.SetMaterial(mat)
+	render.DrawBox(self:GetPos(), ang, ss.vector_one * -10, ss.vector_one * 10, self.Color)
 	self:RenderGeneral()
 end

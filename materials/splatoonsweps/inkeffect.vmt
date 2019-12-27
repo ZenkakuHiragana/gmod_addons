@@ -1,4 +1,4 @@
-"VertexLitGeneric"
+"UnlitGeneric"
 {
 	"$basetexture" "splatoonsweps/inkeffect"
 	"$color" "[1 1 1]"

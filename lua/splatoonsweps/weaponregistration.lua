@@ -130,10 +130,10 @@ hook.Add("PopulateMenuBar", "SplatoonSWEPs: NPC weapon menu", function(menu)
 		if weapontable.IsSplatoonWeapon then
 			local c = ss.Text.CategoryNames[weapontable.Base]
 			WeaponCategories[c] = WeaponCategories[c] or {}
-			table.insert(WeaponCategories[c], {
+			WeaponCategories[c][#WeaponCategories[c] + 1] = {
 				class = classname,
 				title = ss.Text.PrintNames[classname],
-			})
+			}
 		end
 	end
 

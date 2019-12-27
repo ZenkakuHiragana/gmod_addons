@@ -144,7 +144,6 @@ function SWEP:SharedInit()
 	table.Merge(self.Projectile, {
 		AirResist = p.mFreeStateAirResist,
 		Gravity = p.mFreeStateGravity,
-		IsCritical = self.IsSloshingMachine,
 	})
 end
 
@@ -199,6 +198,7 @@ function SWEP:CreateInk(number, spawncount) -- Group #, spawncount-th bullet(0, 
 		DamageMaxDistance = dmaxdist,
 		DamageMin = dmin,
 		DamageMinDistance = dmindist,
+		IsCritical = number == p.mSpiralSplashGroup,
 		PaintRatioFarDistance = pfardist,
 		PaintFarDistance = pfardist,
 		PaintFarRadius = pfarradius,
