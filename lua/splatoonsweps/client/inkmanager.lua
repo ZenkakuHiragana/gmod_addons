@@ -80,7 +80,7 @@ end
 
 local function ProcessPaintQueue()
 	while not rt.Ready do coroutine.yield() end
-	local NumRepetition = 2
+	local NumRepetition = 5
 	local BlendFuncs = {
 		BLEND_ONE,
 		BLEND_ZERO,
