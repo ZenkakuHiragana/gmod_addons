@@ -156,4 +156,6 @@ function EFFECT:Think()
 	and isnumber(self.tmin)
 	and CurTime() < self.InitTime + self.LifeTime
 	and (self.Weapon:IsTPS() or drawviewmodel:GetBool())
+	and IsValid(self.Weapon.Owner)
+	and self.Weapon.Owner:GetActiveWeapon() == self.Weapon
 end

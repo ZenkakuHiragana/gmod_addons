@@ -140,6 +140,7 @@ function EFFECT:Think()
 	local Weapon = self.Ink.Data.Weapon
 	if not IsValid(Weapon) then return false end
 	if not IsValid(Weapon.Owner) then return false end
+	if Weapon.Owner:GetActiveWeapon() ~= Weapon then return false end
 	if not ss.IsInWorld(self.Ink.Trace.endpos) then return false end
 	ss.AdvanceBullet(self.Ink)
 

@@ -147,6 +147,16 @@ function SWEP:SharedInit()
 	})
 end
 
+function SWEP:SharedHolster()
+	self:SetIsBusy(false)
+	self:SetSpawnRemaining1(0)
+	self:SetSpawnRemaining2(0)
+	self:SetSpawnRemaining3(0)
+	self:SetNextInkSpawnTime1(0)
+	self:SetNextInkSpawnTime2(0)
+	self:SetNextInkSpawnTime3(0)
+end
+
 local randinit = "SpaltoonSWEPs: Slosher splash init rate"
 local randink = "SplatoonSWEPs: Shooter ink type"
 local randspread = "SplatoonSWEPs: Slosher random spread"

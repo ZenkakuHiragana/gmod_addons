@@ -127,7 +127,7 @@ end
 
 -- Called when the effect should think, return false to kill the effect.
 function EFFECT:Think()
-	return istable(self.Color)
+	local valid = istable(self.Color)
 	and isnumber(self.Color.r)
 	and isnumber(self.Color.g)
 	and isnumber(self.Color.b)
@@ -139,5 +139,10 @@ function EFFECT:Think()
 	and isvector(self.Pos)
 	and isangle(self.Angle)
 	and CurTime() < self.InitTime + self.LifeTime
-	and (not self.Weapon or self.IsTPS or drawviewmodel:GetBool())
+	if IsValid(self.Weapon) then
+		return valid and IsValid(self.Weapon.Owner)
+		and self.Weapon.Owner:GetActiveWeapon() == self.Weapon
+	else
+		return valid and (self.IsTPS or drawviewmodel:GetBool())
+	end
 end
