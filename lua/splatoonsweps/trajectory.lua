@@ -144,7 +144,6 @@ local function HitEntity(ink, t)
 
 		local frac = math.Remap(value, decay_start, decay_end, 0, 1)
 		damage = Lerp(frac, damage_max, damage_min)
-		print(damage * 100)
 	end
 
 	if ink.IsCarriedByLocalPlayer then
