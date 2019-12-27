@@ -62,6 +62,7 @@ function ss.MakeProjectileStructure()
 		InitPos = Vector(),
 		InitSpeed = 0,
 		InitVel = Vector(),
+		IsCritical = false,
 		PaintRatioFarDistance = 100 * ss.ToHammerUnits,
 		PaintFarDistance = 0,
 		PaintFarRadius = 0,

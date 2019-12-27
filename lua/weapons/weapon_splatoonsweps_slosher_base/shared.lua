@@ -144,6 +144,7 @@ function SWEP:SharedInit()
 	table.Merge(self.Projectile, {
 		AirResist = p.mFreeStateAirResist,
 		Gravity = p.mFreeStateGravity,
+		IsCritical = self.IsSloshingMachine,
 	})
 end
 

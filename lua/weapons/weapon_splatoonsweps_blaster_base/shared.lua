@@ -18,6 +18,7 @@ function SWEP:SharedInit()
     table.Merge(self.Projectile, {
         ColRadiusEntity = p.mCollisionRadiusNear,
         ColRadiusWorld = p.mCollisionRadiusNear,
+        IsCritical = true,
         PaintNearRatio = 1,
         PaintFarRatio = 1,
     })

@@ -2,12 +2,10 @@
 local ss = SplatoonSWEPs
 if not ss then return end
 
-ss.Simulate = {}
-local HitEntity = {}
 local MAX_INK_SIM_AT_ONCE = 60 -- Calculating ink trajectory at once
 local DropGravity = 1 * ss.ToHammerUnitsPerSec2
-
 local function Simulate(ink)
+	ink.CurrentSpeed = ink.Trace.start:Distance(ink.Trace.endpos) / FrameTime()
 	ss.AdvanceBullet(ink)
 	if not IsFirstTimePredicted() then return end
 	ss.DoDropSplashes(ink)
@@ -112,10 +110,110 @@ local function HitPaint(ink, t)
 				angle = data.Yaw,
 				inktype = ss.GetDropType(),
 				ratio = 1,
-				Time = CurTime() + i * data.WallPaintRadius / data.InitSpeed,
+				Time = CurTime() + i * data.WallPaintRadius / ink.CurrentSpeed,
 				filter = tr.filter,
 				ClassName = data.Weapon.ClassName,
 			}] = true
+		end
+	end
+end
+
+local function HitEntity(ink, t)
+	local data, tr, weapon = ink.Data, ink.Trace, ink.Data.Weapon
+	local time = math.max(CurTime() - ink.InitTime, 0)
+	local d, e, o = DamageInfo(), t.Entity, tr.filter
+	if weapon.IsCharger and time > data.StraightFrame then return end
+	if ss.LastHitID[e] == data.ID then return end
+	ss.LastHitID[e] = data.ID -- Avoid multiple damages at once
+	
+	local decay_start = data.DamageMaxDistance
+	local decay_end = data.DamageMinDistance
+	local damage_max = data.DamageMax
+	local damage_min = data.DamageMin
+	local damage = damage_max
+	if not weapon.IsCharger then
+		local value = tr.LengthSum
+		if weapon.IsShooter then
+			value = math.max(CurTime() - ink.InitTime, 0)
+		elseif weapon.IsSlosher then
+			value = tr.endpos.z - data.InitPos.z
+		end
+
+		local frac = math.Remap(value, decay_start, decay_end, 0, 1)
+		damage = Lerp(frac, damage_max, damage_min)
+	end
+
+	if ink.IsCarriedByLocalPlayer then
+		ss.CreateHitEffect(data.Color, data.IsCritical and 1 or 0, t.HitPos, t.HitNormal)
+		if ss.mp and CLIENT then return end
+	end
+
+	d:SetDamage(damage)
+	d:SetDamageForce(-t.HitNormal)
+	d:SetDamagePosition(t.HitPos)
+	d:SetDamageType(DMG_GENERIC)
+	d:SetMaxDamage(damage_max)
+	d:SetReportedPosition(t.HitPos)
+	d:SetAttacker(IsValid(o) and o or game.GetWorld())
+	d:SetInflictor(IsValid(weapon) and weapon or game.GetWorld())
+	d:ScaleDamage(ss.ToHammerHealth)
+	ss.ProtectedCall(e.TakeDamageInfo, e, d)
+end
+
+local function ProcessInkQueue(ply)
+	local Benchmark = SysTime()
+	while true do
+		repeat coroutine.yield() until IsFirstTimePredicted()
+		Benchmark = SysTime()
+		for ink in pairs(ss.InkQueue) do
+			local data, tr, weapon = ink.Data, ink.Trace, ink.Data.Weapon
+			if IsValid(tr.filter) and IsValid(data.Weapon) then
+				if not tr.filter:IsPlayer() or tr.filter == ply then
+					Simulate(ink)
+					if tr.start and tr.endpos then
+						tr.maxs = ss.vector_one * data.ColRadiusWorld
+						tr.mins = -tr.maxs
+						tr.mask = ss.SquidSolidMaskBrushOnly
+						local trworld = util.TraceHull(tr)
+						tr.maxs = ss.vector_one * data.ColRadiusEntity
+						tr.mins = -tr.maxs
+						tr.mask = ss.SquidSolidMask
+						local trent = util.TraceHull(tr)
+						if not (trworld.Hit or ss.IsInWorld(trworld.HitPos)) then
+							ss.InkQueue[ink] = nil
+						elseif data.DoDamage and IsValid(trent.Entity) and trent.Entity:Health() > 0 then
+							local w = ss.IsValidInkling(trent.Entity) -- If ink hits someone
+							if not (w and ss.IsAlly(w, data.Color)) then HitEntity(ink, trent) end
+							ss.InkQueue[ink] = nil
+						elseif trworld.Hit then
+							HitPaint(ink, trworld)
+							ss.InkQueue[ink] = nil
+						end
+
+						if SysTime() - Benchmark > ss.FrameToSec then
+							coroutine.yield()
+							Benchmark = SysTime()
+						end
+					else
+						ss.InkQueue[ink] = nil
+					end
+				end
+			else
+				ss.InkQueue[ink] = nil
+			end
+		end
+
+		for ink in pairs(ss.PaintSchedule) do
+			if CurTime() > ink.Time then
+				ss.Paint(ink.pos, ink.normal, ink.radius, ink.color,
+				ink.angle, ink.inktype, ink.ratio, ink.filter, ink.ClassName)
+				ss.PaintSchedule[ink] = nil
+
+				if SysTime() - Benchmark > ss.FrameToSec then
+					coroutine.yield()
+					Benchmark = SysTime()
+				end
+			end
 		end
 	end
 end
@@ -246,138 +344,6 @@ function ss.DoDropSplashes(ink, iseffect)
 	end
 end
 
-function HitEntity.weapon_splatoonsweps_shooter(ink, t)
-	local data, parameters, tr, weapon = ink.Data, ink.Parameters, ink.Trace, ink.Data.Weapon
-	local d, e, o = DamageInfo(), t.Entity, tr.filter
-	if ss.LastHitID[e] == data.ID then return end
-	ss.LastHitID[e] = data.ID -- Avoid multiple damages at once
-	
-	local decay_start = data.DamageMaxDistance
-	local decay_end = data.DamageMinDistance
-	local damage_max = data.DamageMax
-	local damage_min = data.DamageMin
-	local value = tr.LengthSum
-	if weapon.IsShooter then
-		value = math.max(CurTime() - ink.InitTime, 0)
-	elseif weapon.IsSlosher then
-		value = tr.endpos.z - data.InitPos.z
-	end
-
-	local frac = math.Remap(value, decay_start, decay_end, 0, 1)
-	if ink.IsCarriedByLocalPlayer then
-		ss.CreateHitEffect(data.Color, weapon.IsBlaster and 1 or 0, t.HitPos, t.HitNormal)
-		if ss.mp and CLIENT then return end
-	end
-
-	d:SetDamage(Lerp(frac, damage_max, damage_min))
-	d:SetDamageForce(-t.HitNormal)
-	d:SetDamagePosition(t.HitPos)
-	d:SetDamageType(DMG_GENERIC)
-	d:SetMaxDamage(damage_max)
-	d:SetReportedPosition(t.HitPos)
-	d:SetAttacker(IsValid(o) and o or game.GetWorld())
-	d:SetInflictor(IsValid(weapon) and weapon or game.GetWorld())
-	d:ScaleDamage(ss.ToHammerHealth)
-	ss.ProtectedCall(e.TakeDamageInfo, e, d)
-end
-
-function HitEntity.weapon_splatoonsweps_charger(ink, t)
-	HitSmoke(ink, t)
-	local data, parameters = ink.Data, ink.Parameters
-	local LifeTime = math.max(0, CurTime() - FrameTime() - ink.InitTime)
-	local d, e, o = DamageInfo(), t.Entity, ink.Trace.filter
-	local weapon = ss.IsValidInkling(o)
-	if LifeTime > data.StraightFrame then return end
-	if ss.LastHitID[e] == data.ID then return end
-	ss.LastHitID[e] = data.ID -- Avoid multiple damages at once
-
-	local damage_full = parameters.mFullChargeDamage
-	local damage_max = parameters.mMaxChargeDamage
-	local damage_min = parameters.mMinChargeDamage
-	local damage = ss.Lerp3(data.Charge, damage_min, damage_max, damage_full)
-	if ink.IsCarriedByLocalPlayer then
-		ss.CreateHitEffect(data.Color, damage < 1 and 0 or 1, t.HitPos, t.HitNormal)
-		if ss.mp and CLIENT then return end
-	end
-
-	d:SetDamage(damage)
-	d:SetDamageForce(-t.HitNormal)
-	d:SetDamagePosition(t.HitPos)
-	d:SetDamageType(DMG_GENERIC)
-	d:SetMaxDamage(damage_full)
-	d:SetReportedPosition(t.HitPos)
-	d:SetAttacker(IsValid(o) and o or game.GetWorld())
-	d:SetInflictor(IsValid(weapon) and weapon or game.GetWorld())
-	d:ScaleDamage(ss.ToHammerHealth)
-	ss.ProtectedCall(e.TakeDamageInfo, e, d)
-end
-
-HitEntity.weapon_splatoonsweps_blaster_base = HitEntity.weapon_splatoonsweps_shooter
-HitEntity.weapon_splatoonsweps_slosher_base = HitEntity.weapon_splatoonsweps_shooter
-HitEntity.weapon_splatoonsweps_splatling = HitEntity.weapon_splatoonsweps_shooter
-HitEntity.weapon_splatoonsweps_roller = HitEntity.weapon_splatoonsweps_shooter
-
-local function ProcessInkQueue(ply)
-	local Benchmark = SysTime()
-	while true do
-		repeat coroutine.yield() until IsFirstTimePredicted()
-		Benchmark = SysTime()
-		for ink in pairs(ss.InkQueue) do
-			local data, tr, weapon = ink.Data, ink.Trace, ink.Data.Weapon
-			if IsValid(tr.filter) and IsValid(data.Weapon) then
-				if not tr.filter:IsPlayer() or tr.filter == ply then
-					Simulate(ink)
-					if tr.start and tr.endpos then
-						tr.maxs = ss.vector_one * data.ColRadiusWorld
-						tr.mins = -tr.maxs
-						tr.mask = ss.SquidSolidMaskBrushOnly
-						local trworld = util.TraceHull(tr)
-						tr.maxs = ss.vector_one * data.ColRadiusEntity
-						tr.mins = -tr.maxs
-						tr.mask = ss.SquidSolidMask
-						local trent = util.TraceHull(tr)
-						if not (trworld.Hit or ss.IsInWorld(trworld.HitPos)) then
-							ss.InkQueue[ink] = nil
-						elseif data.DoDamage and IsValid(trent.Entity) and trent.Entity:Health() > 0 then
-							local w = ss.IsValidInkling(trent.Entity)
-							if not (w and ss.IsAlly(w, data.Color)) then -- If ink hits someone
-								ss.ProtectedCall(HitEntity[weapon.Base], ink, trent)
-							end
-							ss.InkQueue[ink] = nil
-						elseif trworld.Hit then
-							tr.endpos = trworld.HitPos - trworld.HitNormal * data.ColRadiusWorld * 2
-							HitPaint(ink, util.TraceLine(tr))
-							ss.InkQueue[ink] = nil
-						end
-
-						if SysTime() - Benchmark > ss.FrameToSec then
-							coroutine.yield()
-							Benchmark = SysTime()
-						end
-					else
-						ss.InkQueue[ink] = nil
-					end
-				end
-			else
-				ss.InkQueue[ink] = nil
-			end
-		end
-
-		for ink in pairs(ss.PaintSchedule) do
-			if CurTime() > ink.Time then
-				ss.Paint(ink.pos, ink.normal, ink.radius, ink.color,
-				ink.angle, ink.inktype, ink.ratio, ink.filter, ink.ClassName)
-				ss.PaintSchedule[ink] = nil
-
-				if SysTime() - Benchmark > ss.FrameToSec then
-					coroutine.yield()
-					Benchmark = SysTime()
-				end
-			end
-		end
-	end
-end
-
 -- Make an ink bullet for shooter.
 -- Arguments:
 --   table parameters	| Table contains weapon parameters
@@ -394,6 +360,7 @@ function ss.AddInk(parameters, data)
 	t.Trace.endpos:Set(data.InitPos)
 	t.Data.InitDir = t.Data.InitVel:GetNormalized()
 	t.Data.InitSpeed = t.Data.InitVel:Length()
+	t.CurrentSpeed = t.Data.InitSpeed
 	ss.InkQueue[t] = true
 	return t
 end
