@@ -3,7 +3,7 @@ AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
 SWEP.ScopeAng = Angle()				-- Scoped viewmodel angles [deg]
-SWEP.ScopePos = Vector(-10, 6, 1.9)	-- Scoped viewmodel position [Hammer units]
+SWEP.ScopePos = Vector(-10, 6, 1.96)	-- Scoped viewmodel position [Hammer units]
 SWEP.ShootSound = "SplatoonSWEPs.Squiffer"
 SWEP.ShootSound2 = SWEP.ShootSound
 SWEP.Special = "bubbler"

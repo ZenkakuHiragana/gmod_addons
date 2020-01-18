@@ -2,9 +2,9 @@
 AddCSLuaFile()
 local ss = SplatoonSWEPs
 if not (ss and SWEP) then return end
-SWEP.ADSAngOffset = Angle(1.5, 0, 0)
+SWEP.ADSAngOffset = Angle(0, 0, 0)
 SWEP.ADSAngOffset2= Angle(2, 0, 0)
-SWEP.ADSOffset = Vector(-6, 0, 4.5)
+SWEP.ADSOffset = Vector(-6, 0, 4.6)
 SWEP.ADSOffset2 = Vector(-8, .04, 2.93)
 SWEP.ShootSound = "SplatoonSWEPs.Zap"
 SWEP.Special = "echolocator"
