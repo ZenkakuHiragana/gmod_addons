@@ -156,6 +156,8 @@ ss.SplatoonMapPorts = {
 	-- gm_octo_showdown = true,
 	-- gm_octo_valley_hubworld = true,
 	-- gm_octo_valley_hubworld_night = true,
+	gm_port_mackerel_day = true,
+	gm_port_mackerel_night = true,
 	gm_skipper_pavilion_day = true,
 	gm_skipper_pavilion_night = true,
 	gm_shootingrange_splat1 = true,
@@ -173,8 +175,8 @@ ss.SplatoonMapPorts = {
 	-- gm_spawning_grounds_normal = true,
 	-- gm_tutorial = true,
 	-- gm_tutorial_night = true,
-	-- humpback_pump_track_day = true,
-	-- humpback_pump_track_night = true,
+	humpback_pump_track_day = true,
+	humpback_pump_track_night = true,
 }
 
 function ss.GetSquidmodel(pmid)

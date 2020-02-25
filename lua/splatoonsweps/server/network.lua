@@ -38,7 +38,7 @@ net.Receive("SplatoonSWEPs: Ready to splat", function(_, ply)
 end)
 
 net.Receive("SplatoonSWEPs: Redownload ink data", function(_, ply)
-	local data = file.Read("splatoonsweps/" .. game.GetMap() .. ".txt", "DATA")
+	local data = file.Read(("splatoonsweps/%s.txt"):format(game.GetMap()))
 	local startpos = ply.SendData or 1
 	local bps = 65530
 	local chunk = data:sub(startpos, startpos + bps - 1)
@@ -52,7 +52,7 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function(_, ply)
 	net.WriteData(chunk, size)
 	net.WriteFloat(current / total)
 	net.Send(ply)
-	print(string.format("Redownloading ink data to %s (%d/%d)", tostring(ply), current, total))
+	print(("Redownloading ink data to %s (%d/%d)"):format(tostring(ply), current, total))
 end)
 
 net.Receive("SplatoonSWEPs: Send ink cleanup", function(_, ply)

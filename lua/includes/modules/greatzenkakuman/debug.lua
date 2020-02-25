@@ -29,7 +29,7 @@ else
 	net.Receive("greatzenkakuman.debug.DPoly", function() DPoly(net.ReadTable(), net.ReadBool(), 1) end)
 end
 
-function DTick() if d then t = .05 else BroadcastLua "greatzenkakuman.debug.DTick()" end end
+function DTick() if d then t = .08 else BroadcastLua "greatzenkakuman.debug.DTick()" end end
 function DShort() if d then t = 5 else BroadcastLua "greatzenkakuman.debug.DShort()" end end
 function DLong() if d then t = 10 else BroadcastLua "greatzenkakuman.debug.DLong()" end end
 function DColor(r, g, b, a, sv)
@@ -151,7 +151,8 @@ end
 
 function DBox(a, b, sv)
 	if d then
-		debugoverlay.Box(vector_origin, a, b, t, ColorAlpha(sv and csv or ccl, 64))
+		local c = sv and csv or ccl
+		debugoverlay.Box(vector_origin, a, b, t, ColorAlpha(c, math.min(c.a, 64)))
 	else
 		BroadcastLua(dbox:format(a.x, a.y, a.z, b.x, b.y, b.z))
 	end
@@ -169,7 +170,8 @@ end
 function DABox(v, a, b, o, sv)
 	o = o or angle_zero
 	if d then
-		debugoverlay.BoxAngles(v, a, b, o, t, ColorAlpha(sv and csv or ccl, 64))
+		local c = sv and csv or ccl
+		debugoverlay.BoxAngles(v, a, b, o, t, ColorAlpha(c, math.min(c.a, 64)))
 	else
 		BroadcastLua(dabox:format(v.x, v.y, v.z, a.x, a.y, a.z, b.x, b.y, b.z, o.p, o.y, o.r))
 	end
@@ -184,10 +186,8 @@ function DTrace(v, z, sv)
 	end
 end
 
-timer.Simple(0, function()
+hook.Add("Think", "greatzenkakuman.debug.DLoop", function()
 	sp = game.SinglePlayer()
 	d = sp or CLIENT
 	if isfunction(DLoop) then DLoop() end
-	if not concommand.GetTable().lua_watch then return end
-	RunConsoleCommand("lua_watch", "lua/do.lua", "lua_send_sh")
 end)

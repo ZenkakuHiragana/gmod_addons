@@ -483,7 +483,6 @@ end,
 				isdisp[#isdisp + 1] = v.pos
 				isdisp.Positions2D[#isdisp.Positions2D + 1] = v.pos2d
 			end
-
 		end
 
 		MakeSurface(mins, maxs, normal, angle, center, v2d, v3d, isdisp)

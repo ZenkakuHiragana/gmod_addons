@@ -442,14 +442,14 @@ local function CheckVelocity()
 	local maxvelocity = GetConVar "sv_maxvelocity":GetFloat()
 	for _, i in ipairs {"x", "y", "z"} do
 		-- See if it's bogus.
-		-- Msg(string.format(1, "PM  Got a NaN velocity %s\n", i))
-		-- Msg(string.format(1, "PM  Got a NaN origin %s\n", i))
+		-- Msg(string.format("PM  Got a NaN velocity %s\n", i))
+		-- Msg(string.format("PM  Got a NaN origin %s\n", i))
 		if me.m_vecVelocity[ply][i] ~= me.m_vecVelocity[ply][i] then me.m_vecVelocity[ply][i] = 0 end
 		if me.m_vecOrigin[ply][i] ~= me.m_vecOrigin[ply][i] then me.m_vecOrigin[ply][i] = 0 end
 
 		-- Bound it.
-		-- Msg(string.format(1, "PM  Got a velocity too high on %s\n", i))
-		-- Msg(string.format(1, "PM  Got a velocity too low on %s\n", i))
+		-- Msg(string.format("PM  Got a velocity too high on %s\n", i))
+		-- Msg(string.format("PM  Got a velocity too low on %s\n", i))
 		me.m_vecVelocity[ply][i] = math.Clamp(me.m_vecVelocity[ply][i], -maxvelocity, maxvelocity)
 	end
 end

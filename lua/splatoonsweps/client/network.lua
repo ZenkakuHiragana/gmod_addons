@@ -27,9 +27,9 @@ net.Receive("SplatoonSWEPs: Redownload ink data", function()
 	end
 
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
-	file.Write(string.format("splatoonsweps/%s.txt", game.GetMap()), buffer)
+	file.Write(("splatoonsweps/%s.txt"):format(game.GetMap()), buffer)
 	notification.Kill "SplatoonSWEPs: Redownload ink data"
-	ss.PrepareInkSurface(buffer)
+	ss.PrepareInkSurface(util.JSONToTable(util.Decompress(buffer)))
 	notification.AddLegacy(ss.Text.LateReadyToSplat, NOTIFY_HINT, 8)
 end)
 

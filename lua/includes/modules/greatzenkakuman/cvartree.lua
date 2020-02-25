@@ -12,7 +12,7 @@ OverrideHelpText = "Override this setting with serverside value"
 local function CreateCategory(nametable)
 	local n, placeholder = "", cvarlist
 	for _, s in ipairs(nametable) do
-		n = string.format("%s%s%s", n, cvarseparator, s)
+		n = ("%s%s%s"):format(n, cvarseparator, s)
 		placeholder[s] = placeholder[s] or {iscvarlayer = true, options = {}}
 		placeholder = placeholder[s]
 	end
@@ -56,13 +56,13 @@ function AddCVar(name, default, helptext, options)
 	local cvartable = placeholder[name] or {}
 	if not (options and options.clientside) then
 		local svdefault = not (options and options.serverside) and -1 or default
-		local svname = string.format("sv%s%s%s", n, cvarseparator, name)
+		local svname = ("sv%s%s%s"):format(n, cvarseparator, name)
 		if isbool(svdefault) then svdefault = svdefault and 1 or 0 end
 		cvartable.sv = CreateConVar(svname, tostring(svdefault), serverflags, helptext)
 	end
 
 	if not (options and options.serverside) then
-		local clname = string.format("cl%s%s%s", n, cvarseparator, name)
+		local clname = ("cl%s%s%s"):format(n, cvarseparator, name)
 		local cldefault = isbool(default) and (default and 1 or 0) or default
 		cvartable.cl = CreateConVar(clname, tostring(cldefault), clientflags, helptext)
 	end
