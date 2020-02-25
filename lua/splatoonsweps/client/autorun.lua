@@ -8,7 +8,6 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	AspectSumX = 0,				-- Sum of widths for each surface
 	AspectSumY = 0,				-- Sum of heights for each surface
 	CrosshairColors = {},
-	Displacements = {},
 	IMesh = {},
 	InkColors = {},
 	InkShotMaterials = {},
@@ -20,20 +19,6 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	PlayerHullChanged = {},
 	PlayerShouldResetCamera = {},
 	RenderTarget = {},
-	SequentialSurfaces = {
-		Angles = {},
-		Areas = {},
-		Bounds = {},
-		DefaultAngles = {},
-		InkCircles = {},
-		Maxs = {},
-		Mins = {},
-		Moved = {},
-		Normals = {},
-		Origins = {},
-		u = {}, v = {},
-		Vertices = {},
-	},
 	WeaponRecord = {},
 }
 
@@ -59,29 +44,34 @@ if not ss.GetOption "enabled" then
 	return
 end
 
-local surf = ss.SequentialSurfaces
 local rt = ss.RenderTarget
 local crashpath = "splatoonsweps/crashdump.txt" -- Existing this means the client crashed before.
 local MAX_TRIANGLES = math.floor(32768 / 3) -- mesh library limitation
 local INK_SURFACE_DELTA_NORMAL = .8 -- Distance between map surface and ink mesh
-function ss.PrepareInkSurface(write)
-	ss.GenerateBSPTree(write)
+function ss.PrepareInkSurface(data)
+	ss.AABBTree = ss.RestoreJSONLimit(data.AABBTree)
+	ss.SurfaceArray = ss.RestoreJSONLimit(data.SurfaceArray)
+	ss.AreaBound  = data.UVInfo.AreaBound
+	ss.AspectSum  = data.UVInfo.AspectSum
+	ss.AspectSumX = data.UVInfo.AspectSumX
+	ss.AspectSumY = data.UVInfo.AspectSumY
+
 	if ss.SplatoonMapPorts[game.GetMap()] then INK_SURFACE_DELTA_NORMAL = 2 end
-	local numsurfs = #surf.Origins
+	local numsurfs = #ss.SurfaceArray
 	local rtsize = rt.BaseTexture:Width()
 	local rtarea = rtsize^2
 	local rtmargin = 4 / rtsize -- Render Target margin
 	local arearatio = 41.3329546960896 / rtsize * -- arearatio[units/pixel], Found by Excel bulldozing
 	(ss.AreaBound * ss.AspectSum / numsurfs * ss.AspectSumX / ss.AspectSumY / 2500 + numsurfs)^.523795515713613
-	local convertunit = rtsize * arearatio -- convertunit[units/pixel], A[pixel] * units/pixel -> A*[units]
+	local convertunit = rtsize * arearatio -- convertunit[units/pixel], A[pixel] * units/pixel -> A[units]
 	local sortedsurfs, movesurfs = {}, {}
 	local NumMeshTriangles, nummeshes, dv, divuv, half = 0, 1, 0, 1
 	local u, v, nv, bu, bv, bk = 0, 0, 0 -- cursor(u, v), shelf height, rectangle size(u, v), beginning of k
-	for k in SortedPairsByValue(surf.Areas, true) do -- Placement of map polygons by Next-Fit algorithm.
-		sortedsurfs[#sortedsurfs + 1] = k
-		NumMeshTriangles = NumMeshTriangles + #surf.Vertices[k] - 2
+	for k, s in SortedPairsByMemberValue(ss.SurfaceArray, "Area", true) do -- Placement of map polygons by Next-Fit algorithm.
+		sortedsurfs[#sortedsurfs + 1] = s.Index
+		NumMeshTriangles = NumMeshTriangles + #s.Vertices - 2
 
-		bu, bv = surf.Bounds[k].x / convertunit, surf.Bounds[k].y / convertunit
+		bu, bv = s.Bound.x / convertunit, s.Bound.y / convertunit
 		nv = math.max(nv, bv)
 		if u + bu > 1 then -- Creating a new shelf
 			if v + nv + rtmargin > 1 then
@@ -92,23 +82,21 @@ function ss.PrepareInkSurface(write)
 		end
 
 		if u == 0 then bk = #sortedsurfs end -- Storing the first element of current shelf
-		for i, vt in ipairs(surf.Vertices[k]) do -- Get UV coordinates
-			local meshvert = vt + surf.Normals[k] * INK_SURFACE_DELTA_NORMAL
-			local UV = ss.To2D(vt, surf.Origins[k], surf.Angles[k]) / convertunit
-			surf.Vertices[k][i] = {pos = meshvert, u = UV.x + u, v = UV.y + v}
+		for i, vert in ipairs(s.Vertices) do -- Get UV coordinates
+			local meshvert = vert + s.Normal * INK_SURFACE_DELTA_NORMAL
+			local UV = ss.To2D(vert, s.Origin, s.Angles) / convertunit
+			s.Vertices[i] = {pos = meshvert, u = UV.x + u, v = UV.y + v}
 		end
 
-		if ss.Displacements[k] then
-			NumMeshTriangles = NumMeshTriangles + #ss.Displacements[k].Triangles - 2
-			for i = 0, #ss.Displacements[k].Positions do
-				local vt = ss.Displacements[k].Positions[i]
-				local meshvert = vt.pos - surf.Normals[k] * surf.Normals[k]:Dot(vt.vec * vt.dist)
-				local UV = ss.To2D(meshvert, surf.Origins[k], surf.Angles[k]) / convertunit
-				vt.u, vt.v = UV.x + u, UV.y + v
+		if s.Displacement then
+			NumMeshTriangles = NumMeshTriangles + #s.Displacement.Triangles - 2
+			for i, vt in ipairs(s.Displacement.Vertices) do
+				local UV = ss.To2D(s.Displacement.VerticesGrid[i], s.Origin, s.Angles) / convertunit
+				s.Displacement.Vertices[i] = {pos = vt, u = UV.x + u, v = UV.y + v}
 			end
 		end
 
-		surf.u[k], surf.v[k] = u, v
+		s.u, s.v = u, v
 		u = u + bu + rtmargin -- Advance U-coordinate
 	end
 
@@ -143,28 +131,28 @@ function ss.PrepareInkSurface(write)
 		end
 
 		for sortedID, k in ipairs(sortedsurfs) do
+			local s = ss.SurfaceArray[k]
 			if half and sortedID >= half.id then -- If current polygon is moved
-				local bu = surf.Bounds[k].x / convertunit * divuv
-				surf.u[k], surf.v[k] = surf.v[k] - dv, 1 - surf.u[k] - bu
-				surf.Moved[k] = true
-				for _, vertex in ipairs(surf.Vertices[k]) do
-					vertex.u, vertex.v = vertex.v - dv, 1 - vertex.u
+				local bu = s.Bound.x / convertunit * divuv
+				s.u, s.v = s.v - dv, 1 - s.u - bu
+				s.Moved = true
+				for _, vert in ipairs(s.Vertices) do
+					vert.u, vert.v = vert.v - dv, 1 - vert.u
 				end
 
-				if ss.Displacements[k] then
-					for i = 0, #ss.Displacements[k].Positions do
-						local vertex = ss.Displacements[k].Positions[i]
-						vertex.u, vertex.v = vertex.v - dv, 1 - vertex.u
+				if s.Displacement then
+					for i, vert in ipairs(s.Displacement.Vertices) do
+						vert.u, vert.v = vert.v - dv, 1 - vert.u
 					end
 				end
 			end
 
-			surf.u[k], surf.v[k] = surf.u[k] / divuv, surf.v[k] / divuv
-			if ss.Displacements[k] then
-				local verts = ss.Displacements[k].Positions
-				for _, v in pairs(verts) do v.u, v.v = v.u / divuv, v.v / divuv end
-				for _, v in ipairs(surf.Vertices[k]) do v.u, v.v = v.u / divuv, v.v / divuv end
-				for _, t in ipairs(ss.Displacements[k].Triangles) do
+			s.u, s.v = s.u / divuv, s.v / divuv
+			if s.Displacement then
+				local verts = s.Displacement.Vertices
+				for _, v in ipairs(verts) do v.u, v.v = v.u / divuv, v.v / divuv end
+				for _, v in ipairs(s.Vertices) do v.u, v.v = v.u / divuv, v.v / divuv end
+				for _, t in ipairs(s.Displacement.Triangles) do
 					local tv = {verts[t[1]], verts[t[2]], verts[t[3]]}
 					local n = (tv[1].pos - tv[2].pos):Cross(tv[3].pos - tv[2].pos):GetNormalized()
 					for _, p in ipairs(tv) do
@@ -177,15 +165,13 @@ function ss.PrepareInkSurface(write)
 
 					ContinueMesh()
 				end
-
-				ss.Displacements[k] = true
 			else
-				for t, v in ipairs(surf.Vertices[k]) do
+				for t, v in ipairs(s.Vertices) do
 					v.u, v.v = v.u / divuv, v.v / divuv
 					if t > 2 then
 						for _, i in ipairs {t - 1, t, 1} do
-							local v = surf.Vertices[k][i]
-							mesh.Normal(surf.Normals[k])
+							local v = s.Vertices[i]
+							mesh.Normal(s.Normal)
 							mesh.Position(v.pos)
 							mesh.TexCoord(0, v.u, v.v)
 							mesh.TexCoord(1, v.u, v.v)
@@ -196,16 +182,8 @@ function ss.PrepareInkSurface(write)
 					end
 				end
 			end
-
-			if not ss.Debug then
-				surf.Areas[k], surf.Vertices[k] = nil
-			end
 		end
 		mesh.End()
-	end
-
-	if not ss.Debug then
-		surf.Areas, surf.Vertices, surf.AreaBound = nil
 	end
 
 	ss.ClearAllInk()
@@ -317,38 +295,32 @@ hook.Add("InitPostEntity", "SplatoonSWEPs: Clientside initialization", function(
 		}
 	)
 
-	file.Delete(crashpath)
+	file.Delete(crashpath) -- Succeeded to make RTs and remove crash detection
 
 	-- Checking ink map in data/
-	local pathbsp = string.format("maps/%s.bsp", game.GetMap())
-	local path = string.format("splatoonsweps/%s.txt", game.GetMap())
-	local InkCRCServer = GetGlobalString "SplatoonSWEPs: Ink map CRC"
-	local data = file.Open(path, "rb", "DATA") or file.Open("data/" .. path, "rb", "GAME")
-	local MapCRC = tonumber(util.CRC(file.Read(pathbsp, true) or ""))
-	local InkCRC = util.CRC(file.Read("data/" .. path, true) or "")
-	local IsValid = data and data:Size() > 4 and data:ReadULong() == MapCRC and (ss.sp or InkCRCServer == InkCRC)
+	local path = ("splatoonsweps/%s.txt"):format(game.GetMap())
+	local pathbsp = ("maps/%s.bsp"):format(game.GetMap())
+	local inkCRCServer = GetGlobalString "SplatoonSWEPs: Ink map CRC"
+	local dataJSON = file.Read(path) or file.Read("data/" .. path, true) or ""
+	local dataTable = util.JSONToTable(util.Decompress(dataJSON))
+	local mapCRC = tonumber(util.CRC(file.Read(pathbsp, true)))
+	local inkCRC = util.CRC(dataJSON)
+	local isvalid = dataTable.MapCRC == mapCRC and (ss.sp or inkCRC == inkCRCServer)
 	local UseDownloaded = false
-	if data then data:Close() end
-	if ss.mp and not IsValid then
+	if ss.mp and not isvalid then -- Local ink cache ~= Ink cache from server
 		file.Rename(path, path .. ".txt")
-		data = file.Open("data/" .. path, "rb", "GAME")
-		InkCRC = util.CRC(file.Read("data/" .. path, true) or "")
-		IsValid = data and data:Size() > 4 and data:ReadULong() == MapCRC and InkCRCServer == InkCRC
+		dataJSON = file.Read("data/" .. path, true) or ""
+		dataTable = util.JSONToTable(util.Decompress(dataJSON))
+		inkCRC = util.CRC(dataJSON)
+		isvalid = dataTable.MapCRC == mapCRC and inkCRC == inkCRCServer
 		UseDownloaded = true
-		if data then data:Close() end
+		file.Rename(path .. ".txt", path)
 	end
 
-	if not IsValid then
-		if ss.mp then file.Rename(path .. ".txt", path) end
-		net.Start "SplatoonSWEPs: Redownload ink data"
-		net.SendToServer()
-		notification.AddProgress("SplatoonSWEPs: Redownload ink data", "Downloading ink map...")
-		return
-	end
-
-	if ss.mp and not UseDownloaded then file.Rename(path .. ".txt", path) end
-	ss.PrepareInkSurface(file.Read("data/" .. path, true))
-	if ss.mp and UseDownloaded then file.Rename(path .. ".txt", path) end
+	if isvalid then ss.PrepareInkSurface(dataTable) return end
+	net.Start "SplatoonSWEPs: Redownload ink data"
+	net.SendToServer()
+	notification.AddProgress("SplatoonSWEPs: Redownload ink data", "Downloading ink map...")
 end)
 
 -- Local player isn't considered by Trace.  This is a poor workaround.

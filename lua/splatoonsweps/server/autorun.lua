@@ -6,11 +6,8 @@ SplatoonSWEPs = SplatoonSWEPs or {
 	AspectSum = 0,
 	AspectSumX = 0,
 	AspectSumY = 0,
-	BSP = {},
 	CrosshairColors = {},
-	Displacements = {},
 	LastHitID = {},
-	Models = {},
 	NoCollide = {},
 	NumInkEntities = 0,
 	InkColors = {},
@@ -58,8 +55,8 @@ function ss.ClearAllInk()
 	net.Send(ss.PlayersReady)
 	table.Empty(ss.InkQueue)
 	table.Empty(ss.PaintSchedule)
-	for node in ss.BSPPairsAll() do
-		for i, v in pairs(node.Surfaces.InkCircles) do
+	for _, s in ipairs(ss.SurfaceArray) do
+		for i, v in pairs(s.InkSurfaces) do
 			table.Empty(v)
 		end
 	end
@@ -160,84 +157,32 @@ end
 -- Parse the map and store the result to txt, then send it to the client.
 hook.Add("PostCleanupMap", "SplatoonSWEPs: Cleanup all ink", ss.ClearAllInk)
 hook.Add("InitPostEntity", "SplatoonSWEPs: Serverside Initialization", function()
-	-- This is needed due to a really annoying bug (GitHub/garrysmod-issues #1495)
-	SetGlobalBool("SplatoonSWEPs: IsDedicated", game.IsDedicated())
-
-	local path = string.format("splatoonsweps/%s.txt", game.GetMap())
-	local data = file.Open(path, "rb", "DATA")
-	local mapCRC = tonumber(util.CRC(file.Read(string.format("maps/%s.bsp", game.GetMap()), true) or "")) or 0
+	local path = ("splatoonsweps/%s.txt"):format(game.GetMap())
+	local pathbsp = ("maps/%s.bsp"):format(game.GetMap())
+	local data = util.JSONToTable(file.Read(path) or "") or {}
+	local mapCRC = tonumber(util.CRC(file.Read(pathbsp, true)))
 	if not file.Exists("splatoonsweps", "DATA") then file.CreateDir "splatoonsweps" end
-	if not data or data:Size() < 4 or data:ReadULong() ~= mapCRC then -- First 4 bytes are map CRC.
-		ss.BSP:Init() -- Parse the map
-		ss.BSP = nil
-		collectgarbage "collect"
-		file.Write(path, "") -- Create an empty file
-		if data then data:Close() end
-		data = file.Open(path, "wb", "DATA")
-		data:WriteULong(ss.NumSurfaces)
-		data:WriteUShort(table.Count(ss.Displacements))
-		data:WriteDouble(ss.AreaBound)
-		data:WriteDouble(ss.AspectSum)
-		data:WriteDouble(ss.AspectSumX)
-		data:WriteDouble(ss.AspectSumY)
-		for node in ss.BSPPairsAll() do
-			local surf = node.Surfaces
-			for i, index in ipairs(surf.Indices) do
-				data:WriteULong(math.abs(index))
-				data:WriteFloat(surf.Angles[i].pitch)
-				data:WriteFloat(surf.Angles[i].yaw)
-				data:WriteFloat(surf.Angles[i].roll)
-				data:WriteFloat(surf.Areas[i])
-				data:WriteFloat(surf.Bounds[i].x)
-				data:WriteFloat(surf.Bounds[i].y)
-				data:WriteFloat(surf.Bounds[i].z)
-				data:WriteFloat(surf.Normals[i].x)
-				data:WriteFloat(surf.Normals[i].y)
-				data:WriteFloat(surf.Normals[i].z)
-				data:WriteFloat(surf.Origins[i].x)
-				data:WriteFloat(surf.Origins[i].y)
-				data:WriteFloat(surf.Origins[i].z)
-				data:WriteUShort(#surf.Vertices[i])
-				for k, v in ipairs(surf.Vertices[i]) do
-					data:WriteFloat(v.x)
-					data:WriteFloat(v.y)
-					data:WriteFloat(v.z)
-				end
-			end
-		end
+	if data.MapCRC ~= mapCRC then
+		include "splatoonsweps/server/buildsurfaces.lua"
+		data.MapCRC = mapCRC
+		data.AABBTree = ss.AvoidJSONLimit(ss.AABBTree)
+		data.SurfaceArray = ss.AvoidJSONLimit(ss.SurfaceArray)
+		data.UVInfo = {
+			AreaBound = ss.AreaBound,
+			AspectSum = ss.AspectSum,
+			AspectSumX = ss.AspectSumX,
+			AspectSumY = ss.AspectSumY,
+		}
 
-		for i, disp in pairs(ss.Displacements) do
-			local power = math.log(math.sqrt(#disp + 1) - 1, 2) - 1 --1, 2, 3
-
-			data:WriteUShort(i)
-			data:WriteByte(power)
-			data:WriteUShort(#disp)
-			for k = 0, #disp do
-				local v = disp[k]
-				data:WriteFloat(v.pos.x)
-				data:WriteFloat(v.pos.y)
-				data:WriteFloat(v.pos.z)
-				data:WriteFloat(v.vec.x)
-				data:WriteFloat(v.vec.y)
-				data:WriteFloat(v.vec.z)
-				data:WriteFloat(v.dist)
-			end
-		end
-
-		data:Close() -- data = map info converted into binary data
-		local write = util.Compress(file.Read(path)) -- write = compressed data
-		file.Delete(path) -- Remove the file temporarily
-		file.Write(path, "") -- Create an empty file again
-		data = file.Open(path, "wb", "DATA")
-		data:WriteULong(mapCRC)
-		for c in write:gmatch "." do data:WriteByte(c:byte()) end
-		data:Close() -- data = map CRC + compressed data
+		file.Write(path, util.Compress(util.TableToJSON(data)))
 	else
-		if data then data:Close() end
-		ss.GenerateBSPTree(file.Read("data/" .. path, true))
+		ss.AABBTree = ss.RestoreJSONLimit(data.AABBTree)
+		ss.SurfaceArray = ss.RestoreJSONLimit(data.SurfaceArray)
 	end
 
-	SetGlobalString("SplatoonSWEPs: Ink map CRC", util.CRC(file.Read("data/" .. path, true)))
+	-- This is needed due to a really annoying bug (GitHub/garrysmod-issues #1495)
+	SetGlobalBool("SplatoonSWEPs: IsDedicated", game.IsDedicated())
+	SetGlobalString("SplatoonSWEPs: Ink map CRC", util.CRC(file.Read(path))) -- CRC check clientside
 	resource.AddSingleFile("data/" .. path)
 end)
 

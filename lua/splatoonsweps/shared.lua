@@ -86,265 +86,79 @@ function ss.CreateSurfaceStructure()
 	}
 end
 
--- Parses the BSP file and stores the BSP tree to SplatoonSWEPs.Models.
-function ss.GenerateBSPTree(write)
-	local mapfile = string.format("maps/%s.bsp", game.GetMap())
-	assert(file.Exists(mapfile, "GAME"), "SplatoonSWEPs: Attempt to load a non-existent map!")
-
-	local bsp = file.Open(mapfile, "rb", "GAME")
-	local header = {lumps = {}}
-
-	local size = 16
-	local PLANES, NODES, LEAFS, MODELS = 1, 5, 10, 14 -- Lump index
-	for _, i in ipairs {PLANES, NODES, LEAFS, MODELS} do
-		bsp:Seek(i * size + 8) -- Reading header
-		header.lumps[i] = {}
-		header.lumps[i].data = {}
-		header.lumps[i].offset = bsp:ReadLong()
-		header.lumps[i].length = bsp:ReadLong()
-	end
-
-	local planes = header.lumps[PLANES]
-	size = 20
-	bsp:Seek(planes.offset)
-	planes.num = math.min(math.floor(planes.length / size) - 1, 65536 - 1)
-	for i = 0, planes.num do
-		local x = bsp:ReadFloat()
-		local y = bsp:ReadFloat()
-		local z = bsp:ReadFloat()
-		planes.data[i] = {}
-		planes.data[i].normal = Vector(x, y, z)
-		planes.data[i].distance = bsp:ReadFloat()
-		bsp:Skip(4) -- type
-	end
-
-	local leafs = header.lumps[LEAFS]
-	local size = 32
-	bsp:Seek(leafs.offset)
-	leafs.num = math.floor(leafs.length / size) - 1
-	for i = 0, leafs.num do
-		leafs.data[i] = {}
-		leafs.data[i].Surfaces = ss.CreateSurfaceStructure()
-	end
-
-	local children = {}
-	local nodes = header.lumps[NODES]
-	bsp:Seek(nodes.offset)
-	nodes.num = math.min(math.floor(nodes.length / size) - 1, 65536 - 1)
-	for i = 0, nodes.num do
-		nodes.data[i] = {}
-		nodes.data[i].ChildNodes = {}
-		nodes.data[i].Surfaces = ss.CreateSurfaceStructure()
-		nodes.data[i].Separator = planes.data[bsp:ReadLong()]
-		children[i] = {}
-		children[i][1] = bsp:ReadLong()
-		children[i][2] = bsp:ReadLong()
-		bsp:Skip(20) -- mins, maxs, firstface, numfaces, area, padding
-	end
-
-	for i = 0, nodes.num do
-		for k = 1, 2 do
-			local child = children[i][k]
-			if child < 0 then
-				child, leafs.data[-child - 1] = leafs.data[-child - 1]
-			else
-				child = nodes.data[child]
-			end
-			nodes.data[i].ChildNodes[k] = child
-		end
-	end
-
-	local models = header.lumps[MODELS]
-	bsp:Seek(models.offset)
-	size = 4 * 12
-	models.num = math.floor(models.length / size) - 1
-	for i = 0, models.num do
-		bsp:Skip(12 * 3)
-		ss.Models[#ss.Models + 1] = nodes.data[bsp:ReadLong()]
-		bsp:Skip(8)
-	end
-
-	bsp:Close()
-
-	-- Generating surfaces...
-	local surf = CLIENT and ss.SequentialSurfaces
-	local path = string.format("splatoonsweps/%s_decompress.txt", game.GetMap())
-	file.Write(path, util.Decompress(write:sub(5))) -- First 4 bytes are map CRC.  Remove them.
-	local data = file.Open("data/" .. path, "rb", "GAME")
-	local numsurfs = data:ReadULong()
-	local numdisps = data:ReadUShort()
-	ss.AreaBound = data:ReadDouble()
-	ss.AspectSum = data:ReadDouble()
-	ss.AspectSumX = data:ReadDouble()
-	ss.AspectSumY = data:ReadDouble()
-	for _ = 1, numsurfs do
-		local i = data:ReadULong()
-		local p = data:ReadFloat()
-		local y = data:ReadFloat()
-		local r = data:ReadFloat()
-		local angle = Angle(p, y, r)
-		local area = data:ReadFloat()
-		local x = data:ReadFloat()
-		local y = data:ReadFloat()
-		local defaultangle = data:ReadFloat()
-		local bound = Vector(x, y)
-		x = data:ReadFloat()
-		y = data:ReadFloat()
-		local z = data:ReadFloat()
-		local normal = Vector(x, y, z)
-		x = data:ReadFloat()
-		y = data:ReadFloat()
-		z = data:ReadFloat()
-		local origin = Vector(x, y, z)
-		local vertices = {}
-		local mins = Vector(math.huge, math.huge, math.huge)
-		local maxs = -mins
-		for __ = 1, data:ReadUShort() do
-			x = data:ReadFloat()
-			y = data:ReadFloat()
-			z = data:ReadFloat()
-			local v = Vector(x, y, z)
-			vertices[#vertices + 1] = v
-			mins = ss.MinVector(mins, v)
-			maxs = ss.MaxVector(maxs, v)
-		end
-
-		local leaf = ss.FindLeaf(vertices)
-		if SERVER then
-			surf = leaf.Surfaces
-			surf.Indices[i] = i
-		else
-			leaf.Surfaces[i] = true
-		end
-
-		surf.Angles[i] = angle
-		surf.Areas[i] = area
-		surf.Bounds[i] = bound
-		surf.DefaultAngles[i] = defaultangle
-		surf.Normals[i] = normal
-		surf.Origins[i] = origin
-		surf.Vertices[i] = vertices
-		surf.InkCircles[i] = {}
-		surf.Mins[i] = mins
-		surf.Maxs[i] = maxs
-	end
-
-	for _ = 1, numdisps do
-		local i = data:ReadUShort()
-		local positions = {}
-		local power = 2^(data:ReadByte() + 1) + 1
-		local disp = {Positions = {}, Triangles = {}}
-		local mins = Vector(math.huge, math.huge, math.huge)
-		local maxs = -mins
-		for k = 0, data:ReadUShort() do
-			local v = {u = 0, v = 0}
-			local x = data:ReadFloat()
-			local y = data:ReadFloat()
-			local z = data:ReadFloat()
-			v.pos = Vector(x, y, z)
-			x = data:ReadFloat()
-			y = data:ReadFloat()
-			z = data:ReadFloat()
-			v.vec = Vector(x, y, z)
-			v.dist = data:ReadFloat()
-			disp.Positions[k] = v
-			mins = ss.MinVector(mins, v.pos)
-			maxs = ss.MaxVector(maxs, v.pos)
-			positions[#positions + 1] = v.pos
-
-			local invert = Either(k % 2 == 0, 1, 0) --Generate triangles from displacement mesh.
-			if k % power < power - 1 and math.floor(k / power) < power - 1 then
-				disp.Triangles[#disp.Triangles + 1] = {k + power + invert, k + 1, k}
-				disp.Triangles[#disp.Triangles + 1] = {k + 1 - invert, k + power, k + power + 1}
-			end
-		end
-
-		local leaf = ss.FindLeaf(positions)
-		if SERVER then
-			surf = leaf.Surfaces
-		else
-			ss.Displacements[i] = disp
-			leaf.Surfaces[i] = true
-		end
-
-		surf.Mins[i] = ss.MinVector(surf.Mins[i] or mins, mins)
-		surf.Maxs[i] = ss.MaxVector(surf.Maxs[i] or maxs, maxs)
-	end
-
-	data:Close()
-	file.Delete(path)
-end
-
--- Returns which sides the polygon specified by given vertices is.
--- Arguments:
---   table vertices	| Vertices of the face
---   Vector normal	| Normal of plane
---   number dist	| Distance from plane to origin
--- Returns:
---   Positive value | Face is in positive side of the plane
---   Negative value | Face is in negative side of the plane
---   0              | Face intersects with the plane
-local PlaneThickness = 0.2
-local function AcrossPlane(vertices, normal, dist)
-	local sign
-	for i, v in ipairs(vertices) do --for each vertices of face
-		local dot = normal:Dot(v) - dist
-		if math.abs(dot) > PlaneThickness then
-			if sign and sign * dot < 0 then return 0 end
-			sign = (sign or 0) + dot
-		end
-	end
-	return sign or 0
-end
-
--- Returns which node the polygon specified by given vertices is in.
--- Arguments:
---   table vertices    | Vertices of the face
---   number modelindex | BSP tree index.  Optional.
--- Returning:
---   table node        | The node which contains the face.
-function ss.FindLeaf(vertices, modelindex)
-	local node = ss.Models[modelindex or 1]
-	while node.Separator do
-		local sign = AcrossPlane(vertices, node.Separator.normal, node.Separator.distance)
-		if sign == 0 then return node end
-		node = node.ChildNodes[sign > 0 and 1 or 2]
-	end
-	return node
-end
-
--- Finds BSP nodes/leaves which includes the given face.
--- Use as an iterator function:
---   for nodes in SplatoonSWEPs:BSPPairs {table of vertices} ... end
--- Arguments:
---   table vertices		| Table of Vertices which represents the face.
---   number modelindex	| BSP tree index.  Optional.
--- Returns:
---   function			| An iterator function.
-function ss.BSPPairs(vertices, modelindex)
-	return function(queue, old)
-		if old.Separator then
-			local sign = AcrossPlane(vertices, old.Separator.normal, old.Separator.distance)
-			if sign >= 0 then queue[#queue + 1] = old.ChildNodes[1] end
-			if sign <= 0 then queue[#queue + 1] = old.ChildNodes[2] end
-		end
-		return ss.tablepop(queue)
-	end, {ss.Models[modelindex or 1]}, {}
-end
-
--- Returns an iterator function which covers all nodes in map BSP tree.
+-- There is an annoying limitation on util.JSONToTable(),
+-- which is that the amount of a table is up to 15000.
+-- Therefore, GMOD can't save/restore a table if #source > 15000.
+-- This function sanitises a table with a large amount of data.
 -- Argument:
---   number modelindex	| BSP tree index.  Optional.
+--   table source | A table containing a large amount of data.
 -- Returning:
---   function			| An iterator function.
-function ss.BSPPairsAll(modelindex)
-	return function(queue, old)
-		if old and old.ChildNodes then
-			queue[#queue + 1] = old.ChildNodes[1]
-			queue[#queue + 1] = old.ChildNodes[2]
+--   table        | A nested table.  Each element has up to 15000 data.
+function ss.AvoidJSONLimit(source)
+	local s = {}
+	for chunk = 1, math.ceil(#source / 15000) do
+		local t = {}
+		for i = 1, 15000 do
+			local index = (chunk - 1) * 15000 + i
+			if index > #source then break end
+			t[#t + 1] = source[index]
 		end
-		return ss.tablepop(queue)
-	end, {ss.Models[modelindex or 1]}
+
+		s[chunk] = t
+	end
+
+	return s
+end
+
+-- Restores a table saved with ss.AvoidJSONLimit().
+-- Argument:
+--   table source | A nested table made by ss.AvoidJSONLimit().
+-- Returning:
+--   table        | A sequential table.
+function ss.RestoreJSONLimit(source)
+	local s = {}
+	for _, chunk in ipairs(source) do
+		for _, v in ipairs(chunk) do s[#s + 1] = v end
+	end
+
+	return s
+end
+
+-- Finds AABB-tree nodes/leaves which includes the given AABB.
+-- Use as an iterator function:
+--   for nodes in SplatoonSWEPs:SearchAABB(AABB) do ... end
+-- Arguments:
+--   table AABB | {mins = Vector(), maxs = Vector()}
+-- Returns:
+--   table      | A sequential table.
+function ss.SearchAABB(AABB, normal)
+	local function recursive(a)
+		local t = {}
+		if a.SurfIndices then
+			for _, i in ipairs(a.SurfIndices) do
+				local a = ss.SurfaceArray[i]
+				if a.Normal:Dot(normal) > ss.MAX_COS_DEG_DIFF then
+					if ss.CollisionAABB(a.AABB.mins, a.AABB.maxs, AABB.mins, AABB.maxs) then
+						t[#t + 1] = a
+					end
+				end
+			end
+		else
+			local l = ss.AABBTree[a.Children[1]]
+			local r = ss.AABBTree[a.Children[2]]
+			if l and ss.CollisionAABB(l.AABB.mins, l.AABB.maxs, AABB.mins, AABB.maxs) then
+				table.Add(t, recursive(l))
+			end
+
+			if r and ss.CollisionAABB(r.AABB.mins, r.AABB.maxs, AABB.mins, AABB.maxs) then
+				table.Add(t, recursive(r))
+			end
+		end
+
+		return t
+	end
+
+	return ipairs(recursive(ss.AABBTree[1]))
 end
 
 -- Compares each component and returns the smaller one.

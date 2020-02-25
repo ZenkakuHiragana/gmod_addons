@@ -575,3 +575,65 @@ function bsp:Parse(parse_type)
 		ss.ProtectedCall(ParseFunction[parse_type], lump)
 	end
 end
+
+-- do return end
+hook.Remove("Think", "Test", function()
+	if CLIENT then return end
+	if not ss.AABBTree then return end
+	if player.GetCount() == 0 then return end
+	local t = player.GetByID(1):GetEyeTrace()
+	local p = t.HitPos
+	local normal = t.HitNormal
+	local size = .1
+	local mins, maxs = p - ss.vector_one * size, p + ss.vector_one * size
+	greatzenkakuman.debug.DShort()
+	if player.GetByID(1):KeyDown(IN_ATTACK) then
+		local function traverse(a)
+			local t = {}
+			if a.SurfIndices then
+				for _, i in ipairs(a.SurfIndices) do
+					local a = ss.SurfaceArray[i]
+					if a.Normal:Dot(normal) > ss.MAX_COS_DEG_DIFF then
+						if ss.CollisionAABB(a.AABB.mins, a.AABB.maxs, mins, maxs) then
+							t[#t + 1] = a
+						end
+					end
+				end
+
+				return t
+			end
+
+			local l = ss.AABBTree[a.Children[1]]
+			local r = ss.AABBTree[a.Children[2]]
+			if ss.CollisionAABB(l.AABB.mins, l.AABB.maxs, mins, maxs) then
+				table.Add(t, traverse(l))
+			end
+
+			if ss.CollisionAABB(r.AABB.mins, r.AABB.maxs, mins, maxs) then
+				table.Add(t, traverse(r))
+			end
+
+			return t
+		end
+
+		greatzenkakuman.debug.DColor(0, 255, 255, 4)
+		greatzenkakuman.debug.DBox(mins, maxs)
+		util.TimerCycle()
+		for i, a in ipairs(traverse(ss.AABBTree[1])) do
+			greatzenkakuman.debug.DColor(0, 255, 0, 4)
+			greatzenkakuman.debug.DBox(a.AABB.mins, a.AABB.maxs)
+			greatzenkakuman.debug.DColor(255, 255, 0, 4)
+			greatzenkakuman.debug.DPoly(a.Vertices)
+		end
+		print("NEW", util.TimerCycle())
+	elseif player.GetByID(1):KeyDown(IN_ATTACK2) then
+		util.TimerCycle()
+		for _, a in ss.SearchAABB({mins = mins, maxs = maxs}, normal) do
+			greatzenkakuman.debug.DColor(0, 255, 0, 4)
+			greatzenkakuman.debug.DBox(a.AABB.mins, a.AABB.maxs)
+			greatzenkakuman.debug.DColor(255, 255, 0, 4)
+			greatzenkakuman.debug.DPoly(a.Vertices)
+		end
+		print("OLD", util.TimerCycle())
+	end
+end)

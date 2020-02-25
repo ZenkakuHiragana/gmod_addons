@@ -5,7 +5,7 @@ local ss = SplatoonSWEPs
 if not ss then return end
 local abs = math.abs
 local Angle = Angle
-local BSPPairs = ss.BSPPairs
+local SearchAABB = ss.SearchAABB
 local CLIENT = CLIENT
 local CollisionAABB = ss.CollisionAABB
 local cos = math.cos
@@ -28,7 +28,6 @@ local net_WriteVector = net.WriteVector
 local NormalizeAngle = math.NormalizeAngle
 local pairs = pairs
 local rad = math.rad
-local SequentialSurfaces = ss.SequentialSurfaces
 local SERVER = SERVER
 local sin = math.sin
 local sp = ss.sp
@@ -53,13 +52,13 @@ end
 local gridsize = ss.InkGridSize
 local gridarea = gridsize * gridsize
 local griddivision = 1 / gridsize
-function ss.AddInkRectangle(color, id, inktype, localang, pos, radius, ratio, surf)
-	local pos2d = To2D(pos, surf.Origins[id], surf.Angles[id]) * griddivision
+function ss.AddInkRectangle(color, inktype, localang, pos, radius, ratio, s)
+	local pos2d = To2D(pos, s.Origin, s.Angles) * griddivision
 	local x0, y0 = pos2d.x, pos2d.y
-	local ink = surf.InkCircles[id]
+	local ink = s.InkSurfaces
 	local t = ss.InkShotMaterials[inktype]
 	local w, h = t.width, t.height
-	local surfsize = surf.Bounds[id] * griddivision
+	local surfsize = s.Bound * griddivision
 	local sw, sh = floor(surfsize.x), floor(surfsize.y)
 	local dy = radius * griddivision
 	local dx = ratio * dy
@@ -109,38 +108,42 @@ function ss.Paint(pos, normal, radius, color, angle, inktype, ratio, ply, classn
 	angle = NormalizeAngle(angle)
 
 	local area = 0
-	local ang, polys = normal:Angle(), {}
+	local ang = normal:Angle()
 	local ignoreprediction = not ply:IsPlayer() and SERVER and mp or nil
+	local AABB = {mins = ss.vector_one * math.huge, maxs = -ss.vector_one * math.huge}
 	ang.roll = abs(normal.z) > MAX_COS_DEG_DIFF and angle * normal.z or ang.yaw
 	for i, v in ipairs(reference_polys) do -- Scaling
-		polys[i] = To3D(v * radius, pos, ang)
+		local vertex = To3D(v * radius, pos, ang)
+		AABB.mins = ss.MinVector(AABB.mins, vertex)
+		AABB.maxs = ss.MaxVector(AABB.maxs, vertex)
 	end
 
+	AABB.mins:Add(-ss.vector_one * MIN_BOUND)
+	AABB.maxs:Add(ss.vector_one * MIN_BOUND)
 	SuppressHostEventsMP(ply)
-	local mins, maxs = GetBoundingBox(polys, MIN_BOUND)
-	for node in BSPPairs(polys) do
-		local surf = SERVER and node.Surfaces or SequentialSurfaces
-		for i, index in pairs(SERVER and surf.Indices or node.Surfaces) do
-			local angdiff = surf.Normals[i]:Dot(normal)
-			local div = Either(SERVER, SERVER and index < 0, ss.Displacements[i]) and 2 or 1
-			if angdiff > MAX_COS_DEG_DIFF / div and CollisionAABB(mins, maxs, surf.Mins[i], surf.Maxs[i]) then
-				local _, localang = WorldToLocal(vector_origin, ang, vector_origin, surf.Normals[i]:Angle())
-				localang = ang.yaw - localang.roll + surf.DefaultAngles[i]
-				local id = SERVER and index or i * (ss.Displacements[i] and -1 or 1)
-				local misc = Vector(radius, localang + (CLIENT and surf.Moved[i] and 90 or 0), ratio)
-				if SERVER then
-					net_Start "SplatoonSWEPs: Send an ink queue"
-					net_WriteInt(id, ss.SURFACE_ID_BITS)
-					net_WriteVector(misc)
-					net_WriteUInt(color, ss.COLOR_BITS)
-					net_WriteEntity(ply)
-					net_WriteUInt(inktype, ss.INK_TYPE_BITS)
-					net_WriteVector(pos)
-					net_Send(ss.PlayersReady)
-				else
-					ss.InkQueueReceiveFunction(id, misc, color, ply, inktype, pos)
-				end
-				area = area + AddInkRectangle(color, i, inktype, localang, pos, radius, ratio, surf)
+	for _, s in SearchAABB(AABB, normal) do
+		local _, localang = WorldToLocal(vector_origin, ang, vector_origin, s.Normal:Angle())
+		localang = ang.yaw - localang.roll + s.DefaultAngles
+		area = area + AddInkRectangle(color, inktype, localang, pos, radius, ratio, s)
+
+		local misc = Vector(radius, localang + (CLIENT and s.Moved and 90 or 0), ratio)
+		if SERVER then
+			net_Start "SplatoonSWEPs: Send an ink queue"
+			net_WriteUInt(s.Index, ss.SURFACE_ID_BITS)
+			net_WriteVector(misc)
+			net_WriteUInt(color, ss.COLOR_BITS)
+			net_WriteEntity(ply)
+			net_WriteUInt(inktype, ss.INK_TYPE_BITS)
+			net_WriteVector(pos)
+			net_Send(ss.PlayersReady)
+			if s.Normal.x > 0.8 then
+				print(s.Index)
+			end
+		else
+			ss.InkQueueReceiveFunction(s.Index, misc, color, ply, inktype, pos)
+			if s.Index == 6888 then
+				local t = {} for i, v in ipairs(s.Vertices) do t[i] = v.pos end
+				greatzenkakuman.debug.DPoly(t)
 			end
 		end
 	end
@@ -166,20 +169,13 @@ end
 function ss.GetSurfaceColor(tr)
 	if not tr.Hit then return end
 	local pos = tr.HitPos
-	for node in BSPPairs {pos - tr.HitNormal} do
-		local surf = SERVER and node.Surfaces or SequentialSurfaces
-		for i, index in pairs(SERVER and surf.Indices or node.Surfaces) do
-			local angdiff = surf.Normals[i]:Dot(tr.HitNormal)
-			local div = Either(SERVER, isnumber(index) and index < 0, ss.Displacements[i]) and 2 or 1
-			if angdiff > MAX_COS_DEG_DIFF / div
-			and CollisionAABB(pos - POINT_BOUND, pos + POINT_BOUND, surf.Mins[i], surf.Maxs[i]) then
-				local p2d = To2D(pos, surf.Origins[i], surf.Angles[i])
-				local ink = surf.InkCircles[i]
-				local x, y = floor(p2d.x * griddivision), floor(p2d.y * griddivision)
-				local colorid = ink[x] and ink[x][y]
-				if ss.Debug then ss.Debug.ShowInkStateMesh(Vector(x, y), i, surf) end
-				if colorid then return colorid end
-			end
-		end
+	local AABB = {mins = pos - POINT_BOUND, maxs = pos + POINT_BOUND}
+	for _, s in SearchAABB(AABB, tr.HitNormal) do
+		local p2d = To2D(pos, s.Origin, s.Angles)
+		local ink = s.InkSurfaces
+		local x, y = floor(p2d.x * griddivision), floor(p2d.y * griddivision)
+		local colorid = ink[x] and ink[x][y]
+		if ss.Debug then ss.Debug.ShowInkStateMesh(Vector(x, y), i, s) end
+		if colorid then return colorid end
 	end
 end

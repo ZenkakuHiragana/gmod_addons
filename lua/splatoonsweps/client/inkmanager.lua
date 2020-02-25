@@ -14,7 +14,6 @@ local inkmaterial = Material "splatoonsweps/splatoonink"
 local lightmapmaterial = Material "splatoonsweps/lightmapbrush"
 local normalmaterial = Material "splatoonsweps/splatoonink_normal"
 local rt = ss.RenderTarget
-local surf = ss.SequentialSurfaces
 local world = game.GetWorld()
 local function DrawMeshes(bDrawingDepth, bDrawingSkybox)
 	if ss.GetOption "hideink" then return end
@@ -51,8 +50,10 @@ function ss.ClearAllInk()
 		ss.AmbientColor = amb
 	end
 
-	for i, v in pairs(surf.InkCircles) do
-		table.Empty(v)
+	for _, s in ipairs(ss.SurfaceArray) do
+		for i, v in pairs(s.InkSurfaces) do
+			table.Empty(v)
+		end
 	end
 
 	render.PushRenderTarget(rt.BaseTexture)
@@ -91,13 +92,6 @@ local function ProcessPaintQueue()
 	}
 	local Benchmark = SysTime()
 	local texturename = "splatoonsweps/inkshot/shot%s"
-	local Angles = surf.Angles
-	local Bounds = surf.Bounds
-	local Moved = surf.Moved
-	local Normals = surf.Normals
-	local Origins = surf.Origins
-	local u = surf.u
-	local v = surf.v
 
 	local BaseTexture = rt.BaseTexture
 	local Normalmap = rt.Normalmap
@@ -113,7 +107,6 @@ local function ProcessPaintQueue()
 	local CollisionAABB2D = ss.CollisionAABB2D
 	local Dot = Vector().Dot
 	local floor = math.floor
-	local format = string.format
 	local GetColor = ss.GetColor
 	local LocalPlayer = LocalPlayer
 	local max = math.max
@@ -160,21 +153,21 @@ local function ProcessPaintQueue()
 		Benchmark = SysTime()
 		for time, queuetable in SortedPairs(PaintQueue, true) do
 			for id, q in SortedPairs(queuetable) do
-				local qn = q.n
-				local angle, origin, normal, moved = Angle(Angles[qn]), Origins[qn], Normals[qn], Moved[qn]
+				local s = ss.SurfaceArray[q.index]
+				local angle, origin, normal, moved = Angle(s.Angles), s.Origin, s.Normal, s.Moved
 				if moved then RotateAroundAxis(angle, normal, -90) end
 				local pos2d = To2D(q.pos, origin, angle) * UnitsToPixels
 				local px = pos2d.x
 				local py = pos2d.y
-				local bx = Bounds[qn].x * UnitsToPixels
-				local by = Bounds[qn].y * UnitsToPixels
+				local bx = s.Bound.x * UnitsToPixels
+				local by = s.Bound.y * UnitsToPixels
 				if moved then bx, by = by, bx end
 				local color = GetColor(q.c)
 				local r = Round(q.r * UnitsToPixels)
-				local up = u[qn] * UVToPixels
-				local vp = v[qn] * UVToPixels
+				local up = s.u * UVToPixels
+				local vp = s.v * UVToPixels
 				local lightorg = q.pos - normal * q.dispflag * (Dot(normal, q.pos - origin) - 1)
-				local settexture = format(texturename, q.t)
+				local settexture = texturename:format(q.t)
 				if moved then px, py = -px, by - py end
 				local cx = Round(px + up) -- 2D center position
 				local cy = Round(py + vp)
@@ -244,7 +237,7 @@ local function ProcessPaintQueue()
 					if q.done > NumRepetition then
 						queuetable[id] = nil
 						if q.owner ~= LocalPlayer() then
-							AddInkRectangle(q.c, qn, q.t, q.inkangle, q.pos, q.r, q.ratio, surf)
+							AddInkRectangle(q.c, q.t, q.inkangle, q.pos, q.r, q.ratio, surf)
 						end
 					end
 
