@@ -1,4 +1,5 @@
 
+local c = ENT.Enum.Conditions
 local function CheckHitFriendly(self)
     local tr = util.TraceLine {
         start = start or self:GetShootPos(),
@@ -100,7 +101,7 @@ local function DefaultFireFunction(self, w, pos, dir)
             filter = self,
             mask = MASK_SHOT,
         }
-        -- debugoverlay.Line(tr.StartPos, tr.HitPos, 5, Color(0, 255, 0))
+        self:line("MeleeTrace", tr.StartPos, tr.HitPos, 3)
         if tr.Hit then
             local d = DamageInfo()
             d:SetAttacker(bullet.Attacker)
@@ -180,7 +181,7 @@ local function TestThrowVec(self, from, to, draw)
     local to = to or self:GetShootTo()
     local dir = to - from
     local dist2D = dir:Length2D()
-    local occluded = self:HasCondition(self.Enum.Conditions.COND_ENEMY_OCCLUDED)
+    local occluded = self:HasCondition(c.COND_ENEMY_OCCLUDED)
     for i = 3, 14 do
         local v0 = 100 * i
         local velocity, ndir2D, v2D = CalcThrowVec(self, from, to, occluded, v0)
@@ -202,8 +203,9 @@ local function TestThrowVec(self, from, to, draw)
                     maxs = Vector(2, 2, 2),
                 }
 
-                -- local color = Color(0, tr.Hit and 0 or 255, 0)
-                -- debugoverlay.SweptBox(tr.StartPos, tr.HitPos, -Vector(2, 2, 2), Vector(2, 2, 2), Angle(), 3, color)
+                self:swept("TestThrowVec", tr.StartPos, tr.HitPos,
+                -Vector(2, 2, 2), Vector(2, 2, 2), nil, Color(0, tr.Hit and 0 or 255, 0))
+
                 if tr.Hit and self:Disposition(tr.Entity) ~= D_HT then
                     pass = false
                     break
@@ -222,22 +224,24 @@ local function GrenadeLOS(self, start, endpos)
     self.GrenadeTossVelocity = nil
     self.GrenadeTossDirection2D = nil
     self.GrenadeTossVelocity2D = nil
-    self:ClearCondition(self.Enum.Conditions.COND_WEAPON_BLOCKED_BY_FRIEND)
+    self:ClearCondition(c.COND_WEAPON_BLOCKED_BY_FRIEND)
     return TestThrowVec(self, start, endpos) and true
 end
 
 local function ThrowGrenade(self, w, pos, dir)
-    local att = self:LookupAttachment "anim_attachment_LH"
+    local att = self:LookupAttachment "anim_attachment_RH"
     local p = self:GetAttachment(att)
     local shootTo = self:GetShootTo()
-    local occluded = self:HasCondition(self.Enum.Conditions.COND_ENEMY_OCCLUDED)
+    local occluded = self:HasCondition(c.COND_ENEMY_OCCLUDED)
     if occluded then shootTo = self:GetLastPosition() + vector_up * 100 end
-    local wait = occluded and 1 or 0.8
+    -- local wait = occluded and 1 or 0.8
+    local wait = 0.1
     local dist2D = (shootTo - p.Pos):Length2D()
     local throwVec, dir2D, v2D = TestThrowVec(self, p.Pos, shootTo)
     if not throwVec then return end
 
-    self.PlaySequence = occluded and "deploy" or "grenadethrow"
+    -- self.PlaySequence = occluded and "deploy" or "grenadethrow"
+    self:RestartGesture(self:TranslateActivity(ACT_HL2MP_GESTURE_RANGE_ATTACK))
 	timer.Simple(wait, function()
         if not IsValid(self) then return end
         if not self:CheckAlive(self) then return end
@@ -310,7 +314,7 @@ local HL2Weapons = {
         ClipSize = 6,
         Damage = "sk_npc_dmg_357",
         Force = 1,
-        HoldType = "pistol",
+        HoldType = "revolver",
         MaxBurstDelay = 1.5,
         MaxBurstNum = 2,
         MaxBurstRestDelay = 2,
@@ -329,7 +333,7 @@ local HL2Weapons = {
         AllowRappel = false,
         FireFunction = ThrowGrenade,
         CheckLOS = GrenadeLOS,
-        HoldType = "passive",
+        HoldType = "grenade",
         MaxBurstDelay = 1.5,
         MaxBurstNum = 2,
         MaxBurstRestDelay = 10,
@@ -345,7 +349,7 @@ local HL2Weapons = {
         AmmoType = "AR2",
         ClipSize = 30,
         Damage = "sk_npc_dmg_ar2",
-        HoldType = "smg",
+        HoldType = "ar2",
         ImpactEffectName = "AR2Impact",
         MaxBurstDelay = 0.1,
         MaxBurstNum = 5,
@@ -367,7 +371,7 @@ local HL2Weapons = {
         ClipSize = 6,
         Damage = "sk_npc_dmg_buckshot",
         Force = 1,
-        HoldType = "smg",
+        HoldType = "shotgun",
         MaxBurstDelay = 0.8,
         MaxBurstNum = 3,
         MaxBurstRestDelay = 1.5,
@@ -479,6 +483,7 @@ function ENT:Initialize_Weapon()
 end
 
 function ENT:CanPrimaryFire()
+    if self.IsReloading then return end
     local w = self:GetActiveWeapon()
     if not IsValid(w) then return end
     if CurTime() < self.Time.FinishReloading then return end
@@ -516,16 +521,19 @@ end
 function ENT:GetAimVector()
     local w = self:GetActiveWeapon()
     if not IsValid(w) then return self:GetForward() end
-    if self:HasValidEnemy() then
-        return (self:GetShootTo() - self:GetShootPos()):GetNormalized()
-    else
-        local id = w:LookupAttachment "muzzle"
-        if id == 0 then
-            return self:GetAttachment(self:LookupAttachment "eyes").Ang:Forward()
+    if self:HasValidEnemy() and not self:HasCondition(c.COND_WEAPON_SIGHT_OCCLUDED) then
+        local dir = (self:GetShootTo() - self:GetShootPos()):GetNormalized()
+        if dir:Dot(self:GetForward()) > 0.9 then
+            return dir
         end
-
-        return w:GetAttachment(id).Ang:Forward()
     end
+
+    local id = w:LookupAttachment "muzzle"
+    if id == 0 then
+        return self:GetAttachment(self:LookupAttachment "eyes").Ang:Forward()
+    end
+
+    return w:GetAttachment(id).Ang:Forward()
 end
 
 function ENT:PrimaryFire()
@@ -569,24 +577,24 @@ function ENT:PrimaryFire()
     end
 
     if params.PlayGesture then
-        self:RestartGesture(self:ActivityTranslate(ACT_GESTURE_RANGE_ATTACK1))
+        self:RestartGesture(self:TranslateActivity(ACT_HL2MP_GESTURE_RANGE_ATTACK))
     end
 
     return true
 end
 
+local NewReloadStyle = true
 function ENT:Reload()
+    if self.IsReloading then return end
     local params = self.WeaponParameters
     if not params then return end
     local s = params.ReloadSound
-    local low = self.Crouching
-    local act = self:ActivityTranslate(low and ACT_RELOAD_LOW or ACT_RELOAD)
+    -- local low = self.Crouching
+    -- local act = self:TranslateActivity(low and ACT_RELOAD_LOW or ACT_RELOAD)
+    local act = self:TranslateActivity(ACT_HL2MP_GESTURE_RELOAD)
     local seq = self:SelectWeightedSequence(act)
-    if seq >= 0 then
-        self.PlaySequence = self:GetSequenceName(seq)
-    end
-
-    self.Clip = params.ClipSize
+    if seq < 0 then return end
+    local reloadtime = self:SequenceDuration(seq)
     if params.ReloadSoundDelay then
         timer.Simple(params.ReloadSoundDelay, function()
             if not IsValid(self) then return end
@@ -594,5 +602,21 @@ function ENT:Reload()
         end)
     else
         self:EmitSound(s)
+    end
+
+    -- self.PlaySequence = self:GetSequenceName(seq)
+    self:SetMovementActivity(self:TranslateActivity(ACT_HL2MP_IDLE))
+    self:RestartGesture(act)
+
+    if NewReloadStyle  then
+        self.IsReloading = true
+        timer.Simple(reloadtime, function()
+            if not IsValid(self) then return end
+            self.IsReloading = false
+            self.Clip = params.ClipSize
+        end)
+    else
+        coroutine.wait(reloadtime)
+        self.Clip = params.ClipSize
     end
 end

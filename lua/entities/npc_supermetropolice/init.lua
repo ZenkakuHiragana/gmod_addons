@@ -9,11 +9,35 @@ include "relationship.lua"
 include "task.lua"
 include "schedule.lua"
 include "target.lua"
+include "trace.lua"
 include "weapon.lua"
 
 ENT.HasLongRange = true
 ENT.IsSuperMetropolice = true
 ENT.MaxHealth = 40
+
+local BULLET_NEAR_DISTANCE_SQR = 50^2
+hook.Add("EntityFireBullets", "GreatZenkakuMan's Nextbot EntityFireBullets", function(ent, bullet)
+	local dir = bullet.Dir:GetNormalized()
+	local org = bullet.Src
+	local length = bullet.Distance
+	for i, self in ipairs(ents.FindByClass "npc_supermetropolice") do
+		if self:HasValidEnemy(ent) then
+			local org2 = self:WorldSpaceCenter()
+			local dir2 = org2 - org
+			if dir2:GetNormalized():Dot(dir) > 0.7 then
+				local length2 = dir:Dot(dir2)
+				local endpos = org + dir * math.min(length, length2)
+				local radiussqr = org2:DistToSqr(endpos)
+				if radiussqr < BULLET_NEAR_DISTANCE_SQR then
+					self:SetCondition(self.Enum.Conditions.COND_BULLET_NEAR)
+					self.Time.LastHearBullet = CurTime()
+				end
+			end
+		end
+	end
+end)
+
 function ENT:RunHook(prefix, ...)
 	for name, func in pairs(self:GetTable()) do
 		if name ~= prefix and name:StartWith(prefix) then
@@ -23,13 +47,15 @@ function ENT:RunHook(prefix, ...)
 end
 
 function ENT:Initialize()
-    self:SetModel "models/police.mdl"
+    self:SetModel "models/player/police.mdl"
 	self:SetMaxHealth(self.MaxHealth)
 	self:SetHealth(self:GetMaxHealth())
 	self:AddFlags(FL_NPC)
 	self:AddFlags(FL_OBJECT)
 	self:SetSolid(SOLID_BBOX)
 	self:MakePhysicsObjectAShadow(true, true)
+	self:SetCollisionBounds(self:GetMins(true), self:GetMaxs(true))
+	self:DrawShadow(true)
 	self.Time = {}
 	self:RunHook "Initialize"
 end
@@ -42,8 +68,6 @@ end
 function ENT:OnKilled(d)
 	self:RunHook("OnKilled", d)
 	self.BaseClass.OnKilled(self, d)
-    local c = self:Health() / self:GetMaxHealth() * 255
-    self:SetColor(Color(255, c, c))
 end
 
 function ENT:OnOtherKilled(victim, d)
@@ -62,34 +86,6 @@ function ENT:OnContact(ent)
 	local p = ent:GetPhysicsObject()
 	if not IsValid(p) then return end
 	p:ApplyForceOffset(self:GetForward() * 600, self:WorldSpaceCenter())
-end
-
-local TRACE_DELTA_Z = vector_up * 7
-function ENT:GetHull(stand)
-	local mins, maxs = self:GetCollisionBounds()
-	if not stand and self.Crouching then
-		maxs.z = maxs.z / 2
-	end
-
-	return mins, maxs
-end
-
-function ENT:TraceHull(from, to, mask, filter, collisiongroup, stand)
-	-- PrintTable(self:GetSaveTable())
-	local mins, maxs = self:GetHull(stand)
-	return util.TraceHull {
-		start = from + TRACE_DELTA_Z,
-		endpos = (to or from) + TRACE_DELTA_Z,
-		collisiongroup = collisiongroup,
-		filter = table.Add({self}, filter),
-		mask = mask or MASK_NPCSOLID,
-		maxs = maxs,
-		mins = mins,
-	}
-end
-
-function ENT:TraceHullStand(from, to, mask, filter, collisiongroup)
-	return self:TraceHull(from, to, mask, filter, collisiongroup, true)
 end
 
 local function ShouldStopSchedule(self)
@@ -124,6 +120,7 @@ function ENT:RunTaskBatch(task)
 		self:DoFaceTowards()
 		self:UpdatePath()
 		self:FixPath()
+		self:FireWeapon()
 	end
 end
 
@@ -151,6 +148,17 @@ function ENT:RunScheduleLoop()
 
 			coroutine.yield()
 		end
+	end
+end
+
+function ENT:Think() -- Change Pathfinder's face
+	local c = self.Enum.Conditions
+	local b = self:FindBodygroupByName "Screen"
+	if b < 0 then return end
+	if self:HasCondition(c.COND_CAN_RANGE_ATTACK1) then
+		self:SetBodygroup(b, 1)
+	else
+		self:SetBodygroup(b, 0)
 	end
 end
 

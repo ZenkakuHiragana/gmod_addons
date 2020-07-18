@@ -4,7 +4,7 @@ SuperMetropoliceBlockedNavAreas = SuperMetropoliceBlockedNavAreas or {}
 local c = ENT.Enum.Conditions
 function ENT:Initialize_Movement()
     self.loco:SetJumpHeight(100)
-	self.loco:SetStepHeight(18 * 2)
+    self.loco:SetStepHeight(18 * 2)
     self.Approach = {}
     self.FaceTowards = {}
     self.IsJumpingAcrossGap = false
@@ -16,7 +16,7 @@ function ENT:Initialize_Movement()
     self.DesiredGoal = Vector()
     self.DesiredPathTarget = NULL
 	self.Path:SetMinLookAheadDistance(50)
-    self.Path:SetGoalTolerance(16)
+    self.Path:SetGoalTolerance(20)
     self.PreviousPosition = Vector()
 end
 
@@ -83,23 +83,24 @@ end
 
 function ENT:HandleStuck()
     self.loco:ClearStuck()
+    self.Approach.Fix = nil
     if not self.Path:IsValid() then return end
-    local dz = vector_up * 32
-    local goal = self.Path:GetCurrentGoal()
-    local t = util.TraceHull {
-        start = self:WorldSpaceCenter(),
-        endpos = goal.pos,
-        mins = self:OBBMins() + dz,
-        maxs = self:OBBMaxs() - dz,
-        filter = self,
-        mask = MASK_NPCSOLID,
-    }
+    -- local dz = vector_up * 32
+    -- local goal = self.Path:GetCurrentGoal()
+    -- local t = util.TraceHull {
+    --     start = self:WorldSpaceCenter(),
+    --     endpos = goal.pos,
+    --     mins = self:OBBMins() + dz,
+    --     maxs = self:OBBMaxs() - dz,
+    --     filter = self,
+    --     mask = MASK_NPCSOLID,
+    -- }
 
-    local a = navmesh.GetNavArea(t.HitPos, 100)
-    local id = a and a:GetID()
-    if id then SuperMetropoliceBlockedNavAreas[id] = t.Entity end
-    self:ComputePath(self.Path:GetStart())
-    self.UnStucking = true
+    -- local a = navmesh.GetNavArea(t.HitPos, 100)
+    -- local id = a and a:GetID()
+    -- if id then SuperMetropoliceBlockedNavAreas[id] = t.Entity end
+    -- self:ComputePath(self.Path:GetStart())
+    -- self.UnStucking = true
 end
 
 function ENT:ComputePath(to)
@@ -148,14 +149,14 @@ function ENT:ComputePath(to)
     
             -- check height change
             local deltaZ = fromArea:ComputeAdjacentConnectionHeightChange(area)
-            if deltaZ >= self.loco:GetStepHeight() / 2 then
+            if deltaZ >= self.loco:GetStepHeight() then
                 return -1 -- too high to reach
             elseif deltaZ < -self.loco:GetDeathDropHeight() then
                 return -1 -- too far to drop
             end
             
             if bit.band(attr, NAV_MESH_AVOID) > 0 then dist = dist * 500 end
-            return dist
+            return area:GetCostSoFar() + dist
         end
     end
 
@@ -171,80 +172,15 @@ function ENT:ComputePath(to)
 end
 
 function ENT:FixPath()
-    if CurTime() < self.Time.CheckHull then return end
-
-    self.Time.CheckHull = CurTime() + 1
-    if self.IsJumpingAcrossGap and self:GetRangeSquaredTo(self.PreviousPosition) == 0 then
-        self.loco:SetVelocity(vector_up * self.loco:GetJumpHeight())
-    end
-    
-    local stucktime = math.max(CurTime() - self.Time.PathStuck, 0)
-    local mul = Lerp(stucktime, 0.25, 1)
-    local avoidstep = 10 * mul
-    local avoidahead = 25 * mul
-    local fix = Vector()
-    local forward = self:GetForward()
-    local org = self:GetPos()
-    local right = self:GetRight()
-    local posr = self:WorldSpaceCenter() + right * avoidstep - forward * avoidahead * .5
-    local posl = self:WorldSpaceCenter() - right * avoidstep - forward * avoidahead * .5
-    local yaw = math.abs(self:GetAngles().yaw) % 90
-    if yaw > 45 then yaw = 90 - yaw end
-    local ratio = math.Remap(yaw, 0, 45, 0.5, 1 / math.sqrt(2))
-    local mins = self:OBBMins() * ratio * mul
-    local maxs = self:OBBMaxs() * ratio * mul
-    maxs.z = 16
-    local trr = util.TraceHull {
-        start = posr,
-        endpos = posr + forward * avoidahead,
-        filter = self,
-        mask = MASK_NPCSOLID_BRUSHONLY,
-        mins = mins,
-        maxs = maxs,
-    }
-    local trl = util.TraceHull {
-        start = posl,
-        endpos = posl + forward * avoidahead,
-        filter = self,
-        mask = MASK_NPCSOLID_BRUSHONLY,
-        mins = mins,
-        maxs = maxs,
-    }
-
-    local ent = IsValid(trr.Entity) and trr.Entity or IsValid(trl.Entity) and trl.Entity
-    if IsValid(ent) and ent:GetClass() == self:GetClass() and CurTime() > ent.Time.GiveWay then
-        ent:SetCondition(ent.Enum.Conditions.COND_GIVE_WAY)
-        ent.Time.GiveWay = ent.Time.NextUpdateCondition + 2
-    end
-    
-    if trr.Hit and not trr.AllSolid then fix = fix - right - forward end
-    if trl.Hit and not trl.AllSolid then fix = fix + right - forward end
-    if trr.StartSolid then fix = fix - right + forward end
-    if trl.StartSolid then fix = fix + right + forward end
-    if trl.AllSolid and trr.AllSolid then
-        fix = self.loco:GetVelocity()
-        if fix:IsZero() then
-            fix = -forward * self.CurrentDesiredSpeed
-        end
-    end
-
+    local fix = -self:GetHitDirectionAround(nil, 12)
     if fix:IsZero() then
-        self.Approach.Fix = nil
         self.Time.PathStuck = CurTime()
-        stucktime = 0
+        self.Approach.Fix = nil
         return
     end
 
-    fix:Normalize()
-    self.Approach.Fix = {
-        goal = org + fix * 32,
-        weight = stucktime * 100,
-    }
-
-    self:swept("FixPath", posr, posr + forward * avoidahead, mins, maxs)
-    self:swept("FixPath", posl, posl + forward * avoidahead, mins, maxs)
-    self:point("FixPath", self:GetPos())
-    self:line("FixPath", self:GetPos(), self.Approach.Fix.goal)
+    self.Approach.Fix = self:GetPos() + fix
+    self:line("FixPath", self:GetPos(), self.Approach.Fix)
 end
 
 function ENT:UpdatePath()
@@ -258,12 +194,8 @@ function ENT:UpdatePath()
         return
     end
 
-    local ang = self:GetAngles()
     local goal = self.Path:GetCurrentGoal()
-    local see = self:HasCondition(c.COND_HAVE_ENEMY_LOS)
-    if see and goal then self:SetAngles(self.PathUpdateAngle) end
-
-    self.Path:Update(self)
+    if not self.Approach.Fix then self.Path:Update(self) end
     self:drawpath()
     self:point("UpdatePath", goal.pos, true)
     self:vector("UpdatePath", self:GetPos(), self.loco:GetVelocity(), true)
@@ -273,18 +205,16 @@ function ENT:UpdatePath()
         self:ComputePath(self.Path:GetEnd())
     end
 
-    -- local nextgoal = self.Path:NextSegment()
-    -- local priorgoal = self.Path:PriorSegment()
-    -- local dz = goal and goal.pos.z - self:GetPos().z
-    -- local toohigh = dz and dz > self.loco:GetStepHeight() / 2
-    -- local canjump = dz and dz < self.loco:GetJumpHeight()
-    -- if canjump and toohigh or priorgoal and nextgoal and (priorgoal.type == 2 or priorgoal.type == 3) then
-    --     if not dz or dz^2 > self:GetRangeSquaredTo(goal.pos) then
-    --         self:RequestJump(goal.pos, goal.forward)
-    --     end
-    -- end
-
-    if see then self:SetAngles(ang) end
+    local nextgoal = self.Path:NextSegment()
+    local priorgoal = self.Path:PriorSegment()
+    local dz = goal and goal.pos.z - self:GetPos().z
+    local toohigh = dz and dz > self.loco:GetStepHeight() / 2
+    local canjump = dz and dz < self.loco:GetJumpHeight()
+    if canjump and toohigh or priorgoal and nextgoal and (priorgoal.type == 2 or priorgoal.type == 3) then
+        if not dz or dz^2 > self:GetRangeSquaredTo(goal.pos) then
+            self:RequestJump(goal.pos, goal.forward)
+        end
+    end
 end
 
 function ENT:OnLandOnGround_Movement(ent)

@@ -333,7 +333,8 @@ ENT.Task_GetPathToEnemyLKPLOS = ENT.Task_GetPathToEnemyLOS
 
 function ENT:Task_GetPathToRandom(arg)
     local dir = self:GetForward()
-    local range = math.Rand(0, arg or 256)
+    local range = arg or 256
+    range = range * math.Rand(0.5, 1)
     dir:Rotate(Angle(0, math.Rand(-180, 180), 0))
     self:ComputePath(self:GetPos() + dir * range)
     self:TaskComplete()
@@ -524,7 +525,7 @@ end
 
 function ENT:Task_MoveLateral()
     if not self.Path:IsValid() then
-        local dir = math.random() > .5 and 64 or -64
+        local dir = math.random() > .5 and 100 or -100
         self:ComputePath(self:GetPos() + self:GetRight() * dir)
     end
 
@@ -556,7 +557,7 @@ function ENT:Task_Rappel(arg)
     local status = self.Schedule.TaskStatus
     local ts = self.Enum.TaskStatus
     if self.Schedule.TaskStatus == self.Enum.TaskStatus.TASKSTATUS_NEW then
-        self.ForceSequence = "deploy"
+        -- self.ForceSequence = "deploy"
         self.Schedule.TaskData = CurTime() + 0.6
         self:TaskStatus(ts.TASKSTATUS_RUN_TASK)
         return
@@ -600,7 +601,7 @@ function ENT:Task_Rappel(arg)
         ap:EnableGravity(false)
         ap:SetVelocity(dir * 4096)
         self:DeleteOnRemove(anchor)
-        self.ForceActivity = ACT_RAPPEL_LOOP
+        self.ForceActivity = ACT_HL2MP_SWIM
         self.ForceSequence = nil
         self.RappelAnchor = anchor
         self.RappelRope = rope
@@ -695,7 +696,7 @@ end
 local SLIDE_VELOCITY = 500
 local SLIDE_TIME = 1
 local SLIDE_DISTANCE = SLIDE_VELOCITY * SLIDE_TIME
-local MIN_SLIDE_DISTANCE_SQR = 100^2
+local MIN_SLIDE_DISTANCE_SQR = 30^2
 function ENT:Task_CombatSlide(arg)
     if CurTime() < self.Time.NextCombatSlide then return end
     
@@ -734,10 +735,10 @@ function ENT:Task_CombatSlide(arg)
 
         dir:Normalize()
         self.Approach.CombatSlide = pos
-        self.DesiredPitch = -60
+        self.DesiredPitch = -45
         self.DesiredSpeed = SLIDE_VELOCITY
         self.FaceTowards.CombatSlide = pos
-        self.ForceActivity = ACT_JUMP
+        self.ForceActivity = ACT_HL2MP_SIT
         self.ForceSequence = nil
         self.MaxPitchRollRate = 900
         self.Schedule.TaskData = {

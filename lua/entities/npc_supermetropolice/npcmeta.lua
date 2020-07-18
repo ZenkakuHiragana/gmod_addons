@@ -7,11 +7,11 @@ if not GreatZenkakuMan_FakeNextbotIsNPC then
     local IsNPC = meta.IsNPC
     if isfunction(IsNPC) then
         function meta:IsNPC()
-            return self.GreatZenkakuMan_IsFakeNPC or IsNPC(self)
+            return (self and self.GreatZenkakuMan_IsFakeNPC) or IsNPC(self)
         end
     else
         function meta:IsNPC()
-            return self.GreatZenkakuMan_IsFakeNPC or false
+            return (self and self.GreatZenkakuMan_IsFakeNPC) or false
         end
     end
 end

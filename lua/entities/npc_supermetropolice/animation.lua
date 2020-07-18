@@ -2,23 +2,6 @@
 include "ai_translations.lua"
 
 function ENT:Initialize_Animation()
-	local translate = {}
-	for _, t in ipairs {
-		"ar2",
-		"crossbow",
-		"grenade",
-		"melee",
-		"melee2",
-        "passive",
-        "pistol",
-		"revolver",
-		"rpg",
-		"shotgun",
-		"smg",
-	} do
-		self:SetupWeaponHoldTypeForAI(t)
-    end
-
     self.PoseParameterIDs = {}
     for i = 0, self:GetNumPoseParameters() - 1 do
         self.PoseParameterIDs[self:GetPoseParameterName(i)] = i
@@ -44,32 +27,17 @@ if not ENT.LookupPoseParameter then
     end
 end
 
-function ENT:ActivityTranslate(act)
-    local h = self.WeaponParameters.HoldType
-    local t = self.ActivityTranslateAI
-    if not t[h] then return act end
-    local a = t[h][act]
-    while not a or self:SelectWeightedSequence(a) < 0 do
-        h = t[h].Fallback
-        if not (h and t[h]) then break end
-        a = t[h][act]
-        if not t[h].Fallback then break end
-    end
-
-    return a or act
-end
-
 function ENT:SetActivity(act)
     if self:GetActivity() ~= act then
         self:StartActivity(act)
     end
 end
 
-function ENT:SetMovementActivity(act)
+function ENT:SetMovementActivity(act, speed)
     self:SetActivity(act)
     local seq = self:SelectWeightedSequence(act)
-    self.CurrentDesiredSpeed = self.DesiredSpeed or self:GetSequenceGroundSpeed(seq)
-    self.loco:SetDesiredSpeed(self.CurrentDesiredSpeed)
+    self.CurrentDesiredSpeed = self.DesiredSpeed or speed or self:GetSequenceGroundSpeed(seq)
+    self.loco:SetDesiredSpeed(math.max(self.CurrentDesiredSpeed, 50))
 end
 
 function ENT:CheckCrouching()
@@ -79,22 +47,22 @@ function ENT:CheckCrouching()
     end
     
     local org = self:GetPos()
-    local t = self:TraceHullStand(org)
-    local mins, maxs = self:GetCollisionBounds()
+    local t = self:TraceHullStand(org, nil, MASK_NPCSOLID, ents.FindByClass(self.ClassName))
+    local mins, maxs = self:GetHull(true)
     self:box("CheckCrouching", org + vector_up * 7, mins, maxs, true)
     self.Crouching = t.Hit
 end
 
 function ENT:UpdateAimParameters()
-    local p, y = 0, 0
-    if self:HasValidEnemy() and self:HasCondition(self.Enum.Conditions.COND_SEE_ENEMY) then
+    local p, y = -self:GetAngles().pitch, 0
+    if self:HasValidEnemy() and not self:HasCondition(self.Enum.Conditions.COND_WEAPON_SIGHT_OCCLUDED) then
         local from = self:GetShootPos()
         local to = self:GetShootTo()
         local dz = from.z - self:GetPos().z
         local dir = self:WorldToLocal(to - vector_up * dz)
         local ang = dir:Angle()
         ang:Normalize()
-        p, y = ang.pitch, ang.yaw
+        p, y = p + ang.pitch, ang.yaw
         self:print("UpdateAimParameters", p, y)
         self:line("UpdateAimParameters", self:GetPos() + vector_up * dz, to, true)
     end
@@ -124,7 +92,6 @@ end
 
 local aidisabled = GetConVar "ai_disabled"
 function ENT:BodyUpdate()
-    self:BodyMoveXY()
     local rate = self.MaxPitchRollRate * FrameTime()
     local ang = self:GetAngles()
     local dp = self.DesiredPitch - ang.pitch
@@ -137,63 +104,72 @@ function ENT:BodyUpdate()
     ang.roll = math.NormalizeAngle(ang.roll + dr)
     self:SetAngles(ang)
     
-    if self.ForceSequence then self:SetSequence(self:LookupSequence(self.ForceSequence)) self:ResetSequenceInfo() return end
     if self.PlaySequence then return end
+    if self.ForceSequence then
+        self:SetSequence(self:LookupSequence(self.ForceSequence))
+        self:ResetSequenceInfo()
+        return
+    end
 
     local crouch = self.Crouching or bit.band(self.NavAttr, NAV_MESH_CROUCH) > 0
-    local act = crouch and ACT_CROUCH or ACT_IDLE
+    local act = crouch and ACT_HL2MP_IDLE_CROUCH or ACT_HL2MP_IDLE
+    local speed = nil
     if self.IsJumpingAcrossGap then
-        act = ACT_JUMP
+        act = ACT_HL2MP_SWIM_IDLE
     elseif self.loco:IsAttemptingToMove() then
         local hasenemy = self:HasValidEnemy() or aidisabled:GetBool()
-        local run = hasenemy and ACT_RUN or ACT_WALK
-        if hasenemy and self:HasCondition(self.Enum.Conditions.COND_SEE_ENEMY) then
-            run = ACT_RUN_AIM
+        local run = hasenemy and ACT_HL2MP_RUN_FAST or ACT_HL2MP_WALK
+        if hasenemy and not (self.WeaponParameters.IsMelee or
+        self:HasCondition(self.Enum.Conditions.COND_WEAPON_SIGHT_OCCLUDED)) then
+            run = ACT_HL2MP_RUN
         end
         
-        act = crouch and ACT_WALK_CROUCH or run
+        act = crouch and ACT_HL2MP_WALK_CROUCH or run
     elseif self:HasValidEnemy() or CurTime() < self.Time.Wait then
-        act = crouch and ACT_CROUCH or ACT_IDLE_ANGRY
+        act = crouch and ACT_HL2MP_CROUCH or ACT_HL2MP_IDLE
     end
     
     if self.ForceActivity then act = self.ForceActivity end
     if IsValid(self:GetActiveWeapon()) then
-        local transact = self:ActivityTranslate(act)
-        if self:SelectWeightedSequence(transact) >= 0 then
-            act = transact
+        local translated = self:TranslateActivity(act)
+        if self:SelectWeightedSequence(translated) >= 0 then
+            act = translated
         end
     end
 
-    self:SetMovementActivity(act)
+    local dir = self.loco:GetGroundMotionVector()
+    if self:LookupPoseParameter "move_yaw" >= 0 then
+        local yaw = 0
+        if self.loco:IsOnGround() then
+            yaw = dir:Dot(self:GetForward())
+            yaw = math.deg(math.acos(math.Clamp(yaw, -1, 1)))
+            if self:GetForward():Cross(dir).z < 0 then
+                yaw = -yaw
+            end
+
+            yaw = math.NormalizeAngle(yaw)
+        end
+
+        local current_yaw = self:GetPoseParameter "move_yaw"
+        local dy = yaw - current_yaw
+        local sy = dy == 0 and 0 or dy > 0 and 1 or -1
+        dy = math.min(math.abs(dy), self.loco:GetMaxYawRate()) * sy
+        current_yaw = math.NormalizeAngle(current_yaw + dy)
+        self:SetPoseParameter("move_yaw", current_yaw)
+    end
+
+    self:BodyMoveXY()
+    self:SetMovementActivity(act, speed)
     self:UpdateAimParameters()
-
-    if not self:LookupPoseParameter "move_yaw" then return end
-    local yaw = 0
-    if self.loco:IsOnGround() then
-        local dir = self.loco:GetGroundMotionVector()
-        yaw = dir:Dot(self:GetForward())
-        yaw = math.deg(math.acos(math.Clamp(yaw, -1, 1)))
-        if self:GetForward():Cross(dir).z < 0 then
-            yaw = -yaw
-        end
-
-        yaw = math.NormalizeAngle(yaw)
-    end
-
-    local current_yaw = self:GetPoseParameter "move_yaw"
-    local dy = yaw - current_yaw
-    local sy = dy == 0 and 0 or dy > 0 and 1 or -1
-    dy = math.min(math.abs(dy), self.loco:GetMaxYawRate()) * sy
-    current_yaw = math.NormalizeAngle(current_yaw + dy)
-    self:SetPoseParameter("move_yaw", current_yaw)
 end
 
 function ENT:OnLandOnGround_Animation(ent)
     if self.PlayLandAnimation and self:GetVelocity().z < -500 then
-        self.PlaySequence = "jump_holding_land"
+        self:AddGestureSequence(self:LookupSequence "jump_land")
     end
 end
 
+local a = ENT.Enum.ACT
 function ENT:OnInjured_Animation(d)
     local pos = d:GetDamagePosition()
     local att = d:GetAttacker()
@@ -201,16 +177,19 @@ function ENT:OnInjured_Animation(d)
     local tr = util.QuickTrace(pos, d:GetDamageForce())
     local params = self.WeaponParameters
 	if tr.Entity ~= self then return end
-	if tr.HitGroup == HITGROUP_HEAD then d:ScaleDamage(2) end
     local flinch = ({
-        [HITGROUP_HEAD] = ACT_GESTURE_FLINCH_HEAD,
-        [HITGROUP_STOMACH] = ACT_GESTURE_FLINCH_STOMACH,
-        [HITGROUP_LEFTARM] = ACT_GESTURE_FLINCH_LEFTARM,
-        [HITGROUP_RIGHTARM] = ACT_GESTURE_FLINCH_RIGHTARM,
+        [HITGROUP_HEAD] = ACT_FLINCH_HEAD,
+        [HITGROUP_STOMACH] = ACT_FLINCH_STOMACH,
+        [HITGROUP_LEFTARM] = a.ACT_FLINCH_SHOULDER_LEFT,
+        [HITGROUP_RIGHTARM] = a.ACT_FLINCH_SHOULDER_RIGHT,
     })[tr.HitGroup]
-    if d:GetDamage() > self:GetMaxHealth() / 4 and params and params.HoldType == "pistol" then
-        self:AddGesture(ACT_BIG_FLINCH)
+    if d:GetDamage() > self:GetMaxHealth() / 4 then
+        if d:GetDamageForce():Dot(self:GetForward()) > 0 then
+            self:AddGesture(a.ACT_FLINCH_BACK)
+        else
+            self:AddGesture(ACT_FLINCH_PHYSICS)
+        end
     else
-        self:AddGesture(flinch or ACT_GESTURE_SMALL_FLINCH)
+        self:AddGesture(flinch or a.ACT_FLINCH)
     end
 end

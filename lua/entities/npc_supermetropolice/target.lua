@@ -1,6 +1,7 @@
 
 AccessorFunc(ENT, "m_vecLastPosition", "LastPosition")
 AccessorFunc(ENT, "m_hEnemy", "Enemy")
+AccessorFunc(ENT, "m_flEnemyValue", "EnemyValue")
 AccessorFunc(ENT, "m_hTargetEnt", "Target")
 function ENT:Initialize_Target()
     self.Time.LastEnemySeen = 0
@@ -30,28 +31,32 @@ end
 
 local FIND_CONE = math.cos(math.rad(90))
 local MAX_DIST_SQR = 4096^2
+local MAX_COMMUNICATE_RANGE_SQR = 3000^2 -- Maximum range they can share enemies
 function ENT:FindEnemy()
     if CurTime() < self.Time.NextFindEnemy then return end
     self.Time.NextFindEnemy = CurTime() + 0.5
 
     local targetlist = ents.FindInPVS(self)
-    local nearestTarget, nearestDist = NULL, math.huge
+    local valuabletarget, highestValue = NULL, 0
     for i, e in ipairs(targetlist) do
         if self:Visible(e) and self:HasValidEnemy(e)
         and (self:GetForward():Dot(e:WorldSpaceCenter() - self:WorldSpaceCenter()) > 0
         or self:GetRangeSquaredTo(e) < MAX_DIST_SQR) then
-            local d = self:GetRangeSquaredTo(e)
-            if d < nearestDist then
-                nearestTarget, nearestDist = e, d
+            local distanceValue = 10000 / self:GetRangeSquaredTo(e)
+            local healthValue = 1 / math.max(e:Health(), 1)
+            local value = distanceValue + healthValue
+            if value > highestValue then
+                valuabletarget, highestValue = e, value
             end
         end
     end
 
-    if not IsValid(nearestTarget) then
+    if not IsValid(valuabletarget) then
         for _, a in ipairs(ents.FindByClass "npc_supermetropolice") do
-            if a ~= self and self:GetRangeSquaredTo(a) < 9e+6 then
+            if a ~= self and self:GetRangeSquaredTo(a) < MAX_COMMUNICATE_RANGE_SQR then
                 if a:HasValidEnemy() then
-                    nearestTarget = a:GetEnemy()
+                    valuabletarget = a:GetEnemy()
+                    value = a:GetEnemyValue()
                     if a:HasCondition(a.Enum.Conditions.COND_SEE_ENEMY) then
                         self:SetLastPosition(a:GetLastPosition())
                     end
@@ -62,8 +67,9 @@ function ENT:FindEnemy()
         end
     end
 
-    if not IsValid(nearestTarget) then return end
-    self:SetEnemy(nearestTarget)
+    if not IsValid(valuabletarget) then return end
+    self:SetEnemy(valuabletarget)
+    self:SetEnemyValue(value)
 end
 
 function ENT:CheckPVS()

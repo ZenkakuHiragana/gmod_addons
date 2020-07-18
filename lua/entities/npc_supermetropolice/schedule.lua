@@ -114,6 +114,12 @@ function ENT:ClearSchedule()
     self.Schedule.CeaseSchedule = true
 end
 
+function ENT:FireWeapon()
+    if not (self:HasCondition(c.COND_CAN_RANGE_ATTACK1)
+    or self:HasCondition(c.COND_CAN_MELEE_ATTACK1)) then return end
+    self:PrimaryFire()
+end
+
 local function IdleSchedule(self)
     local w = self:GetActiveWeapon()
     local params = self.WeaponParameters
@@ -127,7 +133,8 @@ local function IdleSchedule(self)
         s = "GrenadeEscape"
     elseif self:HasCondition(c.COND_GIVE_WAY) then
         s = "GiveWay"
-    elseif IsValid(w) and params and self.Clip < params.ClipSize then
+    elseif not self.IsReloading and IsValid(w)
+    and params and self.Clip < params.ClipSize then
         s = "HideAndReload"
     end
     
@@ -149,7 +156,8 @@ local function AlertSchedule(self)
         s = "GiveWay"
     elseif CurTime() - self.Time.LastEnemySeen < 3 then
         s = "AlertStand"
-    elseif IsValid(w) and params and self.Clip < params.ClipSize then
+    elseif not self.IsReloading and IsValid(w)
+    and params and self.Clip < params.ClipSize then
         s = "HideAndReload"
     end
     
@@ -165,56 +173,22 @@ local function CombatSchedule(self)
     local cap = isfunction(e.CapabilitiesGet) and e:CapabilitiesGet()
     local restdelay = math.max(p.MaxBurstRestDelay / 2, 1)
     local ismelee = p and p.IsMelee
-    local condattack = ismelee and c.COND_CAN_MELEE_ATTACK1 or c.COND_CAN_RANGE_ATTACK1
-    if e:IsNPC() and self:HasCondition(c.COND_ENEMY_FACING_ME) and
-    isnumber(cap) and bit.band(cap, CAP_RANGE_ATTACKS) == 0
-    and e:GetActivity() == ACT_MELEE_ATTACK1 then
-        s = "MoveLateral"
-    end
-
-    if not s then
-        if self:HasCondition(c.COND_ENEMY_DEAD) then
-            s = "IdleStand"
-        elseif self:HasCondition(c.COND_SEE_GRENADE) then
-            s = "GrenadeEscape"
-        elseif self:HasCondition(c.COND_GIVE_WAY) then
-            s = "GiveWay"
-        elseif self:HasCondition(c.COND_REPEATED_DAMAGE) then
-            s = "TakeCoverSlide"
-        elseif not ismelee and CurTime() + restdelay < self.Time.WeaponFire then
-            s = "TakeCoverFromEnemy"
-        elseif self:HasCondition(c.COND_TOO_FAR_TO_ATTACK) then
-            if self:HasCondition(c.COND_CAN_RAPPEL_FORWARD)
-            and not self:HasCondition(c.COND_LOW_PRIMARY_AMMO) then
-                s = "RappelApproach"
-            elseif self:HasCondition(c.COND_GOOD_TO_SLIDE) then
-                s = "CombatSlide"
-            else
-                s = "ChaseEnemy"
-            end
-        elseif self:HasCondition(c.COND_TOO_CLOSE_TO_ATTACK) then
-            s = "MoveAwayFromEnemy"
-        elseif self:HasCondition(c.COND_WEAPON_BLOCKED_BY_FRIEND) then
-            s = "MoveLateral"
-        elseif self:HasCondition(c.COND_NO_PRIMARY_AMMO) then
-            s = "HideAndReload"
-        elseif self:HasCondition(c.COND_WEAPON_SIGHT_OCCLUDED) then
-            if not self:HasCondition(c.COND_CAN_RAPPEL_UP)
-            or self:HasCondition(c.COND_LOW_PRIMARY_AMMO)
-            or ismelee or math.random() < 0.9 then
-                s = "EstablishLineOfFire"
-            else
-                s = "RappelUp"
-            end
-        elseif self:HasCondition(c.COND_NOT_FACING_ATTACK) then
-            s = "CombatFace"
-        elseif self:HasCondition(condattack) then
-            s = ismelee and "MeleeAttack1" or "RangeAttack1"
-        elseif self:HasCondition(c.COND_BEHIND_ENEMY) then
-            s = "CombatStand"
-        else
-            s = "EstablishLineOfFire"
-        end
+    if self:HasCondition(c.COND_ENEMY_DEAD) then
+        s = "IdleStand"
+    elseif self:HasCondition(c.COND_SEE_GRENADE) then
+        s = "GrenadeEscape"
+    elseif self:HasCondition(c.COND_REPEATED_DAMAGE)
+    or not ismelee and CurTime() + restdelay < self.Time.WeaponFire then
+        s = "TakeCoverFromEnemy"
+    elseif self:HasCondition(c.COND_BULLET_NEAR)
+    and not ismelee and CurTime() > self.Time.NextCombatSlide then
+        s = "TakeCoverSlide"
+    elseif self:HasCondition(c.COND_TOO_FAR_TO_ATTACK) then
+        s = self:ScheduleDecision_ApproachEnemy()
+    elseif self:HasCondition(c.COND_TOO_CLOSE_TO_ATTACK) then
+        s = "MoveAwayFromEnemy"
+    else
+        s = self:ScheduleDecision_EstablishLOS()
     end
     
     return s
@@ -239,19 +213,59 @@ function ENT:SelectSchedule(iNPCState)
     return s
 end
 
+function ENT:ScheduleDecision_ApproachEnemy()
+    if self:HasCondition(c.COND_WEAPON_SIGHT_OCCLUDED)
+    and self:HasCondition(c.COND_LOW_PRIMARY_AMMO) then
+        return "HideAndReload"
+    elseif self:HasCondition(c.COND_CAN_RAPPEL_FORWARD) then
+        return "RappelApproach"
+    elseif self:HasCondition(c.COND_GOOD_TO_SLIDE) then
+        return "CombatSlide"
+    else
+        return "ChaseEnemy"
+    end
+end
+
+function ENT:ScheduleDecision_EstablishLOS()
+    local p = self.WeaponParameters
+    local ismelee = p and p.IsMelee
+    local condattack = ismelee and c.COND_CAN_MELEE_ATTACK1 or c.COND_CAN_RANGE_ATTACK1
+    if self:HasCondition(c.COND_WEAPON_BLOCKED_BY_FRIEND) then
+        return "MoveLateral"
+    elseif self:HasCondition(c.COND_NO_PRIMARY_AMMO) then
+        return "HideAndReload"
+    elseif self:HasCondition(c.COND_WEAPON_SIGHT_OCCLUDED) then
+        if self:HasCondition(c.COND_LOW_PRIMARY_AMMO) then
+            return "HideAndReload"
+        else
+            if not self:HasCondition(c.COND_CAN_RAPPEL_UP)
+            or ismelee or math.random() < 0.9 then
+                return "EstablishLineOfFire"
+            else
+                return "RappelUp"
+            end
+        end
+    elseif self:HasCondition(c.COND_NOT_FACING_ATTACK) then
+        return "CombatFace"
+    elseif self:HasCondition(condattack) then
+        return "MoveLateral"
+    elseif self:HasCondition(c.COND_BEHIND_ENEMY) then
+        return "CombatStand"
+    else
+        return "EstablishLineOfFire"
+    end
+end
+
 ENT.ScheduleList = {
     AlertStand = {
         "StopMoving",
-        {"SetActivity", ACT_IDLE},
         {"Wait", 3},
     },
     ChaseEnemy = {
         {"SetFailSchedule", "ChaseEnemyFailed"},
         "StopMoving",
-        -- {"SetToleranceDistance", 24},
         {"SetGoal", ENT.Enum.GoalType.GOAL_ENEMY},
         {"GetPathToGoal", ENT.Enum.PathType.PATH_TRAVEL},
-        -- "RunPath",
         "WaitForMovement",
         "FaceEnemy",
     },
@@ -260,16 +274,13 @@ ENT.ScheduleList = {
         "StopMoving",
         {"Wait", 0.2},
         "FindCoverFromEnemy",
-        -- "RunPath",
         "WaitForMovement",
         {"Remember", "Incover"},
         "FaceEnemy",
-        {"SetActivity", ACT_IDLE},
         {"Wait", 1}
     },
     CombatFace = {
         "StopMoving",
-        {"SetActivity", ACT_IDLE},
         "FaceEnemy",
     },
     CombatSlide = {
@@ -281,7 +292,6 @@ ENT.ScheduleList = {
     },
     CombatStand = {
         "StopMoving",
-        {"SetActivity", ACT_IDLE},
         "WaitIndefinite",
     },
     Cower = {
@@ -293,28 +303,14 @@ ENT.ScheduleList = {
         {"SetFailSchedule", "EstablishLineOfFireFallback"},
         "GetPathToEnemyLOS",
         {"SpeakSentence", 1},
-        -- "RunPath",
         "WaitForMovement",
         {"SetSchedule", "CombatFace"},
     },
     EstablishLineOfFireFallback = {
-        {"SetFailSchedule", "PreFailEstablishLineOfFire"},
         "StopMoving",
         {"GetChasePathToEnemy", 300},
-        -- "RunPath",
         "WaitForMovement",
         "FaceEnemy",
-    },
-    FailEstablishLineOfFire = {
-        {"SetActivity", ACT_IDLE},
-    },
-    FailTakeCover = {
-        {"SetActivity", ACT_IDLE},
-    },
-    GiveWay = {
-        "StopMoving",
-        "MoveLateral",
-        "WaitForMovement",
     },
     GoForwardSlide = {
         {"SetFinalizeTask", "FinalizeCombatSlide"},
@@ -359,16 +355,13 @@ ENT.ScheduleList = {
     },
     IdleStand = {
         "StopMoving",
-        -- {"SetActivity", ACT_IDLE},
         "FaceReasonable",
         {"Wait", 5},
         "WaitPVS",
     },
     IdleWander = {
-        -- {"SetToleranceDistance", 48},
         {"SetRouteSearchTime", 5},
         {"GetPathToRandom", 200},
-        -- "WalkPath",
         "WaitForMovement",
         "FaceReasonable",
         "WaitPVS",
@@ -390,9 +383,7 @@ ENT.ScheduleList = {
     MoveAwayFromEnemy = {
         {"SetFailSchedule", "MoveAwayFail"},
         "FaceEnemy",
-        {"SetToleranceDistance", 8},
         {"MoveAwayPath", 120},
-        -- "RunPath",
         "WaitForMovement",
         {"SetSchedule", "MoveAwayEnd"},
     },
@@ -429,7 +420,6 @@ ENT.ScheduleList = {
         }},
     },
     RappelUp = {
-        {"SetFailSchedule", "MoveLateral"},
         {"SetFinalizeTask", "FinalizeRappel"},
         "StopMoving",
         "WaitForLand",
@@ -443,6 +433,7 @@ ENT.ScheduleList = {
             shoot = true,
             shouldslide = false,
         }},
+        "WaitForLand",
     },
     Reload = {
         "StopMoving",
@@ -452,20 +443,17 @@ ENT.ScheduleList = {
     },
     Standoff = {
         "StopMoving",
-        {"SetActivity", ACT_IDLE},
         {"WaitFaceEnemy", 2},
     },
     TakeCoverFromEnemy = {
         {"SetFailSchedule", "FailTakeCover"},
         "StopMoving",
         {"Wait", 0.2},
-        {"SetToleranceDistance", 8},
+        {"SetToleranceDistance", 20},
         {"FindCoverFromEnemy", 24},
-        -- "RunPath",
         "WaitForMovement",
         {"Remember", "Incover"},
         "FaceEnemy",
-        {"SetActivity", ACT_IDLE},
         {"Wait", 1},
     },
     TakeCoverSlide = {
@@ -498,6 +486,7 @@ ENT.Interrupts = {
 	    c.COND_CAN_MELEE_ATTACK1,
 	    c.COND_CAN_MELEE_ATTACK2,
         c.COND_SEE_GRENADE,
+        c.COND_BULLET_NEAR,
     },
     ChaseEnemy = {
     	c.COND_NEW_ENEMY,

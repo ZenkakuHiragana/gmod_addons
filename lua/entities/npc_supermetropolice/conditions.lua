@@ -100,6 +100,7 @@ ENT.ConditionNameList = {
     "COND_CAN_RAPPEL_FORWARD",
     "COND_GOOD_TO_SLIDE",
     "COND_SHOULD_CROUCH_SHOOT",
+    "COND_BULLET_NEAR",
 }
 
 ENT.Enum.Conditions = {}
@@ -115,6 +116,7 @@ function ENT:Initialize_Conditions()
     }
     self.Time.GiveWay = CurTime()
     self.Time.LastDamage = CurTime()
+    self.Time.LastHearBullet = CurTime()
     self.Time.NextUpdateCondition = CurTime()
 end
 
@@ -196,6 +198,10 @@ function ENT:UpdateConditions()
     if CurTime() > self.Time.LastDamage + 1 then
         self.Conditions.SumDamage = 0
     end
+
+    if CurTime() > self.Time.LastHearBullet + 0.1 then
+        self:ClearCondition(c.COND_BULLET_NEAR)
+    end
     
     if CurTime() > self.Time.GiveWay then
         self:ClearCondition(c.COND_GIVE_WAY)
@@ -212,7 +218,7 @@ function ENT:UpdateConditions()
     self:ManipulateCondition(self:IsUnreachable(e), "COND_ENEMY_UNREACHABLE")
     self:ManipulateCondition(tookdamage > 0, "COND_LIGHT_DAMAGE")
     self:ManipulateCondition(tookdamage > 20, "COND_HEAVY_DAMAGE")
-    self:ManipulateCondition(self.Conditions.SumDamage > self:GetMaxHealth() * 0.3, "COND_REPEATED_DAMAGE")
+    self:ManipulateCondition(self.Conditions.SumDamage > self:GetMaxHealth() * 0.05, "COND_REPEATED_DAMAGE")
     self:ManipulateCondition(self:CheckPVS(), "COND_IN_PVS")
 
     self:ClearCondition(c.COND_CAN_RAPPEL_UP)
@@ -287,14 +293,15 @@ function ENT:UpdateConditions()
     local cap = isfunction(e.CapabilitiesGet) and e:CapabilitiesGet() or 0
     local enemycanmelee = bit.band(cap, CAP_RANGE_ATTACKS) == 0
     local minrange = enemycanmelee and not ismelee and math.max(params.MinRange, 80) or params.MinRange
+    local face_threshold = ismelee and 0 or 0.9
     toenemy:Normalize()
     self:ManipulateCondition(params.CheckLOS(self), "COND_WEAPON_HAS_LOS")
     self:ManipulateCondition(not self:HasCondition(c.COND_WEAPON_HAS_LOS), "COND_WEAPON_SIGHT_OCCLUDED")
     self:ManipulateCondition(d > params.MaxRange, "COND_TOO_FAR_TO_ATTACK")
     self:ManipulateCondition(d < minrange, "COND_TOO_CLOSE_TO_ATTACK")
-    self:ManipulateCondition(self.Clip < params.ClipSize / 2, "COND_LOW_PRIMARY_AMMO")
-    self:ManipulateCondition(self.Clip == 0, "COND_NO_PRIMARY_AMMO")
-    self:ManipulateCondition(toenemy:Dot(self:GetAimVector()) < 0.5, "COND_NOT_FACING_ATTACK")
+    self:ManipulateCondition(not self.IsReloading and self.Clip > 0 and self.Clip < params.ClipSize / 2, "COND_LOW_PRIMARY_AMMO")
+    self:ManipulateCondition(not self.IsReloading and self.Clip == 0, "COND_NO_PRIMARY_AMMO")
+    self:ManipulateCondition(toenemy:Dot(self:GetAimVector()) < face_threshold, "COND_NOT_FACING_ATTACK")
     local canattack = self:CanPrimaryFire() and not (
         self:HasCondition(c.COND_WEAPON_SIGHT_OCCLUDED) or
         self:HasCondition(c.COND_WEAPON_BLOCKED_BY_FRIEND) or
@@ -305,24 +312,27 @@ function ENT:UpdateConditions()
     self:ManipulateCondition(canattack, "COND_CAN_RANGE_ATTACK1")
     self:ManipulateCondition(canattack, "COND_CAN_MELEE_ATTACK1")
 
-    local crouch = {
-        ar2 = true,
-        smg = true,
-        shotgun = true,
-    }
-    if crouch[params.HoldType] and not self.loco:IsAttemptingToMove() then
-        for _, e in ipairs(ents.FindInSphere(self:GetPos(), 80)) do
-            if e.IsSuperMetropolice and self:CheckAlive(e) then
-                local dot = e:GetForward():Dot(self:GetPos() - e:GetPos())
-                if dot < -0.8 then
-                    self:ClearCondition(c.COND_SHOULD_CROUCH_SHOOT)
-                    self.ForceCrouch = false
-                    break
-                elseif dot > 0.8 then
-                    self:SetCondition(c.COND_SHOULD_CROUCH_SHOOT)
-                    self.ForceCrouch = true
-                end
-            end
-        end
-    end
+    -- local crouch = {
+    --     pistol = true,
+    --     ar2 = true,
+    --     smg = true,
+    --     shotgun = true,
+    -- }
+    -- self:ClearCondition(c.COND_SHOULD_CROUCH_SHOOT)
+    -- self.ForceCrouch = false
+    -- if crouch[params.HoldType] then
+    --     for _, e in ipairs(ents.FindInSphere(self:GetPos(), 100)) do
+    --         if e.IsSuperMetropolice
+    --         and self:CheckAlive(e)
+    --         and crouch[e.WeaponParameters.HoldType] then
+    --             local dir = self:GetPos() - e:GetPos()
+    --             local dot = e:GetAimVector():Dot(dir:GetNormalized())
+    --             if dot > 0.85 then
+    --                 self:SetCondition(c.COND_SHOULD_CROUCH_SHOOT)
+    --                 self.ForceCrouch = true
+    --                 break
+    --             end
+    --         end
+    --     end
+    -- end
 end

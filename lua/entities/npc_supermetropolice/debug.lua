@@ -7,20 +7,22 @@ local config = {
     CheckCrouching = false,
     ComputePath = false,
     FindCoverPosAll = false,
-    FindCoverPosAttempt = true,
+    FindCoverPosAttempt = false,
     FindCoverPosAttemptAlt = false,
-    FindLateralCover = true,
+    FindLateralCover = false,
     FindLateralLOS = false,
     FindLOSAll = false,
     FindLOSAttempt = false,
     FindLOSAttemptAlt = false,
     fInterval = false,
-    FixPath = true,
-    HasInterrupt = true,
-    MoveAwayPath = true,
-    ScheduleStart = true,
+    FixPath = false,
+    HasInterrupt = false,
+    MeleeTrace = false,
+    MoveAwayPath = false,
+    ScheduleStart = false,
     SelectSchedule = false,
     TaskStart = false,
+    TestThrowVec = false,
     UpdateAimParameters = false,
     UpdatePath = true,
 }
@@ -64,11 +66,11 @@ function ENT:print(category, ...)
 	print(self, unpack(args))
 end
 
-function ENT:swept(category, from, to, mins, maxs, tick)
+function ENT:swept(category, from, to, mins, maxs, tick, color)
     if dev:GetInt() == 0 then return end
     if category and not config[category] then return end
     if not (mins and maxs) then mins, maxs = self:GetHull() end
-    debugoverlay.SweptBox(from, to, mins, maxs, angle_zero, tick and 0.1 or 3, Color(0, 255, 0, 8))
+    debugoverlay.SweptBox(from, to, mins, maxs, angle_zero, tick and 0.1 or 3, color or Color(0, 255, 0, 8))
 end
 
 function ENT:text(category, org, text, tick, checkz)
