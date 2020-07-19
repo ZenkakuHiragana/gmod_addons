@@ -6,9 +6,14 @@ AccessorFunc(ENT, "m_hTargetEnt", "Target")
 function ENT:Initialize_Target()
     self.Time.LastEnemySeen = 0
     self.Time.NextFindEnemy = CurTime()
+    self.EnemyPool = {}
     self:SetLastPosition(Vector())
     self:SetEnemy(NULL)
     self:SetTarget(NULL)
+
+    for _, e in ipairs(ents.FindByClass "npc_supermetropolice") do
+        table.Merge(self.EnemyPool, e.EnemyPool)
+    end
 end
 
 function ENT:OnInjured_Target(d)
@@ -38,6 +43,7 @@ function ENT:FindEnemy()
 
     local targetlist = ents.FindInPVS(self)
     local valuabletarget, highestValue = NULL, 0
+    local newenemyfound = false
     for i, e in ipairs(targetlist) do
         if self:Visible(e) and self:HasValidEnemy(e)
         and (self:GetForward():Dot(e:WorldSpaceCenter() - self:WorldSpaceCenter()) > 0
@@ -45,10 +51,18 @@ function ENT:FindEnemy()
             local distanceValue = 10000 / self:GetRangeSquaredTo(e)
             local healthValue = 1 / math.max(e:Health(), 1)
             local value = distanceValue + healthValue
+            newenemyfound = newenemyfound or not self.EnemyPool[e]
+
+            self.EnemyPool[e] = value
             if value > highestValue then
                 valuabletarget, highestValue = e, value
             end
         end
+    end
+
+    self:ManipulateCondition(newenemyfound, "COND_NEW_ENEMY")
+    for e in pairs(self.EnemyPool) do
+        if not self:CheckAlive(e) then self.EnemyPool[e] = nil end
     end
 
     if not IsValid(valuabletarget) then

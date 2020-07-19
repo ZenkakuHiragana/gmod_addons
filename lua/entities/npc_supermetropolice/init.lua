@@ -47,7 +47,7 @@ function ENT:RunHook(prefix, ...)
 end
 
 function ENT:Initialize()
-    self:SetModel "models/player/police.mdl"
+    self:SetModel "models/player/police_fem.mdl"
 	self:SetMaxHealth(self.MaxHealth)
 	self:SetHealth(self:GetMaxHealth())
 	self:AddFlags(FL_NPC)
@@ -55,7 +55,6 @@ function ENT:Initialize()
 	self:SetSolid(SOLID_BBOX)
 	self:MakePhysicsObjectAShadow(true, true)
 	self:SetCollisionBounds(self:GetMins(true), self:GetMaxs(true))
-	self:DrawShadow(true)
 	self.Time = {}
 	self:RunHook "Initialize"
 end
@@ -95,7 +94,7 @@ local function ShouldStopSchedule(self)
 	or self:HasInterrupt()
 end
 
-local Benchmark = false
+local Benchmark = true
 function ENT:RunTaskBatch(task)
 	if Benchmark then
 		util.TimerCycle()
@@ -112,6 +111,7 @@ function ENT:RunTaskBatch(task)
 		if max < t then max, str = t, "UpdatePath" end
 		if max > 1 then self:print("Benchmark", max, str) end
 		self:FixPath()
+		self:FireWeapon()
 	else
 		self:UpdateConditions()
 		self:CheckCrouching()
@@ -148,17 +148,6 @@ function ENT:RunScheduleLoop()
 
 			coroutine.yield()
 		end
-	end
-end
-
-function ENT:Think() -- Change Pathfinder's face
-	local c = self.Enum.Conditions
-	local b = self:FindBodygroupByName "Screen"
-	if b < 0 then return end
-	if self:HasCondition(c.COND_CAN_RANGE_ATTACK1) then
-		self:SetBodygroup(b, 1)
-	else
-		self:SetBodygroup(b, 0)
 	end
 end
 

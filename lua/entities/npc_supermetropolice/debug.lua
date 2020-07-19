@@ -1,7 +1,8 @@
 
 local dev = GetConVar "developer"
 local config = {
-    Benchmark = false,
+    AvoidNPCs = false,
+    Benchmark = true,
     CanRappelUp = false,
     CanRappelForward = false,
     CheckCrouching = false,
@@ -19,7 +20,7 @@ local config = {
     HasInterrupt = false,
     MeleeTrace = false,
     MoveAwayPath = false,
-    ScheduleStart = false,
+    ScheduleStart = true,
     SelectSchedule = false,
     TaskStart = false,
     TestThrowVec = false,

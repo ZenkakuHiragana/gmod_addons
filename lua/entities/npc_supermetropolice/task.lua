@@ -199,7 +199,7 @@ function ENT:Task_GetPathToGoal(arg)
     elseif pathtype == p.PATH_LOS then
         local toofar = self.HasLongRange and 1e9 or 1024
         local max, min = 2000, 0
-        local params = self.WeaponParameters
+        local params = self:GetWeaponParameters()
         if params then
             max, min = params.MaxRange, params.MinRange
         end
@@ -259,13 +259,11 @@ function ENT:Task_GetChasePathToEnemy(arg)
         return
     end
 
-    if self:GetShootTo():DistToSqr(self:GetLastPosition()) < arg ^ 2 then
+    if self:GetShootTo():DistToSqr(self:GetLastPosition()) < arg^2 then
         self:Task_GetPathToEnemy()
     else
         self:Task_GetPathToEnemyLKP()
     end
-
-    self:TaskComplete()
 end
 
 function ENT:Task_GetPathToEnemyLOS(arg)
@@ -277,7 +275,7 @@ function ENT:Task_GetPathToEnemyLOS(arg)
     local task = self.Schedule.CurrentTask
     local toofar = self.HasLongRange and 1e9 or 1024
     local max, min = 2000, 0
-    local params = self.WeaponParameters
+    local params = self:GetWeaponParameters()
     if params then
         max, min = params.MaxRange, params.MinRange
     end
@@ -289,7 +287,7 @@ function ENT:Task_GetPathToEnemyLOS(arg)
         posLos = self:FindLateralLOS(enemypos) or self:FindLOS(enemypos, min, max)
         if posLos then
             local d = posLos:Distance(enemypos)
-            found = d < max and d > min
+            found = min < d and d < max
         end
     end
 
@@ -397,10 +395,7 @@ function ENT:Task_SetFinalizeTask(arg)
 end
 
 function ENT:Task_RangeAttack1()
-    local success = self:PrimaryFire()
-    if not success then
-        return
-    end
+    if not self:PrimaryFire() then return end
     self:TaskComplete()
 end
 
@@ -526,7 +521,8 @@ end
 function ENT:Task_MoveLateral()
     if not self.Path:IsValid() then
         local dir = math.random() > .5 and 100 or -100
-        self:ComputePath(self:GetPos() + self:GetRight() * dir)
+        local pos = self:TraceHullStand(nil, self:GetPos() + self:GetRight() * dir).HitPos
+        self:ComputePath(pos)
     end
 
     self:TaskComplete()
@@ -572,7 +568,7 @@ function ENT:Task_Rappel(arg)
         if distance == "Weapon" then
             distance = 900
             if self:HasValidEnemy() then
-                local p = self.WeaponParameters
+                local p = self:GetWeaponParameters()
                 local range = self:GetRangeTo(self:GetEnemy())
                 distance = math.max(500, math.min(range, range - p.MaxRange)) * 0.7
             end
@@ -780,4 +776,35 @@ function ENT:Task_FinalizeCombatSlide()
     self.DesiredPitch = 0
     self.DesiredSpeed = nil
     self.Time.NextCombatSlide = CurTime() + 0.8
+end
+
+function ENT:Task_SwitchWeapon(arg)
+    self:TaskComplete()
+    if arg == "Reload" then
+        for i, w in ipairs(self.Weapons) do
+            if w.Clip < w.Parameters.ClipSize then
+                self:SetActiveWeapon(i)
+                return
+            end
+        end
+    elseif arg == "CloseRange" or arg == "LongRange" then
+        if not IsValid(self:GetEnemy()) then
+            self:TaskFail(f.FAIL_NO_ENEMY)
+            return
+        end
+
+        local close = arg == "CloseRange"
+        local dist = self:GetRangeTo(self:GetEnemy())
+        local first, last, step = 1, #self.Weapons, 1
+        if close then first, last, step = last, first, -step end
+        for i = first, last, step do -- Weapons are sorted by their range
+            local p = self.Weapons[i].Parameters
+            if Either(close, p.MinRange < dist, dist < p.MaxRange) then
+                self:SetActiveWeapon(i)
+                return
+            end
+        end
+
+        self:SetActiveWeapon(close and 1 or #self.Weapons)
+    end
 end

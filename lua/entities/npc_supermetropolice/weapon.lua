@@ -48,7 +48,7 @@ local function DefaultFireCallback(attacker, tr, dmginfo)
     if not IsValid(attacker) then return end
     local w = attacker:GetActiveWeapon()
     if not IsValid(w) then return end
-    local params = attacker.WeaponParameters
+    local params = attacker:GetWeaponTable()
     if not tr.HitSky and params.ImpactEffectName then
         local e = EffectData()
         e:SetOrigin(tr.HitPos + tr.HitNormal)
@@ -70,7 +70,7 @@ end
 local function DefaultFireFunction(self, w, pos, dir)
     local e = self:GetEnemy()
     if not IsValid(e) then return end
-    local params = self.WeaponParameters
+    local params = self:GetWeaponParameters()
     local tan = math.tan(math.rad(params.Spread))
     local dmg = params.Damage
     if isstring(dmg) then
@@ -120,7 +120,7 @@ local function DefaultFireFunction(self, w, pos, dir)
         end
     else
         self:FireBullets(bullet)
-        self.Clip = self.Clip - 1
+        self:GetWeaponTable().Clip = self:GetClip() - 1
     end
 
     if params.ShootSound then
@@ -146,7 +146,7 @@ end
 
 local function CalcThrowVec(self, v1, v2, toss, velocity)
     local g = physenv.GetGravity():Length()
-    local v = velocity or self.WeaponParameters.MaxRange * 0.8
+    local v = velocity or self:GetWeaponParameters().MaxRange * 0.8
     local to = v2 - v1
     local dir2D = Vector(to.x, to.y)
     local x = dir2D:Length()
@@ -289,7 +289,7 @@ local DefaultParameters = {
     MinBurstDelay = 0.1,
     MinBurstNum = 1,
     MinBurstRestDelay = 0.3,
-    MinRange = 24,
+    MinRange = 100,
     MuzzleEffectName = "attack_npc",
     PlayGesture = true,
     ReloadSound = "Weapon_Pistol.NPC_Reload",
@@ -322,7 +322,7 @@ local HL2Weapons = {
         MinBurstDelay = 0.8,
         MinBurstNum = 1,
         MinBurstRestDelay = 1.5,
-        MinRange = 80,
+        MinRange = 200,
         MuzzleEffectName = "attack_npc",
         ReloadSound = "Weapon_357.Spin",
         ReloadSoundDelay = 0.5,
@@ -344,6 +344,7 @@ local HL2Weapons = {
         MinRange = 400,
         PlayGesture = false,
         Spread = 3,
+        UnlimitedAmmo = true,
     },
     weapon_ar2 = {
         AmmoType = "AR2",
@@ -358,7 +359,7 @@ local HL2Weapons = {
         MinBurstDelay = 0.1,
         MinBurstNum = 2,
         MinBurstRestDelay = 0.2,
-        MinRange = 65,
+        MinRange = 160,
         ReloadSound = "Weapon_AR2.NPC_Reload",
         ShootSound = "Weapon_AR2.NPC_Single",
         Spread = 3,
@@ -379,7 +380,7 @@ local HL2Weapons = {
         MinBurstDelay = 0.7,
         MinBurstNum = 1,
         MinBurstRestDelay = 1.2,
-        MinRange = 0,
+        MinRange = 80,
         MuzzleEffectName = "fire",
         ReloadSound = "Weapon_Shotgun.NPC_Reload",
         ShootSound = "Weapon_Shotgun.NPC_Single",
@@ -397,7 +398,7 @@ local HL2Weapons = {
         MinBurstDelay = 0.075,
         MinBurstNum = 2,
         MinBurstRestDelay = 0.2,
-        MinRange = 0,
+        MinRange = 100,
         MuzzleEffectName = "attack1",
         ReloadSound = "Weapon_SMG1.NPC_Reload",
         ShootSound = "Weapon_SMG1.NPC_Single",
@@ -413,7 +414,7 @@ local HL2Weapons = {
         MaxBurstDelay = 1.2,
         MaxBurstNum = 1,
         MaxBurstRestDelay = 1.2,
-        MaxRange = 70,
+        MaxRange = 80,
         MinBurstDelay = 1,
         MinBurstNum = 1,
         MinBurstRestDelay = 1,
@@ -423,13 +424,40 @@ local HL2Weapons = {
         ReloadSound = "Weapon_StunStick.Activate",
         ShootSound = false,
         Spread = 0,
+        UnlimitedAmmo = true,
     },
 }
 
 local SF_WEAPON_DENY_PLAYER_PICKUP = 2
 local SF_WEAPON_NOT_PUNTABLE_BY_GRAVITY_GUN = 4
+function ENT:SetActiveWeapon(weaponID)
+    local wTable = self.Weapons[weaponID]
+    if not wTable then return end
+    local weapon = wTable.Entity
+    if not IsValid(weapon) then return end
+    local oldWeapon = self:GetNWEntity "ActiveWeapon"
+    if IsValid(oldWeapon) then oldWeapon:SetNoDraw(true) end
+    self:SetSaveValue("m_hActiveWeapon", weapon)
+    self:SetNWEntity("ActiveWeapon", weapon)
+    self.Weapons.ActiveWeaponID = weaponID
+    weapon:SetNoDraw(false)
+end
+
+function ENT:GetWeaponTable()
+    return self.Weapons[self.Weapons.ActiveWeaponID]
+end
+
+function ENT:GetWeaponParameters()
+    local wTable = self:GetWeaponTable()
+    return wTable.Parameters
+end
+
+function ENT:GetClip()
+    local wTable = self:GetWeaponTable()
+    return wTable.Clip
+end
+
 function ENT:Give(classname)
-    SafeRemoveEntity(self:GetActiveWeapon())
     local w = ents.Create(classname)
     if not IsValid(w) then return end
     w:SetKeyValue("spawnflags", SF_WEAPON_DENY_PLAYER_PICKUP + SF_WEAPON_NOT_PUNTABLE_BY_GRAVITY_GUN)
@@ -437,13 +465,58 @@ function ENT:Give(classname)
     w:SetOwner(self)
     w:Fire("SetParentAttachmentMaintainOffset", "anim_attachment_RH")
     w:AddEffects(EF_BONEMERGE)
+    w:SetNoDraw(true)
     w:Spawn()
 
-    self:SetSaveValue("m_hActiveWeapon", w)
-    self:SetNWEntity("ActiveWeapon", w)
-    self:RegisterWeaponParameters(HL2Weapons[classname])
-    self.Clip = self.WeaponParameters.ClipSize or 0
+    local t = {
+        Clip = 0,
+        Entity = w,
+        Parameters = table.Merge(table.Copy(DefaultParameters), HL2Weapons[classname]),
+    }
+    t.Clip = t.Parameters.ClipSize
+
+    table.insert(self.Weapons, t)
+    self:DeleteOnRemove(w)
+
+    table.sort(self.Weapons, function(a, b)
+        return a.Parameters.MaxRange < b.Parameters.MaxRange
+    end)
+    
     return w
+end
+
+function ENT:Initialize_Weapon()
+    local skill = game.GetSkillLevel()
+    local SpreadMul = {1.2, 1, 0.3}
+    local BurstRestMul = {1.1, 1, 0.8}
+    local WeaponRestrict = {3, 2, 1}
+    self.BurstNum = 0
+    self.Weapons = {}
+    self.WeaponShootCount = 0
+    self.WeaponSpreadMul = SpreadMul[skill]
+    self.WeaponBurstRestMul = BurstRestMul[skill]
+    self.Time.WeaponBurstRest = CurTime()
+    self.Time.WeaponFire = CurTime()
+    self.Time.FinishReloading = CurTime()
+
+    local WeaponSelection = {}
+    for i = WeaponRestrict[skill], #WeaponList do
+        table.insert(WeaponSelection, i)
+    end
+
+    local NumWeapons = 2
+    if skill == 3 and math.random() > 0.9 then
+        NumWeapons = #WeaponSelection
+    end
+
+    for _ = 1, NumWeapons do
+        local i = math.random(#WeaponSelection)
+        local n = WeaponSelection[i]
+        table.remove(WeaponSelection, i)
+        self:Give(WeaponList[n])
+    end
+    
+    self:SetActiveWeapon(math.random(#self.Weapons))
 end
 
 function ENT:OnKilled_DropWeapon(d)
@@ -460,34 +533,12 @@ function ENT:OnKilled_DropWeapon(d)
     SafeRemoveEntity(w)
 end
 
-function ENT:RegisterWeaponParameters(params)
-    local p = table.Copy(DefaultParameters)
-    self.WeaponParameters = table.Merge(p, params or {})
-end
-
-function ENT:Initialize_Weapon()
-    local skill = game.GetSkillLevel()
-    local SpreadMul = {1.2, 1, 0.3}
-    local BurstRestMul = {1.1, 1, 0.8}
-    local WeaponRestrict = {3, 2, 1}
-    self.BurstNum = 0
-    self.WeaponParameters = {}
-    self.WeaponShootCount = 0
-    self.WeaponSpreadMul = SpreadMul[skill]
-    self.WeaponBurstRestMul = BurstRestMul[skill]
-    self.Clip = 0
-    self.Time.WeaponBurstRest = CurTime()
-    self.Time.WeaponFire = CurTime()
-    self.Time.FinishReloading = CurTime()
-    self:Give(WeaponList[math.random(WeaponRestrict[skill], #WeaponList)])
-end
-
 function ENT:CanPrimaryFire()
     if self.IsReloading then return end
     local w = self:GetActiveWeapon()
     if not IsValid(w) then return end
     if CurTime() < self.Time.FinishReloading then return end
-    return self.WeaponParameters.IsMelee or self.Clip > 0
+    return self:GetWeaponParameters().IsMelee or self:GetClip() > 0
 end
 
 function ENT:GetShootPos()
@@ -507,7 +558,11 @@ function ENT:GetShootTo()
         return self:WorldSpaceCenter() + self:GetForward() * 100
     end
 
-    local params = self.WeaponParameters
+    if self:HasCondition(c.COND_ENEMY_OCCLUDED) then
+        return self:GetLastPosition()
+    end
+    
+    local params = self:GetWeaponParameters()
     local pos = e:WorldSpaceCenter()
     if params and (params.IsMelee or self:GetRangeTo(pos) < (params.MinRange + params.MaxRange) / 2) then
         local id = e:LookupAttachment "head"
@@ -542,7 +597,7 @@ function ENT:PrimaryFire()
 
     local w = self:GetActiveWeapon()
     if not IsValid(w) then return end
-    local params = self.WeaponParameters
+    local params = self:GetWeaponParameters()
     if self.WeaponShootCount == 0 then
         self.BurstNum = math.random(params.MinBurstNum, params.MaxBurstNum)
     end
@@ -586,11 +641,9 @@ end
 local NewReloadStyle = true
 function ENT:Reload()
     if self.IsReloading then return end
-    local params = self.WeaponParameters
+    local params = self:GetWeaponParameters()
     if not params then return end
     local s = params.ReloadSound
-    -- local low = self.Crouching
-    -- local act = self:TranslateActivity(low and ACT_RELOAD_LOW or ACT_RELOAD)
     local act = self:TranslateActivity(ACT_HL2MP_GESTURE_RELOAD)
     local seq = self:SelectWeightedSequence(act)
     if seq < 0 then return end
@@ -604,19 +657,18 @@ function ENT:Reload()
         self:EmitSound(s)
     end
 
-    -- self.PlaySequence = self:GetSequenceName(seq)
     self:SetMovementActivity(self:TranslateActivity(ACT_HL2MP_IDLE))
-    self:RestartGesture(act)
+    self:AddGesture(act)
 
-    if NewReloadStyle  then
+    if NewReloadStyle then
         self.IsReloading = true
         timer.Simple(reloadtime, function()
             if not IsValid(self) then return end
             self.IsReloading = false
-            self.Clip = params.ClipSize
+            self:GetWeaponTable().Clip = params.ClipSize
         end)
     else
         coroutine.wait(reloadtime)
-        self.Clip = params.ClipSize
+        self:GetWeaponTable().Clip = params.ClipSize
     end
 end

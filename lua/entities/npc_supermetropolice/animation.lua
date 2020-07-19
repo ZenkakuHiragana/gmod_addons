@@ -119,7 +119,7 @@ function ENT:BodyUpdate()
     elseif self.loco:IsAttemptingToMove() then
         local hasenemy = self:HasValidEnemy() or aidisabled:GetBool()
         local run = hasenemy and ACT_HL2MP_RUN_FAST or ACT_HL2MP_WALK
-        if hasenemy and not (self.WeaponParameters.IsMelee or
+        if hasenemy and not (self:GetWeaponParameters().IsMelee or
         self:HasCondition(self.Enum.Conditions.COND_WEAPON_SIGHT_OCCLUDED)) then
             run = ACT_HL2MP_RUN
         end
@@ -137,30 +137,42 @@ function ENT:BodyUpdate()
         end
     end
 
-    local dir = self.loco:GetGroundMotionVector()
-    if self:LookupPoseParameter "move_yaw" >= 0 then
-        local yaw = 0
-        if self.loco:IsOnGround() then
-            yaw = dir:Dot(self:GetForward())
-            yaw = math.deg(math.acos(math.Clamp(yaw, -1, 1)))
-            if self:GetForward():Cross(dir).z < 0 then
-                yaw = -yaw
-            end
-
-            yaw = math.NormalizeAngle(yaw)
-        end
-
-        local current_yaw = self:GetPoseParameter "move_yaw"
-        local dy = yaw - current_yaw
-        local sy = dy == 0 and 0 or dy > 0 and 1 or -1
-        dy = math.min(math.abs(dy), self.loco:GetMaxYawRate()) * sy
-        current_yaw = math.NormalizeAngle(current_yaw + dy)
-        self:SetPoseParameter("move_yaw", current_yaw)
-    end
-
-    self:BodyMoveXY()
     self:SetMovementActivity(act, speed)
     self:UpdateAimParameters()
+    self:BodyMoveXY()
+
+    local dir = self.loco:GetGroundMotionVector()
+    local yaw = 0
+    if self.loco:IsOnGround() then
+        yaw = dir:Dot(self:GetForward())
+        yaw = math.deg(math.acos(math.Clamp(yaw, -1, 1)))
+        if self:GetForward():Cross(dir).z < 0 then
+            yaw = -yaw
+        end
+
+        yaw = math.NormalizeAngle(yaw)
+    end
+
+    local current_yaw
+    local move_yaw_exists = self:LookupPoseParameter "move_yaw" >= 0
+    if move_yaw_exists then
+        current_yaw = self:GetPoseParameter "move_yaw"
+    else
+        current_yaw = self.PreviousCurrentYaw or 0
+    end
+
+    local dy = yaw - current_yaw
+    local sy = dy == 0 and 0 or dy > 0 and 1 or -1
+    dy = math.min(math.abs(dy), self.loco:GetMaxYawRate()) * sy
+    current_yaw = math.NormalizeAngle(current_yaw + dy)
+
+    if move_yaw_exists then
+        self:SetPoseParameter("move_yaw", current_yaw)
+    else
+        self:SetPoseParameter("move_x", math.cos(math.rad(current_yaw)))
+        self:SetPoseParameter("move_y", -math.sin(math.rad(current_yaw)))
+        self.PreviousCurrentYaw = current_yaw
+    end
 end
 
 function ENT:OnLandOnGround_Animation(ent)
@@ -175,7 +187,7 @@ function ENT:OnInjured_Animation(d)
     local att = d:GetAttacker()
     local org = IsValid(att) and att:WorldSpaceCenter() or pos
     local tr = util.QuickTrace(pos, d:GetDamageForce())
-    local params = self.WeaponParameters
+    local params = self:GetWeaponParameters()
 	if tr.Entity ~= self then return end
     local flinch = ({
         [HITGROUP_HEAD] = ACT_FLINCH_HEAD,

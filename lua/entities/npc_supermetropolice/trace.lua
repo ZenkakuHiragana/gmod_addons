@@ -18,7 +18,7 @@ function ENT:GetHull(stand)
 end
 
 function ENT:TraceHull(from, to, mask, filter, collisiongroup, stand)
-	-- PrintTable(self:GetSaveTable())
+    local from = from or self:GetPos()
     local mins, maxs = self:GetHull(stand)
     local TRACE_DELTA_Z = vector_up * self.loco:GetStepHeight()
 	return util.TraceHull {

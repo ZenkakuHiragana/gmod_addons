@@ -309,7 +309,7 @@ local ActivityTranslation = {
 }
 
 function ENT:TranslateActivity(act_src)
-    local h = self.WeaponParameters.HoldType
+    local h = self:GetWeaponParameters().HoldType
 	local t = ActivityTranslation
 	local act = act_src
 	if not t[act] then return act end

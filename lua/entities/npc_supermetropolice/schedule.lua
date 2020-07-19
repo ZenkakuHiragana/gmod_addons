@@ -122,20 +122,20 @@ end
 
 local function IdleSchedule(self)
     local w = self:GetActiveWeapon()
-    local params = self.WeaponParameters
-    local sched_list = {"IdleStand", "IdleWander", "IdleRappelUp"}
-    if not self:HasCondition(c.COND_CAN_RAPPEL_UP) then
-        table.remove(sched_list)
-    end
-
+    local params = self:GetWeaponParameters()
+    local sched_list = {"IdleStand", "IdleWander"}
     local s = sched_list[math.random(#sched_list)]
     if self:HasCondition(c.COND_SEE_GRENADE) then
         s = "GrenadeEscape"
-    elseif self:HasCondition(c.COND_GIVE_WAY) then
-        s = "GiveWay"
     elseif not self.IsReloading and IsValid(w)
-    and params and self.Clip < params.ClipSize then
+    and params and self:GetClip() < params.ClipSize then
         s = "HideAndReload"
+    elseif not self.IsReloading then
+        for i, w in ipairs(self.Weapons) do
+            if w.Clip < w.Parameters.ClipSize then
+                return "SwitchWeaponToReload"
+            end
+        end
     end
     
     return s
@@ -143,22 +143,22 @@ end
 
 local function AlertSchedule(self)
     local w = self:GetActiveWeapon()
-    local params = self.WeaponParameters
-    local sched_list = {"AlertStand", "IdleWander", "IdleRappelUp"}
-    if not self:HasCondition(c.COND_CAN_RAPPEL_UP) then
-        table.remove(sched_list)
-    end
-
+    local params = self:GetWeaponParameters()
+    local sched_list = {"AlertStand", "IdleWander"}
     local s = sched_list[math.random(#sched_list)]
     if self:HasCondition(c.COND_SEE_GRENADE) then
         s = "GrenadeEscape"
-    elseif self:HasCondition(c.COND_GIVE_WAY) then
-        s = "GiveWay"
     elseif CurTime() - self.Time.LastEnemySeen < 3 then
         s = "AlertStand"
     elseif not self.IsReloading and IsValid(w)
-    and params and self.Clip < params.ClipSize then
+    and params and self:GetClip() < params.ClipSize then
         s = "HideAndReload"
+    elseif not self.IsReloading then
+        for i, w in ipairs(self.Weapons) do
+            if w.Clip < w.Parameters.ClipSize then
+                return "SwitchWeaponToReload"
+            end
+        end
     end
     
     return s
@@ -168,7 +168,7 @@ local CAP_RANGE_ATTACKS = bit.bor(CAP_WEAPON_RANGE_ATTACK1,
 CAP_WEAPON_RANGE_ATTACK2, CAP_INNATE_RANGE_ATTACK1, CAP_INNATE_RANGE_ATTACK2)
 local function CombatSchedule(self)
     local e = self:GetEnemy()
-    local p = self.WeaponParameters
+    local p = self:GetWeaponParameters()
     local s = nil
     local cap = isfunction(e.CapabilitiesGet) and e:CapabilitiesGet()
     local restdelay = math.max(p.MaxBurstRestDelay / 2, 1)
@@ -177,16 +177,12 @@ local function CombatSchedule(self)
         s = "IdleStand"
     elseif self:HasCondition(c.COND_SEE_GRENADE) then
         s = "GrenadeEscape"
-    elseif self:HasCondition(c.COND_REPEATED_DAMAGE)
-    or not ismelee and CurTime() + restdelay < self.Time.WeaponFire then
+    elseif not ismelee and (self:HasCondition(c.COND_REPEATED_DAMAGE)) then
         s = "TakeCoverFromEnemy"
-    elseif self:HasCondition(c.COND_BULLET_NEAR)
-    and not ismelee and CurTime() > self.Time.NextCombatSlide then
-        s = "TakeCoverSlide"
     elseif self:HasCondition(c.COND_TOO_FAR_TO_ATTACK) then
         s = self:ScheduleDecision_ApproachEnemy()
     elseif self:HasCondition(c.COND_TOO_CLOSE_TO_ATTACK) then
-        s = "MoveAwayFromEnemy"
+        s = self:ScheduleDecision_TooCloseToEnemy()
     else
         s = self:ScheduleDecision_EstablishLOS()
     end
@@ -217,19 +213,24 @@ function ENT:ScheduleDecision_ApproachEnemy()
     if self:HasCondition(c.COND_WEAPON_SIGHT_OCCLUDED)
     and self:HasCondition(c.COND_LOW_PRIMARY_AMMO) then
         return "HideAndReload"
-    elseif self:HasCondition(c.COND_CAN_RAPPEL_FORWARD) then
-        return "RappelApproach"
-    elseif self:HasCondition(c.COND_GOOD_TO_SLIDE) then
-        return "CombatSlide"
+    elseif not self.IsReloading
+    and self:HasCondition(c.COND_SEE_ENEMY)
+    and self.Weapons.ActiveWeaponID < #self.Weapons then
+        return "SwitchWeaponToLongRange"
     else
         return "ChaseEnemy"
     end
 end
 
+function ENT:ScheduleDecision_TooCloseToEnemy()
+    if not self.IsReloading and self.Weapons.ActiveWeaponID > 1 then
+        return "SwitchWeaponToCloseRange"
+    else
+        return "MoveAwayFromEnemy"
+    end
+end
+
 function ENT:ScheduleDecision_EstablishLOS()
-    local p = self.WeaponParameters
-    local ismelee = p and p.IsMelee
-    local condattack = ismelee and c.COND_CAN_MELEE_ATTACK1 or c.COND_CAN_RANGE_ATTACK1
     if self:HasCondition(c.COND_WEAPON_BLOCKED_BY_FRIEND) then
         return "MoveLateral"
     elseif self:HasCondition(c.COND_NO_PRIMARY_AMMO) then
@@ -238,17 +239,21 @@ function ENT:ScheduleDecision_EstablishLOS()
         if self:HasCondition(c.COND_LOW_PRIMARY_AMMO) then
             return "HideAndReload"
         else
-            if not self:HasCondition(c.COND_CAN_RAPPEL_UP)
-            or ismelee or math.random() < 0.9 then
-                return "EstablishLineOfFire"
-            else
-                return "RappelUp"
-            end
+            return "EstablishLineOfFire"
         end
     elseif self:HasCondition(c.COND_NOT_FACING_ATTACK) then
         return "CombatFace"
-    elseif self:HasCondition(condattack) then
-        return "MoveLateral"
+    elseif self:HasCondition(c.COND_CAN_RANGE_ATTACK1) then
+        if self:HasCondition(c.COND_LOW_PRIMARY_AMMO) then
+            return "MoveAwayFromEnemy"
+        elseif self:HasCondition(c.COND_SEE_ENEMY)
+        and self:HasCondition(c.COND_ENEMY_FACING_ME) then
+            return "MoveLateral"
+        else
+            return "RangeAttack1"
+        end
+    elseif self:HasCondition(c.COND_CAN_MELEE_ATTACK1) then
+        return "ChaseEnemy"
     elseif self:HasCondition(c.COND_BEHIND_ENEMY) then
         return "CombatStand"
     else
@@ -319,7 +324,7 @@ ENT.ScheduleList = {
         "CombatSlide",
     },
     GrenadeEscape = {
-        {"SetFailSchedule", "TakeCoverSlide"},
+        {"SetFailSchedule", "TakeCoverFromEnemy"},
         "StopMoving",
         "StoreFearPositionInSavePosition",
         {"SetGoal", ENT.Enum.GoalType.GOAL_SAVED_POSITION},
@@ -332,7 +337,6 @@ ENT.ScheduleList = {
         {"SetFailSchedule", "Reload"},
         "StopMoving",
         "FindCoverFromEnemy",
-        -- "RunPath",
         "WaitForMovement",
         {"Remember", "Incover"},
         "FaceEnemy",
@@ -383,20 +387,15 @@ ENT.ScheduleList = {
     MoveAwayFromEnemy = {
         {"SetFailSchedule", "MoveAwayFail"},
         "FaceEnemy",
-        {"MoveAwayPath", 120},
+        {"MoveAwayPath", 240},
         "WaitForMovement",
         {"SetSchedule", "MoveAwayEnd"},
     },
     MoveLateral = {
+        "StopMoving",
         "MoveLateral",
         "WaitForMovement",
         "FaceEnemy",
-    },
-    PreFailEstablishLineOfFire = {
-        "FaceEnemy",
-        "FaceReasonable",
-        "IgnoreOldEnemies",
-        {"SetSchedule", "FailEstablishLineOfFire"},
     },
     RangeAttack1 = {
         "StopMoving",
@@ -445,8 +444,18 @@ ENT.ScheduleList = {
         "StopMoving",
         {"WaitFaceEnemy", 2},
     },
+    SwitchWeaponToCloseRange = {
+        {"SwitchWeapon", "CloseRange"},
+        {"SetSchedule", "TakeCoverFromEnemy"},
+    },
+    SwitchWeaponToLongRange = {
+        {"SwitchWeapon", "LongRange"},
+        {"SetSchedule", "EstablishLineOfFire"},
+    },
+    SwitchWeaponToReload = {
+        {"SwitchWeapon", "Reload"},
+    },
     TakeCoverFromEnemy = {
-        {"SetFailSchedule", "FailTakeCover"},
         "StopMoving",
         {"Wait", 0.2},
         {"SetToleranceDistance", 20},
@@ -503,7 +512,6 @@ ENT.Interrupts = {
 		c.COND_BETTER_WEAPON_AVAILABLE,
 		c.COND_HEAR_DANGER,
         c.COND_SEE_GRENADE,
-        c.COND_GOOD_TO_SLIDE,
     },
     ChaseEnemyFailed = {
         c.COND_NEW_ENEMY,
@@ -567,22 +575,6 @@ ENT.Interrupts = {
 		c.COND_BETTER_WEAPON_AVAILABLE,
 		c.COND_HEAR_DANGER,
     },
-    FailEstablishLineOfFire = {
-    	c.COND_NEW_ENEMY,
-		c.COND_ENEMY_DEAD,
-		c.COND_LOST_ENEMY,
-		c.COND_CAN_RANGE_ATTACK1,
-		c.COND_CAN_MELEE_ATTACK1,
-		c.COND_CAN_RANGE_ATTACK2,
-		c.COND_CAN_MELEE_ATTACK2,
-		c.COND_HEAR_DANGER,
-    },
-    FailTakeCover = {
-        c.COND_NEW_ENEMY,
-    },
-    GiveWay = {
-        c.COND_WAY_CLEAR,
-    },
     GoForwardSlide = {
         c.COND_TOO_CLOSE_TO_ATTACK,
     },
@@ -592,6 +584,7 @@ ENT.Interrupts = {
     HideAndReload = {
         c.COND_HEAR_DANGER,
         c.COND_SEE_GRENADE,
+        c.COND_LIGHT_DAMAGE,
     },
     IdleRappelUp = {
         c.COND_NEW_ENEMY,
@@ -656,21 +649,7 @@ ENT.Interrupts = {
         c.COND_CAN_MELEE_ATTACK2,
     },
     MoveLateral = {
-        c.COND_NEW_ENEMY,
-		c.COND_ENEMY_DEAD,
-        c.COND_CAN_RANGE_ATTACK1,
-        c.COND_CAN_RANGE_ATTACK2,
-        c.COND_CAN_MELEE_ATTACK1,
-        c.COND_CAN_MELEE_ATTACK2,
-        c.COND_SEE_GRENADE,
-    },
-    PreFailEstablishLineOfFire = {
-    	c.COND_NEW_ENEMY,
-		c.COND_ENEMY_DEAD,
-		c.COND_CAN_RANGE_ATTACK1,
-		c.COND_CAN_MELEE_ATTACK1,
-		c.COND_CAN_RANGE_ATTACK2,
-		c.COND_CAN_MELEE_ATTACK2,
+        c.COND_TOO_CLOSE_TO_ATTACK,
     },
     RangeAttack1 = {
     	c.COND_NEW_ENEMY,
@@ -703,6 +682,9 @@ ENT.Interrupts = {
         c.COND_HEAR_DANGER,
         c.COND_SEE_GRENADE,
     },
+    SwitchWeaponToCloseRange = {},
+    SwitchWeaponToLongRange = {},
+    SwitchWeaponToReload = {},
     TakeCoverFromEnemy = {
         c.COND_NEW_ENEMY,
         c.COND_ENEMY_DEAD,
