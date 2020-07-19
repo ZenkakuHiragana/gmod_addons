@@ -173,7 +173,7 @@ function ENT:ComputePath(to)
 end
 
 function ENT:FixPath()
-    local fix = -self:GetHitDirectionAround(nil, 12)
+    local fix = -self:GetHitDirectionAround(nil, 12, nil, MASK_NPCSOLID_BRUSHONLY)
     if fix:IsZero() then
         self.Time.PathStuck = CurTime()
         self.Approach.Fix = nil

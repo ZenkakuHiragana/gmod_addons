@@ -6,11 +6,12 @@ local function GetYawRatio(yaw)
 end
 
 function ENT:GetMins()
-	return Vector(-16, -16, 0) * GetYawRatio(self:GetAngles().yaw)
+	return self.CollisionBoundMins * GetYawRatio(self:GetAngles().yaw)
 end
 
 function ENT:GetMaxs(stand)
-	return (stand and Vector(16, 16, 72) or Vector(16, 16, 36)) * GetYawRatio(self:GetAngles().yaw)
+    local maxs = stand and self.CollisionBoundMaxs or self.CollisionBoundMaxsCrouched
+	return maxs * GetYawRatio(self:GetAngles().yaw)
 end
 
 function ENT:GetHull(stand)

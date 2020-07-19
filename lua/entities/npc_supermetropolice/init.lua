@@ -15,6 +15,9 @@ include "weapon.lua"
 ENT.HasLongRange = true
 ENT.IsSuperMetropolice = true
 ENT.MaxHealth = 40
+ENT.CollisionBoundMaxs = Vector(16, 16, 72)
+ENT.CollisionBoundMaxsCrouched = Vector(16, 16, 36)
+ENT.CollisionBoundMins = Vector(-16, -16, 0)
 
 local BULLET_NEAR_DISTANCE_SQR = 50^2
 hook.Add("EntityFireBullets", "GreatZenkakuMan's Nextbot EntityFireBullets", function(ent, bullet)
@@ -54,7 +57,7 @@ function ENT:Initialize()
 	self:AddFlags(FL_OBJECT)
 	self:SetSolid(SOLID_BBOX)
 	self:MakePhysicsObjectAShadow(true, true)
-	self:SetCollisionBounds(self:GetMins(true), self:GetMaxs(true))
+	self:SetCollisionBounds(self.CollisionBoundMins, self.CollisionBoundMaxs)
 	self.Time = {}
 	self:RunHook "Initialize"
 end

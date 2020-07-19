@@ -46,8 +46,8 @@ function ENT:FindEnemy()
     local newenemyfound = false
     for i, e in ipairs(targetlist) do
         if self:Visible(e) and self:HasValidEnemy(e)
-        and (self:GetForward():Dot(e:WorldSpaceCenter() - self:WorldSpaceCenter()) > 0
-        or self:GetRangeSquaredTo(e) < MAX_DIST_SQR) then
+        and self:GetForward():Dot(e:WorldSpaceCenter() - self:WorldSpaceCenter()) > 0
+        and self:GetRangeSquaredTo(e) < MAX_DIST_SQR then
             local distanceValue = 10000 / self:GetRangeSquaredTo(e)
             local healthValue = 1 / math.max(e:Health(), 1)
             local value = distanceValue + healthValue
