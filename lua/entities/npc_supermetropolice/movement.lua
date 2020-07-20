@@ -106,25 +106,24 @@ end
 function ENT:ComputePath(to)
     if self:IsUnreachable(to) then
         local start = self:GetPos()
-        local mins, maxs = Vector(-16, -16, 0), Vector(16, 16, 64)
-        local tr = util.TraceHull {
-            start = start,
-            endpos = to,
-            filter = self,
-            mask = MASK_NPCSOLID_BRUSHONLY,
-            maxs = maxs,
-            mins = mins,
-        }
+        local tr = self:TraceHullStand(nil, to, MASK_NPCSOLID_BRUSHONLY, self)
 
         self:line("ComputePath", start, to, false, true)
         self:point("ComputePath", start, false, true)
         self:point("ComputePath", to, false, true)
-        self:swept("ComputePath", start, tr.HitPos, mins, maxs)
+        self:swept("ComputePath", start, tr.HitPos, self:GetMins(), self:GetMaxs())
         self:text("ComputePath", start, self.Schedule.CurrentSchedule)
         self:text("ComputePath", start + vector_up * 5, self.Schedule.CurrentTask)
         self:text("ComputePath", start + vector_up * 10, tostring(tr.StartSolid))
         to = tr.HitPos
     end
+
+    to = util.TraceLine {
+        start = to + vector_up,
+        endpos = to - vector_up * 16384,
+        mask = MASK_NPCSOLID_BRUSHONLY,
+        filter = self,
+    }.HitPos
     
     local stepheight = self.loco:GetStepHeight()
     local ddheight = -self.loco:GetDeathDropHeight()
@@ -132,12 +131,12 @@ function ENT:ComputePath(to)
         if not IsValid(fromArea) then
             return 0 -- first area in path, no cost
         else
+            if not self.loco:IsAreaTraversable(area) then return -1 end
             if area:IsBlocked() then return -1 end
             local areaID = area:GetID()
             local attr = area:GetAttributes()
             if bit.band(attr, NAV_MESH_JUMP) > 0 then return -1 end
             -- if areaID and IsValid(SuperMetropoliceBlockedNavAreas[areaID]) then return -1 end
-            if not self.loco:IsAreaTraversable(area) then return -1 end
 
             -- compute distance traveled along path so far
             local dist = 0
@@ -153,7 +152,7 @@ function ENT:ComputePath(to)
             local deltaZ = fromArea:ComputeAdjacentConnectionHeightChange(area)
             if deltaZ >= stepheight then
                 return -1 -- too high to reach
-            elseif deltaZ < ddheight then
+            elseif deltaZ <= -stepheight then
                 return -1 -- too far to drop
             end
             

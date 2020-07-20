@@ -192,8 +192,8 @@ function ENT:OnInjured_Animation(d)
     local flinch = ({
         [HITGROUP_HEAD] = ACT_FLINCH_HEAD,
         [HITGROUP_STOMACH] = ACT_FLINCH_STOMACH,
-        [HITGROUP_LEFTARM] = a.ACT_FLINCH_SHOULDER_LEFT,
-        [HITGROUP_RIGHTARM] = a.ACT_FLINCH_SHOULDER_RIGHT,
+        [HITGROUP_LEFTARM] = ACT_FLINCH_LEFTARM,
+        [HITGROUP_RIGHTARM] = ACT_FLINCH_RIGHTARM,
     })[tr.HitGroup]
     if d:GetDamage() > self:GetMaxHealth() / 4 then
         if d:GetDamageForce():Dot(self:GetForward()) > 0 then

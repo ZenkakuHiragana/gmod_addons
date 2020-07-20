@@ -334,7 +334,8 @@ function ENT:Task_GetPathToRandom(arg)
     local range = arg or 256
     range = range * math.Rand(0.5, 1)
     dir:Rotate(Angle(0, math.Rand(-180, 180), 0))
-    self:ComputePath(self:GetPos() + dir * range)
+    local desired = self:GetPos() + dir * range
+    self:ComputePath(self:TraceHullStand(nil, desired).HitPos)
     self:TaskComplete()
 end
 

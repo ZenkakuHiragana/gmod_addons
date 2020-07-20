@@ -177,7 +177,7 @@ local function CombatSchedule(self)
         s = "IdleStand"
     elseif self:HasCondition(c.COND_SEE_GRENADE) then
         s = "GrenadeEscape"
-    elseif not ismelee and (self:HasCondition(c.COND_REPEATED_DAMAGE)) then
+    elseif not ismelee and self:HasCondition(c.COND_REPEATED_DAMAGE) then
         s = "TakeCoverFromEnemy"
     elseif self:HasCondition(c.COND_TOO_FAR_TO_ATTACK) then
         s = self:ScheduleDecision_ApproachEnemy()
@@ -247,7 +247,8 @@ function ENT:ScheduleDecision_EstablishLOS()
         if self:HasCondition(c.COND_LOW_PRIMARY_AMMO) then
             return "MoveAwayFromEnemy"
         elseif self:HasCondition(c.COND_SEE_ENEMY)
-        and self:HasCondition(c.COND_ENEMY_FACING_ME) then
+        and self:HasCondition(c.COND_ENEMY_FACING_ME)
+        and self:HasCondition(c.COND_ENEMY_CAN_RANGE_ATTACK) then
             return "MoveLateral"
         else
             return "RangeAttack1"

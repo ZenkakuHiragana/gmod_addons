@@ -101,6 +101,7 @@ ENT.ConditionNameList = {
     "COND_GOOD_TO_SLIDE",
     "COND_SHOULD_CROUCH_SHOOT",
     "COND_BULLET_NEAR",
+    "COND_ENEMY_CAN_RANGE_ATTACK",
 }
 
 ENT.Enum.Conditions = {}
@@ -148,6 +149,12 @@ function ENT:ManipulateCondition(funcresult, conditionName)
     else
         self:ClearCondition(c[conditionName])
     end
+end
+
+local MIN_SLIDE_SPEED_SQR = 100^2
+local function IsGoodToSlide(self)
+    if CurTime() < self.Time.NextCombatSlide then return end
+    return false
 end
 
 local GRENADE_RADIUS = 512
@@ -261,22 +268,20 @@ function ENT:UpdateConditions()
     if not enemyisvalid then return end
     local shootpos = self:GetShootPos()
     local targetpos = self:GetShootTo()
-    local canslide = CurTime() > self.Time.NextCombatSlide
-    local goodrange = self:GetRangeSquaredTo(self:GetLastPosition()) > 40000
-    local ismelee = params and params.IsMelee
-    local trleft = util.QuickTrace(targetpos, (self:GetRight() - e:GetForward()) * 160, {self, e})
-    local trright = util.QuickTrace(targetpos, (-self:GetRight() - e:GetForward()) * 160, {self, e})
-    trleft = not trleft.Hit and not util.TraceHull {start = self:GetPos() + dz, endpos = trleft.HitPos,
-    filter = self, mins = self:OBBMins(), maxs = self:OBBMaxs() - dz}.Hit
-    trright = not trright.Hit and not util.TraceHull {start = self:GetPos() + dz, endpos = trright.HitPos,
-    filter = self, mins = self:OBBMins(), maxs = self:OBBMaxs() - dz}.Hit
-    self:ManipulateCondition(canslide and goodrange and ismelee and trleft and trright, "COND_GOOD_TO_SLIDE")
+    self:ManipulateCondition(IsGoodToSlide(self), "COND_GOOD_TO_SLIDE")
     self:ManipulateCondition(self:Visible(e), "COND_HAVE_ENEMY_LOS")
     self:ManipulateCondition(not self:HasCondition(c.COND_HAVE_ENEMY_LOS), "COND_ENEMY_OCCLUDED")
     self:ManipulateCondition(self:HasCondition(c.COND_HAVE_ENEMY_LOS) and self:GetAimVector():Dot(toenemy) > 0.7, "COND_SEE_ENEMY")
     self:ManipulateCondition(not IsValid(self:GetActiveWeapon()), "COND_NO_WEAPON")
 
     if not IsValid(self:GetActiveWeapon()) then return end
+    local CAP_RANGE_ATTACKS = bit.bor(
+        CAP_WEAPON_RANGE_ATTACK1,
+        CAP_WEAPON_RANGE_ATTACK2,
+        CAP_INNATE_RANGE_ATTACK1,
+        CAP_INNATE_RANGE_ATTACK2)
+    local cap = isfunction(e.CapabilitiesGet) and e:CapabilitiesGet() or 0
+    local enemycanrange = bit.band(cap, CAP_RANGE_ATTACKS) > 0 or e:IsPlayer()
     local toenemy = targetpos - shootpos
     local d = toenemy:Length()
     local face_threshold = ismelee and 0 or 0.9
@@ -289,6 +294,7 @@ function ENT:UpdateConditions()
     self:ManipulateCondition(clip > 0 and clip < params.ClipSize / 2, "COND_LOW_PRIMARY_AMMO")
     self:ManipulateCondition(clip == 0, "COND_NO_PRIMARY_AMMO")
     self:ManipulateCondition(toenemy:Dot(self:GetAimVector()) < face_threshold, "COND_NOT_FACING_ATTACK")
+    self:ManipulateCondition(enemycanrange, "COND_ENEMY_CAN_RANGE_ATTACK")
     if self.IsReloading or params.UnlimitedAmmo then
         self:ClearCondition(c.COND_LOW_PRIMARY_AMMO)
         self:ClearCondition(c.COND_NO_PRIMARY_AMMO)
@@ -304,28 +310,4 @@ function ENT:UpdateConditions()
         self:HasCondition(c.COND_NOT_FACING_ATTACK))
     self:ManipulateCondition(canattack, "COND_CAN_RANGE_ATTACK1")
     self:ManipulateCondition(canattack, "COND_CAN_MELEE_ATTACK1")
-
-    -- local crouch = {
-    --     pistol = true,
-    --     ar2 = true,
-    --     smg = true,
-    --     shotgun = true,
-    -- }
-    -- self:ClearCondition(c.COND_SHOULD_CROUCH_SHOOT)
-    -- self.ForceCrouch = false
-    -- if crouch[params.HoldType] then
-    --     for _, e in ipairs(ents.FindInSphere(self:GetPos(), 100)) do
-    --         if e.IsSuperMetropolice
-    --         and self:CheckAlive(e)
-    --         and crouch[e:GetWeaponParameters().HoldType] then
-    --             local dir = self:GetPos() - e:GetPos()
-    --             local dot = e:GetAimVector():Dot(dir:GetNormalized())
-    --             if dot > 0.85 then
-    --                 self:SetCondition(c.COND_SHOULD_CROUCH_SHOOT)
-    --                 self.ForceCrouch = true
-    --                 break
-    --             end
-    --         end
-    --     end
-    -- end
 end
