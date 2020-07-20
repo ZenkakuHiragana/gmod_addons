@@ -2,13 +2,13 @@
 include("relationship.lua")
 
 --Gets personal enemy entity.
-function ENT.Replacement:GetEnemy()
+function ENT:GetEnemy()
 	if not self.IsInitialized or self:Disposition(self.Memory.Enemy) ~= D_HT then return nil end
 	return self.Memory.Enemy
 end
 
 --Sets personal enemy memory.
-function ENT.Replacement:SetEnemy(ent)
+function ENT:SetEnemy(ent)
 	if self:Disposition(ent) ~= D_HT then return end
 	self.Memory.Enemy = ent
 	self.Memory.EnemyAimVector = self:GetEnemyAimVector()
@@ -25,14 +25,14 @@ function ENT.Replacement:SetEnemy(ent)
 end
 
 --Finds nearest enemy and returns it.
-function ENT.Replacement:FindEnemy()
+function ENT:FindEnemy()
 	local lst = ents.FindInSphere(self:GetEye().Pos, self.Dist.Search)
 	local pos, nearestenemy = vector_origin, NULL
 	local relationship = D_ER
 	
 	for k, v in pairs(lst) do
 		pos = v:WorldSpaceCenter()
-		if self:CanSee(pos) and self:GetAimVector(pos):Dot(self:GetEye().Ang:Forward()) > math.cos(math.rad(self.SearchAngle)) then
+		if self:CanSee(pos, {target = v}) and self:GetAimVector(pos):Dot(self:GetEye().Ang:Forward()) > math.cos(math.rad(self.SearchAngle)) then
 			relationship = self:Disposition(v)
 			if relationship == D_LI then
 				if isfunction(v.GetEnemy) and IsValid(v:GetEnemy()) then
@@ -52,8 +52,8 @@ function ENT.Replacement:FindEnemy()
 	
 	--Clean up old infomations.
 	for k, v in SortedPairsByMemberValue(self.Memory.Enemies, "Distance") do
-		if self:Disposition(k) ~= D_HT or 
-			(self:CanSee(v.Pos) and not self:CanSee(k:WorldSpaceCenter())) then
+		local t = {target = k}
+		if self:Disposition(k) ~= D_HT or (self:CanSee(v.Pos, t) and not self:CanSee(k:WorldSpaceCenter(), t)) then
 			self.Memory.Enemies[k] = nil
 		end
 	end
@@ -80,10 +80,12 @@ end
 ----Table opt | Options.
 ------Vector start | The start position of the trace.
 ------Bool shoot | If true, check MASK_SHOT in place of visiblity.
-function ENT.Replacement:CanSee(pos, opt)
+------Entity target | Target entity if it is other than the current enemy.
+function ENT:CanSee(pos, opt)
 	local opt = opt or {}
 	local e = pos or self.Memory.EnemyPosition
 	local filter = table.Copy(self.breakable_filter)
+	local target = opt.target or self:GetEnemy()
 	table.insert(filter, self)
 	local tr = util.TraceLine({
 		start = opt.start or self:GetEye().Pos,
@@ -95,27 +97,35 @@ function ENT.Replacement:CanSee(pos, opt)
 		debugoverlay.Line(tr.StartPos, tr.HitPos, 3, Color(0, 255, 0, 255), false)
 	end
 	
-	if tr.Entity == self:GetEnemy() then return true end
+	if tr.Entity == target then return true end
 	for _, v in ipairs(ents.FindInSphere(tr.HitPos, 50)) do
-		if v == self:GetEnemy() then
-			return not tr.StartSolid and not tr.HitWorld
-		end
+		if v == target then return not (tr.StartSolid or tr.HitWorld) end
 	end
 end
 
 --Returns where current enemy or the given entity is looking at.
 --Argument:
 ----Entity e | The given entity(Optional).
-function ENT.Replacement:GetEnemyAimVector(e)
-	if not IsValid(e) and not IsValid(self.Memory.Enemy) then return vector_origin end
+function ENT:GetEnemyAimVector(e)
+	if not (IsValid(e) and IsValid(self.Memory.Enemy)) then return vector_origin end
 	local ent = IsValid(e) and e or self.Memory.Enemy
+
+	-- IV04's HL2DM Nextbots make errors, but I shouldn't say it's a bug.
+	-- They aren't NPC or Player and there's no guarantee for GetAimVector().
+	if ent.IV04NextBot then
+		local weapon = isfunction(e.GetActiveWeapon) and e:GetActiveWeapon()
+		if IsValid(weapon) and weapon:LookupAttachment "muzzle" < 1 then
+			return ent:GetForward()
+		end
+	end
+
 	return isfunction(ent.GetAimVector) and ent:GetAimVector() or ent:GetForward()
 end
 
 --Returns aiming direction vector.
 --Argument:
 ----Vector dir | Looking at this position(Optional).
-function ENT.Replacement:GetAimVector(dir)
+function ENT:GetAimVector(dir)
 	local aimat = dir or self.Memory.EnemyPosition
 	return (aimat - self:WorldSpaceCenter()):GetNormalized()
 end
@@ -123,7 +133,7 @@ end
 --Returns if the enemy or the given entity is facing me.
 --Argument:
 ----Entity e | The given entity(Optional).
-function ENT.Replacement:IsFacingMe(e)
+function ENT:IsFacingMe(e)
 	local vEnemyPos = IsValid(e) and e:WorldSpaceCenter() or self.Memory.EnemyPosition
 	local vEnemyAim = IsValid(e) and self:GetEnemyAimVector(e) or self.Memory.EnemyAimVector
 	local vEnemyToMe = -self:GetAimVector(vEnemyPos)
@@ -131,7 +141,7 @@ function ENT.Replacement:IsFacingMe(e)
 end
 
 --Updates current enemy's information.
-function ENT.Replacement:UpdateEnemyMemory()
+function ENT:UpdateEnemyMemory()
 	if self:GetEnemy() and self.Memory.Look and self:HasCondition("HaveEnemyLOS") and
 		math.abs((self:GetEnemy():WorldSpaceCenter() - self:WorldSpaceCenter()):GetNormalized()
 		:Dot(self:GetEye().Ang:Forward())) > math.cos(math.rad(self.SearchAngle)) then

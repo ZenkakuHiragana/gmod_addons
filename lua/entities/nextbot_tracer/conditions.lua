@@ -58,7 +58,7 @@ end
 
 --Builds some conditions of the nextbot.
 --Compare e and PreviousMemory to set "EnemyDead" condition.
-function ENT.Replacement:BuildConditions(e)
+function ENT:BuildConditions(e)
 	local c = {} --list of conditions
 	
 	c.NewEnemy = tobool(not self.State.Previous.HaveEnemy and e) --I got new enemy.
@@ -183,20 +183,20 @@ end
 --Arguments:
 --string c | Condition.
 --Bool state | Set condition state manually.
-function ENT.Replacement:AddCondition(c, state)
+function ENT:AddCondition(c, state)
 	if not self.Condition[c] then return end
 	self.State[self.Condition[c]] = not isbool(state) or state
 end
 
 --Removes a condition.
 --Argument: string c | Condition.
-function ENT.Replacement:RemoveCondition(c)
+function ENT:RemoveCondition(c)
 	if not self.Condition[c] then return end
 	self.State[self.Condition[c]] = nil
 end
 
 --Removes all conditions.
-function ENT.Replacement:RemoveAllConditions()
+function ENT:RemoveAllConditions()
 	for i, c in pairs(self.Condition) do
 		self.State[c] = nil
 	end
@@ -204,7 +204,7 @@ end
 
 --Returns if the nextbot has the given condition.
 --Argument: number c | Condition.
-function ENT.Replacement:HasCondition(c)
+function ENT:HasCondition(c)
 	if not self.Condition[c] then return false end
 	return self.State[self.Condition[c]]
 end

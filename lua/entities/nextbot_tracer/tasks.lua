@@ -298,7 +298,7 @@ function ENT.Task.FindHealthKit(self)
 	local nearest, pickup = math.huge, NULL
 	
 	for k, v in pairs(health) do
-		if self:CanSee(v:WorldSpaceCenter()) then
+		if self:CanSee(v:WorldSpaceCenter(), {target = v}) then
 			local length = self:WorldSpaceCenter():DistToSqr(v:WorldSpaceCenter())
 			if length < self.Dist.SearchSqr and length < nearest then
 				if v:GetClass() ~= "item_healthcharger" or
@@ -479,7 +479,6 @@ function ENT.Task.Recall(self)
 	self.Equipment.Entity:SetNoDraw(true)
 	self.Equipment.Entity:DrawShadow(false)
 	self:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
-	self:SetHealth(1000000000000)
 	
 	--Place some effects here.
 	local e = EffectData()

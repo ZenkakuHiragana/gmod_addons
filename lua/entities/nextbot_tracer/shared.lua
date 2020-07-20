@@ -12,7 +12,6 @@ ENT.Spawnable = false
 ENT.AutomaticFrameAdvance = true
 
 ENT.NextBotIsFakeNPC = true
-ENT.Replacement = {} --Since we make ENT:IsNPC() returns true, we must define NPC Functions.
 ENT.Capabilities = {
 	["Total"] = 0,
 	CAP_MOVE_GROUND,

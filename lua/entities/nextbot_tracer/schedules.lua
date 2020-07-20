@@ -13,7 +13,7 @@ local function GetDanger(self)
 		if IsValid(v) then
 			local dist = self:WorldSpaceCenter():DistToSqr(v:WorldSpaceCenter())
 			local relationship = self:Disposition(v)
-			if (relationship == D_HT or relationship == D_FR) and self:CanSee(v:WorldSpaceCenter()) then
+			if (relationship == D_HT or relationship == D_FR) and self:CanSee(v:WorldSpaceCenter(), {target = v}) then
 				bravery = bravery + (self:IsFacingMe(v) and 2 or 1)
 			elseif dist < self.Dist.GrenadeSqr and --Grenade is near, take cover
 				v:GetClass():find("grenade") then
@@ -63,18 +63,18 @@ end
 
 --Changes the state. Idle/Alert/Combat
 --Argument: number s | New state.
-function ENT.Replacement:SetState(s)
+function ENT:SetState(s)
 	self.State.State = s
 end
 
 --Gets the state. Idle/Alert/Combat
-function ENT.Replacement:GetState()
+function ENT:GetState()
 	return self.State.State
 end
 
 --Starts the given schedule.
 --Argument: Table s | Schedule.
-function ENT.Replacement:SetSchedule(s)
+function ENT:SetSchedule(s)
 	if not istable(self.Schedule[s]) then
 		if isvector(self.m_vecLastPosition) then
 			if s == SCHED_FORCED_GO or s == SCHED_FORCED_GO_RUN then
@@ -114,7 +114,7 @@ function ENT.Replacement:SetSchedule(s)
 end
 
 --Gets the schedule which is executing.
-function ENT.Replacement:GetSchedule()
+function ENT:GetSchedule()
 	return self.State.Schedule, self.State.ScheduleProgress
 end
 
