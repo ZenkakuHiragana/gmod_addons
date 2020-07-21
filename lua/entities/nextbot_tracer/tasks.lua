@@ -317,7 +317,7 @@ end
 
 --SetBlinkDirection: Sets the position after using blink.
 --Argument:
-----string mode | Blink mode: "TowardEnemy", "Dodge"
+----string mode | Blink mode: "TowardEnemy", "FromEnemy", "Sidestep"
 function ENT.Task.SetBlinkDirection(self, mode)
 	if self.BlinkRemaining <= 0 or CurTime() < self.Time.Blink then
 		self.Time.Blink = CurTime() + 1
@@ -329,40 +329,40 @@ function ENT.Task.SetBlinkDirection(self, mode)
 	local aim = self:GetAimVector()
 	if mode == "TowardEnemy" then
 		dir = aim
-		local path = Path("Follow")
-		path:Compute(self, self.Memory.EnemyPosition)
-		if path:IsValid() then
-			local seg = path:FirstSegment()
-			if seg then dir = seg.forward end
-		end
 	elseif mode == "FromEnemy" then
 		dir = -aim
 	elseif mode == "Sidestep" then
-		aim:Rotate(Angle(0, -45, 0))
+		local aimleft = Vector(aim)
+		local aimright = Vector(aim)
+		aimleft:Rotate(Angle(0, -45, 0))
+		aimright:Rotate(Angle(0, 45, 0))
 		
 		if self.Debug.BlinkDestination then
-			debugoverlay.Line(self:GetPos(), self:GetPos() + aim * self.Dist.Blink, 5, Color(255,255,0,255),true)
-			debugoverlay.Sphere(self:GetPos() + dir * self.Dist.Blink, 50, 2, Color(0,255,0,255), true)
+			debugoverlay.Line(self:GetPos(), self:GetPos() + aimleft * self.Dist.Blink, 5, Color(255,255,0,255),true)
+			debugoverlay.Line(self:GetPos(), self:GetPos() + aimright * self.Dist.Blink, 5, Color(255,255,0,255),true)
+			debugoverlay.Sphere(self:GetPos() + aim * self.Dist.Blink, 50, 2, Color(0,255,0,255), true)
 		end
 		
 		local mins, maxs = self:GetCollisionBounds()
 		local tr = {
 			start = self:WorldSpaceCenter(), 
-			endpos = self:WorldSpaceCenter() + aim * self.Dist.Blink,
+			endpos = self:WorldSpaceCenter() + aimleft * self.Dist.Blink,
 			mins = mins, maxs = maxs, mask = MASK_NPCSOLID_BRUSHONLY, filter = self,
 		}
 		local right = util.TraceHull(tr)
-		tr.endpos = self:WorldSpaceCenter() - aim * self.Dist.Blink
+		tr.endpos = self:WorldSpaceCenter() + aimright * self.Dist.Blink
 		local left = util.TraceHull(tr)
 		
 		if right.Hit and left.Hit then
-			dir = right.Fraction > left.Fraction and aim or -aim
+			dir = right.Fraction > left.Fraction and aimleft or aimright
 		elseif right.Hit then
-			dir = -aim
+			dir = aimright
 		elseif left.Hit then
-			dir = aim
+			dir = aimleft
+		elseif self:GetEnemy():GetRight():Dot(aim) < 0 then
+			dir = aimright
 		else
-			dir = math.random() > 0.5 and aim or -aim
+			dir = aimleft
 		end
 	end
 	
@@ -450,7 +450,7 @@ function ENT.Task.Blink(self)
 			if not IsValid(self) or not IsValid(self.Trail) then return end
 			self.Trail:SetKeyValue("LifeTime", 0.2)
 		end)
-		self.Time.Blink = CurTime() + 0.2
+		self.Time.Blink = CurTime() + 1.1 - self.BlinkRemaining * 0.3
 		self.BlinkRemaining = self.BlinkRemaining - 1
 		
 		blinktimer = "BlinkRecover" .. self:EntIndex()

@@ -46,6 +46,9 @@ end
 
 local CombatSchedule = {}
 CombatSchedule.Assault = function(self)
+	local dist = self.Memory.Distance
+	local blinkdist = self.Dist.Blink / 2
+
 	--Take damage several times in a row.
 	--Or mobbed by enemies.
 	if self:HasCondition("NearDanger") or
@@ -68,8 +71,9 @@ CombatSchedule.Assault = function(self)
 				print("EnemyMemory: ", k, "CurrentEnemy: ", self:GetEnemy())
 			end
 			
-			if IsValid(k) and self.Memory.Enemies[k].Distance < self.Memory.Distance then
+			if IsValid(k) and self.Memory.Enemies[k].Distance < dist then
 				self:SetEnemy(k)
+				dist = self.Memory.Enemies[k].Distance
 				break
 			end
 		end
@@ -82,7 +86,7 @@ CombatSchedule.Assault = function(self)
 		if self:HasCondition("EnemyFacingMe") then
 			if self:HasCondition("CanBlink") then
 				self:ReloadWeapon()
-				if self.Memory.Distance < self.Dist.Blink / 3 then
+				if dist < blinkdist then
 					return "BlinkTowardEnemy"
 				else
 					return "BlinkSidestep"
@@ -102,8 +106,7 @@ CombatSchedule.Assault = function(self)
 		(self:Health() < self.HP.MoreBlink and
 		self:HasCondition("LightDamage"))) then
 		
-		if self:HasCondition("EnemyFacingMe") and 
-			self.Memory.Distance < self.Dist.Blink / 3 then
+		if self:HasCondition("EnemyFacingMe") and dist < blinkdist then
 			return "BlinkTowardEnemy"
 		else
 			return math.random() > 0.5 and "BlinkFromEnemy" or "BlinkSidestep"
@@ -116,7 +119,7 @@ CombatSchedule.Assault = function(self)
 			--The enemy is looking at me.
 			if self:HasCondition("EnemyFacingMe") then
 				--Go behind the enemy.
-				if self.Memory.Distance < self.Dist.Blink * .8 then
+				if dist < self.Dist.Blink * 0.8 then
 					return "BlinkTowardEnemy"
 				else --Move sideways.
 					return "BlinkSidestep"
@@ -136,7 +139,7 @@ CombatSchedule.Assault = function(self)
 	--The enemy is out of range.
 	elseif self:HasCondition("EnemyTooFar") and not self:HasCondition("EnemyApproaching") then
 		--Blink and approach it.
-		if self:HasCondition("CanBlink") and self.Memory.Distance > self.Dist.Blink * 2 then
+		if self:HasCondition("CanBlink") and dist > self.Dist.Blink * 2 then
 			return "BlinkTowardEnemy"
 		else --Approach it.
 			if self.State.InterruptCondition == "InvalidPath" then
@@ -147,10 +150,17 @@ CombatSchedule.Assault = function(self)
 		end
 	--The enemy is not visible, chase it.
 	elseif self:HasCondition("EnemyOccluded") then
-		if self:HasCondition("EnemyApproaching") then
+		if self:HasCondition("LowPrimaryAmmo") then
 			return "HideAndReload"
 		else
 			return "AppearUntilSee"
+		end
+	elseif self:HasCondition("CanBlink")
+	and self:HasCondition("EnemyFacingMe") then
+		if dist < self.Dist.Blink * 0.8 then
+			return "BlinkTowardEnemyAndReload"
+		else
+			return "BlinkSidestep"
 		end
 	else
 		return "EscapeLimitedTime"
@@ -177,7 +187,7 @@ CombatSchedule.Flee = function(self)
 		end
 	else
 		if self:HasCondition("CanBlink") then
-			if self.Memory.Distance > self.Dist.Blink / 3 then
+			if self.Memory.Distance > self.Dist.Blink / 2 then
 				return "BlinkFromEnemy"
 			else
 				return "BlinkTowardEnemy"

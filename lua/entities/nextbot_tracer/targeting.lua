@@ -107,8 +107,8 @@ end
 --Argument:
 ----Entity e | The given entity(Optional).
 function ENT:GetEnemyAimVector(e)
-	if not (IsValid(e) and IsValid(self.Memory.Enemy)) then return vector_origin end
 	local ent = IsValid(e) and e or self.Memory.Enemy
+	if not IsValid(ent) then return vector_origin end
 
 	-- IV04's HL2DM Nextbots make errors, but I shouldn't say it's a bug.
 	-- They aren't NPC or Player and there's no guarantee for GetAimVector().

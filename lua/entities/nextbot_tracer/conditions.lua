@@ -49,6 +49,7 @@ ENT.Condition = {
 	"PathFinished", --I've just finished moving.
 	"ReloadFinished", --I've just finished reloading.
 	"RepeatedDamage", --I take a damage repeatedly.
+	"EnemyClose", -- The enemy is close enough.
 }
 
 for i, v in ipairs(ENT.Condition) do
@@ -69,7 +70,7 @@ function ENT:BuildConditions(e)
 		--the enemy is approaching me.
 		local enemy_movement = self.Memory.EnemyPosition - self.State.Previous.ApproachingPos
 		c.EnemyApproaching = enemy_movement:LengthSqr() > 1000 and
-		enemy_movement:GetNormalized():Dot(self:GetAimVector()) > math.cos(math.rad(30))
+		enemy_movement:GetNormalized():Dot(self:GetAimVector()) < -math.cos(math.rad(30))
 		
 		--the enemy is facing me.
 		c.EnemyFacingMe = self:IsFacingMe()
@@ -92,22 +93,20 @@ function ENT:BuildConditions(e)
 		if bLook then self.Time.SeeEnemy = CurTime() end
 		c.EnemyOccluded = not bLook --I can't see the enemy.
 		c.HaveEnemyLOS = bLook --I have LOS of the enemy.
+		c.EnemyClose = self.Memory.Distance < self.Dist.ShootRange * 0.7 -- Enemy is close enough.
 		
 		--if I'm enough to fire primary weapon
-		c.CanPrimaryAttack = 
-		bShoot and
+		c.CanPrimaryAttack = bShoot and
 		self:GetAimVector():Dot(self:GetForward()) > math.cos(math.rad(80)) and
 		self.Memory.Distance < self.Dist.ShootRange and
 		self.Equipment.Ammo > 0 and
-		CurTime() > self.Time.Fire and
 		CurTime() > self.Time.Reload
 		
 		--if I'm enough to fire secondary weapon
 		c.CanSecondaryAttack = false
 		
 		--enemy is too close, beat it
-		c.CanMeleeAttack = 
-		bShoot and
+		c.CanMeleeAttack = bShoot and
 		CurTime() > self.Time.Melee and
 		self.Memory.Distance < self.Dist.Melee
 	else

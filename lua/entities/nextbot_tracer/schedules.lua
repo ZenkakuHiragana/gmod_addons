@@ -576,6 +576,7 @@ ENT.Schedule:Add(
 		"LightDamage",
 	},
 	{
+		"InvalidatePath",
 		"SetFaceEnemy",
 		{"SetBlinkDirection", "TowardEnemy"},
 		"Blink",

@@ -70,7 +70,7 @@ ENT.Bone.Stomach = "ValveBiped.Bip01_Spine2"
 
 ENT.Dist = {}
 --blink distance in hammer unit, meters -> inches -> hammer units
-ENT.Dist.Blink = 367.45406824 --7 * 3.280839895 * 16
+ENT.Dist.Blink = 393.7008 --7.5[m] * 3.28084[feet/m] * 16[Hammer Units/feet]
 ENT.Dist.BlinkSqr = ENT.Dist.Blink^2
 ENT.Dist.FindSpots = 3000 --Search radius for finding where the nextbot should move to.
 ENT.Dist.FollowPlayer = 100 --Following player.
