@@ -129,9 +129,10 @@ function ENT:OnInjured(info)
 		info:ScaleDamage(2)
 	end
 	
-	--For "RepeatedDamage" condition.
-	if CurTime() > self.Time.Damage + self.Time.ResetRepeatedDamage then self.Time.RepeatedDamage = CurTime() end
 	self.Time.Damage = CurTime()
+	if CurTime() > self.Time.Damage + self.Time.ResetRepeatedDamage then
+		self.Time.RepeatedDamage = CurTime() --For "RepeatedDamage" condition.
+	end
 	
 	--Register the attacker's info.
 	local relationship = self:Disposition(info:GetAttacker())

@@ -258,7 +258,6 @@ ENT.Schedule:Add(
 		"EnemyTooFar",
 		"HeavyDamage",
 		"NoPrimaryAmmo",
-		"OnContact",
 		"RepeatedDamage",
 	},
 	{
@@ -285,7 +284,6 @@ ENT.Schedule:Add(
 		"EnemyOccluded",
 		"HeavyDamage",
 		"NewEnemy",
-		"OnContact",
 		"ReloadFinished",
 		"RepeatedDamage",
 	},
@@ -401,6 +399,7 @@ ENT.Schedule:Add(
 		"RepeatedDamage",
 	},
 	{
+		"SetFaceEnemy",
 		"SetWalkFlag",
 		"EscapeGrenade",
 		"StartMove",
@@ -451,6 +450,7 @@ ENT.Schedule:Add(
 		"NewEnemy",
 		"OnContact",
 		"RepeatedDamage",
+		"EnemyApproaching",
 	},
 	{
 		{"SetFailSchedule", "RunFromEnemy"},
@@ -562,7 +562,7 @@ ENT.Schedule:Add(
 	},
 	{
 		"InvalidatePath",
-		"SetFaceEnemy",
+		{"SetFaceEnemy", true},
 		{"SetBlinkDirection", "TowardEnemy"},
 		"Blink",
 	}
@@ -577,10 +577,9 @@ ENT.Schedule:Add(
 	},
 	{
 		"InvalidatePath",
-		"SetFaceEnemy",
+		{"SetFaceEnemy", true},
 		{"SetBlinkDirection", "TowardEnemy"},
 		"Blink",
-		{"SetFaceEnemy", true},
 		"Advance",
 		"StartMove",
 		{"SetFailSchedule", "RunIntoEnemy"},
@@ -595,7 +594,7 @@ ENT.Schedule:Add(
 	},
 	{
 		"InvalidatePath",
-		"SetFaceEnemy",
+		{"SetFaceEnemy", true},
 		{"SetBlinkDirection", "FromEnemy"},
 		"Blink",
 	}
@@ -608,7 +607,7 @@ ENT.Schedule:Add(
 	},
 	{
 		"InvalidatePath",
-		"SetFaceEnemy",
+		{"SetFaceEnemy", true},
 		{"SetBlinkDirection", "Sidestep"},
 		"Blink",
 	}

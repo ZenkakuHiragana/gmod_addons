@@ -86,6 +86,7 @@ ENT.Dist.MobbedSqr = ENT.Dist.Mobbed^2
 ENT.Dist.Search = 2000 --Search radius for finding enemies.
 ENT.Dist.SearchSqr = ENT.Dist.Search^2
 ENT.Dist.ShootRange = 500
+ENT.Dist.WeaponBulletRange = 1207.3488 --23[m] * 3.28084[feet/m] * 16[Hammer Units/feet]
 
 ENT.HP = {}
 ENT.HP.HeavyDamage = 15 --If I've taken damage more than that at once, flag as HeavyDamage.

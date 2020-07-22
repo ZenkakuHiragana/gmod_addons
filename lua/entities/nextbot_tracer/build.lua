@@ -119,7 +119,7 @@ CombatSchedule.Assault = function(self)
 			--The enemy is looking at me.
 			if self:HasCondition("EnemyFacingMe") then
 				--Go behind the enemy.
-				if dist < self.Dist.Blink * 0.8 then
+				if dist < self.Dist.Blink * 0.7 then
 					return "BlinkTowardEnemy"
 				else --Move sideways.
 					return "BlinkSidestep"
@@ -157,7 +157,7 @@ CombatSchedule.Assault = function(self)
 		end
 	elseif self:HasCondition("CanBlink")
 	and self:HasCondition("EnemyFacingMe") then
-		if dist < self.Dist.Blink * 0.8 then
+		if dist < self.Dist.Blink * 0.7 then
 			return "BlinkTowardEnemyAndReload"
 		else
 			return "BlinkSidestep"

@@ -180,6 +180,16 @@ end
 --Escape: search a position that takes a cover from the enemy.
 function ENT.Task.Escape(self, opt)
 	local opt = opt or {}
+	local function eval(self, area, opt)
+		if not self.FindSpotDefaultParameters.evaluation(self, area, opt) then return end
+		local pos = area:GetRandomPoint()
+		local path = Path("Follow")
+		path:Compute(self, pos)
+		if not path:IsValid() then return end
+		local seg = path:FirstSegment()
+		return seg.forward:Dot(self:GetAimVector()) < 0
+	end
+
 	if self:SetDesiredPosition({spottype = "Escape", see = false, nearest = true}) then
 		if opt.nearby then
 			local path = Path("Follow")

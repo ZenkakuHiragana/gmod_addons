@@ -137,18 +137,28 @@ function ENT:IsFacingMe(e)
 	local vEnemyPos = IsValid(e) and e:WorldSpaceCenter() or self.Memory.EnemyPosition
 	local vEnemyAim = IsValid(e) and self:GetEnemyAimVector(e) or self.Memory.EnemyAimVector
 	local vEnemyToMe = -self:GetAimVector(vEnemyPos)
-	return vEnemyAim:Dot(vEnemyToMe) > math.cos(math.rad(40))
+	return vEnemyAim:Dot(vEnemyToMe) > math.cos(math.rad(20))
 end
 
 --Updates current enemy's information.
 function ENT:UpdateEnemyMemory()
-	if self:GetEnemy() and self.Memory.Look and self:HasCondition("HaveEnemyLOS") and
-		math.abs((self:GetEnemy():WorldSpaceCenter() - self:WorldSpaceCenter()):GetNormalized()
-		:Dot(self:GetEye().Ang:Forward())) > math.cos(math.rad(self.SearchAngle)) then
-		--Update the position of current enemy
-		self.Memory.EnemyAimVector = self:GetEnemyAimVector()
-		self.Memory.EnemyPosition = self:GetEnemy():WorldSpaceCenter() --set the last position I saw
-		self.Memory.Distance = self:GetRangeTo(self.Memory.EnemyPosition) --set the last distance I know
-		self.Time.SeeEnemy = CurTime()
-	end
+	local e = self:GetEnemy()
+	if not e then return end
+	if not self.Memory.Look then return end
+	if not self:HasCondition("HaveEnemyLOS") then return end
+	local enemy_center = e:WorldSpaceCenter()
+	local toenemy = enemy_center - self:WorldSpaceCenter()
+	local dir = toenemy:GetNormalized()
+	local looktoward = self:GetEye().Ang:Forward()
+	local search_test = dir:Dot(looktoward)
+	local search_cos = math.cos(math.rad(self.SearchAngle))
+	if search_test < search_cos then return end
+
+	local aimat = (e:EyePos() + enemy_center) / 2
+	--Update the position of current enemy
+	self.Memory.EnemyAimVector = self:GetEnemyAimVector()
+	self.Memory.EnemyPosition = aimat --set the last position I saw
+	debugoverlay.Cross(self.Memory.EnemyPosition, 3, .2, Color(0, 255, 0), true)
+	self.Memory.Distance = self:GetRangeTo(self.Memory.EnemyPosition) --set the last distance I know
+	self.Time.SeeEnemy = CurTime()
 end

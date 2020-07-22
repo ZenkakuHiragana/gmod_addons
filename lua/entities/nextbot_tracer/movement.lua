@@ -103,11 +103,18 @@ function ENT:FindSpecifiedSpot(opt)
 	local path = Path("Follow")
 	for index, area in pairs(spots) do --Check NavAreas near the nextbot.
 		if index > self.MaxNavAreas then break end --There're too many NavAreas, then break.
-		if isfunction(opt.evaluation) and opt.evaluation(self, area, opt) or --Do a evaluate function.
-			self.FindSpotDefaultParameters.evaluation(self, area, opt) then
+		local customevalavailable = isfunction(opt.evaluation)
+		local customeval = customevalavailable and opt.evaluation(self, area, opt) --Do an evaluation function.
+		local defaulteval = self.FindSpotDefaultParameters.evaluation(self, area, opt)
+		if Either(customevalavailable, customeval, defaulteval) then
 			pos = area:GetRandomPoint()
-			path:Invalidate()
-			path:Compute(self, pos) --Calcuate the length to reach.
+			if TypeID(customeval) == TYPE_PATH then
+				path = customeval
+			else
+				path:Invalidate()
+				path:Compute(self, pos) --Calcuate the length to reach.
+			end
+			
 			if path:IsValid() then
 				local length = opt.nearest and path:GetLength() < NearestDistance or path:GetLength() > NearestDistance
 				if length then

@@ -209,6 +209,8 @@ local function FireTracerPistols(self)
 	self:AddGesture(self.Act.Attack)
 	self.Equipment.Entity:EmitSound(self.Equipment.Sound.Fire)
 	
+	local enemypos = self.Memory.EnemyPosition
+	local range = self.Dist.WeaponBulletRange
 	local bullet = {
 		Attacker = self,
 		Num = 1,
@@ -222,9 +224,8 @@ local function FireTracerPistols(self)
 	}
 	
 	for i = 1, 2 do
+		bullet.Dir = (enemypos - shootPos[i].Pos):GetNormalized() * range
 		bullet.Src = shootPos[i].Pos
-		bullet.Dir = (self.Memory.EnemyPosition - shootPos[i].Pos):GetNormalized() * 1000
-		
 		self:FireBullets(bullet)
 		if math.random() < self.Equipment.Muzzle.Probability then
 			ParticleEffectAttach(self.MuzzleFlashParticleName, PATTACH_POINT_FOLLOW, self, att[i])
@@ -242,12 +243,14 @@ function ENT:CreatePulsePistols()
 	--distance: 11m - 30m
 	--fire rate: 40rps
 	--reload time: 1 second
+	local spread_degrees = 3.6
+	local spread_tan = math.tan(math.rad(spread_degrees))
 	return self.Weapon.Create(self, {
 		name = "tfa_tracer_nope",
 		clip = 20,
 		numbullets = 1,
-		spread = 150,
-		dmg = ({1.5, 3, 6})[game.GetSkillLevel()] or 6,
+		spread = spread_tan * self.Dist.WeaponBulletRange,
+		dmg = ({2, 4, 6})[game.GetSkillLevel()] or 6,
 		ammotype = "Pistol",
 		delay = {
 			firerate = 1/20,
