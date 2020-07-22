@@ -225,15 +225,6 @@ function ENT:OnKilled_Dissolve(dmg)
 	dmg:SetDamageForce(vector_origin)
 end
 
-local PhysicsDamageTable = {
-	MinLinearSpeedSqr = 24 * 24,
-	MinMass = 2,
-	[150  * 150 ] = 5,
-	[250  * 250 ] = 10,
-	[350  * 350 ] = 50,
-	[500  * 500 ] = 100,
-	[1000 * 1000] = 500,
-}
 function ENT:PhysicsCollide_ApplyPhysicsDamage(data)
 	local ent = data.HitEntity
 	local phys = data.HitObject
