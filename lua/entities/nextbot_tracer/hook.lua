@@ -78,11 +78,6 @@ function ENT:OnContact(v)
 	
 	if v:IsPlayer() or v:IsNPC() or v.Type == "nextbot" then return end	
 	local p = v:GetPhysicsObject() if not IsValid(p) then return end
-	local f = -p:GetVelocity()
-	
-	p:SetVelocityInstantaneous(vector_origin)
-	p:ApplyForceCenter(f)
-	
 	local e, division = p:GetEnergy(), 2.0 * 10e+6 if e < division then return end
 	if v:IsVehicle() then e = v:GetSpeed() * division end
 	local d, attacker = DamageInfo(), v:GetPhysicsAttacker()
@@ -152,9 +147,6 @@ function ENT:OnInjured(info)
 end
 
 function ENT:OnRemove()	
-	if istable(self.Equipment) and IsValid(self.Equipment.Entity) then
-		SafeRemoveEntity(self.Equipment.Entity)
-	end
 	if IsValid(self.Trail) then SafeRemoveEntity(self.Trail) end
 end
 
@@ -163,19 +155,36 @@ function ENT:OnLandOnGround()
 end
 
 function ENT:OnKilled(info)
-	hook.Run("OnNPCKilled", self, info:GetAttacker(), info:GetInflictor())
-	if IsValid(self.Equipment.Entity) then
-		local w = ents.Create(self.Equipment.Name)
-		w:SetPos(self:WorldSpaceCenter())
-		w:SetAngles(self.Equipment.Entity:GetAngles())
-		w:SetVelocity(self.Equipment.Entity:GetAbsVelocity())
-		w:Spawn()
-		SafeRemoveEntity(self.Equipment.Entity)
-		timer.Simple(10, function()
-			if not IsValid(w) or IsValid(w:GetOwner()) then return end
-			SafeRemoveEntity(w)
-		end)
+	local weapon = self.Equipment.Entity
+	if IsValid(weapon) then
+		weapon:SetOwner(NULL)
+		weapon:SetParent(NULL)
+		weapon:RemoveEffects(EF_BONEMERGE)
+		weapon:SetMoveType(MOVETYPE_VPHYSICS)
+		weapon:SetPos(self:GetRightHand().Pos)
+		weapon:SetAngles(-self:GetRightHand().Ang)
+		weapon:SetNoDraw(false)
 	end
+
+	if info:IsDamageType(DMG_DISSOLVE) then
+		if not self:IsFlagSet(FL_DISSOLVING) then
+			local d = ents.Create "env_entity_dissolver"
+			if IsValid(d) then
+				self:SetName("Dissolved GreatZenkakuMan's Nextbot" .. self:EntIndex())
+				d:Fire("Dissolve", self:GetName())
+				if IsValid(weapon) then
+					weapon:SetName("Dissolved GreatZenkakuMan's Nextbot Weapon" .. self:EntIndex())
+					d:Fire("Dissolve", weapon:GetName())
+				end
+
+				d:Remove()
+				info:SetDamageForce(vector_origin)
+				self:EmitSound "NPC_CombineBall.KillImpact"
+			end
+		end
+	end
+
+	hook.Run("OnNPCKilled", self, info:GetAttacker(), info:GetInflictor())
 	self:BecomeRagdoll(info)
 	self:OnRemove()
 end

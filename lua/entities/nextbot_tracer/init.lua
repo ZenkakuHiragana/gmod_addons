@@ -187,7 +187,7 @@ function ENT:Initialize()
 	self:SetModel(self.Model)
 	self:AddFlags(bit.bor(FL_NPC, FL_OBJECT, FL_AIMTARGET, FL_FAKECLIENT))
 	self:SetSolid(SOLID_BBOX)
-	self:MakePhysicsObjectAShadow(true, true)
+	self:PhysicsInitShadow()
 	
 	--Server functions
 	if not self:InitializeVariables() then

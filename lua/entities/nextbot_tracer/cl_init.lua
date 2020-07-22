@@ -58,7 +58,6 @@ function ENT:Initialize()
 	self:AddFlags(FL_OBJECT)
 	self:AddFlags(FL_AIMTARGET)
 	self:SetSolid(SOLID_BBOX)
-	self:MakePhysicsObjectAShadow(true, true)
 	
 	local vector_default = self:GetEye().Pos + self:GetEye().Ang:Forward() * 400
 	self.EyeHeight = self:GetEye().Pos.z - self:GetPos().z
