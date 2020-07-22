@@ -3,6 +3,7 @@ SuperMetropoliceBlockedNavAreas = SuperMetropoliceBlockedNavAreas or {}
 
 local c = ENT.Enum.Conditions
 function ENT:Initialize_Movement()
+    self.loco:SetAcceleration(1600)
     self.loco:SetJumpHeight(100)
     self.loco:SetStepHeight(18 * 2)
     self.Approach = {}
@@ -77,7 +78,7 @@ function ENT:IsUnreachable(test)
         test = test:WorldSpaceCenter()
     end
 
-    local a = navmesh.GetNavArea(test, 150)
+    local a = navmesh.GetNearestNavArea(test, 100)
     return not (a and a:IsValid())
 end
 
@@ -172,7 +173,7 @@ function ENT:ComputePath(to)
 end
 
 function ENT:FixPath()
-    local fix = -self:GetHitDirectionAround(nil, 12, nil, MASK_NPCSOLID_BRUSHONLY)
+    local fix = -self:GetHitDirectionAround(nil, 12, nil, MASK_NPCSOLID)
     if fix:IsZero() then
         self.Time.PathStuck = CurTime()
         self.Approach.Fix = nil

@@ -165,8 +165,11 @@ function ENT:MainLoop()
 		self:RunScheduleLoop()
 
 		if self.Schedule.TaskFinalize then
-			self.Schedule.CurrentTask = self.Schedule.TaskFinalize
-			self:DoTask()
+			local t = self.Schedule.TaskFinalize
+			local name = istable(t) and t[1] or t
+			local arg = istable(t) and t[2] or nil
+			self.Schedule.CurrentTask = name
+			self:DoTask {name, arg}
 		end
 	end
 end

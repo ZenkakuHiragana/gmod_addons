@@ -67,6 +67,7 @@ function ENT:OnScheduleInitialize()
     self.Schedule.Fallback = nil
     self.Schedule.TaskFailureCode = self.Enum.TaskFailure.NO_TASK_FAILURE
     self.Schedule.TaskFinalize = nil
+    self.Schedule.TaskThreads = {}
     self.Time.ScheduleStart = CurTime()
 end
 
@@ -89,6 +90,15 @@ function ENT:DoTask(task)
     end
     
     func(self, taskArg)
+
+    local s = self.Schedule.TaskStatus
+    for t in pairs(self.Schedule.TaskThreads) do
+        local name = istable(t) and t[1] or t
+        local arg = istable(t) and t[2]
+        local f = self["Task_" .. name]
+        if isfunction(f) then f(self, arg) end
+    end
+    self.Schedule.TaskStatus = s
 end
 
 function ENT:SelectNPCState()
@@ -245,11 +255,11 @@ function ENT:ScheduleDecision_EstablishLOS()
         return "CombatFace"
     elseif self:HasCondition(c.COND_CAN_RANGE_ATTACK1) then
         if self:HasCondition(c.COND_LOW_PRIMARY_AMMO) then
-            return "MoveAwayFromEnemy"
+            return "MoveAwayFromEnemyAndReload"
         elseif self:HasCondition(c.COND_SEE_ENEMY)
         and self:HasCondition(c.COND_ENEMY_FACING_ME)
         and self:HasCondition(c.COND_ENEMY_CAN_RANGE_ATTACK) then
-            return "MoveLateral"
+            return "MoveLateralRandomCrouch"
         else
             return "RangeAttack1"
         end
@@ -336,6 +346,7 @@ ENT.ScheduleList = {
     },
     HideAndReload = {
         {"SetFailSchedule", "Reload"},
+        {"RegisterTask", "Reload"},
         "StopMoving",
         "FindCoverFromEnemy",
         "WaitForMovement",
@@ -392,8 +403,24 @@ ENT.ScheduleList = {
         "WaitForMovement",
         {"SetSchedule", "MoveAwayEnd"},
     },
+    MoveAwayFromEnemyAndReload = {
+        {"SetFailSchedule", "MoveAwayFail"},
+        {"RegisterTask", "Reload"},
+        "FaceEnemy",
+        {"MoveAwayPath", 240},
+        "WaitForMovement",
+        {"SetSchedule", "MoveAwayEnd"},
+    },
     MoveLateral = {
         "StopMoving",
+        "MoveLateral",
+        "WaitForMovement",
+        "FaceEnemy",
+    },
+    MoveLateralRandomCrouch = {
+        {"SetFinalizeTask", {"SetForceCrouch", false}},
+        "StopMoving",
+        {"RegisterTask", {"RandomCrouch", 0.3}},
         "MoveLateral",
         "WaitForMovement",
         "FaceEnemy",
@@ -586,6 +613,7 @@ ENT.Interrupts = {
         c.COND_HEAR_DANGER,
         c.COND_SEE_GRENADE,
         c.COND_LIGHT_DAMAGE,
+        c.COND_RELOAD_FINISHED,
     },
     IdleRappelUp = {
         c.COND_NEW_ENEMY,
@@ -649,7 +677,14 @@ ENT.Interrupts = {
         c.COND_CAN_MELEE_ATTACK1,
         c.COND_CAN_MELEE_ATTACK2,
     },
+    MoveAwayFromEnemy = {
+        c.COND_NEW_ENEMY,
+        c.COND_RELOAD_FINISHED,
+    },
     MoveLateral = {
+        c.COND_TOO_CLOSE_TO_ATTACK,
+    },
+    MoveLateralRandomCrouch = {
         c.COND_TOO_CLOSE_TO_ATTACK,
     },
     RangeAttack1 = {

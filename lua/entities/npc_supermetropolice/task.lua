@@ -403,8 +403,11 @@ end
 ENT.Task_MeleeAttack1 = ENT.Task_RangeAttack1
 
 function ENT:Task_Reload()
-    self:Reload()
     self:TaskComplete()
+
+    local wt = self:GetWeaponTable()
+    if wt.Clip >= wt.Parameters.ClipSize then return end
+    self:Reload()
 end
 
 function ENT:Task_Remember(arg)
@@ -808,4 +811,22 @@ function ENT:Task_SwitchWeapon(arg)
 
         self:SetActiveWeapon(close and 1 or #self.Weapons)
     end
+end
+
+function ENT:Task_RandomCrouch(arg)
+    if not self.Schedule.TaskData then self.Schedule.TaskData = CurTime() end
+    if CurTime() < self.Schedule.TaskData then return end
+    self.Schedule.TaskData = CurTime() + (arg or 0)
+    self:TaskComplete()
+    self.ForceCrouch = math.random() > 0.5
+end
+
+function ENT:Task_SetForceCrouch(arg)
+    self:TaskComplete()
+    self.ForceCrouch = tobool(arg)
+end
+
+function ENT:Task_RegisterTask(arg)
+    self:TaskComplete()
+    self.Schedule.TaskThreads[arg] = true
 end

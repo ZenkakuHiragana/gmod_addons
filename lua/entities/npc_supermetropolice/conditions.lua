@@ -102,6 +102,7 @@ ENT.ConditionNameList = {
     "COND_SHOULD_CROUCH_SHOOT",
     "COND_BULLET_NEAR",
     "COND_ENEMY_CAN_RANGE_ATTACK",
+    "COND_RELOAD_FINISHED",
 }
 
 ENT.Enum.Conditions = {}
@@ -236,7 +237,6 @@ function ENT:UpdateConditions()
     self:ClearCondition(c.COND_CAN_MELEE_ATTACK1)
     self:ClearCondition(c.COND_CAN_RANGE_ATTACK1)
     self:ClearCondition(c.COND_SHOULD_CROUCH_SHOOT)
-    self.ForceCrouch = false
 
     local params = self:GetWeaponParameters()
     local dz = vector_up * self.loco:GetStepHeight() / 2
@@ -268,11 +268,13 @@ function ENT:UpdateConditions()
     if not enemyisvalid then return end
     local shootpos = self:GetShootPos()
     local targetpos = self:GetShootTo()
+    local reloadfinished = self.Time.FinishReloading
     self:ManipulateCondition(IsGoodToSlide(self), "COND_GOOD_TO_SLIDE")
     self:ManipulateCondition(self:Visible(e), "COND_HAVE_ENEMY_LOS")
     self:ManipulateCondition(not self:HasCondition(c.COND_HAVE_ENEMY_LOS), "COND_ENEMY_OCCLUDED")
     self:ManipulateCondition(self:HasCondition(c.COND_HAVE_ENEMY_LOS) and self:GetAimVector():Dot(toenemy) > 0.7, "COND_SEE_ENEMY")
     self:ManipulateCondition(not IsValid(self:GetActiveWeapon()), "COND_NO_WEAPON")
+    self:ManipulateCondition(reloadfinished < CurTime() and CurTime() + 0.1 < reloadfinished, "COND_RELOAD_FINISHED")
 
     if not IsValid(self:GetActiveWeapon()) then return end
     local CAP_RANGE_ATTACKS = bit.bor(
@@ -284,6 +286,7 @@ function ENT:UpdateConditions()
     local enemycanrange = bit.band(cap, CAP_RANGE_ATTACKS) > 0 or e:IsPlayer()
     local toenemy = targetpos - shootpos
     local d = toenemy:Length()
+    local ismelee = self:GetWeaponTable().Parameters.IsMelee
     local face_threshold = ismelee and 0 or 0.9
     local clip = self:GetClip()
     toenemy:Normalize()
@@ -308,6 +311,10 @@ function ENT:UpdateConditions()
         self:HasCondition(c.COND_TOO_CLOSE_TO_ATTACK) or
         self:HasCondition(c.COND_NO_PRIMARY_AMMO) or
         self:HasCondition(c.COND_NOT_FACING_ATTACK))
+    if ismelee then
+        canattack = canattack and CurTime() > self.Time.WeaponFire
+    end
+
     self:ManipulateCondition(canattack, "COND_CAN_RANGE_ATTACK1")
     self:ManipulateCondition(canattack, "COND_CAN_MELEE_ATTACK1")
 end

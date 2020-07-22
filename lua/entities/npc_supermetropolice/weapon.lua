@@ -97,7 +97,7 @@ local function DefaultFireFunction(self, w, pos, dir)
         d:Normalize()
         local tr = util.TraceLine {
             start = self:WorldSpaceCenter(),
-            endpos = self:WorldSpaceCenter() + d * params.MaxRange * 1.2,
+            endpos = self:WorldSpaceCenter() + d * params.MaxRange,
             filter = self,
             mask = MASK_SHOT,
         }
@@ -108,7 +108,7 @@ local function DefaultFireFunction(self, w, pos, dir)
             d:SetDamage(bullet.Damage)
             d:SetDamageForce(dir)
             d:SetDamagePosition(tr.HitPos)
-            d:SetDamageType(DMG_DISSOLVE)
+            d:SetDamageType(params.DamageType or DMG_CLUB)
             d:SetInflictor(w)
             d:SetMaxDamage(d:GetDamage())
             local ent = IsValid(tr.Entity) and tr.Entity or e
@@ -142,6 +142,9 @@ local function DefaultFireFunction(self, w, pos, dir)
     e:SetAngles(dir:Angle())
     e:SetScale(1)
     util.Effect("MuzzleEffect", e)
+end
+
+local function ActivateStunStick(self, weapon, weaponTable)
 end
 
 local function CalcThrowVec(self, v1, v2, toss, velocity)
@@ -406,15 +409,17 @@ local HL2Weapons = {
     weapon_stunstick = {
         CheckLOS = CheckLOSMelee,
         Damage = 40,
+        DamageType = DMG_DISSOLVE,
         DelayedFire = 0.35,
         Force = 0.1,
         HitSound = "Weapon_StunStick.Melee_Hit",
         HoldType = "melee",
+        InitFunction = ActivateStunStick,
         IsMelee = true,
         MaxBurstDelay = 1.2,
         MaxBurstNum = 1,
         MaxBurstRestDelay = 1.2,
-        MaxRange = 80,
+        MaxRange = 100,
         MinBurstDelay = 1,
         MinBurstNum = 1,
         MinBurstRestDelay = 1,
@@ -477,6 +482,9 @@ function ENT:Give(classname)
 
     table.insert(self.Weapons, t)
     self:DeleteOnRemove(w)
+    if isfunction(t.Parameters.InitFunction) then
+        t.Parameters.InitFunction(self, w, t)
+    end
 
     table.sort(self.Weapons, function(a, b)
         return a.Parameters.MaxRange < b.Parameters.MaxRange
@@ -499,21 +507,26 @@ function ENT:Initialize_Weapon()
     self.Time.WeaponFire = CurTime()
     self.Time.FinishReloading = CurTime()
 
-    local WeaponSelection = {}
-    for i = WeaponRestrict[skill], #WeaponList do
-        table.insert(WeaponSelection, i)
-    end
+    local weaponclass = GetConVar "gmod_npcweapon":GetString()
+    if HL2Weapons[weaponclass] then
+        self:Give(weaponclass)
+    else
+        local WeaponSelection = {}
+        for i = WeaponRestrict[skill], #WeaponList do
+            table.insert(WeaponSelection, i)
+        end
 
-    local NumWeapons = 2
-    if skill == 3 and math.random() > 0.9 then
-        NumWeapons = #WeaponSelection
-    end
+        local NumWeapons = 2
+        if skill == 3 and math.random() > 0.9 then
+            NumWeapons = #WeaponSelection
+        end
 
-    for _ = 1, NumWeapons do
-        local i = math.random(#WeaponSelection)
-        local n = WeaponSelection[i]
-        table.remove(WeaponSelection, i)
-        self:Give(WeaponList[n])
+        for _ = 1, NumWeapons do
+            local i = math.random(#WeaponSelection)
+            local n = WeaponSelection[i]
+            table.remove(WeaponSelection, i)
+            self:Give(WeaponList[n])
+        end
     end
     
     self:SetActiveWeapon(math.random(#self.Weapons))
@@ -619,6 +632,7 @@ function ENT:PrimaryFire()
 
     local function fire()
         if not IsValid(self) then return end
+        if not self:CheckAlive(self) then return end
         if not IsValid(w) then return end
         local shootPos = self:GetShootPos()
         local dir = self:GetAimVector()
@@ -666,6 +680,7 @@ function ENT:Reload()
 
     if NewReloadStyle then
         self.IsReloading = true
+        self.Time.FinishReloading = CurTime() + reloadtime
         timer.Simple(reloadtime, function()
             if not IsValid(self) then return end
             self.IsReloading = false
