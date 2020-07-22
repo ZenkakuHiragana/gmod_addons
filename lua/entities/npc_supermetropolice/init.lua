@@ -240,7 +240,6 @@ function ENT:PhysicsCollide_ApplyPhysicsDamage(data)
 	local dvsqr = data.TheirOldVelocity:DistToSqr(data.TheirNewVelocity)
 	local damage = math.floor(dvsqr * phys:GetMass() / 100000)
 	if ent:IsPlayerHolding() then return end
-	print(damage, math.sqrt(dvsqr))
 	if damage < 5 then return end
 	local dmg = DamageInfo()
 	if ent:IsVehicle() and IsValid(ent:GetDriver()) then
