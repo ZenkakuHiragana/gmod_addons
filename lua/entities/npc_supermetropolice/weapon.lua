@@ -520,17 +520,21 @@ function ENT:Initialize_Weapon()
 end
 
 function ENT:OnKilled_DropWeapon(d)
-    local w = self:GetActiveWeapon()
-    if not IsValid(w) then return end
     local id = self:LookupAttachment "anim_attachment_RH"
     local att = self:GetAttachment(id)
-    local drop = ents.Create(w:GetClass())
-    att.Ang:RotateAroundAxis(att.Ang:Up(), 180)
-    drop:SetPos(att.Pos)
-    drop:SetAngles(att.Ang)
-    drop:SetAbsVelocity(w:GetAbsVelocity())
-    drop:Spawn()
-    SafeRemoveEntity(w)
+    local pos, ang = att.Pos, att.Ang
+    for _, wt in ipairs(self.Weapons) do
+        local w = wt.Entity
+        if IsValid(w) then
+            w:SetOwner(NULL)
+            w:SetParent(NULL)
+            w:RemoveEffects(EF_BONEMERGE)
+            w:SetMoveType(MOVETYPE_VPHYSICS)
+            w:SetNoDraw(false)
+            w:SetPos(pos)
+            w:SetAngles(ang)
+        end
+    end
 end
 
 function ENT:CanPrimaryFire()

@@ -58,6 +58,7 @@ function ENT:Initialize()
 	self:SetSolid(SOLID_BBOX)
 	self:PhysicsInitShadow()
 	self:SetCollisionBounds(self.CollisionBoundMins, self.CollisionBoundMaxs)
+	self:SetBloodColor(BLOOD_COLOR_ANTLION_WORKER)
 	self.Time = {}
 	self:RunHook "Initialize"
 	self:AddCallback("PhysicsCollide", function(self, data)
@@ -220,7 +221,16 @@ function ENT:OnKilled_Dissolve(dmg)
     local d = ents.Create "env_entity_dissolver"
 	if not IsValid(d) then return end
 	self:SetName("Dissolved GreatZenkakuMan's Nextbot" .. self:EntIndex())
-    d:Fire("Dissolve", self:GetName())
+	d:Fire("Dissolve", self:GetName())
+	
+	for _, wt in ipairs(self.Weapons) do
+		local w = wt.Entity
+		if IsValid(w) then
+			w:SetName("Dissolved GreatZenkakuMan's Nextbot Weapon" .. w:EntIndex())
+			d:Fire("Dissolve", w:GetName())
+		end
+	end
+
 	d:Remove()
 	dmg:SetDamageForce(vector_origin)
 end
@@ -231,6 +241,7 @@ function ENT:PhysicsCollide_ApplyPhysicsDamage(data)
 	local dvsqr = data.TheirOldVelocity:DistToSqr(data.TheirNewVelocity)
 	local damage = math.floor(dvsqr * phys:GetMass() / 100000)
 	if ent:IsPlayerHolding() then return end
+	if ent:GetClass() == "prop_combine_ball" then return end
 	if damage < 5 then return end
 	local dmg = DamageInfo()
 	if ent:IsVehicle() and IsValid(ent:GetDriver()) then
