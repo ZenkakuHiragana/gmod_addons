@@ -56,10 +56,13 @@ function ENT:Initialize()
 	self:AddFlags(FL_NPC)
 	self:AddFlags(FL_OBJECT)
 	self:SetSolid(SOLID_BBOX)
-	self:MakePhysicsObjectAShadow(true, true)
+	self:PhysicsInitShadow()
 	self:SetCollisionBounds(self.CollisionBoundMins, self.CollisionBoundMaxs)
 	self.Time = {}
 	self:RunHook "Initialize"
+	self:AddCallback("PhysicsCollide", function(self, data)
+		self:RunHook("PhysicsCollide", data)
+	end)
 end
 
 function ENT:OnInjured(d)
@@ -85,9 +88,7 @@ end
 
 function ENT:OnContact(ent)
 	if not IsValid(ent) then return end
-	local p = ent:GetPhysicsObject()
-	if not IsValid(p) then return end
-	p:ApplyForceOffset(self:GetForward() * 600, self:WorldSpaceCenter())
+	self:RunHook("OnContact", ent)
 end
 
 local function ShouldStopSchedule(self)
@@ -211,4 +212,48 @@ function ENT:BehaveUpdate(fInterval)
 	if ok then return end
 	self.BehaveThread = nil
 	ErrorNoHalt(self, " Error: ", message, "\n")
+end
+
+function ENT:OnKilled_Dissolve(dmg)
+	if not dmg:IsDamageType(DMG_DISSOLVE) then return end
+    if self:IsFlagSet(FL_DISSOLVING) then return end
+    local d = ents.Create "env_entity_dissolver"
+	if not IsValid(d) then return end
+	self:SetName("Dissolved GreatZenkakuMan's Nextbot" .. self:EntIndex())
+    d:Fire("Dissolve", self:GetName())
+	d:Remove()
+	dmg:SetDamageForce(vector_origin)
+end
+
+local PhysicsDamageTable = {
+	MinLinearSpeedSqr = 24 * 24,
+	MinMass = 2,
+	[150  * 150 ] = 5,
+	[250  * 250 ] = 10,
+	[350  * 350 ] = 50,
+	[500  * 500 ] = 100,
+	[1000 * 1000] = 500,
+}
+function ENT:PhysicsCollide_ApplyPhysicsDamage(data)
+	local ent = data.HitEntity
+	local phys = data.HitObject
+	local dvsqr = data.TheirOldVelocity:DistToSqr(data.TheirNewVelocity)
+	local damage = math.floor(dvsqr * phys:GetMass() / 100000)
+	if ent:IsPlayerHolding() then return end
+	print(damage, math.sqrt(dvsqr))
+	if damage < 5 then return end
+	local dmg = DamageInfo()
+	if ent:IsVehicle() and IsValid(ent:GetDriver()) then
+		dmg:SetAttacker(ent:GetDriver())
+	elseif IsValid(ent:GetPhysicsAttacker()) then
+		dmg:SetAttacker(ent:GetPhysicsAttacker())
+	else
+		dmg:SetAttacker(ent)
+	end
+
+	dmg:SetInflictor(ent)
+	dmg:SetDamage(damage)
+	dmg:SetDamageType(ent:IsVehicle() and DMG_VEHICLE or DMG_CRUSH)
+	dmg:SetDamageForce(phys:GetVelocity())
+	self:TakeDamageInfo(dmg)
 end
