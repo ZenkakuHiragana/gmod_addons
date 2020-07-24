@@ -7,12 +7,12 @@ include "conditions.lua"
 include "movement.lua"
 include "relationship.lua"
 include "task.lua"
+include "tacticalconfig.lua"
 include "schedule.lua"
 include "target.lua"
 include "trace.lua"
 include "weapon.lua"
 
-ENT.HasLongRange = true
 ENT.IsSuperMetropolice = true
 ENT.MaxHealth = 40
 ENT.CollisionBoundMaxs = Vector(16, 16, 72)
@@ -33,7 +33,7 @@ hook.Add("EntityFireBullets", "GreatZenkakuMan's Nextbot EntityFireBullets", fun
 				local endpos = org + dir * math.min(length, length2)
 				local radiussqr = org2:DistToSqr(endpos)
 				if radiussqr < BULLET_NEAR_DISTANCE_SQR then
-					self:SetCondition(self.Enum.Conditions.COND_BULLET_NEAR)
+					self:RegisterCondition(true, "COND_BULLET_NEAR")
 					self.Time.LastHearBullet = CurTime()
 				end
 			end
@@ -142,9 +142,17 @@ function ENT:RunScheduleLoop()
 			end
 
 			self:FindEnemy()
-			if self:HasValidEnemy() and self:Visible(self:GetEnemy()) then
-				self:SetLastPosition(self:GetEnemy():GetPos())
-				self.Time.LastEnemySeen = CurTime()
+			self:point("LastPos", self:GetLastPosition())
+			if self:HasValidEnemy() then
+				local e = self:GetEnemy()
+				local epos = e:EyePos()
+				local toenemy = epos - self:EyePos()
+				local edir = toenemy:GetNormalized()
+				if self:Visible(e) and self:GetAimVector():Dot(edir) > 0.7 then
+					self:SetLastPosition(epos)
+					self:SetLastVelocity(e:GetVelocity())
+					self.Time.LastEnemySeen = CurTime()
+				end
 			end
 
 			self:RunTaskBatch(task)

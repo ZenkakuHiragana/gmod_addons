@@ -103,3 +103,12 @@ function ENT:GetHitDirectionAround(t, ...)
     local f, r, fl, fr = self:GetAxes()
     return ({fl, fr, f, -fr, -r, Vector(), fl, -fl, Vector(), r, fr, -f, -fr, -fl, Vector()})[dirID]
 end
+
+function ENT:GetTraceToLastPos()
+    return util.TraceLine {
+        start = self:EyePos(),
+        endpos = self:GetLastPosition(),
+        mask = MASK_BLOCKLOS,
+        filter = self,
+    }
+end

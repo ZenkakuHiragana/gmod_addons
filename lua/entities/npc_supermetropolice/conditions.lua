@@ -12,12 +12,12 @@ ENT.ConditionNameList = {
     "COND_SEE_HATE",
     "COND_SEE_FEAR",
     "COND_SEE_DISLIKE",
-    "COND_SEE_ENEMY",
+    "COND_SEE_ENEMY", -- Set if you are seeing the enemy
     "COND_LOST_ENEMY",
     "COND_ENEMY_WENT_NULL",	-- What most people think COND_LOST_ENEMY is: This condition is set in the edge case where you had an enemy last think, but don't have one this think.
     "COND_ENEMY_OCCLUDED",	-- Can't see m_hEnemy
     "COND_TARGET_OCCLUDED",	-- Can't see m_hTargetEnt
-    "COND_HAVE_ENEMY_LOS",
+    "COND_HAVE_ENEMY_LOS", -- You can see the enemy if you rotate the head
     "COND_HAVE_TARGET_LOS",
     "COND_LIGHT_DAMAGE",
     "COND_HEAVY_DAMAGE",
@@ -103,6 +103,8 @@ ENT.ConditionNameList = {
     "COND_BULLET_NEAR",
     "COND_ENEMY_CAN_RANGE_ATTACK",
     "COND_RELOAD_FINISHED",
+    "COND_RELOADING",
+    "COND_SEE_LAST_POSITION",
 }
 
 ENT.Enum.Conditions = {}
@@ -115,6 +117,7 @@ function ENT:Initialize_Conditions()
     self.Conditions = {
         Health = self:Health(),
         SumDamage = 0,
+        Register = {},
     }
     self.Time.LastDamage = CurTime()
     self.Time.LastHearBullet = CurTime()
@@ -144,12 +147,20 @@ function ENT:ConditionName(condition)
     return self.ConditionNameList[condition + 1]
 end
 
-function ENT:ManipulateCondition(funcresult, conditionName)
-    if funcresult then
-        self:SetCondition(c[conditionName])
+function ENT:ManipulateCondition(state, name)
+    if state then
+        self:SetCondition(c[name])
     else
-        self:ClearCondition(c[conditionName])
+        self:ClearCondition(c[name])
     end
+end
+
+function ENT:RegisterCondition(state, name)
+    self.Conditions.Register[name] = tobool(state)
+end
+
+function ENT:UnRegisterCondition(name)
+    self.Conditions.Register[name] = nil
 end
 
 local MIN_SLIDE_SPEED_SQR = 100^2
@@ -160,161 +171,176 @@ end
 
 local GRENADE_RADIUS = 512
 local GRENADE_RADIUS_SQR = GRENADE_RADIUS^2
-function ENT:UpdateConditions()
-    if CurTime() < self.Time.NextUpdateCondition then return end
-    self.Time.NextUpdateCondition = CurTime() + 0.3
-
-    local e = self:GetEnemy()
-    local enemyisvalid = self:HasValidEnemy()
-    local prevhealth = self.Conditions.Health or self:Health()
-    local tookdamage = prevhealth - self:Health()
-    local lookat = enemyisvalid and (isfunction(e.GetAimVector) and e:GetAimVector() or e:GetForward())
-    local toenemy = enemyisvalid and (e:EyePos() - self:GetEyePos())
-    local dot = enemyisvalid and lookat:Dot(toenemy:GetNormalized())
-    local org = self:WorldSpaceCenter()
-    local seegrenade, grenadenearby = false, false
+local function UpdateGreanadeConditions(self)
     self.FearPosition = nil
-    self.Conditions.Health = self:Health()
-    
+    self:ClearCondition(c.COND_SEE_GRENADE)
+    self:SetCondition(c.COND_NO_GRENADE_NEARBY)
+    local org = self:WorldSpaceCenter()
     for _, g in ipairs(ents.FindInSphere(self:GetPos(), GRENADE_RADIUS)) do
         if g:GetClass() == "npc_grenade_frag" or g:GetClass() == "grenade_hand" then
-            local hitpos = util.QuickTrace(g:GetPos(), g:GetVelocity()).HitPos
+            local hitpos      = util.QuickTrace(g:GetPos(), g:GetVelocity()).HitPos
             local withinrange = self:GetRangeSquaredTo(hitpos) < GRENADE_RADIUS_SQR
-            local speedsqr = g:GetVelocity():LengthSqr()
-            local incoming = g:GetVelocity():Dot(g:GetPos() - org) < 0.25
+            local speedsqr    = g:GetVelocity():LengthSqr()
+            local incoming    = g:GetVelocity():Dot(g:GetPos() - org) < 0.25
             if withinrange and (incoming or speedsqr < 400)  then
-                local tr = util.TraceLine {
-                    start = org,
+                if not util.TraceLine {
+                    start  = org,
                     endpos = g:GetPos(),
                     filter = {self, g},
-                    mask = MASK_SHOT,
-                }
-                if not tr.Hit then
-                    seegrenade = true
+                    mask   = MASK_SHOT,
+                }.Hit then
                     self.FearPosition = hitpos
                     self:SetTarget(g)
+                    self:SetCondition(c.COND_SEE_GRENADE)
                 end
                 
-                grenadenearby = true
+                self:ClearCondition(c.COND_NO_GRENADE_NEARBY)
             end
         end
     end
+end
 
-    if CurTime() > self.Time.LastDamage + 1 then
-        self.Conditions.SumDamage = 0
+local CAP_RANGE_ATTACKS = bit.bor(
+    CAP_WEAPON_RANGE_ATTACK1,
+    CAP_WEAPON_RANGE_ATTACK2,
+    CAP_INNATE_RANGE_ATTACK1,
+    CAP_INNATE_RANGE_ATTACK2)
+local function UpdateEnemyConditions(self)
+    self:ClearCondition(c.COND_BEHIND_ENEMY)
+    self:ClearCondition(c.COND_ENEMY_CAN_RANGE_ATTACK)
+    self:ClearCondition(c.COND_ENEMY_DEAD)
+    self:ClearCondition(c.COND_ENEMY_FACING_ME)
+    self:ClearCondition(c.COND_ENEMY_OCCLUDED)
+    self:ClearCondition(c.COND_ENEMY_UNREACHABLE)
+    self:ClearCondition(c.COND_HAVE_ENEMY_LOS)
+    self:ClearCondition(c.COND_LOST_ENEMY)
+    self:ClearCondition(c.COND_NEW_ENEMY)
+    self:ClearCondition(c.COND_SEE_ENEMY)
+
+    if not self:HasValidEnemy() then return end
+    local prevsee    = self.Conditions.PrevSeeEnemy
+    local e          = self:GetEnemy()
+    local lookat     = isfunction(e.GetAimVector) and e:GetAimVector() or e:GetForward()
+    local toenemy    = e:EyePos() - self:GetEyePos()
+    local cap        = isfunction(e.CapabilitiesGet) and e:CapabilitiesGet() or 0
+    local canrange   = bit.band(cap, CAP_RANGE_ATTACKS) > 0 or e:IsPlayer()
+    local dot        = lookat:Dot(toenemy:GetNormalized())
+    local visible    = self:Visible(e)
+    local tr         = self:GetTraceToLastPos()
+    local trlensqr   = tr.StartPos:DistToSqr(self:GetLastPosition())
+    local seelastpos = not tr.Hit
+    local enemyseen  = CurTime() - self.Time.LastEnemySeen
+    local lostenemy  = trlensqr < 60^2 or enemyseen > 10
+    self:ManipulateCondition(dot > -0.7,             "COND_BEHIND_ENEMY"          )
+    self:ManipulateCondition(not self:CheckAlive(e), "COND_ENEMY_DEAD"            )
+    self:ManipulateCondition(canrange,               "COND_ENEMY_CAN_RANGE_ATTACK")
+    self:ManipulateCondition(dot < -0.7,             "COND_ENEMY_FACING_ME"       )
+    self:ManipulateCondition(not visible,            "COND_ENEMY_OCCLUDED"        )
+    self:ManipulateCondition(self:IsUnreachable(e),  "COND_ENEMY_UNREACHABLE"     )
+    self:ManipulateCondition(visible,                "COND_HAVE_ENEMY_LOS"        )
+    self:ManipulateCondition(lostenemy,              "COND_LOST_ENEMY"            )
+    self:ManipulateCondition(enemyseen < 0.2,        "COND_SEE_ENEMY"             )
+    self:ManipulateCondition(seelastpos,             "COND_SEE_LAST_POSITION"     )
+
+    self.Conditions.PrevSeeEnemy = self:HasCondition(c.COND_SEE_ENEMY)
+    if prevsee and not self.Conditions.PrevSeeEnemy then -- predict enemy position
+        self:SetLastPosition(self:GetLastPosition() + self:GetLastVelocity())
     end
+end
+
+local function UpdateWeaponConditions(self)
+    self:ClearCondition(c.COND_CAN_MELEE_ATTACK1)
+    self:ClearCondition(c.COND_CAN_RANGE_ATTACK1)
+    self:ClearCondition(c.COND_LOW_PRIMARY_AMMO)
+    self:ClearCondition(c.COND_NO_PRIMARY_AMMO)
+    self:ClearCondition(c.COND_NO_WEAPON)
+    self:ClearCondition(c.COND_NOT_FACING_ATTACK)
+    self:ClearCondition(c.COND_RELOAD_FINISHED)
+    self:ClearCondition(c.COND_RELOADING)
+    self:ClearCondition(c.COND_TOO_CLOSE_TO_ATTACK)
+    self:ClearCondition(c.COND_TOO_FAR_TO_ATTACK)
+    self:ClearCondition(c.COND_WEAPON_BLOCKED_BY_FRIEND)
+    self:ClearCondition(c.COND_WEAPON_HAS_LOS)
+    self:ClearCondition(c.COND_WEAPON_SIGHT_OCCLUDED)
+
+    local params = self:GetWeaponParameters()
+    if not params then return end
+    if not self:HasValidEnemy() then return end
+    if not IsValid(self:GetActiveWeapon()) then
+        self:SetCondition(c.COND_NO_WEAPON)
+        return
+    end
+
+    local toenemy   = self:GetShootTo() - self:GetShootPos()
+    local enemydir  = toenemy:GetNormalized()
+    local distance  = toenemy:Length()
+    local ismelee   = params.IsMelee
+    local face      = ismelee and 0 or 0.9
+    local clip      = self:GetClip()
+
+    local facing    = enemydir:Dot(self:GetAimVector()) > face
+    local tooclose  = distance < params.MinRange
+    local toofar    = distance > params.MaxRange
+    local hasLOS    = params.CheckLOS(self)
+    local lowammo   = not params.UnlimitedAmmo and clip > 0 and clip < params.ClipSize / 2
+    local noammo    = not params.UnlimitedAmmo and clip == 0
+    local reloading = CurTime() < self.Time.FinishReloading
+    local canattack = self:CanPrimaryFire() and self:HasCondition(c.COND_SEE_ENEMY)
+    and facing and hasLOS and not (reloading or noammo or tooclose or toofar)
+    local canmelee  = canattack and ismelee and CurTime() > self.Time.WeaponFire
+
+    self:ManipulateCondition(canattack,  "COND_CAN_RANGE_ATTACK1"    )
+    self:ManipulateCondition(canmelee,   "COND_CAN_MELEE_ATTACK1"    )
+    self:ManipulateCondition(lowammo,    "COND_LOW_PRIMARY_AMMO"     )
+    self:ManipulateCondition(noammo,     "COND_NO_PRIMARY_AMMO"      )
+    self:ManipulateCondition(noweapon,   "COND_NO_WEAPON"            )
+    self:ManipulateCondition(not facing, "COND_NOT_FACING_ATTACK"    )
+    self:ManipulateCondition(reloading,  "COND_RELOADING"            )
+    self:ManipulateCondition(tooclose,   "COND_TOO_CLOSE_TO_ATTACK"  )
+    self:ManipulateCondition(toofar,     "COND_TOO_FAR_TO_ATTACK"    )
+    self:ManipulateCondition(hasLOS,     "COND_WEAPON_HAS_LOS"       )
+    self:ManipulateCondition(not hasLOS, "COND_WEAPON_SIGHT_OCCLUDED")
+end
+
+local function UpdateHealthConditions(self)
+    local prevhealth = self.Conditions.Health or self:Health()
+    local health_diff = prevhealth - self:Health()
+    local cfg = self.Config
+    local lightdmg = cfg.LightDamage
+    local heavydmg = cfg.HeavyDamage
+    local repdmg   = cfg.RepeatedDamage
+    if lightdmg % 1 > 0 then lightdmg = lightdmg * self:GetMaxHealth() end
+    if heavydmg % 1 > 0 then heavydmg = heavydmg * self:GetMaxHealth() end
+    if repdmg   % 1 > 0 then repdmg   = repdmg   * self:GetMaxHealth() end
+    self.Conditions.Health = self:Health()
+    self:ManipulateCondition(health_diff > lightdmg,             "COND_LIGHT_DAMAGE"   )
+    self:ManipulateCondition(health_diff > heavydmg,             "COND_HEAVY_DAMAGE"   )
+    self:ManipulateCondition(self.Conditions.SumDamage > repdmg, "COND_REPEATED_DAMAGE")
+
+    if CurTime() < self.Time.LastDamage + cfg.SumDamageDuration then return end
+    self.Conditions.SumDamage = 0
+end
+
+function ENT:UpdateConditions()
+    if CurTime() < self.Time.NextUpdateCondition then return end
+    self.Time.NextUpdateCondition = CurTime() + 0.3
 
     if CurTime() > self.Time.LastHearBullet + 0.1 then
         self:ClearCondition(c.COND_BULLET_NEAR)
     end
     
-    self:ManipulateCondition(not self:HasCondition(c.COND_GIVE_WAY), "COND_WAY_CLEAR")
-    self:ManipulateCondition(seegrenade, "COND_SEE_GRENADE")
-    self:ManipulateCondition(not grenadenearby, "COND_NO_GRENADE_NEARBY")
-    self:ManipulateCondition(dot and dot < -0.7, "COND_ENEMY_FACING_ME")
-    self:ManipulateCondition(dot and dot > -0.7, "COND_BEHIND_ENEMY")
-    self:ManipulateCondition(not self:CheckAlive(e), "COND_ENEMY_DEAD")
-    self:ManipulateCondition(self:IsUnreachable(e), "COND_ENEMY_UNREACHABLE")
-    self:ManipulateCondition(tookdamage > 0, "COND_LIGHT_DAMAGE")
-    self:ManipulateCondition(tookdamage > 20, "COND_HEAVY_DAMAGE")
-    self:ManipulateCondition(self.Conditions.SumDamage > self:GetMaxHealth() * 0.05, "COND_REPEATED_DAMAGE")
-    self:ManipulateCondition(self:CheckPVS(), "COND_IN_PVS")
+    UpdateEnemyConditions(self)
+    UpdateGreanadeConditions(self)
+    UpdateHealthConditions(self)
+    UpdateWeaponConditions(self)
 
-    self:ClearCondition(c.COND_CAN_RAPPEL_UP)
-    self:ClearCondition(c.COND_CAN_RAPPEL_FORWARD)
-    self:ClearCondition(c.COND_GOOD_TO_SLIDE)
-    self:ClearCondition(c.COND_HAVE_ENEMY_LOS)
-    self:ClearCondition(c.COND_ENEMY_OCCLUDED)
-    self:ClearCondition(c.COND_SEE_ENEMY)
-    self:ClearCondition(c.COND_NO_WEAPON)
-    self:ClearCondition(c.COND_WEAPON_HAS_LOS)
-    self:ClearCondition(c.COND_WEAPON_SIGHT_OCCLUDED)
-    self:ClearCondition(c.COND_TOO_FAR_TO_ATTACK)
-    self:ClearCondition(c.COND_TOO_CLOSE_TO_ATTACK)
-    self:ClearCondition(c.COND_LOW_PRIMARY_AMMO)
-    self:ClearCondition(c.COND_NO_PRIMARY_AMMO)
-    self:ClearCondition(c.COND_NOT_FACING_ATTACK)
-    self:ClearCondition(c.COND_CAN_MELEE_ATTACK1)
-    self:ClearCondition(c.COND_CAN_RANGE_ATTACK1)
+    self:ManipulateCondition(not self:HasCondition(c.COND_GIVE_WAY), "COND_WAY_CLEAR")
+    self:ManipulateCondition(self:CheckPVS(), "COND_IN_PVS")
+    self:ManipulateCondition(IsGoodToSlide(self), "COND_GOOD_TO_SLIDE")
     self:ClearCondition(c.COND_SHOULD_CROUCH_SHOOT)
 
-    local params = self:GetWeaponParameters()
-    local dz = vector_up * self.loco:GetStepHeight() / 2
-    if not self:HasValidEnemy() or self:GetRangeSquaredTo(e) > 360000 then
-        local dir = (vector_up + self:GetForward()) / 2
-        local start = self:GetPos() + dz
-        local trup = util.TraceHull {
-            start = start,
-            endpos = start + vector_up * 512,
-            filter = self,
-            mask = MASK_NPCSOLID_BRUSHONLY,
-            mins = self:OBBMins(),
-            maxs = self:OBBMaxs() - dz,
-        }
-        local trforward = util.TraceHull {
-            start = start,
-            endpos = start + dir * 512,
-            filter = self,
-            mask = MASK_NPCSOLID_BRUSHONLY,
-            mins = self:OBBMins(),
-            maxs = self:OBBMaxs() - dz,
-        }
-        self:ManipulateCondition(not (params and not params.AllowRappel or trup.Hit), "COND_CAN_RAPPEL_UP")
-        self:ManipulateCondition(not (params and not params.AllowRappel or trforward.Hit), "COND_CAN_RAPPEL_FORWARD")
-        self:swept("CanRappelUp", start, trup.HitPos, nil, nil, true)
-        self:swept("CanRappelForward", start, trforward.HitPos, nil, nil, true)
+    for name, state in pairs(self.Conditions.Register) do
+        self:ManipulateCondition(state, name)
+        self.Conditions.Register[name] = nil
     end
-
-    if not enemyisvalid then return end
-    local shootpos = self:GetShootPos()
-    local targetpos = self:GetShootTo()
-    local reloadfinished = self.Time.FinishReloading
-    self:ManipulateCondition(IsGoodToSlide(self), "COND_GOOD_TO_SLIDE")
-    self:ManipulateCondition(self:Visible(e), "COND_HAVE_ENEMY_LOS")
-    self:ManipulateCondition(not self:HasCondition(c.COND_HAVE_ENEMY_LOS), "COND_ENEMY_OCCLUDED")
-    self:ManipulateCondition(self:HasCondition(c.COND_HAVE_ENEMY_LOS) and self:GetAimVector():Dot(toenemy) > 0.7, "COND_SEE_ENEMY")
-    self:ManipulateCondition(not IsValid(self:GetActiveWeapon()), "COND_NO_WEAPON")
-    self:ManipulateCondition(reloadfinished < CurTime() and CurTime() + 0.1 < reloadfinished, "COND_RELOAD_FINISHED")
-
-    if not IsValid(self:GetActiveWeapon()) then return end
-    local CAP_RANGE_ATTACKS = bit.bor(
-        CAP_WEAPON_RANGE_ATTACK1,
-        CAP_WEAPON_RANGE_ATTACK2,
-        CAP_INNATE_RANGE_ATTACK1,
-        CAP_INNATE_RANGE_ATTACK2)
-    local cap = isfunction(e.CapabilitiesGet) and e:CapabilitiesGet() or 0
-    local enemycanrange = bit.band(cap, CAP_RANGE_ATTACKS) > 0 or e:IsPlayer()
-    local toenemy = targetpos - shootpos
-    local d = toenemy:Length()
-    local ismelee = self:GetWeaponTable().Parameters.IsMelee
-    local face_threshold = ismelee and 0 or 0.9
-    local clip = self:GetClip()
-    toenemy:Normalize()
-    self:ManipulateCondition(params.CheckLOS(self), "COND_WEAPON_HAS_LOS")
-    self:ManipulateCondition(not self:HasCondition(c.COND_WEAPON_HAS_LOS), "COND_WEAPON_SIGHT_OCCLUDED")
-    self:ManipulateCondition(d > params.MaxRange, "COND_TOO_FAR_TO_ATTACK")
-    self:ManipulateCondition(d < params.MinRange, "COND_TOO_CLOSE_TO_ATTACK")
-    self:ManipulateCondition(clip > 0 and clip < params.ClipSize / 2, "COND_LOW_PRIMARY_AMMO")
-    self:ManipulateCondition(clip == 0, "COND_NO_PRIMARY_AMMO")
-    self:ManipulateCondition(toenemy:Dot(self:GetAimVector()) < face_threshold, "COND_NOT_FACING_ATTACK")
-    self:ManipulateCondition(enemycanrange, "COND_ENEMY_CAN_RANGE_ATTACK")
-    if self.IsReloading or params.UnlimitedAmmo then
-        self:ClearCondition(c.COND_LOW_PRIMARY_AMMO)
-        self:ClearCondition(c.COND_NO_PRIMARY_AMMO)
-    end
-    
-    local canattack = self:CanPrimaryFire() and not (
-        self.IsReloading or
-        self:HasCondition(c.COND_WEAPON_SIGHT_OCCLUDED) or
-        self:HasCondition(c.COND_WEAPON_BLOCKED_BY_FRIEND) or
-        self:HasCondition(c.COND_TOO_FAR_TO_ATTACK) or
-        self:HasCondition(c.COND_TOO_CLOSE_TO_ATTACK) or
-        self:HasCondition(c.COND_NO_PRIMARY_AMMO) or
-        self:HasCondition(c.COND_NOT_FACING_ATTACK))
-    if ismelee then
-        canattack = canattack and CurTime() > self.Time.WeaponFire
-    end
-
-    self:ManipulateCondition(canattack, "COND_CAN_RANGE_ATTACK1")
-    self:ManipulateCondition(canattack, "COND_CAN_MELEE_ATTACK1")
 end

@@ -154,7 +154,7 @@ function ENT:Task_SetGoal(arg)
             return
         end
 
-        self.DesiredGoal = e:GetPos()
+        self.DesiredGoal = self:GetEnemyPos()
         self.DesiredPathTarget = e
     elseif goaltype == g.GOAL_ENEMY_LKP then
         local e = self:GetEnemy()
@@ -163,7 +163,7 @@ function ENT:Task_SetGoal(arg)
             return
         end
 
-        self.DesiredGoal = self:GetLastPosition()
+        self.DesiredGoal = self:GetEnemyPos()
         self.DesiredPathTarget = NULL
     elseif goaltype == g.GOAL_TARGET then
         local t = self:GetTarget()
@@ -197,14 +197,8 @@ function ENT:Task_GetPathToGoal(arg)
         self:ComputePath(goal)
         foundpath = self.Path:IsValid()
     elseif pathtype == p.PATH_LOS then
-        local toofar = self.HasLongRange and 1e9 or 1024
-        local max, min = 2000, 0
         local params = self:GetWeaponParameters()
-        if params then
-            max, min = params.MaxRange, params.MinRange
-        end
-
-        max = math.min(max, toofar) -- Check against NPC's max range
+        local max, min = params.MaxRange, params.MinRange
         local eyepos = IsValid(target) and target:EyePos() or goal
         local posLos = self:FindLOS(eyepos, min, max)
         if posLos then -- See if we've found it
@@ -234,79 +228,27 @@ function ENT:Task_GetPathToGoal(arg)
     self:TaskComplete()
 end
 
-function ENT:Task_GetPathToEnemy()
-    if not IsValid(self:GetEnemy()) then
-        self:TaskFail(self.Enum.TaskFailure.FAIL_NO_ENEMY)
-        return
-    end
-
-    self:ComputePath(self:GetEnemy():GetPos())
-    self:TaskComplete()
-end
-
-function ENT:Task_GetPathToEnemyLKP()
-    if not IsValid(self:GetEnemy()) then
-        self:TaskFail(self.Enum.TaskFailure.FAIL_NO_ENEMY)
-    end
-
-    self:ComputePath(self:GetLastPosition())
-    self:TaskComplete()
-end
-
 function ENT:Task_GetChasePathToEnemy(arg)
-    if not IsValid(self:GetEnemy()) then
+    if not self:HasValidEnemy() then
         self:TaskFail(self.Enum.TaskFailure.FAIL_NO_ENEMY)
         return
     end
 
-    if self:GetShootTo():DistToSqr(self:GetLastPosition()) < arg^2 then
-        self:Task_GetPathToEnemy()
-    else
-        self:Task_GetPathToEnemyLKP()
-    end
+    self:ComputePath(self:GetEnemyPos())
+    self:TaskComplete()
 end
 
 function ENT:Task_GetPathToEnemyLOS(arg)
-    if not IsValid(self:GetEnemy()) then
+    if not self:HasValidEnemy() then
         self:TaskFail(f.FAIL_NO_ENEMY)
         return
     end
 
     local task = self.Schedule.CurrentTask
-    local toofar = self.HasLongRange and 1e9 or 1024
-    local max, min = 2000, 0
     local params = self:GetWeaponParameters()
-    if params then
-        max, min = params.MaxRange, params.MinRange
-    end
-
-    max = math.min(max, toofar) -- Check against NPC's max range
-    local enemypos = self:GetShootTo()
-    local posLos, found = nil, false
-    if not task:find "Flank" then
-        posLos = self:FindLateralLOS(enemypos) or self:FindLOS(enemypos, min, max)
-        if posLos then
-            local d = posLos:Distance(enemypos)
-            found = min < d and d < max
-        end
-    end
-
-    if not found then
-        local flankType = 0 -- FLANKTYPE_NONE
-        local refPos = Vector()
-        local flankParam = 0
-        if task == "GetFlankRadiusPathToEnemyLOS" then
-            flankType = 2 -- FLANKTYPE_RADIUS
-            refPos = self:GetPos() -- m_vSavePosition
-            flankParam = arg
-        elseif task == "GetFlankArcPathToEnemyLOS" then
-            flankType = 1 -- FLANKTYPE_ARC
-            refPos = self:GetPos() -- m_vSavePosition
-            flankParam = arg
-        end
-
-        posLos = self:FindLOS(enemypos, min, max, flankType, refPos, flankParam)
-    end
+    local max, min = params.MaxRange, params.MinRange
+    local enemypos = self:GetEnemyPos()
+    local posLos = self:FindLateralLOS(enemypos) or self:FindLOS(enemypos, min, max)
 
     if not posLos then -- No LOS to goal
         self:TaskFail(f.FAIL_NO_SHOOT)
@@ -317,21 +259,9 @@ function ENT:Task_GetPathToEnemyLOS(arg)
     self:TaskComplete()
 end
 
-function ENT:Task_GetPathToEnemyCorpse()
-    if not IsValid(self:GetEnemy()) then
-        self:TaskFail(self.Enum.TaskFailure.FAIL_NO_ENEMY)
-        return
-    end
-
-    self:ComputePath(self:GetLastPosition() - self:GetForward() * 64)
-    self:TaskComplete()
-end
-
-ENT.Task_GetPathToEnemyLKPLOS = ENT.Task_GetPathToEnemyLOS
-
 function ENT:Task_GetPathToRandom(arg)
     local dir = self:GetForward()
-    local range = arg or 256
+    local range = arg or self.Config.RandomPathRange
     range = range * math.Rand(0.5, 1)
     dir:Rotate(Angle(0, math.Rand(-180, 180), 0))
     local desired = self:GetPos() + dir * range
@@ -353,7 +283,7 @@ function ENT:Task_FaceEnemy()
     if self:HasValidEnemy() then
         local e = self:GetEnemy()
         local forward = self:GetForward()
-        local enemypos = self:GetShootTo()
+        local enemypos = self:GetEnemyPos()
         local toenemy = enemypos - self:WorldSpaceCenter()
         toenemy.z = 0
         toenemy:Normalize()
@@ -710,7 +640,7 @@ function ENT:Task_CombatSlide(arg)
             local e = self:GetEnemy()
             local sign = math.random() > 0.5 and 1 or -1
             if arg == "Cover" then
-                pos = self:FindLateralCover(self:GetShootTo(), 50)
+                pos = self:FindLateralCover(self:GetEnemyPos(), 50)
                 or self:GetPos() + self:GetRight() * sign * SLIDE_DISTANCE
             elseif arg == "Maneuver" then
                 local side = e:GetPos() + self:GetRight() * sign * 55

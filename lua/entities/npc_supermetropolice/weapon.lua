@@ -10,11 +10,11 @@ local function CheckHitFriendly(self)
     }
 
     local e = tr.Entity
-    local hit = self:Disposition(e) ~= D_HT and (IsValid(e) and self:Disposition(e:GetParent()) ~= D_HT)
-    self:ManipulateCondition(hit, "COND_WEAPON_BLOCKED_BY_FRIEND")
+    local hit = self:Disposition(e) == D_LI and (IsValid(e) and self:Disposition(e:GetParent()) == D_LI)
+    self:RegisterCondition(hit, "COND_WEAPON_BLOCKED_BY_FRIEND")
 end
 
-local function DefaultCheckLOS(self, start, endpos)
+local function DefaultCheckLOS(self)
     if util.TraceLine {
         start = self:WorldSpaceCenter(),
         endpos = self:GetShootPos(),
@@ -34,14 +34,14 @@ local function DefaultCheckLOS(self, start, endpos)
     or (IsValid(tr.Entity) and self:Disposition(tr.Entity:GetParent()) == D_HT)
 end
 
-local function DefaultCheckLOSOnGround(self, start, endpos)
+local function DefaultCheckLOSOnGround(self)
     if not self:OnGround() then return end
-    return DefaultCheckLOS(self, start, endpos)
+    return DefaultCheckLOS(self)
 end
 
-local function CheckLOSMelee(self, start, endpos)
-    return self:VisibleVec(endpos or self:GetShootTo())
-    or DefaultCheckLOSOnGround(self, start, endpos)
+local function CheckLOSMelee(self)
+    return self:VisibleVec(self:GetShootTo())
+    or DefaultCheckLOSOnGround(self)
 end
 
 local function DefaultFireCallback(attacker, tr, dmginfo)
@@ -176,12 +176,12 @@ local function CalcThrowVec(self, v1, v2, toss, velocity)
     return velocity, dir2D, v * cos
 end
 
-local function TestThrowVec(self, from, to, draw)
+local function TestThrowVec(self, from, to)
     local halfg = physenv.GetGravity():Length() / 2
     local filter = {self, self:GetEnemy()}
     local att = self:LookupAttachment "anim_attachment_LH"
-    local from = from or self:GetAttachment(att).Pos
-    local to = to or self:GetShootTo()
+    local from = self:GetAttachment(att).Pos
+    local to = self:GetShootTo()
     local dir = to - from
     local dist2D = dir:Length2D()
     local occluded = self:HasCondition(c.COND_ENEMY_OCCLUDED)
@@ -222,55 +222,160 @@ local function TestThrowVec(self, from, to, draw)
     end
 end
 
-local function GrenadeLOS(self, start, endpos)
-    if DefaultCheckLOSOnGround(self, start, endpos) then return true end
+local function GrenadeLOS(self)
+    if DefaultCheckLOSOnGround(self) then return true end
     self.GrenadeTossVelocity = nil
     self.GrenadeTossDirection2D = nil
     self.GrenadeTossVelocity2D = nil
-    self:ClearCondition(c.COND_WEAPON_BLOCKED_BY_FRIEND)
-    return TestThrowVec(self, start, endpos) and true
+    self:RegisterCondition(false, "COND_WEAPON_BLOCKED_BY_FRIEND")
+    return TestThrowVec(self)
 end
 
 local function ThrowGrenade(self, w, pos, dir)
     local att = self:LookupAttachment "anim_attachment_RH"
     local p = self:GetAttachment(att)
     local shootTo = self:GetShootTo()
-    local occluded = self:HasCondition(c.COND_ENEMY_OCCLUDED)
-    if occluded then shootTo = self:GetLastPosition() + vector_up * 100 end
-    -- local wait = occluded and 1 or 0.8
-    local wait = 0.1
     local dist2D = (shootTo - p.Pos):Length2D()
     local throwVec, dir2D, v2D = TestThrowVec(self, p.Pos, shootTo)
     if not throwVec then return end
 
-    -- self.PlaySequence = occluded and "deploy" or "grenadethrow"
-    self:RestartGesture(self:TranslateActivity(ACT_HL2MP_GESTURE_RANGE_ATTACK))
-	timer.Simple(wait, function()
-        if not IsValid(self) then return end
-        if not self:CheckAlive(self) then return end
-        local ent = ents.Create "npc_grenade_frag"
-        local p = self:GetAttachment(att)
-		ent:Input("settimer", self, self, dist2D / v2D * (math.random() < 0.3 and 2 or 1))
-		ent:SetHealth(math.huge)
-		ent:SetMaxHealth(math.huge)
-		ent:SetPos(p.Pos)
-		ent:SetAngles(p.Ang)
-		ent:SetOwner(self)
-		ent:SetSaveValue("m_hThrower", self)
-		ent:Spawn()
-		
-        local phys = ent:GetPhysicsObject()
-        if not IsValid(phys) then ent:Remove() return end
-        phys:EnableDrag(false)
-		phys:SetVelocityInstantaneous(throwVec)
-		phys:AddAngleVelocity(VectorRand() * 10)
-		
-        ent:AddCallback("OnAngleChange", function(ent, ang)
-            phys:AddAngleVelocity(VectorRand())
-            if not IsValid(ent) or ent:IsOnFire() then return end
-            ent:Ignite(0.1)
-        end)
+    local timetoland = dist2D / v2D
+    if self:HasCondition(c.COND_SEE_ENEMY) then
+        shootTo = shootTo + self:GetLastVelocity() * timetoland
+        throwVec, dir2D, v2D = TestThrowVec(self, p.Pos, shootTo)
+    end
+
+    if not throwVec then return end
+    local ent = ents.Create "npc_grenade_frag"
+    local p = self:GetAttachment(att)
+    ent:Input("settimer", self, self, timetoland)
+    ent:SetHealth(math.huge)
+    ent:SetMaxHealth(math.huge)
+    ent:SetPos(p.Pos)
+    ent:SetAngles(p.Ang)
+    ent:SetOwner(self)
+    ent:SetSaveValue("m_hThrower", self)
+    ent:Spawn()
+    
+    local phys = ent:GetPhysicsObject()
+    if not IsValid(phys) then ent:Remove() return end
+    phys:EnableDrag(false)
+    phys:SetVelocityInstantaneous(throwVec)
+
+    util.SpriteTrail(ent, 0, color_white, true, 15, 5, 1, 0.025, "cable/redlaser")
+    w:EmitSound(self:GetWeaponParameters().ShootSound)
+end
+
+local function CheckRPGGuide(self)
+    local path = Path "Follow"
+    path:Compute(self, self:GetShootTo())
+    local isvalid = path:IsValid()
+    path:Invalidate()
+    return isvalid
+end
+
+local RPG_SPEED = 1500
+local function FireRPG(self, w, pos, dir)
+    if not self:HasValidEnemy() then return end
+
+    local r = ents.Create "rpg_missile"
+    if not IsValid(r) then return end
+    local e = self:GetEnemy()
+    local params = self:GetWeaponParameters()
+    local enemypos = self:GetEnemyPos()
+    local distance = enemypos:Distance(pos)
+    local targetpos = enemypos + self:GetLastVelocity() * distance / RPG_SPEED
+    local dmg = params.Damage
+    if isstring(dmg) then
+        dmg = GetConVar(dmg)
+        dmg = dmg and dmg:GetInt() or 0
+    end
+    
+    local path = Path "Follow"
+    local step = self.loco:GetStepHeight()
+    self.loco:SetStepHeight(8192)
+    path:Compute(self, enemypos)
+    self.loco:SetStepHeight(step)
+
+    local aim = path:FirstSegment().forward
+    r:SetPos(pos)
+    r:SetOwner(self)
+    r:SetAngles(aim:Angle())
+    r:AddEffects(EF_NOSHADOW)
+    r:SetVelocity(aim * 300 + vector_up * 128)
+    r:SetLocalAngularVelocity(Angle(0, 0, 720))
+    r:SetSaveValue("m_flDamage", dmg)
+    r:SetNotSolid(true)
+    r:Spawn()
+
+    local t0 = CurTime()
+    local t = "GreatZenkakuMan's SuperMetropolice: Guide Missile #" .. r:EntIndex()
+    local traveled = 0
+    timer.Create(t, 0, 0, function()
+        if not (IsValid(self) and IsValid(r)) then
+            timer.Remove(t)
+            path:Invalidate()
+            return
+        end
+        
+        if CurTime() - t0 < 0.2 then return end
+        if not IsValid(e) then
+            e = self:GetEnemy()
+            return
+        end
+
+        r:SetNotSolid(false)
+        local p = r:GetPos()
+        local epos = e:WorldSpaceCenter()
+        local speed = r:GetVelocity():Length()
+        path:MoveCursorToClosestPosition(r:GetPos(), 1)
+        path:MoveCursor(60)
+        path:Draw()
+
+        local cursor = path:GetCursorData()
+        local forward = cursor.forward
+        local ppos = cursor.pos
+        traveled = math.max(traveled, path:GetCursorPosition())
+
+        local len = path:GetLength()
+        local pathleft = len - traveled
+        if pathleft > 60 then ppos.z = ppos.z + 120 end
+        if (ppos - epos):Length2DSqr() < 40000 then ppos = epos end
+
+        local topath = ppos - r:GetPos()
+        if topath:LengthSqr() < 5000 then return end
+        topath:Normalize()
+        topath:Mul(speed)
+        r:SetVelocity(topath - r:GetVelocity())
+        r:SetAngles(topath:Angle())
+
+        if path:GetAge() > 1 then
+            local step = self.loco:GetStepHeight()
+            self.loco:SetStepHeight(8192)
+            path:Compute(self, epos)
+            self.loco:SetStepHeight(step)
+        end
     end)
+
+    w:EmitSound(params.ShootSound)
+end
+
+local function UseCamera(self, w, pos, dir)
+    if not self:HasValidEnemy() then return end
+    if self:HasCondition(c.COND_ENEMY_OCCLUDED) then return end
+    for _, v in ipairs(ents.FindByClass(self.ClassName)) do
+        if v ~= self then
+            v:SetLastPosition(self:GetShootTo())
+            v:SetLastVelocity(self:GetEnemy():GetVelocity())
+            v.Time.LastEnemySeen = CurTime()
+            if not v:HasValidEnemy() or v:GetEnemyValue() < self:GetEnemyValue() then
+                v:SetEnemy(self:GetEnemy())
+                v:SetEnemyValue(self:GetEnemyValue())
+            end
+        end
+    end
+
+    w:EmitSound(self:GetWeaponParameters().ShootSound)
 end
 
 local DefaultParameters = {
@@ -303,7 +408,9 @@ local DefaultParameters = {
 }
 
 local WeaponList = {
+    "weapon_rpg",
     "weapon_357",
+    "gmod_camera",
     "weapon_frag",
     "weapon_ar2",
     "weapon_shotgun",
@@ -312,6 +419,20 @@ local WeaponList = {
     "weapon_pistol",
 }
 local HL2Weapons = {
+    gmod_camera = {
+        FireFunction = UseCamera,
+        HoldType = "camera",
+        MaxBurstDelay = 0.4,
+        MaxBurstNum = 7,
+        MaxBurstRestDelay = 0.7,
+        MaxRange = 4096,
+        MinBurstDelay = 0.1,
+        MinBurstNum = 3,
+        MinBurstRestDelay = 0.5,
+        MinRange = 600,
+        ShootSound = "NPC_CScanner.TakePhoto",
+        UnlimitedAmmo = true,
+    },
     weapon_357 = {
         AmmoType = "357",
         ClipSize = 6,
@@ -345,8 +466,8 @@ local HL2Weapons = {
         MinBurstNum = 1,
         MinBurstRestDelay = 4,
         MinRange = 400,
-        PlayGesture = false,
-        Spread = 3,
+        ReloadSound = "WeaponFrag.Roll",
+        ShootSound = "WeaponFrag.Throw",
         UnlimitedAmmo = true,
     },
     weapon_ar2 = {
@@ -431,6 +552,23 @@ local HL2Weapons = {
         Spread = 0,
         UnlimitedAmmo = true,
     },
+    weapon_rpg = {
+        CheckLOS = CheckRPGGuide,
+        Damage = "sk_npc_dmg_rpg_round",
+        FireFunction = FireRPG,
+        HoldType = "rpg",
+        MaxBurstDelay = 0.25,
+        MaxBurstNum = 5,
+        MaxBurstRestDelay = 10,
+        MaxRange = 8192,
+        MinBurstDelay = 0.25,
+        MinBurstNum = 2,
+        MinBurstRestDelay = 5,
+        MinRange = 800,
+        ReloadSound = "Weapon_RPG.LaserOff",
+        ShootSound = "Weapon_RPG.NPC_Single",
+        UnlimitedAmmo = true,
+    },
 }
 
 local SF_WEAPON_DENY_PLAYER_PICKUP = 2
@@ -446,6 +584,8 @@ function ENT:SetActiveWeapon(weaponID)
     self:SetNWEntity("ActiveWeapon", weapon)
     self.Weapons.ActiveWeaponID = weaponID
     weapon:SetNoDraw(false)
+
+    self:SetTacticalConfig(self:SelectTacticalConfigByWeapon(weaponID))
 end
 
 function ENT:GetWeaponTable()
@@ -497,7 +637,7 @@ function ENT:Initialize_Weapon()
     local skill = game.GetSkillLevel()
     local SpreadMul = {1.2, 1, 0.3}
     local BurstRestMul = {1.1, 1, 0.8}
-    local WeaponRestrict = {3, 2, 1}
+    local WeaponRestrict = {5, 3, 1}
     self.BurstNum = 0
     self.Weapons = {}
     self.WeaponShootCount = 0
@@ -551,7 +691,7 @@ function ENT:OnKilled_DropWeapon(d)
 end
 
 function ENT:CanPrimaryFire()
-    if self.IsReloading then return end
+    if self:HasCondition(c.COND_RELOADING) then return end
     local w = self:GetActiveWeapon()
     if not IsValid(w) then return end
     if CurTime() < self.Time.FinishReloading then return end
@@ -636,7 +776,7 @@ function ENT:PrimaryFire()
         if not IsValid(w) then return end
         local shootPos = self:GetShootPos()
         local dir = self:GetAimVector()
-        if w:IsScripted() then
+        if w:IsScripted() and w:GetClass() ~= "gmod_camera" then
             w:NPCShoot_Primary(shootPos, dir)
         elseif isfunction(params.FireFunction) then
             params.FireFunction(self, w, shootPos, dir)
@@ -656,9 +796,8 @@ function ENT:PrimaryFire()
     return true
 end
 
-local NewReloadStyle = true
 function ENT:Reload()
-    if self.IsReloading then return end
+    if self:HasCondition(c.COND_RELOADING) then return end
     local params = self:GetWeaponParameters()
     if not params then return end
     local s = params.ReloadSound
@@ -678,16 +817,12 @@ function ENT:Reload()
     self:SetMovementActivity(self:TranslateActivity(ACT_HL2MP_IDLE))
     self:AddGesture(act)
 
-    if NewReloadStyle then
-        self.IsReloading = true
-        self.Time.FinishReloading = CurTime() + reloadtime
-        timer.Simple(reloadtime, function()
-            if not IsValid(self) then return end
-            self.IsReloading = false
-            self:GetWeaponTable().Clip = params.ClipSize
-        end)
-    else
-        coroutine.wait(reloadtime)
+    self:RegisterCondition(true, "COND_RELOADING")
+    self.Time.FinishReloading = CurTime() + reloadtime
+    timer.Simple(reloadtime, function()
+        if not IsValid(self) then return end
+        self:RegisterCondition(false, "COND_RELOADING")
+        self:RegisterCondition(true, "COND_RELOAD_FINISHED")
         self:GetWeaponTable().Clip = params.ClipSize
-    end
+    end)
 end

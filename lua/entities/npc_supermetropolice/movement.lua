@@ -78,7 +78,10 @@ function ENT:IsUnreachable(test)
         test = test:WorldSpaceCenter()
     end
 
-    local a = navmesh.GetNearestNavArea(test, 100)
+    if not test then
+        debug.Trace()
+    end
+    local a = navmesh.GetNearestNavArea(test, false, 100)
     return not (a and a:IsValid())
 end
 
@@ -222,20 +225,8 @@ function ENT:UpdatePath()
     self:point("UpdatePath", goal.pos, true)
     self:vector("UpdatePath", self:GetPos(), self.loco:GetVelocity(), true)
     
-    local togoal = self:GetRangeSquaredTo(self.Path:GetClosestPosition(self:GetPos()))
-    if self.Path:GetAge() > self.TimeToRepath or togoal > 1e4 then
+    if self.Path:GetAge() > self.TimeToRepath then
         self:ComputePath(self.Path:GetEnd())
-    end
-
-    local nextgoal = self.Path:NextSegment()
-    local priorgoal = self.Path:PriorSegment()
-    local dz = goal and goal.pos.z - self:GetPos().z
-    local toohigh = dz and dz > self.loco:GetStepHeight() / 2
-    local canjump = dz and dz < self.loco:GetJumpHeight()
-    if canjump and toohigh or priorgoal and nextgoal and (priorgoal.type == 2 or priorgoal.type == 3) then
-        if not dz or dz^2 > self:GetRangeSquaredTo(goal.pos) then
-            self:RequestJump(goal.pos, goal.forward)
-        end
     end
 end
 
@@ -257,60 +248,42 @@ local MAX_SAMPLES = 200
 local SAMPLES_PER_YIELD = 10
 local SPOT_TYPE_ALL = 1 + 2 + 4 + 8
 local SPOT_TYPE_SNIPER = 2 + 4
-local function FindPos(self, vecThreat, min, max, isLOS)
-    local params = self:GetWeaponParameters()
+local function FindPos(self, vecThreat, min, max, spottype, evalFunc)
+    local org = self:GetPos()
     local min2 = min^2
-    local path = Path "Follow"
-    local org = self:WorldSpaceCenter()
-    local dz = vector_up * (self:GetEyePos().z - self:GetPos().z)
     local areas = navmesh.Find(org, max, self.loco:GetStepHeight(), self.loco:GetStepHeight())
-    local toThreat = vecThreat - org
-    local shortest, pos = math.huge, nil
-    local shortest_alt, pos_alt = math.huge, nil
+    local path = Path "Follow"
+    local pos = nil
     local fSamples = MAX_SAMPLES / #areas
     local nSamples, fSamplesFrac = math.modf(fSamples)
     local fSamplesAccumlate = 0
     local nSamplesAccumlate = 0
-    local evaluateFunction = isLOS and self:GetWeaponParameters().CheckLOS or self.IsCoverPosition
-    toThreat.z = 0
-    toThreat:Normalize()
     for _, a in ipairs(areas) do
         local spots = {}
         local n = nSamples
         fSamplesAccumlate = fSamplesAccumlate + fSamplesFrac
         if fSamplesAccumlate > 1 then n, fSamplesAccumlate = n + 1, 0 end
         for i = 1, n do spots[i] = a:GetRandomPoint() end
-        table.Add(spots, a:GetHidingSpots(isLOS and SPOT_TYPE_ALL or SPOT_TYPE_SNIPER))
-        for _, s in ipairs(spots) do
+        table.Add(spots, a:GetHidingSpots(spottype))
+        for _, spot in ipairs(spots) do
             nSamplesAccumlate = nSamplesAccumlate + 1
             if nSamplesAccumlate > SAMPLES_PER_YIELD then
                 nSamplesAccumlate = 0
                 coroutine.yield()
             end
 
-            local s_up = s + dz
-            local tospot = s_up - org
-            self:point(isLOS and "FindLOSAll" or "FindCoverPosAll", s)
-            if tospot:Length2DSqr() > min2 and evaluateFunction(self, s_up, vecThreat) then
-                path:Compute(self, s)
+            if (spot - org):Length2DSqr() > min2 then
+                path:Invalidate()
+                path:Compute(self, spot)
                 if path:IsValid() then
-                    local forward = path:FirstSegment().forward
-                    local length = path:GetLength()
-                    if length < shortest and toThreat:Dot(forward) < 0 then
-                        self:line(isLOS and "FindLOSAttempt" or "FindCoverPosAttempt", org, s)
-                        self:line(isLOS and "FindLOSAttempt" or "FindCoverPosAttempt", vecThreat, s)
-                        pos, shortest = s, length
-                    elseif length < shortest_alt and toThreat:Dot(forward) > 0 then
-                        self:line(isLOS and "FindLOSAttemptAlt" or "FindCoverPosAttemptAlt", org, s)
-                        self:line(isLOS and "FindLOSAttemptAlt" or "FindCoverPosAttemptAlt", vecThreat, s)
-                        pos_alt, shortest_alt = s, length
-                    end
-                end
+                    pos = evalFunc(self, spot, path, pos) or pos
+                end 
             end
         end
     end
 
-    return pos or pos_alt
+    path:Invalidate()
+    return pos
 end
 
 local function TestLateralCover(self, endpos, start, min)
@@ -348,8 +321,18 @@ local function FindLateralPos(self, vecThreat, min, isLOS)
     end
 end
 
+local function GetEvalFunc(self, vecThreat, checkVisibility)
+    local dz = vector_up * (self:GetEyePos().z - self:GetPos().z)
+    local evaluation = self.Config.GetEvaluatePos(self, vecThreat)
+    return function(self, spot, path, pos_candidate)
+        if not checkVisibility(self, spot + dz, vecThreat) then return end
+        return evaluation(self, vecThreat, spot, path, pos_candidate)
+    end
+end
+
 function ENT:FindLOS(vecThreat, min, max)
-    return FindPos(self, vecThreat, min, max, true)
+    return FindPos(self, vecThreat, min, max, SPOT_TYPE_ALL,
+    GetEvalFunc(self, vecThreat, self:GetWeaponParameters().CheckLOS))
 end
 
 function ENT:FindLateralLOS(vecThreat)
@@ -357,7 +340,8 @@ function ENT:FindLateralLOS(vecThreat)
 end
 
 function ENT:FindCoverPos(vecThreat, min, max)
-    return FindPos(self, vecThreat, min, max, false)
+    return FindPos(self, vecThreat, min, max, SPOT_TYPE_SNIPER,
+    GetEvalFunc(self, vecThreat, self.IsCoverPosition))
 end
 
 function ENT:FindLateralCover(vecThreat, min)

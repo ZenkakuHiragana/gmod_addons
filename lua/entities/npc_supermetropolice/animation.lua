@@ -118,12 +118,8 @@ function ENT:BodyUpdate()
         act = ACT_HL2MP_SWIM_IDLE
     elseif self.loco:IsAttemptingToMove() then
         local hasenemy = self:HasValidEnemy() or aidisabled:GetBool()
-        local run = hasenemy and ACT_HL2MP_RUN_FAST or ACT_HL2MP_WALK
-        if hasenemy and not (self:GetWeaponParameters().IsMelee or
-        self:HasCondition(self.Enum.Conditions.COND_WEAPON_SIGHT_OCCLUDED)) then
-            run = ACT_HL2MP_RUN
-        end
-        
+        local run = hasenemy and ACT_HL2MP_RUN or ACT_HL2MP_WALK
+        run, speed = self.Config.SelectMovingAnim(self, run)
         act = crouch and ACT_HL2MP_WALK_CROUCH or run
     elseif self:HasValidEnemy() or CurTime() < self.Time.Wait then
         act = crouch and ACT_HL2MP_CROUCH or ACT_HL2MP_IDLE

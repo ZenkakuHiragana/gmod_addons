@@ -186,6 +186,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_IDLE_RPG,
 		revolver = ACT_HL2MP_IDLE_REVOLVER,
 		normal = ACT_HL2MP_IDLE,
+		camera = ACT_HL2MP_IDLE_CAMERA,
 	},
 	[ ACT_HL2MP_IDLE_CROUCH ] = {
 		smg = ACT_HL2MP_IDLE_CROUCH_SMG1,
@@ -199,6 +200,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_IDLE_CROUCH_RPG,
 		revolver = ACT_HL2MP_IDLE_CROUCH_REVOLVER,
 		normal = ACT_HL2MP_IDLE_CROUCH,
+		camera = ACT_HL2MP_IDLE_CROUCH_CAMERA,
 	},
 	[ ACT_HL2MP_WALK ] = {
 		smg = ACT_HL2MP_WALK_SMG1,
@@ -212,6 +214,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_WALK_RPG,
 		revolver = ACT_HL2MP_WALK_REVOLVER,
 		normal = ACT_HL2MP_WALK,
+		camera = ACT_HL2MP_WALK_CAMERA,
 	},
 	[ ACT_HL2MP_WALK_CROUCH ] = {
 		smg = ACT_HL2MP_WALK_CROUCH_SMG1,
@@ -225,6 +228,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_WALK_CROUCH_RPG,
 		revolver = ACT_HL2MP_WALK_CROUCH_REVOLVER,
 		normal = ACT_HL2MP_WALK_CROUCH,
+		camera = ACT_HL2MP_WALK_CROUCH_CAMERA,
 	},
 	[ ACT_HL2MP_RUN ] = {
 		smg = ACT_HL2MP_RUN_SMG1,
@@ -238,6 +242,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_RUN_RPG,
 		revolver = ACT_HL2MP_RUN_REVOLVER,
 		normal = ACT_HL2MP_RUN,
+		camera = ACT_HL2MP_RUN_CAMERA,
 	},
 	[ ACT_HL2MP_GESTURE_RANGE_ATTACK ] = {
 		smg = ACT_HL2MP_GESTURE_RANGE_ATTACK_SMG1,
@@ -251,6 +256,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_GESTURE_RANGE_ATTACK_RPG,
 		revolver = ACT_HL2MP_GESTURE_RANGE_ATTACK_REVOLVER,
 		normal = ACT_HL2MP_GESTURE_RANGE_ATTACK_GRENADE,
+		camera = ACT_HL2MP_GESTURE_RANGE_ATTACK_CAMERA,
 	},
 	[ ACT_HL2MP_GESTURE_RELOAD ] = {
 		smg = ACT_HL2MP_GESTURE_RELOAD_SMG1,
@@ -264,6 +270,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_GESTURE_RELOAD_RPG,
 		revolver = ACT_HL2MP_GESTURE_RELOAD_REVOLVER,
 		normal = ACT_HL2MP_GESTURE_RELOAD_MELEE,
+		camera = ACT_HL2MP_GESTURE_RELOAD_CAMERA,
 	},
 	[ ACT_HL2MP_SIT ] = {
 		smg = ACT_HL2MP_SIT_SMG1,
@@ -277,6 +284,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_SIT_RPG,
 		revolver = ACT_HL2MP_SIT_PISTOL,
 		normal = ACT_HL2MP_SIT,
+		camera = ACT_HL2MP_SIT_CAMERA,
 	},
 	[ ACT_HL2MP_SWIM ] = {
 		smg = ACT_HL2MP_SWIM_SMG1,
@@ -290,6 +298,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_SWIM_RPG,
 		revolver = ACT_HL2MP_SWIM_PISTOL,
 		normal = ACT_HL2MP_SWIM,
+		camera = ACT_HL2MP_SWIM_CAMERA,
 	},
 	[ ACT_HL2MP_SWIM_IDLE ] = {
 		smg = ACT_HL2MP_SWIM_IDLE_SMG1,
@@ -303,6 +312,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_SWIM_IDLE_RPG,
 		revolver = ACT_HL2MP_SWIM_IDLE_PISTOL,
 		normal = ACT_HL2MP_SWIM_IDLE,
+		camera = ACT_HL2MP_SWIM_IDLE_CAMERA,
 	},
 	[ ACT_HL2MP_JUMP ] = {
 		smg = ACT_HL2MP_JUMP_SMG1,
@@ -316,6 +326,7 @@ local ActivityTranslation = {
 		rpg = ACT_HL2MP_JUMP_RPG,
 		revolver = ACT_HL2MP_JUMP_PISTOL,
 		normal = ACT_HL2MP_JUMP,
+		camera = ACT_HL2MP_JUMP_CAMERA,
 	},
 }
 

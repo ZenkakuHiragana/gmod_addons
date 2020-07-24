@@ -1,5 +1,6 @@
 
 AccessorFunc(ENT, "m_vecLastPosition", "LastPosition")
+AccessorFunc(ENT, "m_vecLastVelocity", "LastVelocity")
 AccessorFunc(ENT, "m_hEnemy", "Enemy")
 AccessorFunc(ENT, "m_flEnemyValue", "EnemyValue")
 AccessorFunc(ENT, "m_hTargetEnt", "Target")
@@ -8,7 +9,9 @@ function ENT:Initialize_Target()
     self.Time.NextFindEnemy = CurTime()
     self.EnemyPool = {}
     self:SetLastPosition(Vector())
+    self:SetLastVelocity(Vector())
     self:SetEnemy(NULL)
+    self:SetEnemyValue(0)
     self:SetTarget(NULL)
 
     for _, e in ipairs(ents.FindByClass "npc_supermetropolice") do
@@ -45,12 +48,11 @@ function ENT:FindEnemy()
     local valuabletarget, highestValue = NULL, 0
     local newenemyfound = false
     for i, e in ipairs(targetlist) do
+        local lensqr = self:GetRangeSquaredTo(e)
         if self:Visible(e) and self:HasValidEnemy(e)
         and self:GetForward():Dot(e:WorldSpaceCenter() - self:WorldSpaceCenter()) > 0
-        and self:GetRangeSquaredTo(e) < MAX_DIST_SQR then
-            local distanceValue = 10000 / self:GetRangeSquaredTo(e)
-            local healthValue = 1 / math.max(e:Health(), 1)
-            local value = distanceValue + healthValue
+        and lensqr < MAX_DIST_SQR then
+            local value = self.Config.GetEnemyValue(self, e, lensqr)
             newenemyfound = newenemyfound or not self.EnemyPool[e]
 
             self.EnemyPool[e] = value
@@ -60,7 +62,7 @@ function ENT:FindEnemy()
         end
     end
 
-    self:ManipulateCondition(newenemyfound, "COND_NEW_ENEMY")
+    self:RegisterCondition(newenemyfound, "COND_NEW_ENEMY")
     for e in pairs(self.EnemyPool) do
         if not self:CheckAlive(e) then self.EnemyPool[e] = nil end
     end
@@ -70,9 +72,11 @@ function ENT:FindEnemy()
             if a ~= self and self:GetRangeSquaredTo(a) < MAX_COMMUNICATE_RANGE_SQR then
                 if a:HasValidEnemy() then
                     valuabletarget = a:GetEnemy()
-                    value = a:GetEnemyValue()
+                    highestValue = a:GetEnemyValue()
                     if a:HasCondition(a.Enum.Conditions.COND_SEE_ENEMY) then
                         self:SetLastPosition(a:GetLastPosition())
+                        self:SetLastVelocity(a:GetLastVelocity())
+                        self.Time.LastEnemySeen = CurTime()
                     end
 
                     break
@@ -83,7 +87,7 @@ function ENT:FindEnemy()
 
     if not IsValid(valuabletarget) then return end
     self:SetEnemy(valuabletarget)
-    self:SetEnemyValue(value)
+    self:SetEnemyValue(highestValue)
 end
 
 function ENT:CheckPVS()
@@ -130,4 +134,15 @@ function ENT:CalcReasonableDirection()
     end
 
     return dir
+end
+
+function ENT:GetEnemyPos()
+    if not self:HasValidEnemy() then return end
+    local lkp = self:GetLastPosition()
+    local pos = self:GetEnemy():GetPos()
+    if lkp:DistToSqr(pos) < 100^2 then
+        return pos
+    else
+        return lkp
+    end
 end
