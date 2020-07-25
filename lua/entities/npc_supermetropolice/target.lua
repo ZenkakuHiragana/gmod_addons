@@ -14,7 +14,7 @@ function ENT:Initialize_Target()
     self:SetEnemyValue(0)
     self:SetTarget(NULL)
 
-    for _, e in ipairs(ents.FindByClass "npc_supermetropolice") do
+    for _, e in ipairs(ents.FindByClass(self.ClassName)) do
         table.Merge(self.EnemyPool, e.EnemyPool)
     end
 end
@@ -68,7 +68,7 @@ function ENT:FindEnemy()
     end
 
     if not IsValid(valuabletarget) then
-        for _, a in ipairs(ents.FindByClass "npc_supermetropolice") do
+        for _, a in ipairs(ents.FindByClass(self.ClassName)) do
             if a ~= self and self:GetRangeSquaredTo(a) < MAX_COMMUNICATE_RANGE_SQR then
                 if a:HasValidEnemy() and a:HasCondition(a.Enum.Conditions.COND_SEE_ENEMY)  then
                     valuabletarget = a:GetEnemy()

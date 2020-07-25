@@ -1,7 +1,7 @@
 AddCSLuaFile()
 
 if CLIENT then return end
-local classnames = {npc_supermetropolice = true, }
+local classnames = {npc_supermetropolice = true, npc_supermetropolice_2p = true,}
 local RelationshipTable_Citizen = {
 	Nextbot = D_LI,
 	[CLASS_NONE] = D_NU,

@@ -24,7 +24,7 @@ hook.Add("EntityFireBullets", "GreatZenkakuMan's Nextbot EntityFireBullets", fun
     local dir = bullet.Dir:GetNormalized()
     local org = bullet.Src
     local length = bullet.Distance
-    for i, self in ipairs(ents.FindByClass "npc_supermetropolice") do
+    for i, self in ipairs(ents.FindByClass "npc_supermetropolice*") do
         if self:HasValidEnemy(ent) then
             local org2 = self:WorldSpaceCenter()
             local dir2 = org2 - org
@@ -50,7 +50,13 @@ function ENT:RunHook(prefix, ...)
 end
 
 function ENT:Initialize()
-    self:SetModel "models/player/police_fem.mdl"
+    self.NextbotBase = self.BaseClass
+    while self.NextbotBase.ClassName ~= "base_nextbot" do
+        self.NextbotBase = self.NextbotBase.BaseClass
+    end
+
+    self:SetModel(self.ModelName)
+    self:SetSkin(self.Skin or 0)
     self:SetMaxHealth(self.MaxHealth)
     self:SetHealth(self:GetMaxHealth())
     self:AddFlags(FL_NPC)
@@ -69,16 +75,16 @@ end
 
 function ENT:OnInjured(d)
     self:RunHook("OnInjured", d)
-    self.BaseClass.OnInjured(self, d)
+    self.NextbotBase.OnInjured(self, d)
 end
 
 function ENT:OnKilled(d)
     self:RunHook("OnKilled", d)
-    self.BaseClass.OnKilled(self, d)
+    self.NextbotBase.OnKilled(self, d)
 end
 
 function ENT:OnOtherKilled(victim, d)
-    self.BaseClass.OnOtherKilled(self, victim, d)
+    self.NextbotBase.OnOtherKilled(self, victim, d)
     if self:HasValidEnemy() then return end
     if self:Disposition(victim) ~= D_LI then return end
     self:SetEnemy(d:GetAttacker())

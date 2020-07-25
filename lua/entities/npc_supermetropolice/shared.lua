@@ -6,6 +6,8 @@ ENT.Category = "GreatZenkakuMan's NPCs"
 ENT.ClassName = "npc_supermetropolice"
 ENT.Enum = {}
 ENT.PrintName = "Super Metropolice"
+ENT.ModelName = "models/player/police_fem.mdl"
+ENT.Skin = 0
 ENT.Spawnable = false
 ENT.Type = "nextbot"
 list.Set("NPC", ENT.ClassName, {

@@ -86,6 +86,8 @@ end
 function ENT:HandleStuck()
     self.loco:ClearStuck()
     self.Approach.Fix = nil
+    self.Path:Invalidate()
+    self:TaskFail(self.Enum.TaskFailure.FAIL_NO_ROUTE_BLOCKED)
 end
 
 function ENT:ComputePath(to, path)
@@ -159,7 +161,7 @@ function ENT:FixPath()
         self.Time.PathStuck = CurTime()
         self.Approach.Fix = nil
     else
-        self.Approach.Fix = self:GetPos() + fix
+        self.Approach.Fix = self:GetPos() + fix + self:GetRight() * math.random(-1, 1)
         self:line("FixPath", self:GetPos(), self.Approach.Fix)
     end
 end
