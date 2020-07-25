@@ -267,11 +267,7 @@ local function ThrowGrenade(self, w, pos, dir)
 end
 
 local function CheckRPGGuide(self)
-    local path = Path "Follow"
-    path:Compute(self, self:GetShootTo())
-    local isvalid = path:IsValid()
-    path:Invalidate()
-    return isvalid
+    return true
 end
 
 local RPG_SPEED = 1500
@@ -282,82 +278,66 @@ local function FireRPG(self, w, pos, dir)
     if not IsValid(r) then return end
     local e = self:GetEnemy()
     local params = self:GetWeaponParameters()
-    local enemypos = self:GetEnemyPos()
-    local distance = enemypos:Distance(pos)
-    local targetpos = enemypos + self:GetLastVelocity() * distance / RPG_SPEED
     local dmg = params.Damage
     if isstring(dmg) then
         dmg = GetConVar(dmg)
         dmg = dmg and dmg:GetInt() or 0
     end
     
-    local path = Path "Follow"
-    local step = self.loco:GetStepHeight()
-    self.loco:SetStepHeight(8192)
-    path:Compute(self, enemypos)
-    self.loco:SetStepHeight(step)
-
-    local aim = path:FirstSegment().forward
+    w:EmitSound(params.ShootSound)
     r:SetPos(pos)
     r:SetOwner(self)
-    r:SetAngles(aim:Angle())
+    r:SetAngles(dir:Angle())
     r:AddEffects(EF_NOSHADOW)
-    r:SetVelocity(aim * 300 + vector_up * 128)
+    r:SetVelocity(dir * 300 + vector_up * 128)
     r:SetLocalAngularVelocity(Angle(0, 0, 720))
     r:SetSaveValue("m_flDamage", dmg)
     r:SetNotSolid(true)
     r:Spawn()
 
     local t0 = CurTime()
-    local t = "GreatZenkakuMan's SuperMetropolice: Guide Missile #" .. r:EntIndex()
-    local traveled = 0
-    timer.Create(t, 0, 0, function()
-        if not (IsValid(self) and IsValid(r)) then
-            timer.Remove(t)
-            path:Invalidate()
-            return
-        end
-        
-        if CurTime() - t0 < 0.2 then return end
-        if not IsValid(e) then
-            e = self:GetEnemy()
-            return
-        end
+    local threadname = "GuideRPG" .. r:EntIndex()
+    self.Coroutines[threadname] = coroutine.create(function(self)
+        local path = Path "Follow"
+        local UsePath = false
+        while true do
+            if not IsValid(r) then return end
+            if CurTime() - t0 > 0.2 then
+                if not IsValid(e) then e = self:GetEnemy() end
+                if IsValid(e) and self:CheckAlive(e) then
+                    local dir
+                    local ep = e:WorldSpaceCenter()
+                    local p = r:GetPos()
+                    local tr = util.TraceLine {start = p, endpos = ep, filter = {self, r, e}}
+                    local v = r:GetVelocity()
+                    local speed = v:Length()
+                    if tr.Hit then
+                        if not UsePath or path:IsValid() and path:GetAge() > 1.5 then
+                            UsePath = true
+                            self:ComputePath(ep, path)
+                            if not IsValid(r) then return end
+                        end
 
-        r:SetNotSolid(false)
-        local p = r:GetPos()
-        local epos = e:WorldSpaceCenter()
-        local speed = r:GetVelocity():Length()
-        path:MoveCursorToClosestPosition(r:GetPos(), 1)
-        path:MoveCursor(60)
-        path:Draw()
+                        path:MoveCursorToClosestPosition(p, 1)
+                        path:MoveCursor(60)
+                        local cursor = path:GetCursorData()
+                        dir = cursor.pos - p + vector_up * 80
+                    else
+                        dir = ep - p
+                        UsePath = false
+                    end
 
-        local cursor = path:GetCursorData()
-        local forward = cursor.forward
-        local ppos = cursor.pos
-        traveled = math.max(traveled, path:GetCursorPosition())
+                    dir:Normalize()
+                    dir:Mul(speed)
+                    r:SetVelocity(dir - v)
+                    r:SetAngles(dir:Angle())
+                    r:SetNotSolid(false)
+                end
+            end
 
-        local len = path:GetLength()
-        local pathleft = len - traveled
-        if pathleft > 60 then ppos.z = ppos.z + 120 end
-        if (ppos - epos):Length2DSqr() < 40000 then ppos = epos end
-
-        local topath = ppos - r:GetPos()
-        if topath:LengthSqr() < 5000 then return end
-        topath:Normalize()
-        topath:Mul(speed)
-        r:SetVelocity(topath - r:GetVelocity())
-        r:SetAngles(topath:Angle())
-
-        if path:GetAge() > 1 then
-            local step = self.loco:GetStepHeight()
-            self.loco:SetStepHeight(8192)
-            path:Compute(self, epos)
-            self.loco:SetStepHeight(step)
+            coroutine.yield()
         end
     end)
-
-    w:EmitSound(params.ShootSound)
 end
 
 local function UseCamera(self, w, pos, dir)
@@ -425,7 +405,7 @@ local HL2Weapons = {
         MaxBurstDelay = 0.4,
         MaxBurstNum = 7,
         MaxBurstRestDelay = 0.7,
-        MaxRange = 4096,
+        MaxRange = 2048,
         MinBurstDelay = 0.1,
         MinBurstNum = 3,
         MinBurstRestDelay = 0.5,
@@ -616,7 +596,7 @@ function ENT:Give(classname)
     local t = {
         Clip = 0,
         Entity = w,
-        Parameters = table.Merge(table.Copy(DefaultParameters), HL2Weapons[classname]),
+        Parameters = table.Merge(table.Copy(DefaultParameters), HL2Weapons[classname] or {}),
     }
     t.Clip = t.Parameters.ClipSize
 
@@ -694,6 +674,8 @@ function ENT:CanPrimaryFire()
     if self:HasCondition(c.COND_RELOADING) then return end
     local w = self:GetActiveWeapon()
     if not IsValid(w) then return end
+    if w:IsScripted() and w:GetClass() ~= "gmod_camera"
+    and not w:CanPrimaryAttack() then return end
     if CurTime() < self.Time.FinishReloading then return end
     return self:GetWeaponParameters().IsMelee or self:GetClip() > 0
 end

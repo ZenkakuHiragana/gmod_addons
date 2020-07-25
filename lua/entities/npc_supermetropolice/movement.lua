@@ -78,36 +78,17 @@ function ENT:IsUnreachable(test)
         test = test:WorldSpaceCenter()
     end
 
-    if not test then
-        debug.Trace()
-    end
-    local a = navmesh.GetNearestNavArea(test, false, 100)
+    if not test then debug.Trace() return true end
+    local a = navmesh.GetNearestNavArea(test, false, 100, false, false)
     return not (a and a:IsValid())
 end
 
 function ENT:HandleStuck()
     self.loco:ClearStuck()
     self.Approach.Fix = nil
-    if not self.Path:IsValid() then return end
-    -- local dz = vector_up * 32
-    -- local goal = self.Path:GetCurrentGoal()
-    -- local t = util.TraceHull {
-    --     start = self:WorldSpaceCenter(),
-    --     endpos = goal.pos,
-    --     mins = self:OBBMins() + dz,
-    --     maxs = self:OBBMaxs() - dz,
-    --     filter = self,
-    --     mask = MASK_NPCSOLID,
-    -- }
-
-    -- local a = navmesh.GetNavArea(t.HitPos, 100)
-    -- local id = a and a:GetID()
-    -- if id then SuperMetropoliceBlockedNavAreas[id] = t.Entity end
-    -- self:ComputePath(self.Path:GetStart())
-    -- self.UnStucking = true
 end
 
-function ENT:ComputePath(to)
+function ENT:ComputePath(to, path)
     if self:IsUnreachable(to) then
         local start = self:GetPos()
         local tr = self:TraceHullStand(nil, to, MASK_NPCSOLID_BRUSHONLY, self)
@@ -131,15 +112,18 @@ function ENT:ComputePath(to)
     
     local stepheight = self.loco:GetStepHeight()
     local ddheight = -self.loco:GetDeathDropHeight()
+    local t0 = SysTime()
+    local MAX_TIME = 0.010
     local function PathGenerator(area, fromArea, ladder, elevator, length)
+        if SysTime() - t0 > MAX_TIME then return -1 end
         if not IsValid(fromArea) then
             return 0 -- first area in path, no cost
         else
             if not self.loco:IsAreaTraversable(area) then return -1 end
-            if area:IsBlocked() then return -1 end
-            local areaID = area:GetID()
+            -- if area:IsBlocked() then return -1 end
+            -- local areaID = area:GetID()
             local attr = area:GetAttributes()
-            if bit.band(attr, NAV_MESH_JUMP) > 0 then return -1 end
+            -- if bit.band(attr, NAV_MESH_JUMP) > 0 then return -1 end
             -- if areaID and IsValid(SuperMetropoliceBlockedNavAreas[areaID]) then return -1 end
 
             -- compute distance traveled along path so far
@@ -164,15 +148,9 @@ function ENT:ComputePath(to)
             return area:GetCostSoFar() + dist
         end
     end
-
-    -- local j = self.loco:GetJumpHeight()
-    -- local s = self.loco:GetStepHeight()
-    -- self.loco:SetJumpHeight(0)
-    -- self.loco:SetStepHeight(0)
-    -- self.Path:Compute(self, to)
-    -- self.loco:SetJumpHeight(j)
-    -- self.loco:SetStepHeight(s)
-    self.Path:Compute(self, to, PathGenerator)
+    
+    local p = path or self.Path
+    return p:Compute(self, to, PathGenerator)
 end
 
 function ENT:FixPath()
@@ -184,28 +162,6 @@ function ENT:FixPath()
         self.Approach.Fix = self:GetPos() + fix
         self:line("FixPath", self:GetPos(), self.Approach.Fix)
     end
-
-    -- local numents = 0
-    -- local vsum = self.loco:GetVelocity()
-    -- local speedsqr = math.max(vsum:LengthSqr() / 4, 900)
-    -- for _, e in ipairs(ents.FindInSphere(self:GetPos(), 64)) do
-    --     local v = e:GetVelocity()
-    --     if v:LengthSqr() > speedsqr and vsum:Dot(v) < 0 then
-    --         numents = numents + 1
-    --         vsum:Add(-v)
-    --     end
-    -- end
-
-    -- if numents > 0 then
-    --     vsum:Normalize()
-    --     self:line("AvoidNPCs", self:GetPos(), self:GetPos() + vsum * 64)
-    --     self.Approach.AvoidNPCs = {
-    --         goal = self:GetPos() + vsum * 64,
-    --         weight = 0.001,
-    --     }
-    -- else
-    --     self.Approach.AvoidNPCs = nil
-    -- end
 end
 
 function ENT:UpdatePath()
@@ -224,10 +180,6 @@ function ENT:UpdatePath()
     self:drawpath()
     self:point("UpdatePath", goal.pos, true)
     self:vector("UpdatePath", self:GetPos(), self.loco:GetVelocity(), true)
-    
-    if self.Path:GetAge() > self.TimeToRepath then
-        self:ComputePath(self.Path:GetEnd())
-    end
 end
 
 function ENT:OnLandOnGround_Movement(ent)
@@ -274,7 +226,7 @@ local function FindPos(self, vecThreat, min, max, spottype, evalFunc)
 
             if (spot - org):Length2DSqr() > min2 then
                 path:Invalidate()
-                path:Compute(self, spot)
+                self:ComputePath(spot, path)
                 if path:IsValid() then
                     pos = evalFunc(self, spot, path, pos) or pos
                 end 

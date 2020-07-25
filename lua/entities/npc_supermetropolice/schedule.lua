@@ -257,8 +257,7 @@ function ENT:ScheduleDecision_CombatEnemy()
             and (self:HasCondition(c.COND_LOW_PRIMARY_AMMO)
             or self:HasCondition(c.COND_NO_PRIMARY_AMMO)) then
                 return "Reload"
-            elseif self:HasCondition(c.COND_RELOADING)
-            or self:HasCondition(c.COND_SEE_LAST_POSITION) then
+            elseif self:HasCondition(c.COND_RELOADING) then
                 return "CombatStand"
             else
                 return "ChaseEnemy"

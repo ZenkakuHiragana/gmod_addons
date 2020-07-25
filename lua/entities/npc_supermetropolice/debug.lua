@@ -11,17 +11,17 @@ local config = {
     FindLateralLOS = false,
     fInterval = false,
     FixPath = false,
-    HasInterrupt = true,
-    LastPos = true,
+    HasInterrupt = false,
+    LastPos = false,
     MeleeTrace = false,
     MoveAwayPath = false,
-    ScheduleStart = true,
+    ScheduleStart = false,
     SelectNPCState = false,
     SelectSchedule = false,
     TaskStart = false,
     TestThrowVec = false,
     UpdateAimParameters = false,
-    UpdatePath = true,
+    UpdatePath = false,
 }
 function ENT:box(category, org, mins, maxs, tick)
     if dev:GetInt() == 0 then return end

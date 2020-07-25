@@ -321,6 +321,7 @@ local function UpdateHealthConditions(self)
     self.Conditions.SumDamage = 0
 end
 
+local Benchmark = false
 function ENT:UpdateConditions()
     if CurTime() < self.Time.NextUpdateCondition then return end
     self.Time.NextUpdateCondition = CurTime() + 0.3
@@ -328,11 +329,28 @@ function ENT:UpdateConditions()
     if CurTime() > self.Time.LastHearBullet + 0.1 then
         self:ClearCondition(c.COND_BULLET_NEAR)
     end
-    
-    UpdateEnemyConditions(self)
-    UpdateGreanadeConditions(self)
-    UpdateHealthConditions(self)
-    UpdateWeaponConditions(self)
+
+    if Benchmark then
+        local max, str = util.TimerCycle(), "pre"
+        UpdateEnemyConditions(self)
+        local t = util.TimerCycle()
+        if max < t then max, str = t, "Enemy" end
+        UpdateGreanadeConditions(self)
+        local t = util.TimerCycle()
+        if max < t then max, str = t, "Grenade" end
+        UpdateHealthConditions(self)
+        local t = util.TimerCycle()
+        if max < t then max, str = t, "Health" end
+        UpdateWeaponConditions(self)
+        local t = util.TimerCycle()
+        if max < t then max, str = t, "Weapon" end
+        if max > 1 then self:print("Benchmark", "UpdateConditions", max, str) end
+    else
+        UpdateEnemyConditions(self)
+        UpdateGreanadeConditions(self)
+        UpdateHealthConditions(self)
+        UpdateWeaponConditions(self)
+    end
 
     self:ManipulateCondition(not self:HasCondition(c.COND_GIVE_WAY), "COND_WAY_CLEAR")
     self:ManipulateCondition(self:CheckPVS(), "COND_IN_PVS")

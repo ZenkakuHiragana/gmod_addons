@@ -39,7 +39,7 @@ end
 
 local FIND_CONE = math.cos(math.rad(90))
 local MAX_DIST_SQR = 4096^2
-local MAX_COMMUNICATE_RANGE_SQR = 3000^2 -- Maximum range they can share enemies
+local MAX_COMMUNICATE_RANGE_SQR = 8192^2 -- Maximum range they can share enemies
 function ENT:FindEnemy()
     if CurTime() < self.Time.NextFindEnemy then return end
     self.Time.NextFindEnemy = CurTime() + 0.5
@@ -70,14 +70,12 @@ function ENT:FindEnemy()
     if not IsValid(valuabletarget) then
         for _, a in ipairs(ents.FindByClass "npc_supermetropolice") do
             if a ~= self and self:GetRangeSquaredTo(a) < MAX_COMMUNICATE_RANGE_SQR then
-                if a:HasValidEnemy() then
+                if a:HasValidEnemy() and a:HasCondition(a.Enum.Conditions.COND_SEE_ENEMY)  then
                     valuabletarget = a:GetEnemy()
                     highestValue = a:GetEnemyValue()
-                    if a:HasCondition(a.Enum.Conditions.COND_SEE_ENEMY) then
-                        self:SetLastPosition(a:GetLastPosition())
-                        self:SetLastVelocity(a:GetLastVelocity())
-                        self.Time.LastEnemySeen = CurTime()
-                    end
+                    self:SetLastPosition(a:GetLastPosition())
+                    self:SetLastVelocity(a:GetLastVelocity())
+                    self.Time.LastEnemySeen = CurTime()
 
                     break
                 end
@@ -91,13 +89,9 @@ function ENT:FindEnemy()
 end
 
 function ENT:CheckPVS()
-    local finish = player.GetCount() == 0
     for _, p in ipairs(player.GetAll()) do
-        finish = finish or self:TestPVS(p)
-        if finish then break end
+        if self:TestPVS(p) then return true end
     end
-
-    return finish
 end
 
 function ENT:IsValidReasonableFacing()
