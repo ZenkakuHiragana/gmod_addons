@@ -58,9 +58,12 @@ end
 local function CameraPos(self, vecThreat)
     local e = self:GetEnemy()
     local ef = IsValid(e) and e:GetForward() or -self:GetForward()
+    local params = self:GetWeaponParameters()
+    local MIN_DIST_SQR = params.MinRange^2
     return function(self, vecThreat, spot, path, pos_candidate)
         local toThreat = vecThreat - self:WorldSpaceCenter()
         if toThreat:Dot(path:FirstSegment().forward) > 0 then return end
+        if vecThreat:DistToSqr(spot) < MIN_DIST_SQR then return end
         if ef:Dot(path:LastSegment().forward) > 0 then return spot end
     end
 end
