@@ -49,7 +49,7 @@ local function EndSliding(ply)
     ManipulateBones(ply, ply, Angle(), Angle(), Angle())
     ply:SetNWBool("IsSliding", false)
     ply:SetNWFloat("SlidingStartTime", CurTime())
-    ply:StopSound "Flesh.ScrapeRough"
+    if SERVER then ply:StopSound "Flesh.ScrapeRough" end
 end
 
 hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
@@ -118,7 +118,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     ply:SetNWVector("SlidingCurrentVelocity", dir * runspeed)
     ply:SetNWVector("SlidingMaxSpeed", runspeed * 5)
     ply:EmitSound "Flesh.ImpactSoft"
-    ply:EmitSound "Flesh.ScrapeRough"
+    if SERVER then ply:EmitSound "Flesh.ScrapeRough" end
 end)
 
 hook.Add("PlayerFootstep", "Sliding sound", function(ply, pos, foot, sound, volume, filter)
