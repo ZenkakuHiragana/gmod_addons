@@ -5,7 +5,7 @@ Commit messages are all Japanese.
 ## Branches  
 1 branch = 1 addon
 * master  
-Some old codes here.  
+Currently there's an experimental addon which gives players sliding ability.   
 * DecentVehicle  
 An NPC that drives vehicles automatically along paths.  
 * gm_flounder_heights  
