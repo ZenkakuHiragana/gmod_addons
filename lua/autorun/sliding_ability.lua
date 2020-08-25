@@ -43,6 +43,10 @@ local function ManipulateBones(ply, ent, base, thigh, calf)
     ent:ManipulateBoneAngles(0, base * timefrac)
     ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Thigh", thigh * timefrac)
     ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Calf", calf * timefrac)
+    if EnhancedCameraTwo and ent == EnhancedCameraTwo.entity then
+        local dp = thigh:IsZero() and Vector() or Vector(10, 0, -30)
+        ent:ManipulateBonePosition(0, dp * timefrac)
+    end
 end
 
 local function EndSliding(ply)
@@ -132,8 +136,9 @@ end)
 
 hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocity, maxSeqGroundSpeed)
     if not ply:GetNWBool "IsSliding" then
-        if CLIENT and g_LegsVer then
-            ManipulateBones(ply, GetPlayerLegs(), Angle(), Angle(), Angle())
+        if CLIENT then
+            if g_LegsVer then ManipulateBones(ply, GetPlayerLegs(), Angle(), Angle(), Angle()) end
+            if EnhancedCameraTwo then ManipulateBones(ply, EnhancedCameraTwo.entity, Angle(), Angle(), Angle()) end
         end
 
         return
@@ -161,8 +166,12 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
 
     ply:SetPoseParameter("aim_pitch", p)
 
-    if SERVER or not g_LegsVer then return end
-    local l = GetPlayerLegs()
+    if SERVER then return end
+
+    local l
+    if g_LegsVer then l = GetPlayerLegs() end
+    if EnhancedCameraTwo then l = EnhancedCameraTwo.entity end
+    if not IsValid(l) then return end
     local dp = ply:GetPos() - (l.SlidingPreviousPosition or ply:GetPos())
     local dp2d = Vector(dp.x, dp.y)
     dp:Normalize()
