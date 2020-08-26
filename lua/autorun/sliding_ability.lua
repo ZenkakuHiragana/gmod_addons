@@ -1,8 +1,10 @@
 AddCSLuaFile()
 
 local SLOPE_MAX = math.cos(math.rad(45))
-local SLIDE_ACCEL = 400
+local SLIDE_ACCEL = 250
 local SLIDE_ANIM_TRANSITION_TIME = 0.2
+local SLIDE_COOLDOWN_TIME = 0.3
+local SLIDE_JUMP_COOLDOWN_TIME = 0.6
 local SLIDE_TILT_DEG = 42
 local IN_MOVE = bit.bor(IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT)
 local ACT_HL2MP_SIT_CAMERA = "sit_camera"
@@ -37,6 +39,7 @@ local function GetSlidingActivity(ply)
 end
 
 local function ManipulateBones(ply, ent, base, thigh, calf)
+    if not IsValid(ent) then return end
     local t0 = ply:GetNWFloat "SlidingStartTime"
     local timefrac = math.TimeFraction(t0, t0 + SLIDE_ANIM_TRANSITION_TIME, CurTime())
     timefrac = math.Clamp(timefrac, 0, 1)
@@ -44,7 +47,12 @@ local function ManipulateBones(ply, ent, base, thigh, calf)
     ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Thigh", thigh * timefrac)
     ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Calf", calf * timefrac)
     if EnhancedCameraTwo and ent == EnhancedCameraTwo.entity then
-        local dp = thigh:IsZero() and Vector() or Vector(10, 0, -30)
+        local dp = thigh:IsZero() and Vector() or Vector(10, 0, -25)
+        local w, pose = ply:GetActiveWeapon(), ""
+        if IsValid(w) then pose = w:GetHoldType() or w.HoldType end
+        if pose:find "all" then pose = "normal" end
+        if pose == "smg1" then pose = "smg" end
+        if pose then EnhancedCameraTwo.pose = pose EnhancedCameraTwo:OnPoseChange() end
         ent:ManipulateBonePosition(0, dp * timefrac)
     end
 end
@@ -84,7 +92,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         local speedref = Lerp(math.max(-dp.z, 0), speedref_min, speedref_max)
         local accel = SLIDE_ACCEL * FrameTime()
         if speed > speedref then accel = -accel end
-        v = LerpVector(0.01, vdir, forward) * (speed + accel)
+        v = LerpVector(0.005, vdir, forward) * (speed + accel)
 
         ManipulateBones(ply, ply, -Angle(0, 0, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG), Angle(0, 32, 0), Angle(0, -60, 0))
         ply:SetNWVector("SlidingCurrentVelocity", v)
@@ -94,6 +102,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         or mv:KeyReleased(IN_DUCK) or math.abs(speed - speedref_min) < 100 then
             EndSliding(ply)
             if mv:KeyPressed(IN_JUMP) then
+                ply:SetNWFloat("SlidingStartTime", CurTime() + SLIDE_JUMP_COOLDOWN_TIME)
                 ply:SetNWFloat("SlidingPreserveWalkSpeed", ply:GetWalkSpeed())
                 ply:SetWalkSpeed(speed)
                 ply:SetMaxSpeed(speed)
@@ -112,10 +121,10 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     if not ply:Crouching() then return end
     if not mv:KeyDown(IN_DUCK) then return end
     if ply:GetNWBool "IsSliding" then return end
-    if CurTime() < ply:GetNWFloat "SlidingStartTime" + SLIDE_ANIM_TRANSITION_TIME then return end
+    if CurTime() < ply:GetNWFloat "SlidingStartTime" + SLIDE_COOLDOWN_TIME then return end
     if math.abs(ply:GetWalkSpeed() - ply:GetRunSpeed()) < 100 then return end
     if math.abs(mv:GetVelocity():Length() - ply:GetRunSpeed()) > 100 then return end
-    local runspeed = math.max(ply:GetVelocity():Length(), mv:GetVelocity():Length(), ply:GetRunSpeed()) * 1.2
+    local runspeed = math.max(ply:GetVelocity():Length(), mv:GetVelocity():Length(), ply:GetRunSpeed()) * 1.5
     local dir = mv:GetVelocity():GetNormalized()
     ply:SetNWBool("IsSliding", true)
     ply:SetNWFloat("SlidingStartTime", CurTime())
@@ -170,7 +179,10 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
 
     local l
     if g_LegsVer then l = GetPlayerLegs() end
-    if EnhancedCameraTwo then l = EnhancedCameraTwo.entity end
+    if EnhancedCameraTwo then
+        l = EnhancedCameraTwo.entity
+    end
+
     if not IsValid(l) then return end
     local dp = ply:GetPos() - (l.SlidingPreviousPosition or ply:GetPos())
     local dp2d = Vector(dp.x, dp.y)
