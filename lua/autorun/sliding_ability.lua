@@ -47,7 +47,7 @@ local function ManipulateBones(ply, ent, base, thigh, calf)
     ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Thigh", thigh * timefrac)
     ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Calf", calf * timefrac)
     if EnhancedCameraTwo and ent == EnhancedCameraTwo.entity then
-        local dp = thigh:IsZero() and Vector() or Vector(10, 0, -25)
+        local dp = thigh:IsZero() and Vector() or Vector(10, 0, -10)
         local w, pose = ply:GetActiveWeapon(), ""
         if IsValid(w) then pose = w:GetHoldType() or w.HoldType end
         if pose:find "all" then pose = "normal" end
