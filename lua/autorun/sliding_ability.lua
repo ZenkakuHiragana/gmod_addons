@@ -54,13 +54,23 @@ local function ManipulateBones(ply, ent, base, thigh, calf)
     ent:ManipulateBoneAngles(0, base * timefrac)
     ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Thigh", thigh * timefrac)
     ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Calf", calf * timefrac)
+    local dp = thigh:IsZero() and Vector() or Vector(10, 0, -10)
+    local w, pose = ply:GetActiveWeapon(), ""
+    if IsValid(w) then pose = w:GetHoldType() or w.HoldType end
+    if pose:find "all" then pose = "normal" end
+    if pose == "smg1" then pose = "smg" end
+    if EnhancedCamera and ent == EnhancedCamera.entity then
+        if pose then
+            EnhancedCamera.pose = pose
+            EnhancedCamera:OnPoseChange()
+        end
+        ent:ManipulateBonePosition(0, dp * timefrac)
+    end
     if EnhancedCameraTwo and ent == EnhancedCameraTwo.entity then
-        local dp = thigh:IsZero() and Vector() or Vector(10, 0, -10)
-        local w, pose = ply:GetActiveWeapon(), ""
-        if IsValid(w) then pose = w:GetHoldType() or w.HoldType end
-        if pose:find "all" then pose = "normal" end
-        if pose == "smg1" then pose = "smg" end
-        if pose then EnhancedCameraTwo.pose = pose EnhancedCameraTwo:OnPoseChange() end
+        if pose then
+            EnhancedCameraTwo.pose = pose
+            EnhancedCameraTwo:OnPoseChange()
+        end
         ent:ManipulateBonePosition(0, dp * timefrac)
     end
 end
@@ -159,6 +169,7 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
     if not ply:GetNWBool "IsSliding" then
         if CLIENT then
             if g_LegsVer then ManipulateBones(ply, GetPlayerLegs(), Angle(), Angle(), Angle()) end
+            if EnhancedCamera then ManipulateBones(ply, EnhancedCamera.entity, Angle(), Angle(), Angle()) end
             if EnhancedCameraTwo then ManipulateBones(ply, EnhancedCameraTwo.entity, Angle(), Angle(), Angle()) end
         end
 
@@ -191,9 +202,8 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
 
     local l
     if g_LegsVer then l = GetPlayerLegs() end
-    if EnhancedCameraTwo then
-        l = EnhancedCameraTwo.entity
-    end
+    if EnhancedCamera then l = EnhancedCamera.entity end
+    if EnhancedCameraTwo then l = EnhancedCameraTwo.entity end
 
     if not IsValid(l) then return end
     local dp = ply:GetPos() - (l.SlidingPreviousPosition or ply:GetPos())
