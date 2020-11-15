@@ -1,10 +1,18 @@
 AddCSLuaFile()
 
+local cf = {FCVAR_REPLICATED, FCVAR_ARCHIVE}
+local CVarAccel = CreateConVar("sliding_ability_acceleration", 250, cf,
+"The acceleration/deceleration of the sliding.  Larger value makes shorter sliding.")
+local CVarCooldown = CreateConVar("sliding_ability_cooldown", 0.3, cf,
+"Cooldown time to be able to slide again in seconds.")
+local CVarCooldownJump = CreateConVar("sliding_ability_cooldown_jump", 0.6, cf,
+"Cooldown time to be able to slide again when you jump while sliding, in seconds.")
+local SLIDING_ABILITY_BLACKLIST = {
+    climb_swep2 = true,
+    parkourmod = true,
+}
 local SLOPE_MAX = math.cos(math.rad(45))
-local SLIDE_ACCEL = 250
 local SLIDE_ANIM_TRANSITION_TIME = 0.2
-local SLIDE_COOLDOWN_TIME = 0.3
-local SLIDE_JUMP_COOLDOWN_TIME = 0.6
 local SLIDE_TILT_DEG = 42
 local IN_MOVE = bit.bor(IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT)
 local ACT_HL2MP_SIT_CAMERA = "sit_camera"
@@ -65,13 +73,16 @@ local function EndSliding(ply)
 end
 
 hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
+    local w = ply:GetActiveWeapon()
+    if IsValid(w) and SLIDING_ABILITY_BLACKLIST[w:GetClass()] then return end
+    if ConVarExists "savav_parkour_Enable" and GetConVar "savav_parkour_Enable":GetBool() then return end
     if ply:GetNWFloat "SlidingPreserveWalkSpeed" > 0 then
         local v = Vector(ply:GetNWVector "SlidingCurrentVelocity")
         v.z = mv:GetVelocity().z
         ply:SetWalkSpeed(ply:GetNWFloat "SlidingPreserveWalkSpeed")
         mv:SetVelocity(v)
     end
-
+    
     ply:SetNWFloat("SlidingPreserveWalkSpeed", -1)
     if CLIENT and not IsFirstTimePredicted() then return end
     if not ply:Crouching() and ply:GetNWBool "IsSliding" then EndSliding(ply) end
@@ -90,7 +101,8 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         dp2d:Normalize()
         local dot = forward:Dot(dp2d)
         local speedref = Lerp(math.max(-dp.z, 0), speedref_min, speedref_max)
-        local accel = SLIDE_ACCEL * FrameTime()
+        local accel_cvar = CVarAccel:GetFloat()
+        local accel = accel_cvar * FrameTime()
         if speed > speedref then accel = -accel end
         v = LerpVector(0.005, vdir, forward) * (speed + accel)
 
@@ -102,7 +114,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         or mv:KeyReleased(IN_DUCK) or math.abs(speed - speedref_min) < 100 then
             EndSliding(ply)
             if mv:KeyPressed(IN_JUMP) then
-                ply:SetNWFloat("SlidingStartTime", CurTime() + SLIDE_JUMP_COOLDOWN_TIME)
+                ply:SetNWFloat("SlidingStartTime", CurTime() + CVarCooldownJump:GetFloat())
                 ply:SetNWFloat("SlidingPreserveWalkSpeed", ply:GetWalkSpeed())
                 ply:SetWalkSpeed(speed)
                 ply:SetMaxSpeed(speed)
@@ -121,7 +133,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     if not ply:Crouching() then return end
     if not mv:KeyDown(IN_DUCK) then return end
     if ply:GetNWBool "IsSliding" then return end
-    if CurTime() < ply:GetNWFloat "SlidingStartTime" + SLIDE_COOLDOWN_TIME then return end
+    if CurTime() < ply:GetNWFloat "SlidingStartTime" + CVarCooldown:GetFloat() then return end
     if math.abs(ply:GetWalkSpeed() - ply:GetRunSpeed()) < 100 then return end
     if math.abs(mv:GetVelocity():Length() - ply:GetRunSpeed()) > 100 then return end
     local runspeed = math.max(ply:GetVelocity():Length(), mv:GetVelocity():Length(), ply:GetRunSpeed()) * 1.5
@@ -193,9 +205,25 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
     l.SlidingPreviousPosition = ply:GetPos()
 end)
 
-if SERVER then return end
+if SERVER then
+    hook.Add("PlayerInitialSpawn", "Prevent breaking TPS model on changelevel", function(ply, transition)
+        if not transition then return end
+        timer.Simple(1, function()
+            for i = 0, ply:GetBoneCount() - 1 do
+                ply:ManipulateBoneScale(i, Vector(1, 1, 1))
+                ply:ManipulateBoneAngles(i, Angle())
+                ply:ManipulateBonePosition(i, Vector())
+            end
+        end)
+    end)
+
+    return
+end
+
+CreateClientConVar("sliding_ability_tilt_viewmodel", 1, true, true, "Enable viewmodel tilt like Apex Legends when sliding.")
 hook.Add("CalcViewModelView", "Sliding view model tilt", function(w, vm, op, oa, p, a)
     if not (IsValid(w.Owner) and w.Owner:IsPlayer()) then return end
+    if not GetConVar "sliding_ability_tilt_viewmodel":GetBool() then return end
     local wp, wa = p, a
     if isfunction(w.CalcViewModelView) then wp, wa = w:CalcViewModelView(vm, op, oa, p, a) end
     if not (wp and wa) then wp, wa = p, a end
