@@ -105,6 +105,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         local speedref_crouch = ply:GetWalkSpeed() * ply:GetCrouchedWalkSpeed()
         local speedref_min = math.min(speedref_crouch, speedref_slide)
         local speedref_max = math.max(speedref_crouch, speedref_slide)
+        local speedref_check = ply:GetRunSpeed() > speedref_crouch and speedref_min or speedref_max
         local dp = mv:GetOrigin() - ply:GetNWVector "SlidingPreviousPosition"
         local dp2d = Vector(dp.x, dp.y)
         dp:Normalize()
@@ -120,8 +121,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         ply:SetNWVector("SlidingCurrentVelocity", v)
         ply:SetNWVector("SlidingPreviousPosition", mv:GetOrigin())
         mv:SetVelocity(v)
-        if not ply:OnGround() or mv:KeyPressed(IN_JUMP)
-        or mv:KeyReleased(IN_DUCK) or math.abs(speed - speedref_min) < 100 then
+        if not ply:OnGround() or mv:KeyPressed(IN_JUMP) or mv:KeyReleased(IN_DUCK) or math.abs(speed - speedref_crouch) < 10 then
             EndSliding(ply)
             if mv:KeyPressed(IN_JUMP) then
                 ply:SetNWFloat("SlidingStartTime", CurTime() + CVarCooldownJump:GetFloat())
@@ -138,16 +138,21 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         
         return
     end
-
+    
     if not ply:OnGround() then return end
     if not ply:Crouching() then return end
     if not mv:KeyDown(IN_DUCK) then return end
+    if not mv:KeyDown(bit.bor(IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT)) then return end
     if ply:GetNWBool "IsSliding" then return end
     if CurTime() < ply:GetNWFloat "SlidingStartTime" + CVarCooldown:GetFloat() then return end
     if math.abs(ply:GetWalkSpeed() - ply:GetRunSpeed()) < 100 then return end
-    if math.abs(mv:GetVelocity():Length() - ply:GetRunSpeed()) > 100 then return end
-    local runspeed = math.max(ply:GetVelocity():Length(), mv:GetVelocity():Length(), ply:GetRunSpeed()) * 1.5
-    local dir = mv:GetVelocity():GetNormalized()
+    local v = mv:GetVelocity()
+    local speed = v:Length()
+    local run, crouched = ply:GetRunSpeed(), ply:GetWalkSpeed() * ply:GetCrouchedWalkSpeed()
+    if run > crouched and speed - ply:GetRunSpeed() < -1 then return end
+    if run < crouched and (not mv:KeyDown(IN_SPEED) or speed < 10 or speed - ply:GetRunSpeed() > 1) then return end
+    local runspeed = math.max(ply:GetVelocity():Length(), speed, ply:GetRunSpeed()) * 1.5
+    local dir = v:GetNormalized()
     ply:SetNWBool("IsSliding", true)
     ply:SetNWFloat("SlidingStartTime", CurTime())
     ply:SetNWVector("SlidingCurrentVelocity", dir * runspeed)
@@ -165,7 +170,15 @@ hook.Add("CalcMainActivity", "Sliding animation", function(ply, velocity)
     return GetSlidingActivity(ply), -1
 end)
 
+-- Workaround!!!  Revive Mod disables the sliding animation so we disable it
+local ReviveModUpdateAnimation = hook.GetTable().UpdateAnimation.BleedOutAnims
+if ReviveModUpdateAnimation then hook.Remove("UpdateAnimation", "BleedOutAnims") end
 hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocity, maxSeqGroundSpeed)
+    if ReviveModUpdateAnimation and ply:IsBleedOut() then
+        ReviveModUpdateAnimation(ply, velocity, maxSeqGroundSpeed)
+        return
+    end
+
     if not ply:GetNWBool "IsSliding" then
         if CLIENT then
             if g_LegsVer then ManipulateBones(ply, GetPlayerLegs(), Angle(), Angle(), Angle()) end
