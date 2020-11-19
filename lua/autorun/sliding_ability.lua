@@ -148,10 +148,12 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     if math.abs(ply:GetWalkSpeed() - ply:GetRunSpeed()) < 100 then return end
     local v = mv:GetVelocity()
     local speed = v:Length()
-    local run, crouched = ply:GetRunSpeed(), ply:GetWalkSpeed() * ply:GetCrouchedWalkSpeed()
-    if run > crouched and speed - ply:GetRunSpeed() < -1 then return end
-    if run < crouched and (not mv:KeyDown(IN_SPEED) or speed < 10 or speed - ply:GetRunSpeed() > 1) then return end
-    local runspeed = math.max(ply:GetVelocity():Length(), speed, ply:GetRunSpeed()) * 1.5
+    local run = ply:GetRunSpeed()
+    local crouched = ply:GetWalkSpeed() * ply:GetCrouchedWalkSpeed()
+    local threshold = (run + crouched) / 2
+    if run > crouched and speed < threshold then return end
+    if run < crouched and (not mv:KeyDown(IN_SPEED) or speed < run - 1 or speed > threshold) then return end
+    local runspeed = math.max(ply:GetVelocity():Length(), speed, run) * 1.5
     local dir = v:GetNormalized()
     ply:SetNWBool("IsSliding", true)
     ply:SetNWFloat("SlidingStartTime", CurTime())
@@ -170,10 +172,10 @@ hook.Add("CalcMainActivity", "Sliding animation", function(ply, velocity)
     return GetSlidingActivity(ply), -1
 end)
 
--- Workaround!!!  Revive Mod disables the sliding animation so we disable it
-local ReviveModUpdateAnimation = hook.GetTable().UpdateAnimation.BleedOutAnims
-if ReviveModUpdateAnimation then hook.Remove("UpdateAnimation", "BleedOutAnims") end
 hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocity, maxSeqGroundSpeed)
+    -- Workaround!!!  Revive Mod disables the sliding animation so we disable it
+    local ReviveModUpdateAnimation = hook.GetTable().UpdateAnimation.BleedOutAnims
+    if ReviveModUpdateAnimation then hook.Remove("UpdateAnimation", "BleedOutAnims") end
     if ReviveModUpdateAnimation and ply:IsBleedOut() then
         ReviveModUpdateAnimation(ply, velocity, maxSeqGroundSpeed)
         return
@@ -245,6 +247,7 @@ end
 
 CreateClientConVar("sliding_ability_tilt_viewmodel", 1, true, true, "Enable viewmodel tilt like Apex Legends when sliding.")
 hook.Add("CalcViewModelView", "Sliding view model tilt", function(w, vm, op, oa, p, a)
+    if w.ArcCW and w:GetState() == ArcCW.STATE_SIGHTS then return end
     if not (IsValid(w.Owner) and w.Owner:IsPlayer()) then return end
     if not GetConVar "sliding_ability_tilt_viewmodel":GetBool() then return end
     local wp, wa = p, a
