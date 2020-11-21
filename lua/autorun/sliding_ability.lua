@@ -226,7 +226,7 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
     dp:Normalize()
     dp2d:Normalize()
     local dot = ply:GetForward():Dot(dp2d)
-    ManipulateBones(ply, l, -Angle(0, 0, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG), Angle(0, 32, 0), Angle(0, -60, 0))
+    ManipulateBones(ply, l, -Angle(0, 0, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG), Angle(20, 35, 85), Angle(0, 45, 0))
     l.SlidingPreviousPosition = ply:GetPos()
 end)
 
