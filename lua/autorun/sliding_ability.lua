@@ -46,14 +46,25 @@ local function GetSlidingActivity(ply)
     return a
 end
 
+local BoneAngleCache = SERVER and {} or nil
+local function ManipulateBoneAnglesLessTraffic(ent, bone, ang, frac)
+    local a = SERVER and ang or ang * frac
+    if CLIENT or BoneAngleCache[ent] and BoneAngleCache[ent][bone] ~= a then
+        ent:ManipulateBoneAngles(bone, a)
+        if CLIENT then return end
+        if not BoneAngleCache[ent] then BoneAngleCache[ent] = {} end
+        BoneAngleCache[ent][bone] = a
+    end
+end
+
 local function ManipulateBones(ply, ent, base, thigh, calf)
     if not IsValid(ent) then return end
     local t0 = ply:GetNWFloat "SlidingStartTime"
     local timefrac = math.TimeFraction(t0, t0 + SLIDE_ANIM_TRANSITION_TIME, CurTime())
-    timefrac = math.Clamp(timefrac, 0, 1)
-    ent:ManipulateBoneAngles(0, base * timefrac)
-    ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Thigh", thigh * timefrac)
-    ent:ManipulateBoneAngles(ent:LookupBone "ValveBiped.Bip01_R_Calf", calf * timefrac)
+    timefrac = SERVER and 1 or math.Clamp(timefrac, 0, 1)
+    ManipulateBoneAnglesLessTraffic(ent, 0, base, timefrac)
+    ManipulateBoneAnglesLessTraffic(ent, ent:LookupBone "ValveBiped.Bip01_R_Thigh", thigh, timefrac)
+    ManipulateBoneAnglesLessTraffic(ent, ent:LookupBone "ValveBiped.Bip01_R_Calf", calf, timefrac)
     local dp = thigh:IsZero() and Vector() or Vector(10, 0, -10)
     local w, pose = ply:GetActiveWeapon(), ""
     if IsValid(w) then pose = w:GetHoldType() or w.HoldType end
@@ -82,6 +93,10 @@ local function EndSliding(ply)
     if SERVER then ply:StopSound "Flesh.ScrapeRough" end
 end
 
+local function SetSlidingPose(ply, ent, body_tilt)
+    ManipulateBones(ply, ent, -Angle(0, 0, body_tilt), Angle(20, 35, 85), Angle(0, 45, 0))
+end
+
 hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     local w = ply:GetActiveWeapon()
     if IsValid(w) and SLIDING_ABILITY_BLACKLIST[w:GetClass()] then return end
@@ -89,7 +104,6 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     if ply:GetNWFloat "SlidingPreserveWalkSpeed" > 0 then
         local v = Vector(ply:GetNWVector "SlidingCurrentVelocity")
         v.z = mv:GetVelocity().z
-        ply:SetWalkSpeed(ply:GetNWFloat "SlidingPreserveWalkSpeed")
         mv:SetVelocity(v)
     end
     
@@ -117,7 +131,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         if speed > speedref then accel = -accel end
         v = LerpVector(0.005, vdir, forward) * (speed + accel)
 
-        ManipulateBones(ply, ply, -Angle(0, 0, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG), Angle(0, 32, 0), Angle(0, -60, 0))
+        SetSlidingPose(ply, ply, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG)
         ply:SetNWVector("SlidingCurrentVelocity", v)
         ply:SetNWVector("SlidingPreviousPosition", mv:GetOrigin())
         mv:SetVelocity(v)
@@ -126,8 +140,6 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
             if mv:KeyPressed(IN_JUMP) then
                 ply:SetNWFloat("SlidingStartTime", CurTime() + CVarCooldownJump:GetFloat())
                 ply:SetNWFloat("SlidingPreserveWalkSpeed", ply:GetWalkSpeed())
-                ply:SetWalkSpeed(speed)
-                ply:SetMaxSpeed(speed)
             end
         end
 
@@ -219,14 +231,14 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
     if g_LegsVer then l = GetPlayerLegs() end
     if EnhancedCamera then l = EnhancedCamera.entity end
     if EnhancedCameraTwo then l = EnhancedCameraTwo.entity end
+    if not IsValid(l) or l == LocalPlayer() then return end
 
-    if not IsValid(l) then return end
     local dp = ply:GetPos() - (l.SlidingPreviousPosition or ply:GetPos())
     local dp2d = Vector(dp.x, dp.y)
     dp:Normalize()
     dp2d:Normalize()
     local dot = ply:GetForward():Dot(dp2d)
-    ManipulateBones(ply, l, -Angle(0, 0, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG), Angle(20, 35, 85), Angle(0, 45, 0))
+    SetSlidingPose(ply, l, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG)
     l.SlidingPreviousPosition = ply:GetPos()
 end)
 
@@ -250,10 +262,10 @@ hook.Add("CalcViewModelView", "Sliding view model tilt", function(w, vm, op, oa,
     if w.ArcCW and w:GetState() == ArcCW.STATE_SIGHTS then return end
     if not (IsValid(w.Owner) and w.Owner:IsPlayer()) then return end
     if not GetConVar "sliding_ability_tilt_viewmodel":GetBool() then return end
+    if w.IsTFAWeapon and w:GetIronSights() then return end
     local wp, wa = p, a
     if isfunction(w.CalcViewModelView) then wp, wa = w:CalcViewModelView(vm, op, oa, p, a) end
     if not (wp and wa) then wp, wa = p, a end
-    if w.IsTFAWeapon and w:GetIronSights() then return end
 
     local ply = w.Owner
     local t0 = ply:GetNWFloat "SlidingStartTime"
