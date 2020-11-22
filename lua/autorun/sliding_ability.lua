@@ -102,7 +102,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     if IsValid(w) and SLIDING_ABILITY_BLACKLIST[w:GetClass()] then return end
     if ConVarExists "savav_parkour_Enable" and GetConVar "savav_parkour_Enable":GetBool() then return end
     if ply:GetNWFloat "SlidingPreserveWalkSpeed" > 0 then
-        local v = Vector(ply:GetNWVector "SlidingCurrentVelocity")
+        local v = ply.SlidingCurrentVelocity or Vector()
         v.z = mv:GetVelocity().z
         mv:SetVelocity(v)
     end
@@ -111,7 +111,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     if CLIENT and not IsFirstTimePredicted() then return end
     if not ply:Crouching() and ply:GetNWBool "IsSliding" then EndSliding(ply) end
     if ply:Crouching() and ply:GetNWBool "IsSliding" then
-        local v = ply:GetNWVector "SlidingCurrentVelocity"
+        local v = ply.SlidingCurrentVelocity or Vector()
         local vdir = v:GetNormalized()
         local forward = mv:GetMoveAngles():Forward()
         local speed = v:Length()
@@ -119,7 +119,6 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         local speedref_crouch = ply:GetWalkSpeed() * ply:GetCrouchedWalkSpeed()
         local speedref_min = math.min(speedref_crouch, speedref_slide)
         local speedref_max = math.max(speedref_crouch, speedref_slide)
-        local speedref_check = ply:GetRunSpeed() > speedref_crouch and speedref_min or speedref_max
         local dp = mv:GetOrigin() - ply:GetNWVector "SlidingPreviousPosition"
         local dp2d = Vector(dp.x, dp.y)
         dp:Normalize()
@@ -132,7 +131,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         v = LerpVector(0.005, vdir, forward) * (speed + accel)
 
         SetSlidingPose(ply, ply, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG)
-        ply:SetNWVector("SlidingCurrentVelocity", v)
+        ply.SlidingCurrentVelocity = v
         ply:SetNWVector("SlidingPreviousPosition", mv:GetOrigin())
         mv:SetVelocity(v)
         if not ply:OnGround() or mv:KeyPressed(IN_JUMP) or mv:KeyReleased(IN_DUCK) or math.abs(speed - speedref_crouch) < 10 then
@@ -169,7 +168,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     local dir = v:GetNormalized()
     ply:SetNWBool("IsSliding", true)
     ply:SetNWFloat("SlidingStartTime", CurTime())
-    ply:SetNWVector("SlidingCurrentVelocity", dir * runspeed)
+    ply.SlidingCurrentVelocity = dir * runspeed
     ply:SetNWVector("SlidingMaxSpeed", runspeed * 5)
     ply:EmitSound "Flesh.ImpactSoft"
     if SERVER then ply:EmitSound "Flesh.ScrapeRough" end
