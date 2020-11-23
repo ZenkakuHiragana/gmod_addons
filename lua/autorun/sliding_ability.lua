@@ -230,7 +230,7 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
     if g_LegsVer then l = GetPlayerLegs() end
     if EnhancedCamera then l = EnhancedCamera.entity end
     if EnhancedCameraTwo then l = EnhancedCameraTwo.entity end
-    if not IsValid(l) or l == LocalPlayer() then return end
+    if not IsValid(l) or (not game.SinglePlayer() and l == LocalPlayer()) then return end
 
     local dp = ply:GetPos() - (l.SlidingPreviousPosition or ply:GetPos())
     local dp2d = Vector(dp.x, dp.y)
