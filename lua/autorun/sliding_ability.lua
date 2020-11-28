@@ -91,10 +91,12 @@ local function EndSliding(ply)
     ply:SetNWBool("IsSliding", false)
     ply:SetNWFloat("SlidingStartTime", CurTime())
     if SERVER then ply:StopSound "Flesh.ScrapeRough" end
+    if CLIENT and ply ~= LocalPlayer() then ply.IsSliding = nil end
 end
 
 local function SetSlidingPose(ply, ent, body_tilt)
     ManipulateBones(ply, ent, -Angle(0, 0, body_tilt), Angle(20, 35, 85), Angle(0, 45, 0))
+    if CLIENT and ply ~= LocalPlayer() then ply.IsSliding = true end
 end
 
 hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
@@ -197,6 +199,7 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
             if g_LegsVer then ManipulateBones(ply, GetPlayerLegs(), Angle(), Angle(), Angle()) end
             if EnhancedCamera then ManipulateBones(ply, EnhancedCamera.entity, Angle(), Angle(), Angle()) end
             if EnhancedCameraTwo then ManipulateBones(ply, EnhancedCameraTwo.entity, Angle(), Angle(), Angle()) end
+            if ply ~= LocalPlayer() and ply.IsSliding then EndSliding(ply) end
         end
 
         return
@@ -226,12 +229,14 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
 
     if SERVER then return end
 
-    local l
-    if g_LegsVer then l = GetPlayerLegs() end
-    if EnhancedCamera then l = EnhancedCamera.entity end
-    if EnhancedCameraTwo then l = EnhancedCameraTwo.entity end
-    if not IsValid(l) or (not game.SinglePlayer() and l == LocalPlayer()) then return end
-
+    local l = ply
+    if ply == LocalPlayer() then
+        if g_LegsVer then l = GetPlayerLegs() end
+        if EnhancedCamera then l = EnhancedCamera.entity end
+        if EnhancedCameraTwo then l = EnhancedCameraTwo.entity end
+        if not IsValid(l) then return end
+    end
+    
     local dp = ply:GetPos() - (l.SlidingPreviousPosition or ply:GetPos())
     local dp2d = Vector(dp.x, dp.y)
     dp:Normalize()
@@ -258,6 +263,7 @@ end
 
 CreateClientConVar("sliding_ability_tilt_viewmodel", 1, true, true, "Enable viewmodel tilt like Apex Legends when sliding.")
 hook.Add("CalcViewModelView", "Sliding view model tilt", function(w, vm, op, oa, p, a)
+    if w.SuppressSlidingViewModelTilt then return end -- For the future addons which are compatible with this addon
     if w.ArcCW and w:GetState() == ArcCW.STATE_SIGHTS then return end
     if not (IsValid(w.Owner) and w.Owner:IsPlayer()) then return end
     if not GetConVar "sliding_ability_tilt_viewmodel":GetBool() then return end
