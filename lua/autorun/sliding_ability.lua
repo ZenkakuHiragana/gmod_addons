@@ -49,7 +49,7 @@ end
 local BoneAngleCache = SERVER and {} or nil
 local function ManipulateBoneAnglesLessTraffic(ent, bone, ang, frac)
     local a = SERVER and ang or ang * frac
-    if CLIENT or BoneAngleCache[ent] and BoneAngleCache[ent][bone] ~= a then
+    if CLIENT or not BoneAngleCache[ent] or BoneAngleCache[ent][bone] ~= a then
         ent:ManipulateBoneAngles(bone, a)
         if CLIENT then return end
         if not BoneAngleCache[ent] then BoneAngleCache[ent] = {} end
@@ -231,6 +231,7 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
 
     local l = ply
     if ply == LocalPlayer() then
+        if game.SinglePlayer() then return end
         if g_LegsVer then l = GetPlayerLegs() end
         if EnhancedCamera then l = EnhancedCamera.entity end
         if EnhancedCameraTwo then l = EnhancedCameraTwo.entity end
