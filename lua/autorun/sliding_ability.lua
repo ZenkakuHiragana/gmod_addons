@@ -59,12 +59,14 @@ end
 
 local function ManipulateBones(ply, ent, base, thigh, calf)
     if not IsValid(ent) then return end
+    local bthigh = ent:LookupBone "ValveBiped.Bip01_R_Thigh"
+    local bcalf = ent:LookupBone "ValveBiped.Bip01_R_Calf"
     local t0 = ply:GetNWFloat "SlidingStartTime"
     local timefrac = math.TimeFraction(t0, t0 + SLIDE_ANIM_TRANSITION_TIME, CurTime())
     timefrac = SERVER and 1 or math.Clamp(timefrac, 0, 1)
-    ManipulateBoneAnglesLessTraffic(ent, 0, base, timefrac)
-    ManipulateBoneAnglesLessTraffic(ent, ent:LookupBone "ValveBiped.Bip01_R_Thigh", thigh, timefrac)
-    ManipulateBoneAnglesLessTraffic(ent, ent:LookupBone "ValveBiped.Bip01_R_Calf", calf, timefrac)
+    if bthigh or bcalf then ManipulateBoneAnglesLessTraffic(ent, 0, base, timefrac) end
+    if bthigh then ManipulateBoneAnglesLessTraffic(ent, bthigh, thigh, timefrac) end
+    if bcalf then ManipulateBoneAnglesLessTraffic(ent, bcalf, calf, timefrac) end
     local dp = thigh:IsZero() and Vector() or Vector(10, 0, -10)
     local w, pose = ply:GetActiveWeapon(), ""
     if IsValid(w) then pose = w:GetHoldType() or w.HoldType end
@@ -205,27 +207,31 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
         return
     end
 
-    local b = ply:GetManipulateBoneAngles(0).roll
-    local p = ply:GetPoseParameter "aim_pitch" -- degrees in server, 0-1 in client
-    local y = ply:GetPoseParameter "aim_yaw"
-    if CLIENT then
-        p = Lerp(p, ply:GetPoseParameterRange(ply:LookupPoseParameter "aim_pitch"))
-        y = Lerp(y, ply:GetPoseParameterRange(ply:LookupPoseParameter "aim_yaw"))
+    local pppitch = ply:LookupPoseParameter "aim_pitch"
+    local ppyaw = ply:LookupPoseParameter "aim_yaw"
+    if pppitch >= 0 and ppyaw >= 0 then
+        local b = ply:GetManipulateBoneAngles(0).roll
+        local p = ply:GetPoseParameter "aim_pitch" -- degrees in server, 0-1 in client
+        local y = ply:GetPoseParameter "aim_yaw"
+        if CLIENT then
+            p = Lerp(p, ply:GetPoseParameterRange(pppitch))
+            y = Lerp(y, ply:GetPoseParameterRange(ppyaw))
+        end
+
+        p = p - b
+
+        local a = ply:GetSequenceActivity(ply:GetSequence())
+        local la = ply:GetSequenceActivity(ply:GetLayerSequence(0))
+        if a == ply:GetSequenceActivity(ply:LookupSequence(ACT_HL2MP_SIT_DUEL)) and la ~= ACT_HL2MP_GESTURE_RELOAD_DUEL then
+            p = p - 45
+            ply:SetPoseParameter("aim_yaw", ply:GetPoseParameterRange(ppyaw))
+        elseif a == ply:GetSequenceActivity(ply:LookupSequence(ACT_HL2MP_SIT_CAMERA)) then
+            y = y + 20
+            ply:SetPoseParameter("aim_yaw", y)
+        end
+
+        ply:SetPoseParameter("aim_pitch", p)
     end
-
-    p = p - b
-
-    local a = ply:GetSequenceActivity(ply:GetSequence())
-    local la = ply:GetSequenceActivity(ply:GetLayerSequence(0))
-    if a == ply:GetSequenceActivity(ply:LookupSequence(ACT_HL2MP_SIT_DUEL)) and la ~= ACT_HL2MP_GESTURE_RELOAD_DUEL then
-        p = p - 45
-        ply:SetPoseParameter("aim_yaw", ply:GetPoseParameterRange(ply:LookupPoseParameter "aim_yaw"))
-    elseif a == ply:GetSequenceActivity(ply:LookupSequence(ACT_HL2MP_SIT_CAMERA)) then
-        y = y + 20
-        ply:SetPoseParameter("aim_yaw", y)
-    end
-
-    ply:SetPoseParameter("aim_pitch", p)
 
     if SERVER then return end
 
