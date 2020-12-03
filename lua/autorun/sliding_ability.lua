@@ -39,6 +39,15 @@ local acts = {
     magic = ACT_HL2MP_SIT_DUEL,
     knife = ACT_HL2MP_SIT_KNIFE,
 }
+local function AngleEqualTol(a1, a2, tol)
+    tol = tol or 1e-3
+    if not (isangle(a1) and isangle(a2)) then return false end
+    if math.abs(a1.pitch - a2.pitch) > tol then return false end
+    if math.abs(a1.yaw - a2.yaw) > tol then return false end
+    if math.abs(a1.roll - a2.roll) > tol then return false end
+    return true
+end
+
 local function GetSlidingActivity(ply)
     local w, a = ply:GetActiveWeapon(), ACT_HL2MP_SIT_DUEL
     if IsValid(w) then a = acts[w:GetHoldType()] or acts[w.HoldType] or ACT_HL2MP_SIT_DUEL end
@@ -49,7 +58,7 @@ end
 local BoneAngleCache = SERVER and {} or nil
 local function ManipulateBoneAnglesLessTraffic(ent, bone, ang, frac)
     local a = SERVER and ang or ang * frac
-    if CLIENT or not BoneAngleCache[ent] or BoneAngleCache[ent][bone] ~= a then
+    if CLIENT or not (BoneAngleCache[ent] and AngleEqualTol(BoneAngleCache[ent][bone], a, 0.1)) then
         ent:ManipulateBoneAngles(bone, a)
         if CLIENT then return end
         if not BoneAngleCache[ent] then BoneAngleCache[ent] = {} end
