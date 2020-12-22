@@ -77,7 +77,7 @@ local function ManipulateBones(ply, ent, base, thigh, calf)
     if bthigh then ManipulateBoneAnglesLessTraffic(ent, bthigh, thigh, timefrac) end
     if bcalf then ManipulateBoneAnglesLessTraffic(ent, bcalf, calf, timefrac) end
     local dp = thigh:IsZero() and Vector() or Vector(10, 0, -10)
-    local w, pose = ply:GetActiveWeapon(), ""
+    local w, pose = ply:GetActiveWeapon(), "normal"
     if IsValid(w) then pose = w:GetHoldType() or w.HoldType end
     if pose:find "all" then pose = "normal" end
     if pose == "smg1" then pose = "smg" end
