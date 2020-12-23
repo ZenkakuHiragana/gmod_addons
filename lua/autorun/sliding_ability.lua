@@ -50,7 +50,7 @@ end
 
 local function GetSlidingActivity(ply)
     local w, a = ply:GetActiveWeapon(), ACT_HL2MP_SIT_DUEL
-    if IsValid(w) then a = acts[w:GetHoldType()] or acts[w.HoldType] or ACT_HL2MP_SIT_DUEL end
+    if IsValid(w) then a = acts[w:GetHoldType()] or acts[string.lower(w.HoldType or "")] or ACT_HL2MP_SIT_DUEL end
     if isstring(a) then return ply:GetSequenceActivity(ply:LookupSequence(a)) end
     return a
 end
@@ -76,24 +76,22 @@ local function ManipulateBones(ply, ent, base, thigh, calf)
     if bthigh or bcalf then ManipulateBoneAnglesLessTraffic(ent, 0, base, timefrac) end
     if bthigh then ManipulateBoneAnglesLessTraffic(ent, bthigh, thigh, timefrac) end
     if bcalf then ManipulateBoneAnglesLessTraffic(ent, bcalf, calf, timefrac) end
-    local dp = thigh:IsZero() and Vector() or Vector(10, 0, -10)
-    local w, pose = ply:GetActiveWeapon(), "normal"
-    if IsValid(w) then pose = w:GetHoldType() or w.HoldType end
-    if pose:find "all" then pose = "normal" end
-    if pose == "smg1" then pose = "smg" end
-    if EnhancedCamera and ent == EnhancedCamera.entity then
-        if pose then
-            EnhancedCamera.pose = pose
-            EnhancedCamera:OnPoseChange()
+    local dp = thigh:IsZero() and Vector() or Vector(10, 0, -6)
+    for _, ec in pairs {EnhancedCamera, EnhancedCameraTwo} do
+        if ent == ec.entity then
+            local w = ply:GetActiveWeapon()
+            local seqname = LocalPlayer():GetSequenceName(ec:GetSequence())
+            local pose = IsValid(w) and string.lower(w.HoldType or "") or seqname:sub((seqname:find "_" or 0) + 1)
+            if pose:find "all" then pose = "normal" end
+            if pose == "smg1" then pose = "smg" end
+            if pose and pose ~= "" and pose ~= ec.pose then
+                ec.pose = pose
+                ec:OnPoseChange()
+                print(pose)
+            end
+
+            ent:ManipulateBonePosition(0, dp * timefrac)
         end
-        ent:ManipulateBonePosition(0, dp * timefrac)
-    end
-    if EnhancedCameraTwo and ent == EnhancedCameraTwo.entity then
-        if pose then
-            EnhancedCameraTwo.pose = pose
-            EnhancedCameraTwo:OnPoseChange()
-        end
-        ent:ManipulateBonePosition(0, dp * timefrac)
     end
 end
 
