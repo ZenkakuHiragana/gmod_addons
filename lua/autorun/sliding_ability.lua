@@ -167,7 +167,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     if not mv:KeyDown(bit.bor(IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT)) then return end
     if ply:GetNWBool "IsSliding" then return end
     if CurTime() < ply:GetNWFloat "SlidingStartTime" + CVarCooldown:GetFloat() then return end
-    if math.abs(ply:GetWalkSpeed() - ply:GetRunSpeed()) < 100 then return end
+    if math.abs(ply:GetWalkSpeed() - ply:GetRunSpeed()) < 1 then return end
     local v = mv:GetVelocity()
     local speed = v:Length()
     local run = ply:GetRunSpeed()
