@@ -70,7 +70,7 @@ local function ManipulateBones(ply, ent, base, thigh, calf)
     if not IsValid(ent) then return end
     local bthigh = ent:LookupBone "ValveBiped.Bip01_R_Thigh"
     local bcalf = ent:LookupBone "ValveBiped.Bip01_R_Calf"
-    local t0 = ply:GetNWFloat "SlidingStartTime"
+    local t0 = ply:GetNWFloat "SlidingAbility_SlidingStartTime"
     local timefrac = math.TimeFraction(t0, t0 + SLIDE_ANIM_TRANSITION_TIME, CurTime())
     timefrac = SERVER and 1 or math.Clamp(timefrac, 0, 1)
     if bthigh or bcalf then ManipulateBoneAnglesLessTraffic(ent, 0, base, timefrac) end
@@ -97,10 +97,10 @@ end
 
 local function EndSliding(ply)
     if SERVER then ManipulateBones(ply, ply, Angle(), Angle(), Angle()) end
-    ply.IsSliding = false
-    ply.SlidingStartTime = CurTime()
-    ply:SetNWBool("IsSliding", false)
-    ply:SetNWFloat("SlidingStartTime", CurTime())
+    ply.SlidingAbility_IsSliding = false
+    ply.SlidingAbility_SlidingStartTime = CurTime()
+    ply:SetNWBool("SlidingAbility_IsSliding", false)
+    ply:SetNWFloat("SlidingAbility_SlidingStartTime", CurTime())
     if SERVER then ply:StopSound "Flesh.ScrapeRough" end
 end
 
@@ -111,7 +111,7 @@ end
 -- Backtack our data by WholeCream
 local SlidingBacktrack = {}
 local PredictedVars = {
-    ["SlidingCurrentVelocity"] = Vector(),
+    ["SlidingAbility_SlidingCurrentVelocity"] = Vector(),
 }
 
 local function GetPredictedVar(ply, name)
@@ -130,26 +130,27 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     local w = ply:GetActiveWeapon()
     if IsValid(w) and SLIDING_ABILITY_BLACKLIST[w:GetClass()] then return end
     if ConVarExists "savav_parkour_Enable" and GetConVar "savav_parkour_Enable":GetBool() then return end
+    if ConVarExists "sv_sliding_enabled" and GetConVar "sv_sliding_enabled":GetBool() and ply.HasExosuit ~= false then return end
     if ply:GetNWFloat "SlidingPreserveWalkSpeed" > 0 then
-        local v = GetPredictedVar(ply, "SlidingCurrentVelocity") or Vector()
+        local v = GetPredictedVar(ply, "SlidingAbility_SlidingCurrentVelocity") or Vector()
         v.z = mv:GetVelocity().z
         mv:SetVelocity(v)
     end
 
-    if not ply.SlidingPreviousPosition then
-        ply.SlidingPreviousPosition = Vector()
-        ply.SlidingStartTime = 0
-        ply.IsSliding = false
+    if not ply.SlidingAbility_SlidingPreviousPosition then
+        ply.SlidingAbility_SlidingPreviousPosition = Vector()
+        ply.SlidingAbility_SlidingStartTime = 0
+        ply.SlidingAbility_IsSliding = false
     end
     
     ply:SetNWFloat("SlidingPreserveWalkSpeed", -1)
-    if IsFirstTimePredicted() and not ply:Crouching() and ply.IsSliding then
+    if IsFirstTimePredicted() and not ply:Crouching() and ply.SlidingAbility_IsSliding then
         EndSliding(ply)
     end
     
     -- actual calculation of movement
     local CT = CurTime()
-    if (ply:Crouching() and ply.IsSliding) or (CLIENT and SlidingBacktrack[CT]) then
+    if (ply:Crouching() and ply.SlidingAbility_IsSliding) or (CLIENT and SlidingBacktrack[CT]) then
         local restorevars = {}
         local vpbacktrack
         if CLIENT and not ply:KeyDown(IN_JUMP) then
@@ -166,16 +167,16 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         end
 
         -- calculate movement
-        local v = GetPredictedVar(ply, "SlidingCurrentVelocity") or Vector()
+        local v = GetPredictedVar(ply, "SlidingAbility_SlidingCurrentVelocity") or Vector()
         local speed = v:Length()
         local speedref_crouch = ply:GetWalkSpeed() * ply:GetCrouchedWalkSpeed()
         if not vpbacktrack then
             local vdir = v:GetNormalized()
             local forward = mv:GetMoveAngles():Forward()
-            local speedref_slide = ply.SlidingMaxSpeed
+            local speedref_slide = ply.SlidingAbility_SlidingMaxSpeed
             local speedref_min = math.min(speedref_crouch, speedref_slide)
             local speedref_max = math.max(speedref_crouch, speedref_slide)
-            local dp = mv:GetOrigin() - ply.SlidingPreviousPosition
+            local dp = mv:GetOrigin() - ply.SlidingAbility_SlidingPreviousPosition
             local dp2d = Vector(dp.x, dp.y)
             dp:Normalize()
             dp2d:Normalize()
@@ -187,13 +188,13 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
             v = LerpVector(0.005, vdir, forward) * (speed + accel)
 
             SetSlidingPose(ply, ply, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG)
-            SetPredictedVar(ply, "SlidingCurrentVelocity", v)
-            ply.SlidingCurrentVelocity = v
-            ply.SlidingPreviousPosition = mv:GetOrigin()
+            SetPredictedVar(ply, "SlidingAbility_SlidingCurrentVelocity", v)
+            ply.SlidingAbility_SlidingCurrentVelocity = v
+            ply.SlidingAbility_SlidingPreviousPosition = mv:GetOrigin()
         end
 
         -- set push velocity
-        mv:SetVelocity(GetPredictedVar(ply, "SlidingCurrentVelocity"))
+        mv:SetVelocity(GetPredictedVar(ply, "SlidingAbility_SlidingCurrentVelocity"))
 
         -- effects & ending
         if not vpbacktrack then
@@ -201,8 +202,8 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
                 EndSliding(ply)
                 if mv:KeyPressed(IN_JUMP) then
                     local t = CurTime() + CVarCooldownJump:GetFloat()
-                    ply.SlidingStartTime = t
-                    ply:SetNWFloat("SlidingStartTime", t)
+                    ply.SlidingAbility_SlidingStartTime = t
+                    ply:SetNWFloat("SlidingAbility_SlidingStartTime", t)
                     ply:SetNWFloat("SlidingPreserveWalkSpeed", ply:GetWalkSpeed())
                 end
             end
@@ -254,13 +255,13 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     end
     
     -- initial check to see if we can do it
-    if ply.IsSliding then return end
+    if ply.SlidingAbility_IsSliding then return end
     if not ply:OnGround() then return end
     if not ply:Crouching() then return end
     if not IsFirstTimePredicted() then return end
     if not mv:KeyDown(IN_DUCK) then return end
     if not mv:KeyDown(bit.bor(IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT)) then return end
-    if CurTime() < ply.SlidingStartTime + CVarCooldown:GetFloat() then return end
+    if CurTime() < ply.SlidingAbility_SlidingStartTime + CVarCooldown:GetFloat() then return end
     if math.abs(ply:GetWalkSpeed() - ply:GetRunSpeed()) < 25 then return end
 
     local v = mv:GetVelocity()
@@ -273,24 +274,24 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     local runspeed = math.max(ply:GetVelocity():Length(), speed, run) * 1.5
     local dir = v:GetNormalized()
     local ping = SERVER and 0 or (ply == LocalPlayer() and ply:Ping() / 1000 or 0)
-    ply.IsSliding = true
-    ply.SlidingStartTime = CurTime() - ping
-    ply.SlidingCurrentVelocity = dir * runspeed
-    ply.SlidingMaxSpeed = runspeed * 5
-    ply:SetNWBool("IsSliding", true)
-    ply:SetNWFloat("SlidingStartTime", ply.SlidingStartTime)
-    ply:SetNWVector("SlidingMaxSpeed", ply.SlidingMaxSpeed)
-    SetPredictedVar(ply, "SlidingCurrentVelocity", ply.SlidingCurrentVelocity)
+    ply.SlidingAbility_IsSliding = true
+    ply.SlidingAbility_SlidingStartTime = CurTime() - ping
+    ply.SlidingAbility_SlidingCurrentVelocity = dir * runspeed
+    ply.SlidingAbility_SlidingMaxSpeed = runspeed * 5
+    ply:SetNWBool("SlidingAbility_IsSliding", true)
+    ply:SetNWFloat("SlidingAbility_SlidingStartTime", ply.SlidingAbility_SlidingStartTime)
+    ply:SetNWVector("SlidingAbility_SlidingMaxSpeed", ply.SlidingAbility_SlidingMaxSpeed)
+    SetPredictedVar(ply, "SlidingAbility_SlidingCurrentVelocity", ply.SlidingAbility_SlidingCurrentVelocity)
     ply:EmitSound("Flesh.ImpactSoft")
     if SERVER then ply:EmitSound "Flesh.ScrapeRough" end
 end)
 
 hook.Add("PlayerFootstep", "Sliding sound", function(ply, pos, foot, sound, volume, filter)
-    return ply:GetNWBool "IsSliding" or nil
+    return ply:GetNWBool "SlidingAbility_IsSliding" or nil
 end)
 
 hook.Add("CalcMainActivity", "Sliding animation", function(ply, velocity)
-    if not ply:GetNWBool "IsSliding" then return end
+    if not ply:GetNWBool "SlidingAbility_IsSliding" then return end
     if GetSlidingActivity(ply) == -1 then return end
     return GetSlidingActivity(ply), -1
 end)
@@ -304,8 +305,8 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
         return
     end
 
-    if not ply:GetNWBool "IsSliding" then
-        if ply.cSlidingReset then
+    if not ply:GetNWBool "SlidingAbility_IsSliding" then
+        if ply.SlidingAbility_SlidingReset then
             local l = ply
             if ply == LocalPlayer() then
                 if g_LegsVer then l = GetPlayerLegs() end
@@ -318,7 +319,7 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
             if EnhancedCamera then ManipulateBones(ply, EnhancedCamera.entity, Angle(), Angle(), Angle()) end
             if EnhancedCameraTwo then ManipulateBones(ply, EnhancedCameraTwo.entity, Angle(), Angle(), Angle()) end
             ManipulateBones(ply, ply, Angle(), Angle(), Angle())
-            ply.cSlidingReset = nil
+            ply.SlidingAbility_SlidingReset = nil
         end
 
         return
@@ -360,14 +361,14 @@ hook.Add("UpdateAnimation", "Sliding aim pose parameters", function(ply, velocit
         if not IsValid(l) then return end
     end
     
-    local dp = ply:GetPos() - (l.SlidingPreviousPosition or ply:GetPos())
+    local dp = ply:GetPos() - (l.SlidingAbility_SlidingPreviousPosition or ply:GetPos())
     local dp2d = Vector(dp.x, dp.y)
     dp:Normalize()
     dp2d:Normalize()
     local dot = ply:GetForward():Dot(dp2d)
     SetSlidingPose(ply, l, math.deg(math.asin(dp.z)) * dot + SLIDE_TILT_DEG)
-    l.SlidingPreviousPosition = ply:GetPos()
-    ply.cSlidingReset = true
+    l.SlidingAbility_SlidingPreviousPosition = ply:GetPos()
+    ply.SlidingAbility_SlidingReset = true
 end)
 
 if SERVER then
@@ -397,10 +398,10 @@ hook.Add("CalcViewModelView", "Sliding view model tilt", function(w, vm, op, oa,
     if not (wp and wa) then wp, wa = p, a end
 
     local ply = w.Owner
-    local t0 = ply:GetNWFloat "SlidingStartTime"
+    local t0 = ply:GetNWFloat "SlidingAbility_SlidingStartTime"
     local timefrac = math.TimeFraction(t0, t0 + SLIDE_ANIM_TRANSITION_TIME, CurTime())
     timefrac = math.Clamp(timefrac, 0, 1)
-    if not ply:GetNWBool "IsSliding" then timefrac = 1 - timefrac end
+    if not ply:GetNWBool "SlidingAbility_IsSliding" then timefrac = 1 - timefrac end
     if timefrac == 0 then return end
     wp:Add(LerpVector(timefrac, Vector(), LocalToWorld(Vector(0, 2, -6), Angle(), Vector(), wa)))
     wa:RotateAroundAxis(wa:Forward(), Lerp(timefrac, 0, -45))
