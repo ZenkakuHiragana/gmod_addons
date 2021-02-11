@@ -76,18 +76,18 @@ local function ManipulateBones(ply, ent, base, thigh, calf)
     if bthigh or bcalf then ManipulateBoneAnglesLessTraffic(ent, 0, base, timefrac) end
     if bthigh then ManipulateBoneAnglesLessTraffic(ent, bthigh, thigh, timefrac) end
     if bcalf then ManipulateBoneAnglesLessTraffic(ent, bcalf, calf, timefrac) end
-    local dp = thigh:IsZero() and Vector() or Vector(10, 0, -6)
+    local dp = thigh:IsZero() and Vector() or Vector(12, 0, -18)
     for _, ec in pairs {EnhancedCamera, EnhancedCameraTwo} do
         if ent == ec.entity then
             local w = ply:GetActiveWeapon()
             local seqname = LocalPlayer():GetSequenceName(ec:GetSequence())
-            local pose = IsValid(w) and string.lower(w.HoldType or "") or seqname:sub((seqname:find "_" or 0) + 1)
+            local pose = IsValid(w) and string.lower(w.HoldType or "") or ""
+            if pose == "" then pose = seqname:sub((seqname:find "_" or 0) + 1) end
             if pose:find "all" then pose = "normal" end
             if pose == "smg1" then pose = "smg" end
             if pose and pose ~= "" and pose ~= ec.pose then
                 ec.pose = pose
                 ec:OnPoseChange()
-                print(pose)
             end
 
             ent:ManipulateBonePosition(0, dp * timefrac)
@@ -260,6 +260,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     if not ply:Crouching() then return end
     if not IsFirstTimePredicted() then return end
     if not mv:KeyDown(IN_DUCK) then return end
+    if not mv:KeyDown(IN_SPEED) then return end
     if not mv:KeyDown(bit.bor(IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT)) then return end
     if CurTime() < ply.SlidingAbility_SlidingStartTime + CVarCooldown:GetFloat() then return end
     if math.abs(ply:GetWalkSpeed() - ply:GetRunSpeed()) < 25 then return end
@@ -270,7 +271,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     local crouched = ply:GetWalkSpeed() * ply:GetCrouchedWalkSpeed()
     local threshold = (run + crouched) / 2
     if run > crouched and speed < threshold then return end
-    if run < crouched and (not mv:KeyDown(IN_SPEED) or speed < run - 1 or speed > threshold) then return end
+    if run < crouched and (speed < run - 1 or speed > threshold) then return end
     local runspeed = math.max(ply:GetVelocity():Length(), speed, run) * 1.5
     local dir = v:GetNormalized()
     local ping = SERVER and 0 or (ply == LocalPlayer() and ply:Ping() / 1000 or 0)
