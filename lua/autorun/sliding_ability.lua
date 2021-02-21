@@ -1,5 +1,26 @@
 -- Thanks to WholeCream, prediction issues are fixed.
 
+sound.Add {
+    name = "SlidingAbility.ImpactSoft",
+    channel = CHAN_BODY,
+    level = 75,
+    volume = 0.6,
+    sound = {
+        "physics/body/body_medium_impact_soft1.wav",
+        "physics/body/body_medium_impact_soft2.wav",
+        "physics/body/body_medium_impact_soft5.wav",
+        "physics/body/body_medium_impact_soft6.wav",
+        "physics/body/body_medium_impact_soft7.wav",
+    },
+}
+sound.Add {
+    name = "SlidingAbility.ScrapeRough",
+    channel = CHAN_STATIC,
+    level = 70,
+    volume = 0.25,
+    sound = "physics/body/body_medium_scrape_rough_loop1.wav",
+}
+
 local cf = {FCVAR_REPLICATED, FCVAR_ARCHIVE}
 local CVarAccel = CreateConVar("sliding_ability_acceleration", 250, cf,
 "The acceleration/deceleration of the sliding.  Larger value makes shorter sliding.")
@@ -101,7 +122,7 @@ local function EndSliding(ply)
     ply.SlidingAbility_SlidingStartTime = CurTime()
     ply:SetNWBool("SlidingAbility_IsSliding", false)
     ply:SetNWFloat("SlidingAbility_SlidingStartTime", CurTime())
-    if SERVER then ply:StopSound "Flesh.ScrapeRough" end
+    if SERVER then ply:StopSound "SlidingAbility.ScrapeRough" end
 end
 
 local function SetSlidingPose(ply, ent, body_tilt)
@@ -148,7 +169,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         EndSliding(ply)
     end
     
-    -- actual calculation of movement
+    -- Actual calculation of movement
     local CT = CurTime()
     if (ply:Crouching() and ply.SlidingAbility_IsSliding) or (CLIENT and SlidingBacktrack[CT]) then
         local restorevars = {}
@@ -166,7 +187,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
             end
         end
 
-        -- calculate movement
+        -- Calculate movement
         local v = GetPredictedVar(ply, "SlidingAbility_SlidingCurrentVelocity") or Vector()
         local speed = v:Length()
         local speedref_crouch = ply:GetWalkSpeed() * ply:GetCrouchedWalkSpeed()
@@ -193,10 +214,10 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
             ply.SlidingAbility_SlidingPreviousPosition = mv:GetOrigin()
         end
 
-        -- set push velocity
+        -- Set push velocity
         mv:SetVelocity(GetPredictedVar(ply, "SlidingAbility_SlidingCurrentVelocity"))
 
-        -- effects & ending
+        -- Effects & ending
         if not vpbacktrack then
             if not ply:OnGround() or mv:KeyPressed(IN_JUMP) or mv:KeyReleased(IN_DUCK) or math.abs(speed - speedref_crouch) < 10 then
                 EndSliding(ply)
@@ -214,7 +235,7 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
             util.Effect("WheelDust", e)
         end
 
-        -- restore backtrack or record data
+        -- Restore backtrack or record data
         if CLIENT then
             if vpbacktrack then
                 for k, v in pairs(restorevars) do
@@ -254,13 +275,13 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
         return
     end
     
-    -- initial check to see if we can do it
+    -- Initial check to see if we can do it
     if ply.SlidingAbility_IsSliding then return end
     if not ply:OnGround() then return end
     if not ply:Crouching() then return end
     if not IsFirstTimePredicted() then return end
     if not mv:KeyDown(IN_DUCK) then return end
-    if not mv:KeyDown(IN_SPEED) then return end
+    -- if not mv:KeyDown(IN_SPEED) then return end -- This disables sliding for some people for some reason
     if not mv:KeyDown(bit.bor(IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT)) then return end
     if CurTime() < ply.SlidingAbility_SlidingStartTime + CVarCooldown:GetFloat() then return end
     if math.abs(ply:GetWalkSpeed() - ply:GetRunSpeed()) < 25 then return end
@@ -283,8 +304,8 @@ hook.Add("SetupMove", "Check sliding", function(ply, mv, cmd)
     ply:SetNWFloat("SlidingAbility_SlidingStartTime", ply.SlidingAbility_SlidingStartTime)
     ply:SetNWVector("SlidingAbility_SlidingMaxSpeed", ply.SlidingAbility_SlidingMaxSpeed)
     SetPredictedVar(ply, "SlidingAbility_SlidingCurrentVelocity", ply.SlidingAbility_SlidingCurrentVelocity)
-    ply:EmitSound("Flesh.ImpactSoft")
-    if SERVER then ply:EmitSound "Flesh.ScrapeRough" end
+    ply:EmitSound "SlidingAbility.ImpactSoft"
+    if SERVER then ply:EmitSound "SlidingAbility.ScrapeRough" end
 end)
 
 hook.Add("PlayerFootstep", "Sliding sound", function(ply, pos, foot, sound, volume, filter)
