@@ -962,7 +962,9 @@ function ENT:Initialize()
 
 	local e = EffectData()
 	e:SetEntity(self.v)
-	util.Effect("propspawn", e) -- Perform a spawn effect.
+	if not self.DontUseSpawnEffect then
+		util.Effect("propspawn", e) -- Perform a spawn effect.
+	end
 	self:AttachModel()
 	self:DrawShadow(false)
 	self:GetVehicleParams()
