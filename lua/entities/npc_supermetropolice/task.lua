@@ -740,6 +740,13 @@ function ENT:Task_SwitchWeapon(arg)
         end
 
         self:SetActiveWeapon(close and 1 or #self.Weapons)
+    elseif arg == "Camera" then
+        for i, t in ipairs(self.Weapons) do
+            if t.Entity:GetClass() == "weapon_camera" then
+                self:SetActiveWeapon(i)
+                return
+            end
+        end
     end
 end
 

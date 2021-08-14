@@ -236,6 +236,12 @@ function ENT:ScheduleDecision_ApproachEnemy()
     and self.Weapons.ActiveWeaponID < #self.Weapons then
         return "SwitchWeaponToLongRange"
     else
+        for i, t in ipairs(self.Weapons) do
+            if t.Entity:GetClass() == "weapon_camera" then
+                return "SwitchWeaponToCamera"
+            end
+        end
+
         return "ChaseEnemy"
     end
 end
@@ -486,6 +492,10 @@ ENT.ScheduleList = {
         "StopMoving",
         {"WaitFaceEnemy", 2},
     },
+    SwitchWeaponToCamera = {
+        {"SwitchWeapon", "Camera"},
+        {"SetSchedule", "TakeCoverFromEnemy"},
+    },
     SwitchWeaponToCloseRange = {
         {"SwitchWeapon", "CloseRange"},
         {"SetSchedule", "TakeCoverFromEnemy"},
@@ -725,6 +735,7 @@ ENT.Interrupts = {
         c.COND_HEAR_DANGER,
         c.COND_SEE_GRENADE,
     },
+    SwitchWeaponToCamera = {},
     SwitchWeaponToCloseRange = {},
     SwitchWeaponToLongRange = {},
     SwitchWeaponToReload = {},

@@ -163,7 +163,7 @@ hook.Add("OnEntityCreated", "GreatZenkakuMan's Nextbot relationship setting", fu
 	end
 end)
 
-ENT.NPCClass = CLASS_ALIEN_PREDATOR
+ENT.NPCClass = CLASS_COMBINE
 ENT.Relationship = RelationshipTable
 function ENT:Initialize_Relationship()
 	self.RelationshipEntity = {}

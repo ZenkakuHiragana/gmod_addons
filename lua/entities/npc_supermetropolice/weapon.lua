@@ -297,6 +297,10 @@ local function FireRPG(self, w, pos, dir)
 
     local t0 = CurTime()
     local threadname = "GuideRPG" .. r:EntIndex()
+    timer.Create(threadname, 1, 0, function()
+        if not IsValid(r) then timer.Remove(threadname) return end
+        if not IsValid(self) then r:SetVelocity(r:GetForward() * 300) end
+    end)
     self.Coroutines[threadname] = coroutine.create(function(self)
         local path = Path "Follow"
         local UsePath = false
@@ -538,12 +542,12 @@ local HL2Weapons = {
         FireFunction = FireRPG,
         HoldType = "rpg",
         MaxBurstDelay = 0.25,
-        MaxBurstNum = 5,
+        MaxBurstNum = 2,
         MaxBurstRestDelay = 10,
         MaxRange = 8192,
         MinBurstDelay = 0.25,
-        MinBurstNum = 2,
-        MinBurstRestDelay = 5,
+        MinBurstNum = 1,
+        MinBurstRestDelay = 6,
         MinRange = 800,
         ReloadSound = "Weapon_RPG.LaserOff",
         ShootSound = "Weapon_RPG.NPC_Single",
