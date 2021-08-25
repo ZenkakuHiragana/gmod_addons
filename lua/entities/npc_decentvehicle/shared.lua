@@ -28,6 +28,11 @@ function ENT:SetDriverPosition()
 	self:SetAngles(seat:LocalToWorldAngles(self:GetNWAngle "Ang"))
 end
 
+function ENT:GetDrivingEntity()
+	local vehicle = self:GetNWEntity "Vehicle"
+	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return vehicle end
+end
+
 function ENT:GetVehicleForward(v)
 	local vehicle = v or self:GetNWEntity "Vehicle"
 	if not (IsValid(vehicle) and vehicle:IsVehicle()) then return self:GetForward() end

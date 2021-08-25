@@ -31,8 +31,8 @@ function ENT:Think()
 			net.WriteUInt(5, 4) -- The passenger got off the taxi
 			net.Send(self.Caller)
 			if engine.ActiveGamemode() == "darkrp" then
-				self.Caller:ChatPrint(dvd.Texts.Taxi.Fare:format(dv.Fare))
-				self.Caller:SetDarkRPVar("money", math.max(self.Caller.DarkRPVars.money - dv.Fare, 0))
+				self.Caller:ChatPrint(dvd.Texts.Taxi.Fare:format(self.Fare))
+				self.Caller:setDarkRPVar("money", math.max(self.Caller.DarkRPVars.money - self.Fare, 0))
 			end
 			
 			local seats = self.v:GetChildren()

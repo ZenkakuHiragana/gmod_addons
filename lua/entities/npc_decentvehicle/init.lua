@@ -607,6 +607,10 @@ function ENT:DriveToWaypoint()
 	return rest_length < threshold and not IsObstacle(self.TraceNextWaypoint)
 end
 
+function ENT:GetNPCDriver()
+  return self.NPCDriver
+end
+
 function ENT:DoLights()
 	if CurTime() < self.NextDoLights then return end
 	local fogenabled, fogend = GetFogInfo()

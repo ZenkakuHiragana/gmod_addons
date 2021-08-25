@@ -49,7 +49,7 @@ function ENT:GetCount() return 0 end
 function ENT:GetCrouchedWalkSpeed() return 0 end
 function ENT:GetCurrentCommand() return dvd.FakeCUserCmd end
 function ENT:GetCurrentViewOffset() return FakeViewOffset end
-function ENT:GetDrivingEntity() return NULL end
+--function ENT:GetDrivingEntity() return NULL end
 function ENT:GetDrivingMode() return 0 end
 function ENT:GetDuckSpeed() return 0.3 end
 function ENT:GetEntityInUse() return NULL end
@@ -98,7 +98,7 @@ function ENT:PlayerEnteredSCar() end -- For SCAR base
 function ENT:OnTakeDamage() end -- For SCAR base
 function ENT:RemoveCarConnection() end -- For SCAR base
 function ENT:InVehicle() return true end
-function ENT:IsDrivingEntity() return false end
+function ENT:IsDrivingEntity() return true end
 function ENT:IsFrozen() return false end
 function ENT:IsPlayingTaunt() return false end
 function ENT:IsSprinting() return false end
