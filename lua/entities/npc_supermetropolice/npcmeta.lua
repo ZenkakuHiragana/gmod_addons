@@ -5,13 +5,18 @@ if not GreatZenkakuMan_FakeNextbotIsNPC then
     GreatZenkakuMan_FakeNextbotIsNPC = true
     local meta = FindMetaTable "NextBot" or FindMetaTable "Entity"
     local IsNPC = meta.IsNPC
+    local function IsFakeNPC(self)
+        if debug.traceback():find "improved_hl2_npcs" then return false end
+        return self and self.GreatZenkakuMan_IsFakeNPC
+    end
+
     if isfunction(IsNPC) then
         function meta:IsNPC()
-            return (self and self.GreatZenkakuMan_IsFakeNPC) or IsNPC(self)
+            return IsFakeNPC(self) or IsNPC(self)
         end
     else
         function meta:IsNPC()
-            return (self and self.GreatZenkakuMan_IsFakeNPC) or false
+            return IsFakeNPC(self) or false
         end
     end
 end
