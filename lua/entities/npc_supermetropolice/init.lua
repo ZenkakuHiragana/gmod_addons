@@ -42,7 +42,7 @@ hook.Add("EntityFireBullets", "GreatZenkakuMan's Nextbot EntityFireBullets", fun
 end)
 
 function ENT:RunHook(prefix, ...)
-    for name, func in pairs(self:GetTable()) do
+    for name, func in SortedPairs(self:GetTable()) do
         if name ~= prefix and name:StartWith(prefix) then
             func(self, ...)
         end
