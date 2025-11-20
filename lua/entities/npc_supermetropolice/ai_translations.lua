@@ -13,6 +13,8 @@ local holdtypes = {
 	"smg",
 }
 local a = ENT.Enum.ACT
+
+---@type table<Enum.ACT, table<string, Enum.ACT|Enum.ACT[]>>
 local ActivityTranslation = {
 	[ ACT_IDLE ] = {
 		smg = ACT_IDLE_SMG1,
@@ -68,8 +70,8 @@ local ActivityTranslation = {
 	},
 	[ ACT_WALK_STIMULATED ] = {
 		fallback = ACT_WALK,
-		smg = ACT_WALK_RIFLE_STIULATED,
-		ar2 = ACT_WALK_RIFLE_STIULATED,
+		smg = ACT_WALK_RIFLE_STIMULATED,
+		ar2 = ACT_WALK_RIFLE_STIMULATED,
 		shotgun = ACT_WALK_RIFLE_STIMULATED,
 	},
 	[ ACT_WALK_STEALTH ] = {
@@ -87,7 +89,7 @@ local ActivityTranslation = {
 		fallback = ACT_WALK_AIM,
 		smg = ACT_WALK_AIM_RIFLE_STIMULATED,
 		ar2 = ACT_WALK_AIM_RIFLE_STIMULATED,
-		shotgun = ACT_WALK_AIM_SHOTGUN_STIMULATED,
+		shotgun = ACT_WALK_AIM_SHOTGUN,
 	},
 	[ ACT_WALK_AIM_STEALTH ] = {
 		fallback = ACT_WALK_AIM,
@@ -279,7 +281,7 @@ local ActivityTranslation = {
 		shotgun = ACT_HL2MP_SIT_SHOTGUN,
 		passive = a.ACT_HL2MP_SIT_PASSIVE,
 		melee = ACT_HL2MP_SIT_MELEE,
-		melee2 = ACT_HL2MP_SIT_MELEE2,
+		melee2 = { ACT_HL2MP_SIT_MELEE2, ACT_HL2MP_SIT_MELEE },
 		grenade = ACT_HL2MP_SIT_GRENADE,
 		rpg = ACT_HL2MP_SIT_RPG,
 		revolver = ACT_HL2MP_SIT_PISTOL,
